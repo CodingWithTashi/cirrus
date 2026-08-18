@@ -21,6 +21,11 @@ class AppShell extends ConsumerWidget {
     final lp = context.lp;
     final l10n = context.l10n;
 
+    // Warm the community feed while the user is still on Home, so the tab
+    // never opens onto its empty state during the fetch. (listen, not watch:
+    // the shell must not rebuild on feed changes.)
+    ref.listen(communityStoreProvider, (_, _) {});
+
     void quickLog() {
       LpHaptics.light();
       ref.read(quitStoreProvider.notifier).logPuff();

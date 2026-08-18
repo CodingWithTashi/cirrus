@@ -29,7 +29,7 @@ class FrameMapScreen extends ConsumerWidget {
     bool go = false,
   }) {
     if (ref.read(quitStoreProvider) == null) {
-      ref.read(quitStoreProvider.notifier).loadExistingJourney();
+      ref.read(quitStoreProvider.notifier).seedDemoJourney();
     }
     go ? context.go(route) : context.push(route);
   }
@@ -41,7 +41,7 @@ class FrameMapScreen extends ConsumerWidget {
 
   void _panic(WidgetRef ref, BuildContext context, int step) {
     if (ref.read(quitStoreProvider) == null) {
-      ref.read(quitStoreProvider.notifier).loadExistingJourney();
+      ref.read(quitStoreProvider.notifier).seedDemoJourney();
     }
     ref.read(panicProvider.notifier).previewStep(step);
     context.push(Routes.panic);

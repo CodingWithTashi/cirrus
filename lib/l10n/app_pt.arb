@@ -67,6 +67,7 @@
   "authResendCountdown": "Reenviar em {seconds}s",
   "authBackToLogin": "Voltar ao início de sessão",
   "authInvalidEmail": "isso não parece um email",
+  "authEmailInUse": "esse email já tem um percurso — inicia sessão",
 
   "obProgressOf": "{step}/{total}",
   "obWelcomeCounterHint": "passas por dia — estás quase a descobrir",

@@ -232,6 +232,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authInvalidEmail => 'isso não parece um email';
 
   @override
+  String get authEmailInUse => 'esse email já tem um percurso — inicia sessão';
+
+  @override
   String obProgressOf(int step, int total) {
     return '$step/$total';
   }

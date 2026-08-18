@@ -80,3 +80,6 @@ enum PostTag { win, sos, day1, milestone, vent }
 enum SubscriptionTier { free, trial, premium }
 
 enum PanicOutcome { survived, slipped }
+
+/// Quick-reply chips under Ember's composer (docs/04 §3).
+enum CoachChip { craving, roughDay, slipped, progress }

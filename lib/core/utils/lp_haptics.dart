@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 
 /// Semantic haptic vocabulary (docs/03 §1: every action gets a reaction).
@@ -16,8 +18,8 @@ abstract final class LpHaptics {
 
   /// Celebration pattern — a quick double pulse.
   static Future<void> celebrate() async {
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     await Future<void>.delayed(const Duration(milliseconds: 120));
-    HapticFeedback.heavyImpact();
+    unawaited(HapticFeedback.heavyImpact());
   }
 }

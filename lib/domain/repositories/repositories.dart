@@ -1,61 +1,85 @@
-/// Repository contracts (DIP seam). The UI depends on these interfaces only;
-/// today they're backed by in-memory stores, later by Firestore + Functions
-/// without touching a single view (docs/05 architecture).
+/// Backend contracts (DIP seam). Stores — the view-model layer — depend on
+/// these interfaces only; today they're implemented over a fake JSON API
+/// (`data/api/fake`), later over Firebase or a REST client without touching a
+/// single store or view (docs/05 architecture).
 library;
 
 import '../models/journey_state.dart';
 import '../models/models.dart';
 
-/// Commands + state for the quit journey itself.
-abstract interface class QuitRepository {
-  JourneyState? get journey;
+/// Session lifecycle. Every method is a real (fake-backed) API round-trip.
+abstract interface class AuthRepository {
+  /// The signed-in account's journey, or null (no session / not onboarded).
+  Future<JourneyState?> restoreSession();
 
-  /// Starts a brand-new journey from onboarding output.
-  void startJourney({required UserProfile profile, required QuitPlan plan});
+  /// Throws [InvalidCredentialsException] on a wrong password.
+  Future<JourneyState> signInWithEmail({
+    required String email,
+    required String password,
+  });
 
-  /// Loads the returning-user account (demo seed in the in-memory build).
-  void loadExistingJourney();
+  /// The account's journey when it already has one; null → onboarding.
+  Future<JourneyState?> signInWithApple();
 
-  void endJourney();
+  /// Creates the account and opens a session (journey comes later, from
+  /// onboarding). Throws [EmailAlreadyInUseException].
+  Future<void> register({required String email, required String password});
 
-  void logPuff({DateTime? at});
-  void undoLastPuff();
-  void confirmVapeFreeDay();
-  void recordCravingSurvived();
-  void recordSlipTrigger(SlipTrigger trigger);
-  void applySlipRecovery();
-  void dismissSlipRecovery();
-  void editPastDay(DateTime date, int puffs);
-  void checkInMood(Mood mood, {String? note});
-  void addGoal(SavingsGoal goal);
-  void adjustPlan({QuitMethod? method, int? paceDays});
-  void completeDay1Task(int index);
-  void updateAlias(String alias, String avatarEmoji);
-  void setTier(SubscriptionTier tier);
+  Future<void> requestPasswordReset(String email);
+
+  Future<void> signOut();
+
+  Future<void> deleteAccount();
+}
+
+/// Persistence of the quit journey itself.
+abstract interface class JourneyRepository {
+  /// The backend creates the initial journey from onboarding output.
+  Future<JourneyState> create({
+    required UserProfile profile,
+    required QuitPlan plan,
+  });
+
+  /// Write-behind upsert after every local mutation.
+  Future<void> save(JourneyState journey);
+
+  Future<void> delete();
 }
 
 /// Anonymous community feed.
 abstract interface class CommunityRepository {
-  List<Post> get posts;
+  Future<List<Post>> fetchPosts();
 
-  void addPost({required String text, required PostTag tag});
-  void toggleReaction(String postId, String emoji);
-  void addReply(String postId, String text);
-  void reportPost(String postId);
-  void blockAuthor(String postId);
-  void nudgeBuddy();
+  Future<void> addPost(Post post);
+
+  Future<void> setReaction(String postId, String emoji, {required bool on});
+
+  Future<void> addReply(String postId, Reply reply);
+
+  Future<void> reportPost(String postId);
+
+  Future<void> blockAuthor(String alias);
+
+  Future<void> nudgeBuddy();
 }
 
-/// Ember — scripted in-memory stand-in for the server-side coach
-/// (docs/04; the real Gemini flow slots in behind this interface).
+/// Ember — the backend decides *what* to say ([CoachReply]); views localize.
 abstract interface class CoachRepository {
-  List<CoachMessage> get messages;
-  bool get isTyping;
-  int get freeMessagesLeftToday;
-
-  Future<void> send(String text);
-  Future<void> sendChip(CoachChip chip);
-  void seedGreetingIfEmpty();
+  Future<CoachReply> requestReply({
+    String? text,
+    CoachChip? chip,
+    required bool capped,
+  });
 }
 
-enum CoachChip { craving, roughDay, slipped, progress }
+sealed class AuthException implements Exception {
+  const AuthException();
+}
+
+final class InvalidCredentialsException extends AuthException {
+  const InvalidCredentialsException();
+}
+
+final class EmailAlreadyInUseException extends AuthException {
+  const EmailAlreadyInUseException();
+}

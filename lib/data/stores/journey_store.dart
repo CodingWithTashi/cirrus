@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/logic/dependence_engine.dart';
@@ -8,65 +10,87 @@ import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../seed/seed_data.dart';
+import 'providers.dart';
 
-/// In-memory implementation of [QuitRepository]. Everything lives for the
-/// session only; swapping in Firestore later means replacing this class,
-/// nothing above it.
-class JourneyStore extends Notifier<JourneyState?> implements QuitRepository {
+/// View model of the quit journey. Session lifecycle is awaited API work
+/// (auth + journey creation); every other mutation is optimistic: applied
+/// locally through the engines, then synced write-behind via [_commit] —
+/// so views keep reading fresh state synchronously right after a command.
+class JourneyStore extends Notifier<JourneyState?> {
   @override
   JourneyState? build() => null;
 
-  @override
   JourneyState? get journey => state;
+
+  AuthRepository get _auth => ref.read(authRepositoryProvider);
+
+  JourneyRepository get _journeys => ref.read(journeyRepositoryProvider);
 
   DateTime get _now => DateTime.now();
 
   DateTime get _todayKey => JourneyState.dateKey(_now);
 
-  // ---- lifecycle ------------------------------------------------------------
-
-  @override
-  void startJourney({required UserProfile profile, required QuitPlan plan}) {
-    final today = JourneyState.dateKey(_now);
-    state = JourneyState(
-      profile: profile,
-      plan: plan,
-      days: {
-        today: DayLog(date: today, puffs: 0, limit: _limitOn(plan, today)),
-      },
-      cravingsSurvivedTotal: 0,
-      repairTokens: 0,
-      longestStreak: 0,
-      goals: [
-        if (plan.weeklySpend > 0)
-          SavingsGoal(
-            id: 'onboarding-goal',
-            emoji: '✈️',
-            name: 'Tokyo flight',
-            price: 1300,
-            fromOnboarding: true,
-          ),
-      ],
-      earnedBadges: const {},
-      buddy: const Buddy(
-        alias: '@trashpanda',
-        avatarEmoji: '🦝',
-        name: 'Sam',
-        streakDays: 19,
-      ),
-      day1TasksDone: const {},
-    );
+  /// Applies a mutation locally and syncs it to the backend write-behind.
+  void _commit(JourneyState next) {
+    state = next;
+    unawaited(_journeys.save(next));
   }
 
-  @override
-  void loadExistingJourney() => state = SeedData.journey(_now);
+  // ---- session lifecycle (awaited API calls) --------------------------------
 
-  @override
-  void endJourney() => state = null;
+  /// Splash-time restore. Never clobbers an already-live journey (the frame
+  /// map and tests seed state before navigation).
+  Future<void> restoreSession() async {
+    if (state != null) return;
+    final restored = await _auth.restoreSession();
+    if (restored != null && state == null) state = restored;
+  }
+
+  /// Throws [InvalidCredentialsException] on a wrong password.
+  Future<void> logIn({required String email, required String password}) async {
+    state = await _auth.signInWithEmail(email: email, password: password);
+  }
+
+  /// Returns true when the Apple account already had a journey to restore;
+  /// false → route to onboarding.
+  Future<bool> signInWithApple() async {
+    final restored = await _auth.signInWithApple();
+    if (restored != null) state = restored;
+    return restored != null;
+  }
+
+  /// Throws [EmailAlreadyInUseException].
+  Future<void> register({required String email, required String password}) =>
+      _auth.register(email: email, password: password);
+
+  Future<void> requestPasswordReset(String email) =>
+      _auth.requestPasswordReset(email);
+
+  /// Ends onboarding: the backend creates the journey from the profile+plan.
+  Future<void> startJourney({
+    required UserProfile profile,
+    required QuitPlan plan,
+  }) async {
+    state = await _journeys.create(profile: profile, plan: plan);
+  }
+
+  /// Optimistic: signed out locally at once, the API ack is write-behind.
+  void signOut() {
+    state = null;
+    unawaited(_auth.signOut());
+  }
+
+  void deleteAccount() {
+    state = null;
+    unawaited(_auth.deleteAccount());
+  }
+
+  /// Frame-map/dev shortcut: seeds the demo journey synchronously (no router
+  /// race) and plants it on the fake backend via the write-behind sync.
+  void seedDemoJourney() => _commit(SeedData.journey(_now));
 
   // ---- daily log ------------------------------------------------------------
 
-  @override
   void logPuff({DateTime? at}) {
     final s = state;
     if (s == null) return;
@@ -106,18 +130,19 @@ class JourneyStore extends Notifier<JourneyState?> implements QuitRepository {
       );
     }
 
-    state = _withBadges(
-      s.copyWith(
-        days: {...s.days, key: updated},
-        lastPuffAt: when,
-        repairTokens: tokens,
-        pendingSlipCleanDays: () => pendingSlip,
-        day1TasksDone: {...s.day1TasksDone, 0},
+    _commit(
+      _withBadges(
+        s.copyWith(
+          days: {...s.days, key: updated},
+          lastPuffAt: when,
+          repairTokens: tokens,
+          pendingSlipCleanDays: () => pendingSlip,
+          day1TasksDone: {...s.day1TasksDone, 0},
+        ),
       ),
     );
   }
 
-  @override
   void undoLastPuff() {
     final s = state;
     if (s == null) return;
@@ -132,124 +157,129 @@ class JourneyStore extends Notifier<JourneyState?> implements QuitRepository {
     } else {
       buckets.remove(lastHour);
     }
-    state = s.copyWith(
-      days: {
-        ...s.days,
-        _todayKey: log.copyWith(puffs: log.puffs - 1, hourBuckets: buckets),
-      },
+    _commit(
+      s.copyWith(
+        days: {
+          ...s.days,
+          _todayKey: log.copyWith(puffs: log.puffs - 1, hourBuckets: buckets),
+        },
+      ),
     );
   }
 
-  @override
   void confirmVapeFreeDay() {
     final s = state;
     if (s == null) return;
     final log =
         s.days[_todayKey] ??
         DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
-    state = _withBadges(
-      s.copyWith(
-        days: {...s.days, _todayKey: log.copyWith(vapeFreeConfirmed: true)},
+    _commit(
+      _withBadges(
+        s.copyWith(
+          days: {...s.days, _todayKey: log.copyWith(vapeFreeConfirmed: true)},
+        ),
       ),
     );
   }
 
-  @override
   void editPastDay(DateTime date, int puffs) {
     final s = state;
     if (s == null) return;
     final key = JourneyState.dateKey(date);
     final log = s.days[key];
     if (log == null) return;
-    state = _withBadges(
-      s.copyWith(
-        days: {
-          ...s.days,
-          key: log.copyWith(puffs: puffs),
-        },
+    _commit(
+      _withBadges(
+        s.copyWith(
+          days: {
+            ...s.days,
+            key: log.copyWith(puffs: puffs),
+          },
+        ),
       ),
     );
   }
 
   // ---- cravings & slips -----------------------------------------------------
 
-  @override
   void recordCravingSurvived() {
     final s = state;
     if (s == null) return;
     final log =
         s.days[_todayKey] ??
         DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
-    state = _withBadges(
-      s.copyWith(
-        cravingsSurvivedTotal: s.cravingsSurvivedTotal + 1,
-        days: {
-          ...s.days,
-          _todayKey: log.copyWith(cravingsSurvived: log.cravingsSurvived + 1),
-        },
+    _commit(
+      _withBadges(
+        s.copyWith(
+          cravingsSurvivedTotal: s.cravingsSurvivedTotal + 1,
+          days: {
+            ...s.days,
+            _todayKey: log.copyWith(cravingsSurvived: log.cravingsSurvived + 1),
+          },
+        ),
       ),
     );
   }
 
-  @override
   void recordSlipTrigger(SlipTrigger trigger) {
     final s = state;
     if (s == null) return;
     final log = s.days[_todayKey];
     if (log == null) return;
-    state = s.copyWith(
-      days: {
-        ...s.days,
-        _todayKey: log.copyWith(slipTrigger: trigger),
-      },
+    _commit(
+      s.copyWith(
+        days: {
+          ...s.days,
+          _todayKey: log.copyWith(slipTrigger: trigger),
+        },
+      ),
     );
   }
 
-  @override
   void applySlipRecovery() {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(
-      plan: TaperEngine.reflowAfterSlip(s.plan),
-      pendingSlipCleanDays: () => null,
+    _commit(
+      s.copyWith(
+        plan: TaperEngine.reflowAfterSlip(s.plan),
+        pendingSlipCleanDays: () => null,
+      ),
     );
   }
 
-  @override
   void dismissSlipRecovery() {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(pendingSlipCleanDays: () => null);
+    _commit(s.copyWith(pendingSlipCleanDays: () => null));
   }
 
   // ---- mood / goals / plan --------------------------------------------------
 
-  @override
   void checkInMood(Mood mood, {String? note}) {
     final s = state;
     if (s == null) return;
     final log =
         s.days[_todayKey] ??
         DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
-    state = _withBadges(
-      s.copyWith(
-        days: {
-          ...s.days,
-          _todayKey: log.copyWith(mood: mood, moodNote: note),
-        },
-        moodCheckIns: s.moodCheckIns + 1,
+    _commit(
+      _withBadges(
+        s.copyWith(
+          days: {
+            ...s.days,
+            _todayKey: log.copyWith(mood: mood, moodNote: note),
+          },
+          moodCheckIns: s.moodCheckIns + 1,
+        ),
       ),
     );
   }
 
-  @override
   void addGoal(SavingsGoal goal) {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(goals: [...s.goals, goal]);
+    _commit(s.copyWith(goals: [...s.goals, goal]));
   }
 
-  @override
   void adjustPlan({QuitMethod? method, int? paceDays}) {
     final s = state;
     if (s == null) return;
@@ -259,45 +289,46 @@ class JourneyStore extends Notifier<JourneyState?> implements QuitRepository {
     final newPace = paceDays == null
         ? s.plan.paceDays
         : currentDay - 1 + paceDays;
-    state = s.copyWith(
-      plan: s.plan.copyWith(
-        method: method ?? s.plan.method,
-        paceDays: newPace,
-        stretchDays: 0,
+    _commit(
+      s.copyWith(
+        plan: s.plan.copyWith(
+          method: method ?? s.plan.method,
+          paceDays: newPace,
+          stretchDays: 0,
+        ),
       ),
     );
   }
 
   // ---- misc -----------------------------------------------------------------
 
-  @override
   void completeDay1Task(int index) {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(day1TasksDone: {...s.day1TasksDone, index});
+    _commit(s.copyWith(day1TasksDone: {...s.day1TasksDone, index}));
   }
 
-  @override
   void updateAlias(String alias, String avatarEmoji) {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(
-      profile: s.profile.copyWith(alias: alias, avatarEmoji: avatarEmoji),
+    _commit(
+      s.copyWith(
+        profile: s.profile.copyWith(alias: alias, avatarEmoji: avatarEmoji),
+      ),
     );
   }
 
-  @override
   void setTier(SubscriptionTier tier) {
     final s = state;
     if (s == null) return;
-    state = s.copyWith(profile: s.profile.copyWith(tier: tier));
+    _commit(s.copyWith(profile: s.profile.copyWith(tier: tier)));
   }
 
   /// Awards a badge from another feature (community, buddy…).
   void awardBadge(String id) {
     final s = state;
     if (s == null || s.earnedBadges.contains(id)) return;
-    state = s.copyWith(earnedBadges: {...s.earnedBadges, id});
+    _commit(s.copyWith(earnedBadges: {...s.earnedBadges, id}));
   }
 
   int _limitToday(JourneyState s) => _limitOn(s.plan, _now);

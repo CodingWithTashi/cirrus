@@ -12,7 +12,6 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
-import '../../domain/repositories/repositories.dart';
 
 /// Frame 36 — Ember's chat. Cites the user's own data, never generic advice.
 class CoachScreen extends ConsumerStatefulWidget {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/models.dart';
@@ -58,14 +60,28 @@ class CommunityState {
   );
 }
 
-class CommunityStore extends Notifier<CommunityState>
-    implements CommunityRepository {
+/// View model of the community feed: fetched async from the backend, mutated
+/// optimistically with write-behind sync (the feed never blocks on the wire).
+class CommunityStore extends Notifier<CommunityState> {
   int _reportCounts = 0;
 
   @override
-  CommunityState build() => CommunityState(posts: _seed(DateTime.now()));
+  CommunityState build() {
+    // Riverpod 2.x Notifiers have no `ref.mounted`; guard the async load
+    // against provider invalidation (sign-out) mid-fetch.
+    var alive = true;
+    ref.onDispose(() => alive = false);
+    unawaited(_load(() => alive));
+    return const CommunityState(posts: []);
+  }
 
-  @override
+  CommunityRepository get _repo => ref.read(communityRepositoryProvider);
+
+  Future<void> _load(bool Function() alive) async {
+    final posts = await _repo.fetchPosts();
+    if (alive()) state = state.copyWith(posts: posts);
+  }
+
   List<Post> get posts => state.posts;
 
   String get _myAlias =>
@@ -100,7 +116,6 @@ class CommunityStore extends Notifier<CommunityState>
     return banned.any(t.contains);
   }
 
-  @override
   void addPost({required String text, required PostTag tag}) {
     final post = Post(
       id: 'p${DateTime.now().microsecondsSinceEpoch}',
@@ -115,58 +130,54 @@ class CommunityStore extends Notifier<CommunityState>
       hidden: violatesCommunityRules(text),
     );
     state = state.copyWith(posts: [post, ...state.posts]);
+    unawaited(_repo.addPost(post));
     ref.read(quitStoreProvider.notifier).awardBadge('firstPost');
   }
 
-  @override
   void toggleReaction(String postId, String emoji) {
+    final post = state.posts.where((p) => p.id == postId).firstOrNull;
+    if (post == null) return;
+    final on = !post.myReactions.contains(emoji);
     state = state.copyWith(
       posts: [
         for (final p in state.posts)
           if (p.id != postId)
             p
-          else if (p.myReactions.contains(emoji))
-            p.copyWith(
-              reactions: {...p.reactions, emoji: (p.reactions[emoji] ?? 1) - 1},
-              myReactions: {...p.myReactions}..remove(emoji),
-            )
-          else
+          else if (on)
             p.copyWith(
               reactions: {...p.reactions, emoji: (p.reactions[emoji] ?? 0) + 1},
               myReactions: {...p.myReactions, emoji},
+            )
+          else
+            p.copyWith(
+              reactions: {...p.reactions, emoji: (p.reactions[emoji] ?? 1) - 1},
+              myReactions: {...p.myReactions}..remove(emoji),
             ),
       ],
     );
+    unawaited(_repo.setReaction(postId, emoji, on: on));
   }
 
-  @override
   void addReply(String postId, String text) {
+    final reply = Reply(
+      alias: _myAlias,
+      avatarEmoji: _myAvatar,
+      text: text,
+      isMine: true,
+    );
     state = state.copyWith(
       posts: [
         for (final p in state.posts)
-          if (p.id != postId)
-            p
-          else
-            p.copyWith(
-              replies: [
-                ...p.replies,
-                Reply(
-                  alias: _myAlias,
-                  avatarEmoji: _myAvatar,
-                  text: text,
-                  isMine: true,
-                ),
-              ],
-            ),
+          if (p.id != postId) p else p.copyWith(replies: [...p.replies, reply]),
       ],
     );
+    unawaited(_repo.addReply(postId, reply));
     final post = state.posts.firstWhere((p) => p.id == postId);
     if (post.tag == PostTag.sos && !post.isMine) {
       ref.read(quitStoreProvider.notifier).awardBadge('helpedSos');
     }
   }
 
-  @override
   void reportPost(String postId) {
     // 3 reports auto-hide pending review (App Store UGC requirement).
     _reportCounts++;
@@ -178,12 +189,13 @@ class CommunityStore extends Notifier<CommunityState>
         ],
       );
     }
+    unawaited(_repo.reportPost(postId));
   }
 
-  @override
   void blockAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(blocked: {...state.blocked, post.alias});
+    unawaited(_repo.blockAuthor(post.alias));
   }
 
   void muteAuthor(String postId) {
@@ -196,98 +208,10 @@ class CommunityStore extends Notifier<CommunityState>
   int get nudgesLeftToday =>
       (nudgeDailyCap - state.nudgesToday).clamp(0, nudgeDailyCap);
 
-  @override
   void nudgeBuddy() {
     if (nudgesLeftToday == 0) return;
     state = state.copyWith(nudgesToday: state.nudgesToday + 1);
+    unawaited(_repo.nudgeBuddy());
     ref.read(quitStoreProvider.notifier).awardBadge('buddyBond');
   }
-
-  static List<Post> _seed(DateTime now) => [
-    Post(
-      id: 'seed-win',
-      alias: '@embermaus',
-      avatarEmoji: '🐭',
-      dayN: 30,
-      tag: PostTag.win,
-      seedTextId: 'win30',
-      createdAt: now.subtract(const Duration(hours: 2)),
-      reactions: const {'💪': 214, '🔥': 89, '💬': 31},
-    ),
-    Post(
-      id: 'seed-sos',
-      alias: '@slowturtle',
-      avatarEmoji: '🐢',
-      dayN: 4,
-      tag: PostTag.sos,
-      seedTextId: 'sosGasStation',
-      createdAt: now.subtract(const Duration(minutes: 22)),
-      replyingNow: 12,
-      replies: const [
-        Reply(
-          alias: '@quietfox',
-          avatarEmoji: '🦊',
-          seedTextId: 'sosReplyWalk',
-          isMine: true,
-        ),
-        Reply(
-          alias: '@nightbee',
-          avatarEmoji: '🐝',
-          seedTextId: 'sosReplyScience',
-        ),
-        Reply(
-          alias: '@owlish',
-          avatarEmoji: '🦉',
-          seedTextId: 'sosReplyGatorade',
-        ),
-        Reply(
-          alias: '@slowturtle',
-          avatarEmoji: '🐢',
-          seedTextId: 'sosReplyUpdate',
-          isOp: true,
-        ),
-      ],
-    ),
-    Post(
-      id: 'seed-day1',
-      alias: '@cactusjuice',
-      avatarEmoji: '🌵',
-      dayN: 1,
-      tag: PostTag.day1,
-      seedTextId: 'day1Lake',
-      createdAt: now.subtract(const Duration(hours: 1)),
-      reactions: const {'💪': 47, '🔥': 12},
-    ),
-    Post(
-      id: 'seed-vent',
-      alias: '@moonmoth',
-      avatarEmoji: '🦋',
-      dayN: 9,
-      tag: PostTag.vent,
-      seedTextId: 'ventCoworker',
-      createdAt: now.subtract(const Duration(hours: 5)),
-      reactions: const {'💪': 33, '💬': 8},
-    ),
-    Post(
-      id: 'seed-milestone',
-      alias: '@ironlung',
-      avatarEmoji: '🐺',
-      dayN: 14,
-      tag: PostTag.milestone,
-      seedTextId: 'milestoneStairs',
-      createdAt: now.subtract(const Duration(hours: 8)),
-      reactions: const {'💪': 96, '🔥': 41},
-    ),
-    Post(
-      id: 'seed-win2',
-      alias: '@quietfox',
-      avatarEmoji: '🦊',
-      dayN: 12,
-      tag: PostTag.win,
-      seedTextId: 'winParty',
-      createdAt: now.subtract(const Duration(hours: 26)),
-      reactions: const {'💪': 58, '🔥': 21},
-      isMine: true,
-    ),
-  ];
 }

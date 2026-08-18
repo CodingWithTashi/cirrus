@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -142,7 +143,7 @@ void showLpSnack(
   final messenger = ScaffoldMessenger.of(context);
   // Replace, never queue — rapid logging must not stack minutes of snacks.
   messenger.clearSnackBars();
-  messenger.showSnackBar(
+  final controller = messenger.showSnackBar(
     SnackBar(
       content: Text(message),
       duration: duration,
@@ -151,6 +152,17 @@ void showLpSnack(
           : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
     ),
   );
+  // The framework skips its auto-timeout for action snack bars whenever the
+  // platform reports accessible navigation — which some environments report
+  // spuriously, leaving "Undo" snacks up forever. The design wants a bounded
+  // lifetime regardless (docs/03 §5: a 5s undo window), so close whatever is
+  // still showing ourselves. Cancelled as soon as the snack closes by any
+  // other path (timeout, swipe, replacement), so it never double-fires.
+  final timer = Timer(
+    duration + const Duration(milliseconds: 250),
+    controller.close,
+  );
+  unawaited(controller.closed.whenComplete(timer.cancel));
 }
 
 /// Slim animated progress bar (onboarding header, day-1 checklist, goals).

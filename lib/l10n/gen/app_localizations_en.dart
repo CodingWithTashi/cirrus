@@ -230,6 +230,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authInvalidEmail => 'that doesn\'t look like an email';
 
   @override
+  String get authEmailInUse =>
+      'that email already has a journey — log in instead';
+
+  @override
   String obProgressOf(int step, int total) {
     return '$step/$total';
   }

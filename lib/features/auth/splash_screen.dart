@@ -25,21 +25,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     vsync: this,
     duration: const Duration(seconds: 4),
   )..repeat(reverse: true);
-  Timer? _advance;
 
   @override
   void initState() {
     super.initState();
-    _advance = Timer(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      final hasJourney = ref.read(quitStoreProvider) != null;
-      context.go(hasJourney ? Routes.home : Routes.auth);
-    });
+    unawaited(_advance());
+  }
+
+  /// Restores the backend session while the wordmark breathes — but never
+  /// under the branding beat of 1.5s.
+  Future<void> _advance() async {
+    await Future.wait([
+      Future<void>.delayed(const Duration(milliseconds: 1500)),
+      ref.read(quitStoreProvider.notifier).restoreSession(),
+    ]);
+    if (!mounted) return;
+    final hasJourney = ref.read(quitStoreProvider) != null;
+    context.go(hasJourney ? Routes.home : Routes.auth);
   }
 
   @override
   void dispose() {
-    _advance?.cancel();
     _breath.dispose();
     super.dispose();
   }

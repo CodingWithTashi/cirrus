@@ -67,6 +67,7 @@
   "authResendCountdown": "Erneut senden in {seconds}s",
   "authBackToLogin": "Zurück zur Anmeldung",
   "authInvalidEmail": "das sieht nicht nach einer E-Mail aus",
+  "authEmailInUse": "diese E-Mail hat schon eine Reise — melde dich an",
 
   "obProgressOf": "{step}/{total}",
   "obWelcomeCounterHint": "Züge am Tag — gleich weißt du es",

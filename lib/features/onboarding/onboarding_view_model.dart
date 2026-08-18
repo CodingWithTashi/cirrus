@@ -275,27 +275,29 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     );
   }
 
-  /// Ends onboarding: creates the journey with [tier] and clears the draft.
-  void completeWithTier(SubscriptionTier tier) {
+  /// Ends onboarding: the backend creates the journey with [tier], then the
+  /// draft clears. Profile and plan are captured BEFORE the await — nothing
+  /// may touch `state`/`ref` after [Ref.invalidateSelf], which must stay the
+  /// final statement.
+  Future<void> completeWithTier(SubscriptionTier tier) async {
     final (alias, emoji) = _randomAlias();
-    ref
+    final profile = UserProfile(
+      alias: alias,
+      avatarEmoji: emoji,
+      tier: tier,
+      email: state.email,
+      gender: state.gender,
+      birthYear: state.birthYear,
+      whys: state.whys,
+      worries: state.worries,
+      attempts: state.attempts,
+      frequency: state.frequency,
+      firstPuff: state.firstPuff,
+    );
+    final plan = draftPlan();
+    await ref
         .read(quitStoreProvider.notifier)
-        .startJourney(
-          profile: UserProfile(
-            alias: alias,
-            avatarEmoji: emoji,
-            tier: tier,
-            email: state.email,
-            gender: state.gender,
-            birthYear: state.birthYear,
-            whys: state.whys,
-            worries: state.worries,
-            attempts: state.attempts,
-            frequency: state.frequency,
-            firstPuff: state.firstPuff,
-          ),
-          plan: draftPlan(),
-        );
+        .startJourney(profile: profile, plan: plan);
     ref.invalidateSelf();
   }
 

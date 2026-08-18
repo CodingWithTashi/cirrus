@@ -230,6 +230,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authInvalidEmail => 'eso no parece un email';
 
   @override
+  String get authEmailInUse => 'ese email ya tiene un plan — inicia sesión';
+
+  @override
   String obProgressOf(int step, int total) {
     return '$step/$total';
   }

@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'that doesn\'t look like an email'**
   String get authInvalidEmail;
 
+  /// No description provided for @authEmailInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'that email already has a journey — log in instead'**
+  String get authEmailInUse;
+
   /// No description provided for @obProgressOf.
   ///
   /// In en, this message translates to:

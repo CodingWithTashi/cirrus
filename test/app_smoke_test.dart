@@ -5,10 +5,16 @@ import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/data/stores/providers.dart';
 
 void main() {
+  // The fake backend answers instantly under test — pumpAndSettle must never
+  // wait out simulated network latency.
+  final noLatency = apiLatencyProvider.overrideWithValue(Duration.zero);
+
   testWidgets('boots to splash and lands on sign-in when signed out', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: LastPuffApp()));
+    await tester.pumpWidget(
+      ProviderScope(overrides: [noLatency], child: const LastPuffApp()),
+    );
     expect(find.text('LastPuff'), findsWidgets);
 
     // Splash auto-advances after 1.5s.
@@ -20,9 +26,9 @@ void main() {
   testWidgets('signed-in demo journey lands on Today with live numbers', (
     tester,
   ) async {
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [noLatency]);
     addTearDown(container.dispose);
-    container.read(quitStoreProvider.notifier).loadExistingJourney();
+    container.read(quitStoreProvider.notifier).seedDemoJourney();
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -47,9 +53,9 @@ void main() {
   testWidgets('Daylight Ember theme renders Home on the light ground', (
     tester,
   ) async {
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [noLatency]);
     addTearDown(container.dispose);
-    container.read(quitStoreProvider.notifier).loadExistingJourney();
+    container.read(quitStoreProvider.notifier).seedDemoJourney();
     container
         .read(settingsStoreProvider.notifier)
         .setThemeMode(ThemeMode.light);

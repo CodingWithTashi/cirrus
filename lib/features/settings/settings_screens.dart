@@ -381,6 +381,23 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  /// Leaves the session: optimistic sign-out/delete (the API ack rides
+  /// behind), per-account stores reset, back to auth. One path for both
+  /// dialogs so they can't drift apart.
+  void _leaveJourney(
+    BuildContext dialogContext,
+    BuildContext context,
+    WidgetRef ref, {
+    required bool deleteAccount,
+  }) {
+    Navigator.of(dialogContext).pop();
+    final store = ref.read(quitStoreProvider.notifier);
+    deleteAccount ? store.deleteAccount() : store.signOut();
+    ref.invalidate(coachStoreProvider);
+    ref.invalidate(communityStoreProvider);
+    context.go(Routes.auth);
+  }
+
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final lp = context.lp;
@@ -398,13 +415,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref.read(quitStoreProvider.notifier).endJourney();
-              ref.invalidate(coachStoreProvider);
-              ref.invalidate(communityStoreProvider);
-              context.go(Routes.auth);
-            },
+            onPressed: () =>
+                _leaveJourney(dialogContext, context, ref, deleteAccount: true),
             child: Text(
               l10n.settingsDeleteConfirmCta,
               style: LpType.body14(lp.dangerText, weight: FontWeight.w600),
@@ -432,12 +444,12 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref.read(quitStoreProvider.notifier).endJourney();
-              ref.invalidate(coachStoreProvider);
-              context.go(Routes.auth);
-            },
+            onPressed: () => _leaveJourney(
+              dialogContext,
+              context,
+              ref,
+              deleteAccount: false,
+            ),
             child: Text(
               l10n.settingsSignOut,
               style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),

@@ -15,22 +15,37 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/repositories/repositories.dart';
 import '../onboarding/onboarding_view_model.dart';
 
 /// Frame 26 — Apple primary, email second-class but never hidden.
-class SignInScreen extends ConsumerWidget {
+class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends ConsumerState<SignInScreen> {
+  bool _appleBusy = false;
+
+  Future<void> _signInApple() async {
+    if (_appleBusy) return;
+    setState(() => _appleBusy = true);
+    // A new Apple account onboards; one that already onboarded (this app
+    // session) gets its journey restored from the backend.
+    final restored = await ref
+        .read(quitStoreProvider.notifier)
+        .signInWithApple();
+    if (!mounted) return;
+    setState(() => _appleBusy = false);
+    context.go(restored ? Routes.home : Routes.onboarding);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
-
-    void signInApple() {
-      // A new account — Apple or email — always onboards. Only "Log in"
-      // (Welcome back) restores the returning demo journey.
-      context.go(Routes.onboarding);
-    }
 
     return Scaffold(
       body: SafeArea(
@@ -52,7 +67,7 @@ class SignInScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               PressScale(
-                onTap: signInApple,
+                onTap: _appleBusy ? null : _signInApple,
                 child: Container(
                   height: LpDimens.ctaHeight,
                   decoration: BoxDecoration(
@@ -61,24 +76,39 @@ class SignInScreen extends ConsumerWidget {
                     color: lp.isDark ? Colors.white : const Color(0xFF111419),
                     borderRadius: BorderRadius.circular(LpDimens.rButton),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.apple,
-                        size: 24,
-                        color: lp.isDark ? Colors.black : Colors.white,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.authSignInWithApple,
-                        style: LpType.emphasis(
-                          lp.isDark ? Colors.black : const Color(0xFFFDFDFC),
-                          size: 17,
+                  child: _appleBusy
+                      ? Center(
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                lp.isDark ? Colors.black : Colors.white,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.apple,
+                              size: 24,
+                              color: lp.isDark ? Colors.black : Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.authSignInWithApple,
+                              style: LpType.emphasis(
+                                lp.isDark
+                                    ? Colors.black
+                                    : const Color(0xFFFDFDFC),
+                                size: 17,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -131,6 +161,25 @@ class SignInScreen extends ConsumerWidget {
   }
 }
 
+/// Auth forms scroll under a min-height so the keyboard never overflows
+/// them; the Spacer-pinned footer stays put whenever there's room — the same
+/// idiom as the community composer.
+class _AuthScrollView extends StatelessWidget {
+  const _AuthScrollView({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: IntrinsicHeight(child: child),
+      ),
+    ),
+  );
+}
+
 /// Frame 27 — live strength meter, casual copy, never red-alarm.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -145,6 +194,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   bool _show = false;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -153,6 +203,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _createAccount() async {
+    if (!_email.text.contains('@')) {
+      showLpSnack(context, context.l10n.authInvalidEmail);
+      return;
+    }
+    final email = _email.text.trim();
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(quitStoreProvider.notifier)
+          .register(email: email, password: _password.text);
+    } on EmailAlreadyInUseException {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showLpSnack(context, context.l10n.authEmailInUse);
+      return;
+    }
+    if (!mounted) return;
+    ref.read(onboardingProvider.notifier).setEmail(email);
+    context.go(Routes.onboarding);
   }
 
   int get _strength {
@@ -171,107 +243,104 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackChevron(onTap: () => context.pop()),
-              ),
-              const SizedBox(height: 16),
-              Text(l10n.authRegisterTitle, style: LpType.title(lp.textPrimary)),
-              const SizedBox(height: 26),
-              LpField(
-                label: l10n.authEmailLabel,
-                controller: _email,
-                focusNode: _emailFocus,
-                keyboardType: TextInputType.emailAddress,
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              LpField(
-                label: l10n.authPasswordLabel,
-                controller: _password,
-                focusNode: _passwordFocus,
-                obscure: !_show,
-                onChanged: (_) => setState(() {}),
-                trailing: PressScale(
-                  onTap: () => setState(() => _show = !_show),
-                  child: Text(
-                    _show ? l10n.authHidePassword : l10n.authShowPassword,
-                    style: LpType.caption(lp.textSecondary),
+          child: _AuthScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BackChevron(onTap: () => context.pop()),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.authRegisterTitle,
+                  style: LpType.title(lp.textPrimary),
+                ),
+                const SizedBox(height: 26),
+                LpField(
+                  label: l10n.authEmailLabel,
+                  controller: _email,
+                  focusNode: _emailFocus,
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                LpField(
+                  label: l10n.authPasswordLabel,
+                  controller: _password,
+                  focusNode: _passwordFocus,
+                  obscure: !_show,
+                  onChanged: (_) => setState(() {}),
+                  trailing: PressScale(
+                    onTap: () => setState(() => _show = !_show),
+                    child: Text(
+                      _show ? l10n.authHidePassword : l10n.authShowPassword,
+                      style: LpType.caption(lp.textSecondary),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  for (var i = 0; i < 3; i++) ...[
-                    AnimatedContainer(
-                      duration: LpMotion.fast,
-                      width: 36,
-                      height: 4,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: i < _strength ? lp.volt : lp.border,
-                        borderRadius: BorderRadius.circular(2),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      AnimatedContainer(
+                        duration: LpMotion.fast,
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: i < _strength ? lp.volt : lp.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
+                    ],
+                    const SizedBox(width: 4),
+                    Text(
+                      _strength == 0
+                          ? ''
+                          : _strength < 2
+                          ? l10n.authPasswordStrengthWeak
+                          : _strength == 2
+                          ? l10n.authPasswordStrengthDecent
+                          : l10n.authPasswordStrengthStrong,
+                      style: LpType.caption(lp.textSecondary),
                     ),
                   ],
-                  const SizedBox(width: 4),
-                  Text(
-                    _strength == 0
-                        ? ''
-                        : _strength < 2
-                        ? l10n.authPasswordStrengthWeak
-                        : _strength == 2
-                        ? l10n.authPasswordStrengthDecent
-                        : l10n.authPasswordStrengthStrong,
-                    style: LpType.caption(lp.textSecondary),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              LpNoteCard(l10n.authNoSpamCard),
-              const SizedBox(height: 14),
-              LpButton(
-                l10n.authCreateAccount,
-                onTap: () {
-                  if (!_email.text.contains('@')) {
-                    showLpSnack(context, l10n.authInvalidEmail);
-                    return;
-                  }
-                  ref
-                      .read(onboardingProvider.notifier)
-                      .setEmail(_email.text.trim());
-                  context.go(Routes.onboarding);
-                },
-              ),
-              const SizedBox(height: 6),
-              Center(
-                child: PressScale(
-                  onTap: () => context.pushReplacement(Routes.login),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text.rich(
-                      TextSpan(
-                        text: '${l10n.authAlreadyHaveOne} ',
-                        style: LpType.body13(lp.textSecondary),
-                        children: [
-                          TextSpan(
-                            text: l10n.authLogIn,
-                            style: LpType.body13(
-                              lp.voltText,
-                              weight: FontWeight.w600,
+                ),
+                const Spacer(),
+                LpNoteCard(l10n.authNoSpamCard),
+                const SizedBox(height: 14),
+                LpButton(
+                  l10n.authCreateAccount,
+                  busy: _busy,
+                  onTap: _createAccount,
+                ),
+                const SizedBox(height: 6),
+                Center(
+                  child: PressScale(
+                    onTap: () => context.pushReplacement(Routes.login),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text.rich(
+                        TextSpan(
+                          text: '${l10n.authAlreadyHaveOne} ',
+                          style: LpType.body13(lp.textSecondary),
+                          children: [
+                            TextSpan(
+                              text: l10n.authLogIn,
+                              style: LpType.body13(
+                                lp.voltText,
+                                weight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -295,6 +364,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _shakeKey = GlobalKey<ShakeItState>();
   bool _show = false;
   bool _wrongPassword = false;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -305,6 +375,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _logIn() async {
+    LpHaptics.medium();
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(quitStoreProvider.notifier)
+          .logIn(email: _email.text.trim(), password: _password.text);
+    } on InvalidCredentialsException {
+      // Frame 28: wrong password shakes the field 2px, copy stays kind.
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _wrongPassword = true;
+      });
+      _shakeKey.currentState?.shake();
+      return;
+    }
+    if (!mounted) return;
+    context.go(Routes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
@@ -313,105 +404,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackChevron(onTap: () => context.pop()),
-              ),
-              const SizedBox(height: 16),
-              Text(l10n.authLoginTitle, style: LpType.title(lp.textPrimary)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.authLoginSubtitle,
-                style: LpType.body14(lp.textSecondary),
-              ),
-              const SizedBox(height: 26),
-              LpField(
-                label: l10n.authEmailLabel,
-                controller: _email,
-                focusNode: _emailFocus,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              // Frame 28: wrong password shakes the field 2px, copy stays kind.
-              ShakeIt(
-                key: _shakeKey,
-                child: LpField(
-                  label: l10n.authPasswordLabel,
-                  controller: _password,
-                  focusNode: _passwordFocus,
-                  obscure: !_show,
-                  onChanged: (_) {
-                    if (_wrongPassword) {
-                      setState(() => _wrongPassword = false);
-                    }
-                  },
-                  trailing: PressScale(
-                    onTap: () => setState(() => _show = !_show),
-                    child: Text(
-                      _show ? l10n.authHidePassword : l10n.authShowPassword,
-                      style: LpType.caption(lp.textSecondary),
-                    ),
-                  ),
+          child: _AuthScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BackChevron(onTap: () => context.pop()),
                 ),
-              ),
-              if (_wrongPassword) ...[
+                const SizedBox(height: 16),
+                Text(l10n.authLoginTitle, style: LpType.title(lp.textPrimary)),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.authWrongPassword,
-                  style: LpType.caption(lp.dangerText, weight: FontWeight.w600),
+                  l10n.authLoginSubtitle,
+                  style: LpType.body14(lp.textSecondary),
                 ),
-              ],
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerRight,
-                child: PressScale(
-                  onTap: () => context.push(Routes.forgot),
-                  child: Text(
-                    l10n.authForgotPassword,
-                    style: LpType.body13(lp.voltText, weight: FontWeight.w600),
-                  ),
+                const SizedBox(height: 26),
+                LpField(
+                  label: l10n.authEmailLabel,
+                  controller: _email,
+                  focusNode: _emailFocus,
+                  keyboardType: TextInputType.emailAddress,
                 ),
-              ),
-              const Spacer(),
-              LpButton(
-                l10n.authLogIn,
-                onTap: () {
-                  if (_password.text.length < 6) {
-                    LpHaptics.medium();
-                    _shakeKey.currentState?.shake();
-                    setState(() => _wrongPassword = true);
-                    return;
-                  }
-                  LpHaptics.medium();
-                  ref.read(quitStoreProvider.notifier).loadExistingJourney();
-                  context.go(Routes.home);
-                },
-              ),
-              const SizedBox(height: 12),
-              PressScale(
-                onTap: () => context.pushReplacement(Routes.register),
-                child: Center(
-                  child: Text.rich(
-                    TextSpan(
-                      text: '${l10n.authNewHere} ',
-                      style: LpType.body13(lp.textSecondary),
-                      children: [
-                        TextSpan(
-                          text: l10n.authCreateAccount,
-                          style: LpType.body13(
-                            lp.voltText,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                const SizedBox(height: 12),
+                // Frame 28: wrong password shakes the field 2px, copy stays kind.
+                ShakeIt(
+                  key: _shakeKey,
+                  child: LpField(
+                    label: l10n.authPasswordLabel,
+                    controller: _password,
+                    focusNode: _passwordFocus,
+                    obscure: !_show,
+                    onChanged: (_) {
+                      if (_wrongPassword) {
+                        setState(() => _wrongPassword = false);
+                      }
+                    },
+                    trailing: PressScale(
+                      onTap: () => setState(() => _show = !_show),
+                      child: Text(
+                        _show ? l10n.authHidePassword : l10n.authShowPassword,
+                        style: LpType.caption(lp.textSecondary),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                if (_wrongPassword) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.authWrongPassword,
+                    style: LpType.caption(
+                      lp.dangerText,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: PressScale(
+                    onTap: () => context.push(Routes.forgot),
+                    child: Text(
+                      l10n.authForgotPassword,
+                      style: LpType.body13(
+                        lp.voltText,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                LpButton(l10n.authLogIn, busy: _busy, onTap: _logIn),
+                const SizedBox(height: 12),
+                PressScale(
+                  onTap: () => context.pushReplacement(Routes.register),
+                  child: Center(
+                    child: Text.rich(
+                      TextSpan(
+                        text: '${l10n.authNewHere} ',
+                        style: LpType.body13(lp.textSecondary),
+                        children: [
+                          TextSpan(
+                            text: l10n.authCreateAccount,
+                            style: LpType.body13(
+                              lp.voltText,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -420,14 +506,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 /// Frame 29 — inline success state, resend disabled 30s with countdown.
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _email = TextEditingController(text: 'maya@quitmail.com');
   final _emailFocus = FocusNode();
   bool _sent = false;
@@ -444,6 +531,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _send() {
     LpHaptics.light();
+    // Optimistic: the success banner shows at once, the request rides behind.
+    unawaited(
+      ref
+          .read(quitStoreProvider.notifier)
+          .requestPasswordReset(_email.text.trim()),
+    );
     setState(() {
       _sent = true;
       _cooldown = 30;
@@ -466,79 +559,81 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackChevron(onTap: () => context.pop()),
-              ),
-              const SizedBox(height: 16),
-              Text(l10n.authForgotTitle, style: LpType.title(lp.textPrimary)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.authForgotSubtitle,
-                style: LpType.body14(lp.textSecondary),
-              ),
-              const SizedBox(height: 26),
-              LpField(
-                label: l10n.authEmailLabel,
-                controller: _email,
-                focusNode: _emailFocus,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 14),
-              AnimatedOpacity(
-                opacity: _sent ? 1 : 0,
-                duration: LpMotion.normal,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 13,
-                  ),
-                  decoration: BoxDecoration(
-                    color: lp.voltSoft,
-                    borderRadius: BorderRadius.circular(LpDimens.rInput),
-                    border: Border.all(
-                      color: lp.volt.withValues(alpha: 0.35),
-                      width: 1.5,
+          child: _AuthScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BackChevron(onTap: () => context.pop()),
+                ),
+                const SizedBox(height: 16),
+                Text(l10n.authForgotTitle, style: LpType.title(lp.textPrimary)),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.authForgotSubtitle,
+                  style: LpType.body14(lp.textSecondary),
+                ),
+                const SizedBox(height: 26),
+                LpField(
+                  label: l10n.authEmailLabel,
+                  controller: _email,
+                  focusNode: _emailFocus,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 14),
+                AnimatedOpacity(
+                  opacity: _sent ? 1 : 0,
+                  duration: LpMotion.normal,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 13,
+                    ),
+                    decoration: BoxDecoration(
+                      color: lp.voltSoft,
+                      borderRadius: BorderRadius.circular(LpDimens.rInput),
+                      border: Border.all(
+                        color: lp.volt.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '✓',
+                          style: LpType.body13(
+                            lp.voltText,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l10n.authLinkSent,
+                            style: LpType.body13(lp.textBody),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        '✓',
-                        style: LpType.body13(
-                          lp.voltText,
-                          weight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          l10n.authLinkSent,
-                          style: LpType.body13(lp.textBody),
-                        ),
-                      ),
-                    ],
+                ),
+                const Spacer(),
+                Opacity(
+                  opacity: _cooldown > 0 ? 0.55 : 1,
+                  child: LpButton(
+                    _cooldown > 0
+                        ? l10n.authResendCountdown(_cooldown)
+                        : _sent
+                        ? l10n.authResendLink
+                        : l10n.commonContinue,
+                    onTap: _cooldown > 0 ? null : _send,
                   ),
                 ),
-              ),
-              const Spacer(),
-              Opacity(
-                opacity: _cooldown > 0 ? 0.55 : 1,
-                child: LpButton(
-                  _cooldown > 0
-                      ? l10n.authResendCountdown(_cooldown)
-                      : _sent
-                      ? l10n.authResendLink
-                      : l10n.commonContinue,
-                  onTap: _cooldown > 0 ? null : _send,
-                ),
-              ),
-              const SizedBox(height: 12),
-              LpTextButton(l10n.authBackToLogin, onTap: () => context.pop()),
-            ],
+                const SizedBox(height: 12),
+                LpTextButton(l10n.authBackToLogin, onTap: () => context.pop()),
+              ],
+            ),
           ),
         ),
       ),

@@ -67,6 +67,7 @@
   "authResendCountdown": "Renvoyer dans {seconds}s",
   "authBackToLogin": "Retour à la connexion",
   "authInvalidEmail": "ça ne ressemble pas à un e-mail",
+  "authEmailInUse": "cet e-mail a déjà un parcours — connecte-toi",
 
   "obProgressOf": "{step}/{total}",
   "obWelcomeCounterHint": "taffes par jour — tu vas le découvrir",

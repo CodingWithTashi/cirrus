@@ -17,6 +17,7 @@ class LpButton extends StatelessWidget {
     this.height = LpDimens.ctaHeight,
     this.fontSize = 17,
     this.glow = true,
+    this.busy = false,
   });
 
   final String label;
@@ -25,6 +26,10 @@ class LpButton extends StatelessWidget {
   final double height;
   final double fontSize;
   final bool glow;
+
+  /// While an awaited API call is in flight: taps are inert and the label
+  /// swaps for a spinner. Pixel-identical when false.
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +44,7 @@ class LpButton extends StatelessWidget {
       LpButtonStyle.surface => (lp.surface, lp.textPrimary, null),
     };
     return PressScale(
-      onTap: onTap,
+      onTap: busy ? null : onTap,
       child: Container(
         height: height,
         alignment: Alignment.center,
@@ -51,13 +56,22 @@ class LpButton extends StatelessWidget {
               : null,
           boxShadow: shadows,
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: style == LpButtonStyle.surface
-              ? LpType.emphasis(fg, size: fontSize - 2)
-              : LpType.button(fg, size: fontSize),
-        ),
+        child: busy
+            ? SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation<Color>(fg),
+                ),
+              )
+            : Text(
+                label,
+                textAlign: TextAlign.center,
+                style: style == LpButtonStyle.surface
+                    ? LpType.emphasis(fg, size: fontSize - 2)
+                    : LpType.button(fg, size: fontSize),
+              ),
       ),
     );
   }

@@ -352,6 +352,25 @@ class CoachMessage {
   final bool showWeekCard;
 }
 
+/// The coach backend's reply envelope: *what* Ember says (template + the
+/// user's real numbers), never in which language — views localize it. This is
+/// the only coach payload that crosses the wire (docs/04; the Gemini flow
+/// returns the same shape).
+class CoachReply {
+  const CoachReply({
+    required this.template,
+    this.args = const {},
+    this.showWeekCard = false,
+  });
+
+  final CoachTemplate template;
+
+  /// Numeric/string args captured server-side at reply time.
+  final Map<String, Object> args;
+
+  final bool showWeekCard;
+}
+
 /// A milestone badge definition + earned state.
 class QuitBadge {
   const QuitBadge({

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,15 +33,18 @@ class PaywallScreen extends ConsumerStatefulWidget {
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   _Tier _selected = _Tier.yearly;
+  bool _busy = false;
 
   bool get _fromOnboarding => ref.read(quitStoreProvider) == null;
 
-  void _startTrial() {
-    LpHaptics.celebrate();
+  Future<void> _startTrial() async {
+    unawaited(LpHaptics.celebrate());
     if (_fromOnboarding) {
-      ref
+      setState(() => _busy = true);
+      await ref
           .read(onboardingProvider.notifier)
           .completeWithTier(SubscriptionTier.trial);
+      if (!mounted) return;
       context.go(Routes.day1);
     } else {
       ref.read(quitStoreProvider.notifier).setTier(SubscriptionTier.premium);
@@ -276,7 +281,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 ),
               ),
               const Spacer(),
-              LpButton(l10n.paywallCta, height: 54, onTap: _startTrial),
+              LpButton(
+                l10n.paywallCta,
+                height: 54,
+                busy: _busy,
+                onTap: _startTrial,
+              ),
               const SizedBox(height: 6),
               LpTextButton(
                 l10n.paywallFreeLink,
@@ -292,11 +302,33 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 }
 
 /// D5b — pure positive framing of Free. No guilt copy anywhere.
-class FreePlanScreen extends ConsumerWidget {
+class FreePlanScreen extends ConsumerStatefulWidget {
   const FreePlanScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FreePlanScreen> createState() => _FreePlanScreenState();
+}
+
+class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
+  bool _busy = false;
+
+  Future<void> _continueFree() async {
+    final fromOnboarding = ref.read(quitStoreProvider) == null;
+    if (fromOnboarding) {
+      setState(() => _busy = true);
+      await ref
+          .read(onboardingProvider.notifier)
+          .completeWithTier(SubscriptionTier.free);
+      if (!mounted) return;
+      context.go(Routes.day1);
+    } else {
+      ref.read(quitStoreProvider.notifier).setTier(SubscriptionTier.free);
+      context.go(Routes.home);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
 
@@ -340,23 +372,7 @@ class FreePlanScreen extends ConsumerWidget {
               const Spacer(),
               LpNoteCard(l10n.freePlanUpgradeNote),
               const SizedBox(height: 14),
-              LpButton(
-                l10n.freePlanCta,
-                onTap: () {
-                  final fromOnboarding = ref.read(quitStoreProvider) == null;
-                  if (fromOnboarding) {
-                    ref
-                        .read(onboardingProvider.notifier)
-                        .completeWithTier(SubscriptionTier.free);
-                    context.go(Routes.day1);
-                  } else {
-                    ref
-                        .read(quitStoreProvider.notifier)
-                        .setTier(SubscriptionTier.free);
-                    context.go(Routes.home);
-                  }
-                },
-              ),
+              LpButton(l10n.freePlanCta, busy: _busy, onTap: _continueFree),
             ],
           ),
         ),

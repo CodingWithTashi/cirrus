@@ -73,6 +73,7 @@
   "@authResendCountdown": { "placeholders": { "seconds": { "type": "int" } } },
   "authBackToLogin": "Back to log in",
   "authInvalidEmail": "that doesn't look like an email",
+  "authEmailInUse": "that email already has a journey — log in instead",
 
   "obProgressOf": "{step}/{total}",
   "@obProgressOf": { "placeholders": { "step": { "type": "int" }, "total": { "type": "int" } } },
