@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Connectivity probe + the (future) real backend. Debug/profile builds
+         inherit this from Flutter's tooling manifests; release needs it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="LastPuff"
         android:name="${applicationName}"

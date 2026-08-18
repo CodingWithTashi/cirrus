@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../domain/repositories/repositories.dart';
 import 'fake_fixtures.dart';
 
 /// The in-memory "backend database" behind the fake APIs. Everything resets
@@ -11,10 +12,18 @@ import 'fake_fixtures.dart';
 /// clients and server-computed coach replies consistent — do not introduce
 /// ops that mutate after the delay.
 class FakeServer {
-  FakeServer({this.latency = const Duration(milliseconds: 350)});
+  FakeServer({this.latency = const Duration(milliseconds: 350), this.isOnline});
 
   /// Simulated network round-trip. Widget tests override this to zero.
   final Duration latency;
+
+  /// Synchronous read of device connectivity (wired to the connectivity
+  /// store). null = always reachable. When it reports offline, every call
+  /// fails like a real backend would — after a short "tried and gave up"
+  /// beat — without applying anything.
+  final bool Function()? isOnline;
+
+  bool get reachable => isOnline?.call() ?? true;
 
   static const demoEmail = 'maya@quitmail.com';
   static const _appleAccountId = 'apple-user';
@@ -34,8 +43,16 @@ class FakeServer {
 
   String? _sessionAccountId;
 
-  /// Applies [op] synchronously, delays only the ack.
+  /// Applies [op] synchronously, delays only the ack. Offline devices get a
+  /// [NoConnectionException] instead — checked BEFORE the op so nothing is
+  /// half-applied.
   Future<T> respond<T>(T Function() op) {
+    if (!reachable) {
+      return Future<T>.delayed(
+        latency,
+        () => throw const NoConnectionException(),
+      );
+    }
     final result = op();
     return Future<T>.delayed(latency, () => result);
   }
@@ -56,7 +73,10 @@ class FakeServer {
   /// [FakeAuthApi] before this is called.
   void signIn(String email) {
     _sessionAccountId = email;
-    _journeys.putIfAbsent(email, () => FakeFixtures.journeyJson(DateTime.now()));
+    _journeys.putIfAbsent(
+      email,
+      () => FakeFixtures.journeyJson(DateTime.now()),
+    );
   }
 
   /// Apple accounts onboard like fresh registrations: no journey until

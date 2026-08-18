@@ -11,6 +11,7 @@ import '../api/fake/fake_community_api.dart';
 import '../api/fake/fake_journey_api.dart';
 import '../api/fake/fake_server.dart';
 import '../api/journey_api.dart';
+import '../network/connectivity.dart';
 import '../repositories/api_auth_repository.dart';
 import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
@@ -34,7 +35,12 @@ final apiLatencyProvider = Provider<Duration>(
 );
 
 final fakeServerProvider = Provider<FakeServer>(
-  (ref) => FakeServer(latency: ref.watch(apiLatencyProvider)),
+  (ref) => FakeServer(
+    latency: ref.watch(apiLatencyProvider),
+    // Synchronous read on purpose (sync-apply invariant): when the device is
+    // offline the fake backend is unreachable, exactly like a real one.
+    isOnline: () => ref.read(connectivityProvider),
+  ),
 );
 
 final authApiProvider = Provider<AuthApi>(

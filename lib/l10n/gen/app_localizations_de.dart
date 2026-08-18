@@ -1206,6 +1206,55 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das waren meine 5 Gratis-Nachrichten für heute — um Mitternacht bin ich zurück. Willst du mich rund um die Uhr? Genau das ist Premium.';
 
   @override
+  String get coachConnectionLost =>
+      'Die Verbindung ist mitten im Gedanken abgerissen 😅 Ich bin noch da — sag\'s nochmal, wenn du wieder online bist?';
+
+  @override
+  String get errorOfflineBanner =>
+      'offline — deine Logs zählen, wir syncen später';
+
+  @override
+  String get errorOfflineTitle => 'Kein WLAN, kein Stress';
+
+  @override
+  String get errorOfflineBody =>
+      'Du bist gerade offline. Nichts geht verloren — verbinde dich neu und wir machen genau da weiter.';
+
+  @override
+  String get errorGenericTitle => 'Ups, das hat gehakt';
+
+  @override
+  String get errorGenericBody =>
+      'Liegt an uns, nicht an dir. Probier\'s gleich nochmal.';
+
+  @override
+  String get errorRetry => 'Nochmal';
+
+  @override
+  String get errorGotIt => 'Alles klar';
+
+  @override
+  String get errorFeedTitle => 'Der Feed lässt uns hängen';
+
+  @override
+  String get errorFeedBody =>
+      'Die Community war nicht erreichbar. Check dein Netz und probier\'s nochmal.';
+
+  @override
+  String get errorRouteTitle => 'Diese Seite gibt\'s nicht';
+
+  @override
+  String get errorRouteBody =>
+      'Was du gesucht hast, ist nicht hier. Zurück zum Wesentlichen.';
+
+  @override
+  String get errorRouteCta => 'Bring mich nach Hause';
+
+  @override
+  String get errorBackstage =>
+      'hinter den Kulissen hat was gehakt — du kannst ganz normal weitermachen';
+
+  @override
   String get coachWeekCardLabel => 'DEINE WOCHE';
 
   @override

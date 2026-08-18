@@ -14,6 +14,7 @@ import '../../core/utils/lp_haptics.dart';
 import '../../core/utils/lp_pricing.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
@@ -41,9 +42,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     unawaited(LpHaptics.celebrate());
     if (_fromOnboarding) {
       setState(() => _busy = true);
-      await ref
-          .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.trial);
+      try {
+        await ref
+            .read(onboardingProvider.notifier)
+            .completeWithTier(SubscriptionTier.trial);
+      } on Exception catch (error) {
+        // Onboarding draft survives a failed start — retry loses nothing.
+        if (!mounted) return;
+        setState(() => _busy = false);
+        await showLpErrorDialog(context, error: error, onRetry: _startTrial);
+        return;
+      }
       if (!mounted) return;
       context.go(Routes.day1);
     } else {
@@ -316,9 +325,16 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
     final fromOnboarding = ref.read(quitStoreProvider) == null;
     if (fromOnboarding) {
       setState(() => _busy = true);
-      await ref
-          .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.free);
+      try {
+        await ref
+            .read(onboardingProvider.notifier)
+            .completeWithTier(SubscriptionTier.free);
+      } on Exception catch (error) {
+        if (!mounted) return;
+        setState(() => _busy = false);
+        await showLpErrorDialog(context, error: error, onRetry: _continueFree);
+        return;
+      }
       if (!mounted) return;
       context.go(Routes.day1);
     } else {

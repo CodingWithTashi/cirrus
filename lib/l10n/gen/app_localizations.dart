@@ -2168,6 +2168,90 @@ abstract class AppLocalizations {
   /// **'That\'s my 5 free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.'**
   String get coachCapReached;
 
+  /// No description provided for @coachConnectionLost.
+  ///
+  /// In en, this message translates to:
+  /// **'Signal dropped mid-thought 😅 I\'m still right here — say that again once you\'re back online?'**
+  String get coachConnectionLost;
+
+  /// No description provided for @errorOfflineBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'offline — logs still count, we\'ll sync later'**
+  String get errorOfflineBanner;
+
+  /// No description provided for @errorOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No wifi, no worries'**
+  String get errorOfflineTitle;
+
+  /// No description provided for @errorOfflineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline right now. Nothing\'s lost — reconnect and we\'ll pick up right where you left off.'**
+  String get errorOfflineBody;
+
+  /// No description provided for @errorGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Well, that glitched'**
+  String get errorGenericTitle;
+
+  /// No description provided for @errorGenericBody.
+  ///
+  /// In en, this message translates to:
+  /// **'That one\'s on us, not you. Give it another shot in a sec.'**
+  String get errorGenericBody;
+
+  /// No description provided for @errorRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Run it back'**
+  String get errorRetry;
+
+  /// No description provided for @errorGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get errorGotIt;
+
+  /// No description provided for @errorFeedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The feed ghosted us'**
+  String get errorFeedTitle;
+
+  /// No description provided for @errorFeedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the community. Check your signal and run it back.'**
+  String get errorFeedBody;
+
+  /// No description provided for @errorRouteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This page doesn\'t exist'**
+  String get errorRouteTitle;
+
+  /// No description provided for @errorRouteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Whatever you were looking for, it\'s not here. Let\'s get you back on track.'**
+  String get errorRouteBody;
+
+  /// No description provided for @errorRouteCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Take me home'**
+  String get errorRouteCta;
+
+  /// No description provided for @errorBackstage.
+  ///
+  /// In en, this message translates to:
+  /// **'something glitched backstage — you\'re all good to keep going'**
+  String get errorBackstage;
+
   /// No description provided for @coachWeekCardLabel.
   ///
   /// In en, this message translates to:

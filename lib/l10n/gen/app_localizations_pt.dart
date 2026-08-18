@@ -1202,6 +1202,55 @@ class AppLocalizationsPt extends AppLocalizations {
       'Foram as minhas 5 mensagens grátis de hoje — volto à meia-noite. Queres-me 24/7? É isso o Premium.';
 
   @override
+  String get coachConnectionLost =>
+      'A ligação caiu a meio da ideia 😅 Continuo aqui — repetes isso quando voltares a estar online?';
+
+  @override
+  String get errorOfflineBanner =>
+      'offline — os registos contam, sincronizamos depois';
+
+  @override
+  String get errorOfflineTitle => 'Sem wifi, sem stress';
+
+  @override
+  String get errorOfflineBody =>
+      'Estás offline agora. Nada se perde — volta a ligar-te e continuamos exatamente onde ficaste.';
+
+  @override
+  String get errorGenericTitle => 'Bem, isso falhou';
+
+  @override
+  String get errorGenericBody =>
+      'A culpa é nossa, não tua. Tenta outra vez daqui a nada.';
+
+  @override
+  String get errorRetry => 'Tenta de novo';
+
+  @override
+  String get errorGotIt => 'Entendido';
+
+  @override
+  String get errorFeedTitle => 'O feed deixou-nos em visto';
+
+  @override
+  String get errorFeedBody =>
+      'Não conseguimos chegar à comunidade. Vê a tua ligação e tenta de novo.';
+
+  @override
+  String get errorRouteTitle => 'Esta página não existe';
+
+  @override
+  String get errorRouteBody =>
+      'O que procuravas não está aqui. Vamos voltar ao que interessa.';
+
+  @override
+  String get errorRouteCta => 'Leva-me para casa';
+
+  @override
+  String get errorBackstage =>
+      'algo falhou nos bastidores — podes continuar à vontade';
+
+  @override
   String get coachWeekCardLabel => 'A TUA SEMANA';
 
   @override

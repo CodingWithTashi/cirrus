@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/widgets/lp_error.dart';
 import '../data/stores/providers.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
@@ -23,6 +24,13 @@ class LastPuffApp extends ConsumerWidget {
       locale: settings.locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      // App-level chrome: the offline strip floats above every screen.
+      builder: (context, child) => Stack(
+        children: [
+          ?child,
+          const Align(alignment: Alignment.topCenter, child: OfflineBanner()),
+        ],
+      ),
     );
   }
 }

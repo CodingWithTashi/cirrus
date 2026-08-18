@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../data/stores/providers.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
@@ -59,6 +61,31 @@ abstract final class Routes {
   static const framesEdge = '/frames/edge';
 }
 
+/// Root navigator key — gives app-level error surfaces (app_errors.dart) a
+/// context that sits under Localizations and the ScaffoldMessenger.
+final lpRootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Friendly dead-end for unknown/broken routes (bad deep link, stale state).
+class RouteNotFoundScreen extends StatelessWidget {
+  const RouteNotFoundScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
+      body: SafeArea(
+        child: LpErrorState(
+          emoji: '🧭',
+          title: l10n.errorRouteTitle,
+          body: l10n.errorRouteBody,
+          retryLabel: l10n.errorRouteCta,
+          onRetry: () => context.go(Routes.splash),
+        ),
+      ),
+    );
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
   ref.onDispose(refresh.dispose);
@@ -67,9 +94,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   bool hasJourney() => ref.read(quitStoreProvider) != null;
 
   return GoRouter(
+    navigatorKey: lpRootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     debugLogDiagnostics: kDebugMode,
+    errorBuilder: (_, _) => const RouteNotFoundScreen(),
     redirect: (context, state) {
       final path = state.uri.path;
       final authed = hasJourney();

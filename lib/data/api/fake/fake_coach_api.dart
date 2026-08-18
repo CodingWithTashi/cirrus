@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../../domain/models/journey_state.dart';
 import '../../../domain/models/models.dart';
+import '../../../domain/repositories/repositories.dart';
 import '../../dto/coach_codec.dart';
 import '../../dto/codec_helpers.dart';
 import '../../dto/journey_codec.dart';
@@ -27,6 +28,13 @@ class FakeCoachApi implements CoachApi {
         ? Duration.zero
         : Duration(milliseconds: 700 + _random.nextInt(700));
 
+    if (!_server.reachable) {
+      return Future.delayed(
+        thinking,
+        () => throw const NoConnectionException(),
+      );
+    }
+
     final chip = enumByNameOrNull(CoachChip.values, request['chip']);
     final template = (request['capped'] as bool? ?? false)
         ? CoachTemplate.capReached
@@ -51,10 +59,7 @@ class FakeCoachApi implements CoachApi {
       CoachTemplate.craving2,
       CoachTemplate.craving3,
     ]),
-    CoachChip.roughDay => _rotate([
-      CoachTemplate.rough1,
-      CoachTemplate.rough2,
-    ]),
+    CoachChip.roughDay => _rotate([CoachTemplate.rough1, CoachTemplate.rough2]),
     CoachChip.slipped => _rotate([CoachTemplate.slip1, CoachTemplate.slip2]),
     CoachChip.progress => _rotate([
       CoachTemplate.progress1,

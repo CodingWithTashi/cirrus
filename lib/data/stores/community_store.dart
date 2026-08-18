@@ -6,15 +6,21 @@ import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import 'providers.dart';
 
+/// Lifecycle of the feed's initial fetch. Mutations after `ready` stay
+/// optimistic and never regress the status.
+enum FeedStatus { loading, ready, failed }
+
 class CommunityState {
   const CommunityState({
     required this.posts,
+    this.status = FeedStatus.loading,
     this.blocked = const {},
     this.muted = const {},
     this.nudgesToday = 0,
   });
 
   final List<Post> posts;
+  final FeedStatus status;
   final Set<String> blocked;
 
   /// Muted authors: their posts hide for you, without mutual invisibility.
@@ -49,11 +55,13 @@ class CommunityState {
 
   CommunityState copyWith({
     List<Post>? posts,
+    FeedStatus? status,
     Set<String>? blocked,
     Set<String>? muted,
     int? nudgesToday,
   }) => CommunityState(
     posts: posts ?? this.posts,
+    status: status ?? this.status,
     blocked: blocked ?? this.blocked,
     muted: muted ?? this.muted,
     nudgesToday: nudgesToday ?? this.nudgesToday,
@@ -65,21 +73,40 @@ class CommunityState {
 class CommunityStore extends Notifier<CommunityState> {
   int _reportCounts = 0;
 
+  bool Function() _alive = () => false;
+
   @override
   CommunityState build() {
     // Riverpod 2.x Notifiers have no `ref.mounted`; guard the async load
     // against provider invalidation (sign-out) mid-fetch.
     var alive = true;
     ref.onDispose(() => alive = false);
-    unawaited(_load(() => alive));
+    _alive = () => alive;
+    unawaited(_load());
     return const CommunityState(posts: []);
   }
 
   CommunityRepository get _repo => ref.read(communityRepositoryProvider);
 
-  Future<void> _load(bool Function() alive) async {
-    final posts = await _repo.fetchPosts();
-    if (alive()) state = state.copyWith(posts: posts);
+  Future<void> _load() async {
+    try {
+      final posts = await _repo.fetchPosts();
+      if (_alive()) {
+        state = state.copyWith(posts: posts, status: FeedStatus.ready);
+      }
+    } on Exception {
+      // Offline or backend hiccup — the screen offers "run it back".
+      if (_alive() && state.status == FeedStatus.loading) {
+        state = state.copyWith(status: FeedStatus.failed);
+      }
+    }
+  }
+
+  /// Retry CTA on the feed's error state.
+  Future<void> retryFeed() async {
+    if (state.status == FeedStatus.loading) return;
+    state = state.copyWith(status: FeedStatus.loading);
+    await _load();
   }
 
   List<Post> get posts => state.posts;
@@ -130,7 +157,7 @@ class CommunityStore extends Notifier<CommunityState> {
       hidden: violatesCommunityRules(text),
     );
     state = state.copyWith(posts: [post, ...state.posts]);
-    unawaited(_repo.addPost(post));
+    _repo.addPost(post).ignore();
     ref.read(quitStoreProvider.notifier).awardBadge('firstPost');
   }
 
@@ -155,7 +182,7 @@ class CommunityStore extends Notifier<CommunityState> {
             ),
       ],
     );
-    unawaited(_repo.setReaction(postId, emoji, on: on));
+    _repo.setReaction(postId, emoji, on: on).ignore();
   }
 
   void addReply(String postId, String text) {
@@ -171,7 +198,7 @@ class CommunityStore extends Notifier<CommunityState> {
           if (p.id != postId) p else p.copyWith(replies: [...p.replies, reply]),
       ],
     );
-    unawaited(_repo.addReply(postId, reply));
+    _repo.addReply(postId, reply).ignore();
     final post = state.posts.firstWhere((p) => p.id == postId);
     if (post.tag == PostTag.sos && !post.isMine) {
       ref.read(quitStoreProvider.notifier).awardBadge('helpedSos');
@@ -189,13 +216,13 @@ class CommunityStore extends Notifier<CommunityState> {
         ],
       );
     }
-    unawaited(_repo.reportPost(postId));
+    _repo.reportPost(postId).ignore();
   }
 
   void blockAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(blocked: {...state.blocked, post.alias});
-    unawaited(_repo.blockAuthor(post.alias));
+    _repo.blockAuthor(post.alias).ignore();
   }
 
   void muteAuthor(String postId) {
@@ -211,7 +238,7 @@ class CommunityStore extends Notifier<CommunityState> {
   void nudgeBuddy() {
     if (nudgesLeftToday == 0) return;
     state = state.copyWith(nudgesToday: state.nudgesToday + 1);
-    unawaited(_repo.nudgeBuddy());
+    _repo.nudgeBuddy().ignore();
     ref.read(quitStoreProvider.notifier).awardBadge('buddyBond');
   }
 }

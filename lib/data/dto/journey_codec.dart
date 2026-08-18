@@ -10,7 +10,8 @@ abstract final class JourneyCodec {
     'profile': encodeProfile(s.profile),
     'plan': encodePlan(s.plan),
     'days': {
-      for (final e in s.days.entries) encodeDayKey(e.key): _encodeDayLog(e.value),
+      for (final e in s.days.entries)
+        encodeDayKey(e.key): _encodeDayLog(e.value),
     },
     'cravingsSurvivedTotal': s.cravingsSurvivedTotal,
     'repairTokens': s.repairTokens,

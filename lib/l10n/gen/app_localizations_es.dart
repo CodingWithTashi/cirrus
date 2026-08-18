@@ -1202,6 +1202,55 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esos son mis 5 mensajes gratis de hoy — vuelvo a medianoche. ¿Me quieres 24/7? Eso es Premium.';
 
   @override
+  String get coachConnectionLost =>
+      'Se cortó la señal a mitad de idea 😅 Sigo aquí — ¿me lo repites cuando vuelvas a estar en línea?';
+
+  @override
+  String get errorOfflineBanner =>
+      'sin conexión — todo cuenta, sincronizamos luego';
+
+  @override
+  String get errorOfflineTitle => 'Sin wifi, sin drama';
+
+  @override
+  String get errorOfflineBody =>
+      'Ahora mismo estás sin conexión. No se pierde nada — reconecta y seguimos justo donde lo dejaste.';
+
+  @override
+  String get errorGenericTitle => 'Vaya, eso falló';
+
+  @override
+  String get errorGenericBody =>
+      'Es cosa nuestra, no tuya. Inténtalo otra vez en un momento.';
+
+  @override
+  String get errorRetry => 'Otra vez';
+
+  @override
+  String get errorGotIt => 'Vale';
+
+  @override
+  String get errorFeedTitle => 'El feed nos dejó en visto';
+
+  @override
+  String get errorFeedBody =>
+      'No pudimos llegar a la comunidad. Revisa tu señal e inténtalo otra vez.';
+
+  @override
+  String get errorRouteTitle => 'Esta página no existe';
+
+  @override
+  String get errorRouteBody =>
+      'Lo que buscabas no está aquí. Volvamos a lo importante.';
+
+  @override
+  String get errorRouteCta => 'Llévame a casa';
+
+  @override
+  String get errorBackstage =>
+      'algo falló entre bastidores — puedes seguir tranquilo';
+
+  @override
   String get coachWeekCardLabel => 'TU SEMANA';
 
   @override

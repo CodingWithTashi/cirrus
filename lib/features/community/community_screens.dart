@@ -12,10 +12,11 @@ import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
-import '../../data/stores/community_store.dart' show CommunityStore;
+import '../../data/stores/community_store.dart' show CommunityStore, FeedStatus;
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 
@@ -111,7 +112,29 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: posts.isEmpty
+              child: posts.isEmpty && community.status == FeedStatus.loading
+                  ? Center(
+                      child: SizedBox(
+                        width: 26,
+                        height: 26,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            lp.textFaint,
+                          ),
+                        ),
+                      ),
+                    )
+                  : posts.isEmpty && community.status == FeedStatus.failed
+                  ? LpErrorState(
+                      emoji: '📡',
+                      title: l10n.errorFeedTitle,
+                      body: l10n.errorFeedBody,
+                      retryLabel: l10n.errorRetry,
+                      onRetry: () =>
+                          ref.read(communityStoreProvider.notifier).retryFeed(),
+                    )
+                  : posts.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32),

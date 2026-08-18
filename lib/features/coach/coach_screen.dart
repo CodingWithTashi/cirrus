@@ -104,6 +104,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       CoachTemplate.generic4 => l10n.coachReplyGeneric4,
       CoachTemplate.party => l10n.coachReplyParty(i('count')),
       CoachTemplate.capReached => l10n.coachCapReached,
+      CoachTemplate.connectionLost => l10n.coachConnectionLost,
     };
   }
 

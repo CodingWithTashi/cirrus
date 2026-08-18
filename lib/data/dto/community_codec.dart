@@ -32,10 +32,13 @@ abstract final class PostCodec {
     seedTextId: json['seedTextId'] as String?,
     createdAt: decodeTimestamp(json['createdAt'] as String),
     reactions: {
-      for (final e in (json['reactions'] as Map<String, dynamic>? ?? const {}).entries)
+      for (final e
+          in (json['reactions'] as Map<String, dynamic>? ?? const {}).entries)
         e.key: (e.value as num).toInt(),
     },
-    myReactions: (json['myReactions'] as List? ?? const []).cast<String>().toSet(),
+    myReactions: (json['myReactions'] as List? ?? const [])
+        .cast<String>()
+        .toSet(),
     replies: [
       for (final r in json['replies'] as List? ?? const [])
         decodeReply(r as Map<String, dynamic>),

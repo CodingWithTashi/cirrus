@@ -44,9 +44,8 @@ void main() {
         expect(e.value.date, e.key);
       }
       // The hard-but-held Thursday (day 7: 133 puffs) with its hour buckets.
-      final day7 = decoded.days[journey.plan.startDate.add(
-        const Duration(days: 6),
-      )]!;
+      final day7 =
+          decoded.days[journey.plan.startDate.add(const Duration(days: 6))]!;
       expect(day7.puffs, 133);
       expect(day7.hourBuckets, isNotEmpty);
       expect(day7.moodNote, 'work party tonight, nervous');

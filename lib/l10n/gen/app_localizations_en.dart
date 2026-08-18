@@ -1196,6 +1196,55 @@ class AppLocalizationsEn extends AppLocalizations {
       'That\'s my 5 free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.';
 
   @override
+  String get coachConnectionLost =>
+      'Signal dropped mid-thought 😅 I\'m still right here — say that again once you\'re back online?';
+
+  @override
+  String get errorOfflineBanner =>
+      'offline — logs still count, we\'ll sync later';
+
+  @override
+  String get errorOfflineTitle => 'No wifi, no worries';
+
+  @override
+  String get errorOfflineBody =>
+      'You\'re offline right now. Nothing\'s lost — reconnect and we\'ll pick up right where you left off.';
+
+  @override
+  String get errorGenericTitle => 'Well, that glitched';
+
+  @override
+  String get errorGenericBody =>
+      'That one\'s on us, not you. Give it another shot in a sec.';
+
+  @override
+  String get errorRetry => 'Run it back';
+
+  @override
+  String get errorGotIt => 'Got it';
+
+  @override
+  String get errorFeedTitle => 'The feed ghosted us';
+
+  @override
+  String get errorFeedBody =>
+      'Couldn\'t reach the community. Check your signal and run it back.';
+
+  @override
+  String get errorRouteTitle => 'This page doesn\'t exist';
+
+  @override
+  String get errorRouteBody =>
+      'Whatever you were looking for, it\'s not here. Let\'s get you back on track.';
+
+  @override
+  String get errorRouteCta => 'Take me home';
+
+  @override
+  String get errorBackstage =>
+      'something glitched backstage — you\'re all good to keep going';
+
+  @override
   String get coachWeekCardLabel => 'YOUR WEEK';
 
   @override

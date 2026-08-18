@@ -33,6 +33,15 @@ Strict MVVM with Riverpod 2.x `Notifier`s as view models, layered as a one-way d
 - `lib/app/` — `app_router.dart` (go_router with a `StatefulShellRoute` 4-tab shell: Home/Stats/Community/Coach; all route paths live in the `Routes` class) and the theme. The router redirects journey-requiring paths to `/auth` while `journey == null`, but **deliberately allows authed visits to `/auth` and `/onboarding`** so the Frame Map can preview every screen — don't "fix" that. Lifecycle callers must set journey state **before** navigating into gated paths (awaiting the store call does this).
 - `lib/core/` — shared widgets (`LpCard`, `LpChip`, charts, `RollingNumber`, `ProgressRing`, `NewIdConfetti`, `PushPreviewCard`, …) and utils. **All price strings and the invite URL live only in `core/utils/lp_pricing.dart` (`LpPricing`/`LpLinks`)** — reuse, don't duplicate.
 
+### Error handling
+
+Every failure has a designated friendly surface — never invent per-screen phrasing or let an error escape raw:
+
+- **Taxonomy**: repositories throw `NoConnectionException` (offline) or auth-specific `AuthException`s (`domain/repositories`). `data/network/connectivity.dart` polls a DNS probe (5s); `FakeServer` reads it synchronously and becomes unreachable offline, exactly like a real backend.
+- **Surfaces** (all in `core/widgets/lp_error.dart` unless noted): app-level offline pill overlaid via `MaterialApp.builder` (`OfflineBanner`); `showLpErrorDialog(context, error:, onRetry:)` for awaited lifecycle CTAs — `lpErrorCopy` picks offline vs generic copy; `LpErrorState` for failed content areas (community feed pattern: `FeedStatus` + `retryFeed()`); go_router `errorBuilder` → `RouteNotFoundScreen`; the coach fails in-thread via `CoachTemplate.connectionLost` (and refunds the free message); `LpCrashScreen` (core/widgets) replaces the red error box — it may render in a broken tree, so it's the ONE place with non-ARB copy and raw palette hexes (annotated); `LpErrors.install()` (app/app_errors.dart, called in main) routes uncaught async errors to a throttled "backstage" snack.
+- **Local-first stance**: optimistic mutations `.ignore()` wire failures (`_commit`, community write-behinds) — the banner tells the story; never surface a dialog for a background save. `restoreSession` failure lands on sign-in, never a stuck splash.
+- **Tests**: anything that pumps the app or wires the fake backend must use `fastBackendOverrides()` from `test/helpers.dart` (zero latency + polling off; `online: false` simulates airplane mode). Error surfaces are covered in `test/widgets/error_handling_test.dart`.
+
 ### Demo model
 
 Email login (any email; password < 6 chars = "wrong", enforced in `FakeAuthApi`, not views) restores the seeded day-12 journey (@quietfox). "Sign in with Apple"/register open a fresh account → 19-step onboarding → paywall → the backend creates the day-1 journey. Within one app session, mutations persist across logout→login (write-behind JSON on `FakeServer`); registering the demo email `maya@quitmail.com` fails as already-in-use. The Frame Map (`/frames`, reachable from the sign-in screen and Settings) lists all 52 design frames; `seedDemoJourney()` keeps its jumps synchronous — don't make them await.
@@ -66,3 +75,5 @@ Zero hardcoded UI strings. ARB files in `lib/l10n/app_{en,es,fr,de,pt}.arb`, gen
 - `PanicFlow` clears snackbars on entry (the 5s undo snack otherwise outlives the route push and covers "Skip to my why").
 - `showLpSnack` carries a fallback timer that force-closes the snack at `duration + 250ms` — the framework skips its own timeout for action snack bars under accessible navigation (which some environments report spuriously), leaving "Undo" snacks up forever. Don't remove it; route all snacks through `showLpSnack`.
 - Auth form screens (Register/Login/Forgot) wrap their Column in `_AuthScrollView` (scroll under min-height + `IntrinsicHeight`, same idiom as the community composer) — a bare Column overflows when the keyboard opens.
+- The FakeServer's connectivity gate reads the connectivity store **synchronously** (never await a probe inside `respond`) — an async gap there breaks the sync-apply invariant.
+- App-pumping tests without `fastBackendOverrides()` do real DNS lookups and leak the 5s poll timer.

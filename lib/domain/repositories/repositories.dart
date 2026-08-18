@@ -83,3 +83,10 @@ final class InvalidCredentialsException extends AuthException {
 final class EmailAlreadyInUseException extends AuthException {
   const EmailAlreadyInUseException();
 }
+
+/// The device can't reach the backend (airplane mode, dead wifi, tunnel…).
+/// Thrown by every repository operation that needs the wire; views map it to
+/// the friendly offline surfaces, never to a generic failure.
+final class NoConnectionException implements Exception {
+  const NoConnectionException();
+}

@@ -31,19 +31,27 @@ class JourneyStore extends Notifier<JourneyState?> {
   DateTime get _todayKey => JourneyState.dateKey(_now);
 
   /// Applies a mutation locally and syncs it to the backend write-behind.
+  /// A failed save (offline…) is deliberately swallowed: the app is
+  /// local-first and the offline banner already tells the story — a real
+  /// sync layer with a retry queue slots in here later.
   void _commit(JourneyState next) {
     state = next;
-    unawaited(_journeys.save(next));
+    _journeys.save(next).ignore();
   }
 
   // ---- session lifecycle (awaited API calls) --------------------------------
 
   /// Splash-time restore. Never clobbers an already-live journey (the frame
-  /// map and tests seed state before navigation).
+  /// map and tests seed state before navigation), and never blocks launch on
+  /// a dead connection — no session restored simply lands on sign-in.
   Future<void> restoreSession() async {
     if (state != null) return;
-    final restored = await _auth.restoreSession();
-    if (restored != null && state == null) state = restored;
+    try {
+      final restored = await _auth.restoreSession();
+      if (restored != null && state == null) state = restored;
+    } on Exception {
+      // Offline or backend hiccup at launch — proceed signed out.
+    }
   }
 
   /// Throws [InvalidCredentialsException] on a wrong password.
@@ -77,12 +85,12 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Optimistic: signed out locally at once, the API ack is write-behind.
   void signOut() {
     state = null;
-    unawaited(_auth.signOut());
+    _auth.signOut().ignore();
   }
 
   void deleteAccount() {
     state = null;
-    unawaited(_auth.deleteAccount());
+    _auth.deleteAccount().ignore();
   }
 
   /// Frame-map/dev shortcut: seeds the demo journey synchronously (no router

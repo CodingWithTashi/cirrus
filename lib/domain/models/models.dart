@@ -306,6 +306,10 @@ enum CoachTemplate {
   generic4,
   party,
   capReached,
+
+  /// Client-side fallback when the coach backend is unreachable — the only
+  /// template a store may fabricate without a backend reply.
+  connectionLost,
 }
 
 class CoachMessage {

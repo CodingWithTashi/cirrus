@@ -93,11 +93,30 @@ class CoachStore extends Notifier<CoachState> {
       freeUsedToday: state.freeUsedToday + 1,
     );
 
-    final reply = await _repo.requestReply(
-      text: userText,
-      chip: chip,
-      capped: capped,
-    );
+    CoachReply reply;
+    try {
+      reply = await _repo.requestReply(
+        text: userText,
+        chip: chip,
+        capped: capped,
+      );
+    } on Exception {
+      // Offline or backend hiccup: Ember owns the miss in-thread, and the
+      // attempt doesn't burn a free message.
+      if (!_alive()) return;
+      state = state.copyWith(
+        isTyping: false,
+        freeUsedToday: (state.freeUsedToday - 1).clamp(0, 1 << 20),
+        messages: [
+          ...state.messages,
+          CoachMessage.ember(
+            id: _nextId(),
+            template: CoachTemplate.connectionLost,
+          ),
+        ],
+      );
+      return;
+    }
 
     // Sign-out invalidates this store while Ember is "typing".
     if (!_alive()) return;

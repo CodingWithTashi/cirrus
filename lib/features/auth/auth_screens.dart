@@ -12,6 +12,7 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
@@ -34,9 +35,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _appleBusy = true);
     // A new Apple account onboards; one that already onboarded (this app
     // session) gets its journey restored from the backend.
-    final restored = await ref
-        .read(quitStoreProvider.notifier)
-        .signInWithApple();
+    final bool restored;
+    try {
+      restored = await ref.read(quitStoreProvider.notifier).signInWithApple();
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() => _appleBusy = false);
+      await showLpErrorDialog(context, error: error, onRetry: _signInApple);
+      return;
+    }
     if (!mounted) return;
     setState(() => _appleBusy = false);
     context.go(restored ? Routes.home : Routes.onboarding);
@@ -221,6 +228,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() => _busy = false);
       showLpSnack(context, context.l10n.authEmailInUse);
       return;
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await showLpErrorDialog(context, error: error, onRetry: _createAccount);
+      return;
     }
     if (!mounted) return;
     ref.read(onboardingProvider.notifier).setEmail(email);
@@ -391,6 +403,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       });
       _shakeKey.currentState?.shake();
       return;
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await showLpErrorDialog(context, error: error, onRetry: _logIn);
+      return;
     }
     if (!mounted) return;
     context.go(Routes.home);
@@ -531,12 +548,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   void _send() {
     LpHaptics.light();
-    // Optimistic: the success banner shows at once, the request rides behind.
-    unawaited(
-      ref
-          .read(quitStoreProvider.notifier)
-          .requestPasswordReset(_email.text.trim()),
-    );
+    // Optimistic: the success banner shows at once, the request rides behind
+    // (a real backend re-sends on the next tap if this one got lost).
+    ref
+        .read(quitStoreProvider.notifier)
+        .requestPasswordReset(_email.text.trim())
+        .ignore();
     setState(() {
       _sent = true;
       _cooldown = 30;

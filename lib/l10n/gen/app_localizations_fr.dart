@@ -1201,6 +1201,55 @@ class AppLocalizationsFr extends AppLocalizations {
       'C\'étaient mes 5 messages gratuits du jour — je reviens à minuit. Tu me veux 24h/24 ? C\'est ça, Premium.';
 
   @override
+  String get coachConnectionLost =>
+      'La connexion a lâché en pleine phrase 😅 Je suis toujours là — redis-moi ça quand tu repasses en ligne ?';
+
+  @override
+  String get errorOfflineBanner =>
+      'hors ligne — tes logs comptent, on synchronise après';
+
+  @override
+  String get errorOfflineTitle => 'Pas de wifi, pas de panique';
+
+  @override
+  String get errorOfflineBody =>
+      'Tu es hors ligne. Rien n\'est perdu — reconnecte-toi et on reprend exactement où tu en étais.';
+
+  @override
+  String get errorGenericTitle => 'Bon, ça a buggé';
+
+  @override
+  String get errorGenericBody =>
+      'C\'est nous, pas toi. Réessaie dans un instant.';
+
+  @override
+  String get errorRetry => 'On retente';
+
+  @override
+  String get errorGotIt => 'Compris';
+
+  @override
+  String get errorFeedTitle => 'Le feed nous a ghostés';
+
+  @override
+  String get errorFeedBody =>
+      'Impossible de joindre la communauté. Vérifie ta connexion et retente.';
+
+  @override
+  String get errorRouteTitle => 'Cette page n\'existe pas';
+
+  @override
+  String get errorRouteBody =>
+      'Ce que tu cherchais n\'est pas ici. On te ramène en lieu sûr.';
+
+  @override
+  String get errorRouteCta => 'Ramène-moi à l\'accueil';
+
+  @override
+  String get errorBackstage =>
+      'petit bug en coulisses — tu peux continuer tranquille';
+
+  @override
   String get coachWeekCardLabel => 'TA SEMAINE';
 
   @override
