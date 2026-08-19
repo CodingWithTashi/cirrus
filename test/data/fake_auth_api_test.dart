@@ -26,7 +26,7 @@ void main() {
       email: 'someone@else.com',
       password: 'hunter22',
     );
-    final journey = JourneyCodec.decode(json);
+    final journey = JourneyCodec.decode(json!);
     expect(journey.profile.alias, '@quietfox');
     expect(journey.plan.baselinePuffsPerDay, 200);
     expect(journey.plan.dayNumber(DateTime.now()), 12);
@@ -66,9 +66,9 @@ void main() {
     // Onboarding completes → the backend creates the journey.
     final journeys = FakeJourneyApi(server);
     final demo = JourneyCodec.decode(
-      await FakeAuthApi(
+      (await FakeAuthApi(
         FakeServer(latency: Duration.zero),
-      ).signInWithEmail(email: FakeServer.demoEmail, password: 'secret1'),
+      ).signInWithEmail(email: FakeServer.demoEmail, password: 'secret1'))!,
     );
     await journeys.createJourney(
       profile: JourneyCodec.encodeProfile(demo.profile),
@@ -77,6 +77,25 @@ void main() {
 
     await auth.signOut();
     expect(await auth.signInWithApple(), isNotNull);
+  });
+
+  test('Google sign-in onboards first, restores its journey after', () async {
+    expect(await auth.signInWithGoogle(), isNull);
+
+    // Onboarding completes → the backend creates the journey.
+    final journeys = FakeJourneyApi(server);
+    final demo = JourneyCodec.decode(
+      (await FakeAuthApi(
+        FakeServer(latency: Duration.zero),
+      ).signInWithEmail(email: FakeServer.demoEmail, password: 'secret1'))!,
+    );
+    await journeys.createJourney(
+      profile: JourneyCodec.encodeProfile(demo.profile),
+      plan: JourneyCodec.encodePlan(demo.plan),
+    );
+
+    await auth.signOut();
+    expect(await auth.signInWithGoogle(), isNotNull);
   });
 
   test('deleteAccount removes the journey', () async {

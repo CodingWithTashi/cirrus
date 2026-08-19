@@ -8,14 +8,18 @@ abstract interface class AuthApi {
   /// that has not onboarded yet).
   Future<Map<String, dynamic>?> restoreSession();
 
-  /// Journey JSON on success; throws [InvalidCredentialsException].
-  Future<Map<String, dynamic>> signInWithEmail({
+  /// Journey JSON on success; null for an account without a journey yet
+  /// (→ onboarding). Throws [InvalidCredentialsException].
+  Future<Map<String, dynamic>?> signInWithEmail({
     required String email,
     required String password,
   });
 
   /// Journey JSON when the Apple account already has one; null → onboarding.
   Future<Map<String, dynamic>?> signInWithApple();
+
+  /// Journey JSON when the Google account already has one; null → onboarding.
+  Future<Map<String, dynamic>?> signInWithGoogle();
 
   /// Creates the account and opens a session (no journey yet);
   /// throws [EmailAlreadyInUseException].

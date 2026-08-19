@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,15 +30,30 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _appleBusy = false;
+  bool _googleBusy = false;
+
+  /// Native identity buttons follow the device — Apple on Apple platforms,
+  /// Google on Android; email is always available.
+  static bool get _showApple =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  static bool get _showGoogle =>
+      defaultTargetPlatform == TargetPlatform.android;
 
   Future<void> _signInApple() async {
     if (_appleBusy) return;
     setState(() => _appleBusy = true);
-    // A new Apple account onboards; one that already onboarded (this app
-    // session) gets its journey restored from the backend.
+    // A new Apple account onboards; one that already onboarded gets its
+    // journey restored from the backend.
     final bool restored;
     try {
       restored = await ref.read(quitStoreProvider.notifier).signInWithApple();
+    } on SignInCancelledException {
+      // Dismissed the native sheet — not an error.
+      if (!mounted) return;
+      setState(() => _appleBusy = false);
+      return;
     } on Exception catch (error) {
       if (!mounted) return;
       setState(() => _appleBusy = false);
@@ -46,6 +62,28 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
     if (!mounted) return;
     setState(() => _appleBusy = false);
+    context.go(restored ? Routes.home : Routes.onboarding);
+  }
+
+  Future<void> _signInGoogle() async {
+    if (_googleBusy) return;
+    setState(() => _googleBusy = true);
+    final bool restored;
+    try {
+      restored = await ref.read(quitStoreProvider.notifier).signInWithGoogle();
+    } on SignInCancelledException {
+      // Dismissed the native sheet — not an error.
+      if (!mounted) return;
+      setState(() => _googleBusy = false);
+      return;
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() => _googleBusy = false);
+      await showLpErrorDialog(context, error: error, onRetry: _signInGoogle);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _googleBusy = false);
     context.go(restored ? Routes.home : Routes.onboarding);
   }
 
@@ -73,52 +111,63 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 style: LpType.body14(lp.textSecondary),
               ),
               const SizedBox(height: 32),
-              PressScale(
-                onTap: _appleBusy ? null : _signInApple,
-                child: Container(
-                  height: LpDimens.ctaHeight,
-                  decoration: BoxDecoration(
-                    // Apple HIG button colors, not theme tokens on purpose:
-                    // white-on-dark / black-on-light, exactly as Apple ships.
-                    color: lp.isDark ? Colors.white : const Color(0xFF111419),
-                    borderRadius: BorderRadius.circular(LpDimens.rButton),
-                  ),
-                  child: _appleBusy
-                      ? Center(
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                lp.isDark ? Colors.black : Colors.white,
+              if (_showApple) ...[
+                PressScale(
+                  onTap: _appleBusy ? null : _signInApple,
+                  child: Container(
+                    height: LpDimens.ctaHeight,
+                    decoration: BoxDecoration(
+                      // Apple HIG button colors, not theme tokens on purpose:
+                      // white-on-dark / black-on-light, exactly as Apple ships.
+                      color: lp.isDark ? Colors.white : const Color(0xFF111419),
+                      borderRadius: BorderRadius.circular(LpDimens.rButton),
+                    ),
+                    child: _appleBusy
+                        ? Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  lp.isDark ? Colors.black : Colors.white,
+                                ),
                               ),
                             ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.apple,
+                                size: 24,
+                                color: lp.isDark ? Colors.black : Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.authSignInWithApple,
+                                style: LpType.emphasis(
+                                  lp.isDark
+                                      ? Colors.black
+                                      : const Color(0xFFFDFDFC),
+                                  size: 17,
+                                ),
+                              ),
+                            ],
                           ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.apple,
-                              size: 24,
-                              color: lp.isDark ? Colors.black : Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.authSignInWithApple,
-                              style: LpType.emphasis(
-                                lp.isDark
-                                    ? Colors.black
-                                    : const Color(0xFFFDFDFC),
-                                size: 17,
-                              ),
-                            ),
-                          ],
-                        ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
+              if (_showGoogle) ...[
+                LpButton(
+                  l10n.authSignInWithGoogle,
+                  style: LpButtonStyle.surface,
+                  busy: _googleBusy,
+                  onTap: _signInGoogle,
+                ),
+                const SizedBox(height: 12),
+              ],
               LpButton(
                 l10n.authContinueWithEmail,
                 style: LpButtonStyle.surface,
@@ -389,11 +438,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _logIn() async {
     LpHaptics.medium();
+    final email = _email.text.trim();
     setState(() => _busy = true);
+    final bool restored;
     try {
-      await ref
+      restored = await ref
           .read(quitStoreProvider.notifier)
-          .logIn(email: _email.text.trim(), password: _password.text);
+          .logIn(email: email, password: _password.text);
     } on InvalidCredentialsException {
       // Frame 28: wrong password shakes the field 2px, copy stays kind.
       if (!mounted) return;
@@ -410,7 +461,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     if (!mounted) return;
-    context.go(Routes.home);
+    if (restored) {
+      context.go(Routes.home);
+    } else {
+      // Registered but never onboarded — the backend has no journey yet.
+      ref.read(onboardingProvider.notifier).setEmail(email);
+      context.go(Routes.onboarding);
+    }
   }
 
   @override

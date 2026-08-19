@@ -119,7 +119,8 @@ void main() {
     await tester.tap(find.text('Take me home'));
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text('Sign in with Apple'), findsOneWidget);
+    // Signed out → sign-in; the test platform (android) shows Google.
+    expect(find.text('Sign in with Google'), findsOneWidget);
   });
 
   testWidgets('a crashed subtree renders the friendly crash screen', (

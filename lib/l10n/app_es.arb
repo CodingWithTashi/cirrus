@@ -37,6 +37,7 @@
   "authSignInTitle": "Vamos a proteger\ntu plan.",
   "authSignInSubtitle": "Anónimo por defecto — elegirás un alias para la comunidad.",
   "authSignInWithApple": "Iniciar sesión con Apple",
+  "authSignInWithGoogle": "Iniciar sesión con Google",
   "authContinueWithEmail": "Continuar con email",
   "authWhyAccountDivider": "¿por qué una cuenta?",
   "authWhyAccountCard": "Tu racha, tu plan y la memoria de tu coach se sincronizan entre dispositivos. 🔒 Nunca vendemos tus datos. Sin rastreadores de anuncios. Jamás.",

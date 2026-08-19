@@ -27,6 +27,7 @@ class FakeServer {
 
   static const demoEmail = 'maya@quitmail.com';
   static const _appleAccountId = 'apple-user';
+  static const _googleAccountId = 'google-user';
   static const _guestAccountId = 'guest';
 
   /// email → password. The demo account exists implicitly (see [signIn]).
@@ -82,6 +83,9 @@ class FakeServer {
   /// Apple accounts onboard like fresh registrations: no journey until
   /// createJourney. Returns the account's journey if one already exists.
   void signInApple() => _sessionAccountId = _appleAccountId;
+
+  /// Same model as [signInApple], for the Google button.
+  void signInGoogle() => _sessionAccountId = _googleAccountId;
 
   void register(String email, String password) {
     _accounts[email] = password;

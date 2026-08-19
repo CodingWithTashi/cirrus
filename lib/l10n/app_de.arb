@@ -37,6 +37,7 @@
   "authSignInTitle": "Bringen wir deinen\nPlan in Sicherheit.",
   "authSignInSubtitle": "Standardmäßig anonym — für die Community wählst du einen Alias.",
   "authSignInWithApple": "Mit Apple anmelden",
+  "authSignInWithGoogle": "Mit Google anmelden",
   "authContinueWithEmail": "Mit E-Mail fortfahren",
   "authWhyAccountDivider": "warum ein Konto?",
   "authWhyAccountCard": "Deine Serie, dein Plan und das Gedächtnis deines Coaches syncen über Geräte. 🔒 Wir verkaufen nie deine Daten. Keine Werbe-Tracker. Niemals.",

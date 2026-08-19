@@ -54,15 +54,30 @@ class JourneyStore extends Notifier<JourneyState?> {
     }
   }
 
-  /// Throws [InvalidCredentialsException] on a wrong password.
-  Future<void> logIn({required String email, required String password}) async {
-    state = await _auth.signInWithEmail(email: email, password: password);
+  /// Returns true when the account had a journey to restore; false → the
+  /// account registered but never onboarded — route to onboarding. Throws
+  /// [InvalidCredentialsException] on a wrong password.
+  Future<bool> logIn({required String email, required String password}) async {
+    final restored = await _auth.signInWithEmail(
+      email: email,
+      password: password,
+    );
+    if (restored != null) state = restored;
+    return restored != null;
   }
 
   /// Returns true when the Apple account already had a journey to restore;
   /// false → route to onboarding.
   Future<bool> signInWithApple() async {
     final restored = await _auth.signInWithApple();
+    if (restored != null) state = restored;
+    return restored != null;
+  }
+
+  /// Returns true when the Google account already had a journey to restore;
+  /// false → route to onboarding.
+  Future<bool> signInWithGoogle() async {
+    final restored = await _auth.signInWithGoogle();
     if (restored != null) state = restored;
     return restored != null;
   }

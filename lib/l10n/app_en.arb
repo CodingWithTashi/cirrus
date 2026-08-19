@@ -42,6 +42,7 @@
   "authSignInTitle": "Let's keep your\nplan safe.",
   "authSignInSubtitle": "Anonymous by default — you'll pick an alias for community.",
   "authSignInWithApple": "Sign in with Apple",
+  "authSignInWithGoogle": "Sign in with Google",
   "authContinueWithEmail": "Continue with email",
   "authWhyAccountDivider": "why an account?",
   "authWhyAccountCard": "Your streak, plan, and coach memory sync across devices. 🔒 We never sell your data. No ad trackers. Ever.",

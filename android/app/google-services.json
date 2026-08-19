@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "826701239342-6qvmbj446tb3fahehgba9tb2e4uqf5fe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quitvape.last_puff",
+            "certificate_hash": "3fa5c2cd39f64d1f93874ce15d21cc2dce2613f9"
+          }
+        },
+        {
+          "client_id": "826701239342-skks4sv2japtbg8ter2b5r7li942u875.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quitvape.last_puff",
+            "certificate_hash": "a861478dc1e8fc8364c0b2c9bb828d4cdafb0b44"
+          }
+        },
+        {
           "client_id": "826701239342-1agl82qs8af24aohuoiep9m7gi64pc6n.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -11,23 +11,28 @@ import '../api/fake/fake_community_api.dart';
 import '../api/fake/fake_journey_api.dart';
 import '../api/fake/fake_server.dart';
 import '../api/journey_api.dart';
+import '../backend_mode.dart';
 import '../network/connectivity.dart';
 import '../repositories/api_auth_repository.dart';
 import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
+import '../repositories/firebase_auth_repository.dart';
+import '../repositories/firebase_journey_repository.dart';
 import 'coach_store.dart';
 import 'community_store.dart';
 import 'journey_store.dart';
 import 'settings_store.dart';
 
 // ---- backend seam -----------------------------------------------------------
-// This block is the swap point for a real backend:
-//  * REST: replace the Fake*Api bodies with an http client — same Api
-//    interfaces, same JSON.
-//  * Firebase: replace either the Api bodies (Firestore/Auth adapters) or the
-//    Api*Repository bodies — same domain contracts.
+// [backendModeProvider] picks who answers the domain contracts: mobile runs
+// the real Firebase repositories (auth + journey), while desktop/web/tests
+// stay on the fake JSON backend (LP_BACKEND dart-define overrides; tests pin
+// fake via fastBackendOverrides). Community/Coach still answer from the fake
+// everywhere — their real implementations slot into the same providers later.
 // Nothing above these providers (stores, views) changes.
+
+final backendModeProvider = Provider<BackendMode>((_) => resolveBackendMode());
 
 /// Simulated network latency; widget tests override this with Duration.zero.
 final apiLatencyProvider = Provider<Duration>(
@@ -60,11 +65,17 @@ final coachApiProvider = Provider<CoachApi>(
 );
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => ApiAuthRepository(ref.watch(authApiProvider)),
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => ApiAuthRepository(ref.watch(authApiProvider)),
+    BackendMode.firebase => FirebaseAuthRepository(),
+  },
 );
 
 final journeyRepositoryProvider = Provider<JourneyRepository>(
-  (ref) => ApiJourneyRepository(ref.watch(journeyApiProvider)),
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => ApiJourneyRepository(ref.watch(journeyApiProvider)),
+    BackendMode.firebase => FirebaseJourneyRepository(),
+  },
 );
 
 final communityRepositoryProvider = Provider<CommunityRepository>(

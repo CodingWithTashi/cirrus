@@ -15,7 +15,7 @@ class FakeAuthApi implements AuthApi {
       _server.respond(_server.journeyJsonForCurrentSession);
 
   @override
-  Future<Map<String, dynamic>> signInWithEmail({
+  Future<Map<String, dynamic>?> signInWithEmail({
     required String email,
     required String password,
   }) => _server.respond(() {
@@ -31,6 +31,12 @@ class FakeAuthApi implements AuthApi {
   @override
   Future<Map<String, dynamic>?> signInWithApple() => _server.respond(() {
     _server.signInApple();
+    return _server.journeyJsonForCurrentSession();
+  });
+
+  @override
+  Future<Map<String, dynamic>?> signInWithGoogle() => _server.respond(() {
+    _server.signInGoogle();
     return _server.journeyJsonForCurrentSession();
   });
 

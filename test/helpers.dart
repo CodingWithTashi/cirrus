@@ -1,12 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/providers.dart';
 
 /// Standard test overrides for anything that pumps the app or wires the fake
-/// backend: instant fake network + no connectivity polling (no pending
-/// timers, no real DNS lookups). Pass `online: false` to simulate airplane
-/// mode — every backend call then throws [NoConnectionException].
+/// backend: pinned to the fake backend (the test platform reports android,
+/// which would otherwise select Firebase), instant fake network + no
+/// connectivity polling (no pending timers, no real DNS lookups). Pass
+/// `online: false` to simulate airplane mode — every backend call then
+/// throws [NoConnectionException].
 List<Override> fastBackendOverrides({bool online = true}) => [
+  backendModeProvider.overrideWithValue(BackendMode.fake),
   apiLatencyProvider.overrideWithValue(Duration.zero),
   connectivityPollIntervalProvider.overrideWithValue(null),
   if (!online) connectivityProvider.overrideWith(ToggleConnectivity.new),

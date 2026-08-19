@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
+import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
@@ -15,7 +16,10 @@ void main() {
 
   ProviderContainer harness() {
     final container = ProviderContainer(
-      overrides: [fakeServerProvider.overrideWithValue(server)],
+      overrides: [
+        backendModeProvider.overrideWithValue(BackendMode.fake),
+        fakeServerProvider.overrideWithValue(server),
+      ],
     );
     addTearDown(container.dispose);
     return container;
@@ -31,10 +35,46 @@ void main() {
     );
     expect(c.read(quitStoreProvider), isNull);
 
-    await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+    expect(
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1'),
+      isTrue,
+    );
     final journey = c.read(quitStoreProvider);
     expect(journey, isNotNull);
     expect(journey!.plan.dayNumber(DateTime.now()), 12);
+  });
+
+  test('signInWithGoogle onboards first, restores after', () async {
+    final c = harness();
+    final store = c.read(quitStoreProvider.notifier);
+    expect(await store.signInWithGoogle(), isFalse);
+    expect(c.read(quitStoreProvider), isNull);
+
+    // Onboarding completes → the backend creates the journey.
+    await store.startJourney(
+      profile: const UserProfile(
+        alias: '@bravewolf42',
+        avatarEmoji: '🐺',
+        tier: SubscriptionTier.trial,
+      ),
+      plan: QuitPlan(
+        method: QuitMethod.taper,
+        paceDays: 30,
+        startDate: DateTime(2026, 8, 18),
+        baselinePuffsPerDay: 200,
+        weeklySpend: 45,
+        strength: NicStrength.mg50,
+      ),
+    );
+    store.signOut();
+
+    // A second app session: the Google account's journey comes back.
+    final c2 = harness();
+    expect(
+      await c2.read(quitStoreProvider.notifier).signInWithGoogle(),
+      isTrue,
+    );
+    expect(c2.read(quitStoreProvider)?.profile.alias, '@bravewolf42');
   });
 
   test('mutations sync write-behind and survive logout → login', () async {

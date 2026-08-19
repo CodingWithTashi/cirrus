@@ -12,14 +12,19 @@ abstract interface class AuthRepository {
   /// The signed-in account's journey, or null (no session / not onboarded).
   Future<JourneyState?> restoreSession();
 
-  /// Throws [InvalidCredentialsException] on a wrong password.
-  Future<JourneyState> signInWithEmail({
+  /// The account's journey, or null for an account that registered but never
+  /// onboarded (route to onboarding). Throws [InvalidCredentialsException] on
+  /// a wrong password.
+  Future<JourneyState?> signInWithEmail({
     required String email,
     required String password,
   });
 
   /// The account's journey when it already has one; null → onboarding.
   Future<JourneyState?> signInWithApple();
+
+  /// The account's journey when it already has one; null → onboarding.
+  Future<JourneyState?> signInWithGoogle();
 
   /// Creates the account and opens a session (journey comes later, from
   /// onboarding). Throws [EmailAlreadyInUseException].
@@ -82,6 +87,12 @@ final class InvalidCredentialsException extends AuthException {
 
 final class EmailAlreadyInUseException extends AuthException {
   const EmailAlreadyInUseException();
+}
+
+/// The user dismissed a native sign-in sheet (Google/Apple). Not a failure:
+/// views reset their busy flag and stay put — never a dialog.
+final class SignInCancelledException extends AuthException {
+  const SignInCancelledException();
 }
 
 /// The device can't reach the backend (airplane mode, dead wifi, tunnel…).

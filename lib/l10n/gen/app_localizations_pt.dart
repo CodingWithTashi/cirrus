@@ -136,6 +136,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authSignInWithApple => 'Iniciar sessão com a Apple';
 
   @override
+  String get authSignInWithGoogle => 'Iniciar sessão com o Google';
+
+  @override
   String get authContinueWithEmail => 'Continuar com email';
 
   @override

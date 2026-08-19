@@ -16,16 +16,23 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<JourneyState> signInWithEmail({
+  Future<JourneyState?> signInWithEmail({
     required String email,
     required String password,
-  }) async => JourneyCodec.decode(
-    await _api.signInWithEmail(email: email, password: password),
-  );
+  }) async {
+    final json = await _api.signInWithEmail(email: email, password: password);
+    return json == null ? null : JourneyCodec.decode(json);
+  }
 
   @override
   Future<JourneyState?> signInWithApple() async {
     final json = await _api.signInWithApple();
+    return json == null ? null : JourneyCodec.decode(json);
+  }
+
+  @override
+  Future<JourneyState?> signInWithGoogle() async {
+    final json = await _api.signInWithGoogle();
     return json == null ? null : JourneyCodec.decode(json);
   }
 

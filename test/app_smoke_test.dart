@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +24,24 @@ void main() {
     // Splash auto-advances after 1.5s.
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text('Sign in with Apple'), findsOneWidget);
+    // The test platform reports android: Google shows, Apple stays hidden.
+    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Sign in with Apple'), findsNothing);
+  });
+
+  testWidgets('Apple replaces Google on Apple devices', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await tester.pumpWidget(
+        ProviderScope(overrides: overrides, child: const LastPuffApp()),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in with Apple'), findsOneWidget);
+      expect(find.text('Sign in with Google'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('signed-in demo journey lands on Today with live numbers', (
