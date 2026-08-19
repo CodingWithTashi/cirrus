@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "826701239342",
+    "project_id": "alastpuff",
+    "storage_bucket": "alastpuff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826701239342:android:6f8f39f49c52ee24e4bbbf",
+        "android_client_info": {
+          "package_name": "com.quitvape.last_puff"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "826701239342-1agl82qs8af24aohuoiep9m7gi64pc6n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcToCViLNaGiGRehNfYGM_YkkRSNOfz2U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "826701239342-1agl82qs8af24aohuoiep9m7gi64pc6n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "826701239342-subqr6qjihope76ji6f1qisti9p3vkl3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.quitvape.lastPuff"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
