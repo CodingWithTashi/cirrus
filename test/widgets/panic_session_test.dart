@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
@@ -96,6 +97,87 @@ void main() {
     // The session itself is untouched: breathing, the why card and the tap
     // game are all still where they were.
     expect(c.read(panicProvider).step, 0);
+  });
+
+  /// Mounts the real PanicFlow against a container the TEST owns, so
+  /// replacing the tree (what popping the route does) disposes the widget
+  /// without disposing the providers underneath it.
+  Future<ProviderContainer> mountFlow(WidgetTester tester) async {
+    final c = ProviderContainer(
+      overrides: [
+        ...fastBackendOverrides(),
+        panicRepositoryProvider.overrideWithValue(panic),
+      ],
+    );
+    addTearDown(c.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+          theme: LpTheme.midnight(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const PanicFlow(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    return c;
+  }
+
+  Future<void> unmountFlow(WidgetTester tester, ProviderContainer c) async {
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+          theme: LpTheme.midnight(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  testWidgets('closing the takeover does not throw', (tester) async {
+    // Found by the on-device run: `dispose()` read `ref`, which Riverpod
+    // forbids once the element is gone, so EVERY close of the panic flow threw
+    // "Cannot use ref after the widget was disposed". The widget suite missed
+    // it because nothing here had ever unmounted PanicFlow.
+    final c = await mountFlow(tester);
+    await unmountFlow(tester, c);
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('closing without surviving reports the craving abandoned', (
+    tester,
+  ) async {
+    final c = await mountFlow(tester);
+    await unmountFlow(tester, c);
+
+    expect(panic.survivedIntensities, isEmpty);
+    expect(c.read(panicProvider).step, 0);
+  });
+
+  testWidgets('a survived craving is not also counted as abandoned', (
+    tester,
+  ) async {
+    final c = await mountFlow(tester);
+    c.read(quitStoreProvider.notifier).seedDemoJourney();
+    await tester.pump(const Duration(milliseconds: 400));
+    final before = c.read(quitStoreProvider)!.cravingsSurvivedTotal;
+
+    c.read(panicProvider.notifier).survive();
+    await tester.pump(const Duration(milliseconds: 400));
+    await unmountFlow(tester, c);
+
+    // survive() invalidates the notifier, so a `ref.read` in dispose would
+    // hand back a FRESH, unresolved session and count this same craving twice.
+    expect(tester.takeException(), isNull);
+    expect(panic.survivedIntensities, hasLength(1));
+    expect(c.read(quitStoreProvider)!.cravingsSurvivedTotal, before + 1);
   });
 }
 

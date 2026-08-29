@@ -39,6 +39,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Drives the real app on a real device — the only harness that can prove the
+  # Firebase repositories, the router and the platform channels actually work
+  # together. Widget tests pin behaviour; these pin integration.
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
 
 flutter:

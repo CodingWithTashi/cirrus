@@ -158,10 +158,20 @@ void showLpSnack(
   // lifetime regardless (docs/03 §5: a 5s undo window), so close whatever is
   // still showing ourselves. Cancelled as soon as the snack closes by any
   // other path (timeout, swipe, replacement), so it never double-fires.
-  final timer = Timer(
-    duration + const Duration(milliseconds: 250),
-    controller.close,
-  );
+  final timer = Timer(duration + const Duration(milliseconds: 250), () {
+    // Guarded because this is a backstop, not a control path. If the tree
+    // that owns the messenger was torn down while the snack was up — a
+    // crash screen replacing the app, the host disposing it — `close()`
+    // asserts on a disposed AnimationController, and a *backstop* taking the
+    // app down is strictly worse than a snack that outlives its window.
+    // `controller.closed` never completes in that case, so the cancel below
+    // never runs and this timer is the one thing left holding the reference.
+    try {
+      controller.close();
+    } on Object {
+      // Nothing to do: the snack is already gone with its messenger.
+    }
+  });
   unawaited(controller.closed.whenComplete(timer.cancel));
 }
 

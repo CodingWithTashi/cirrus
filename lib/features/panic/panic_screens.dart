@@ -137,9 +137,20 @@ class PanicFlow extends ConsumerStatefulWidget {
 }
 
 class _PanicFlowState extends ConsumerState<PanicFlow> {
+  /// Captured in [initState], not read in [dispose].
+  ///
+  /// Riverpod throws "Cannot use ref after the widget was disposed" for a
+  /// `ref.read` inside `dispose`, so the reference has to be taken while the
+  /// element is still alive. Holding the instance is also what makes the
+  /// resolved check correct: `survive()` invalidates the provider, so a later
+  /// read would hand back a FRESH notifier with `_resolved == false` and every
+  /// survived craving would be reported abandoned as well.
+  late final PanicViewModel _session = ref.read(panicProvider.notifier);
+
   @override
   void initState() {
     super.initState();
+    _session; // resolve now, while ref is still usable
     // The takeover owns the whole screen — a lingering "Logged 1 puff"
     // undo snack must never cover the step controls.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -149,9 +160,9 @@ class _PanicFlowState extends ConsumerState<PanicFlow> {
 
   @override
   void dispose() {
-    // `survive()` invalidates the notifier and marks itself resolved before
-    // this runs, so a survived session is never double-counted here.
-    ref.read(panicProvider.notifier).abandon();
+    // `survive()` marks the session resolved before this runs, so a survived
+    // craving is never double-counted as an abandoned one.
+    _session.abandon();
     super.dispose();
   }
 
