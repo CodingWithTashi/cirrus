@@ -25,7 +25,7 @@
 |---|---|---|
 | **Revenue goal** | **$44,000/mo net by M6 post-launch** (≈ Apr 15, 2027) | Aug 29, 2026 — supersedes PRD §1's $10K/mo |
 | **Launch date** | **Oct 15, 2026** — soft launch per Doc 6 §1 | Aug 29, 2026 |
-| **Platforms** | **iOS + Android together** | Aug 29, 2026 — overrides PRD §15 item 4 ("iOS-first, Android V2") |
+| **Platforms** | **Android at launch; iOS fast-follow** | Aug 29, 2026 - revised. The original "both platforms" call was made before B17 was known: there is no Mac, so iOS cannot be built or submitted at all. Android is already wired (google-services.json, release signing) and is the market Puff Count never entered. |
 | **Pricing** | $2.99/wk · $7.99/mo · $39.99/yr · 3-day trial | Founder-locked, PRD §11 |
 | **Days remaining to launch** | **47** | as of Aug 29, 2026 |
 
@@ -52,6 +52,8 @@ Recomputed from the locked prices (`lib/core/utils/lp_pricing.dart`), 15% Small 
 Consequence: PRD's own $10K target needs **1,261 active subs, not 1,050**.
 
 ### The funnel to $44K/mo net
+
+> **Android-first note (Aug 29).** Per-subscriber economics are unchanged: the prices are the same on Play, and Play's first-$1M rate is also 15%, so **blended net ARPU stays $7.93** and the sub counts below still hold. What changes is *reach*, not unit economics - and honestly, the direction is unclear rather than simply worse. Puff Count has no Android at all (uncontested), but US Gen-Z skews iOS and quit-vaping search volume differs by store. **Do not re-derive the download target from guesses** - the first four weeks of real Play install and conversion data replace the 17,240/month figure. Until then it stands as the iOS-era estimate.
 
 Working backwards at PRD §13's own conversion rates:
 
@@ -109,7 +111,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B3** | **Client cannot call the backend.** No `cloud_functions`, no `firebase_app_check` in `pubspec.yaml`; zero `httpsCallable` in `lib/`. All 5 callables set `enforceAppCheck: true` and would reject the app anyway. | `pubspec.yaml`, import grep | S1 |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
 | **B5** | **Community + Coach fake in production.** Their providers have no `switch` on `backendModeProvider` → `FakeCommunityApi`/`FakeCoachApi` on a real phone, over memory that resets on restart. The "AI coach" is `if (text.contains('crav'))` over 18 canned templates. | `lib/data/stores/providers.dart:59-87` | S2, S3 |
-| **B6** | **iOS cannot build against Firebase.** No `GoogleService-Info.plist`, no `.entitlements`, no URL schemes for Google Sign-In. | `ios/Runner/` | S0 |
+| **B6** | **iOS cannot build against Firebase.** No `GoogleService-Info.plist`, no `.entitlements`, no URL schemes. **Deferred to the iOS fast-follow** with B17. Note the plist is not actually hard to get - `firebase apps:sdkconfig IOS <appId>` returns it - the blocker is having no machine to build on. | `ios/Runner/` | iOS fast-follow |
 | **B7** | **Zero analytics, crash reporting, push.** `firebase_messaging` declared but never imported. Danger-hour settings schedule nothing. | `pubspec.yaml`, import grep | S4 |
 | **B8** | **No local persistence.** No `shared_preferences`/`hive`. Theme, locale, notifications, danger hours all wipe on restart. | `lib/data/stores/settings_store.dart` | S4 |
 | **B9** | **Both hourly crons would no-op forever.** They query `users where recalcHourUtc == n`, but `users/{uid}` docs are created only by `syncUserContext`, which nothing calls. | `taperRecalc.ts:42`, `weeklyInsight.ts:49` | S2 |
@@ -120,7 +122,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B14** | **Lock-screen widget absent** though founder-locked for MVP (Doc 3 header). No iOS widget extension target, no Android app widget. | `ios/Runner.xcodeproj` targets, `android/` | S0 decision |
 | ~~**B15**~~ | [RESOLVED Aug 29] **The name is Cirrus** (founder). Renamed test-first: 4 keys x 5 locales, `android:label`, `CFBundleDisplayName`, pubspec. Internal identifiers (`last_puff` package, `LastPuffApp`, `undoLastPuff`) deliberately unchanged - no user sees them. **Bundle IDs unchanged and still a founder call:** moving off `com.quitvape.last_puff` means re-registering both Firebase apps. | `flutter test` 52/52; `test/brand_name_test.dart` guards all 5 locales | S0 done |
 | **B16** | **No CI, no fastlane, no store assets**, default Flutter launcher icons. | repo root, `assets/` | S0 |
-| **B17** | 🆕 **NO macOS / Xcode — the dev machine is Windows.** iOS cannot be built, run, signed, or submitted from here at all. Config files can be written (and the `GoogleService-Info.plist` pulled via `firebase apps:sdkconfig`), but nothing iOS is *verifiable* until it touches a Mac. **This is the single biggest threat to "both platforms Oct 15"** — larger than any code item, because no amount of work here retires it. Options: a Mac, or macOS CI (Codemagic / GitHub Actions `macos` runner); submission still needs the Apple account. | `flutter doctor` on win32; no Xcode toolchain | **S0 — founder decision** |
+| ~~**B17**~~ | [ANSWERED Aug 29] No macOS/Xcode on the dev machine. **Resolved by descoping iOS from the Oct 15 launch**, not by fixing the machine. iOS becomes a fast-follow and needs a Mac or macOS CI before it can ship. Everything iOS-shaped (B6, plist, entitlements, StoreKit) moves out of S0-S6. | `flutter doctor` on win32 | iOS fast-follow |
 
 ### 🔒 Security & correctness backlog (found in audit, none blocking S0)
 
@@ -164,8 +166,8 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 **Goal:** clear every hard blocker and start every clock that runs without us.
 
 **Administrative (start Day 1 — these have the longest lead times)**
-- [ ] `S0-1` Apple Developer Program enrollment ($99/yr) — **start today**
-- [ ] `S0-2` App Store Connect: Paid Apps agreement + **banking & tax forms** ← blocks all IAP testing
+- [ ] `S0-1` Apple Developer Program enrollment ($99/yr) — **moved to the iOS fast-follow**; not on the Oct 15 path
+- [ ] `S0-2` ~~App Store Connect~~ → **Play Console: banking & tax / merchant setup** ← still the long pole, still blocks all IAP testing
 - [ ] `S0-3` Google Play Console ($25) + merchant account
 - [x] `S0-4` ✅ **Cirrus** (decided Aug 29; rename shipped). Original note: **Name decision (B15):** "LastPuff" vs "Cirrus". Blast radius — ASO title/subtitle/keywords (Doc 6 §4), store listings, domain, TikTok/IG/YT handles, the wordmark concept in Doc 7 §4 (built on the literal "LastPuff" ligature), 3 ARB keys, `AndroidManifest.xml`, `Info.plist`, Firebase display name. **Founder decision.**
 - [ ] `S0-5` Doc 7 §1 due-diligence: domain, handles, USPTO/CIPO trademark check — all currently unchecked
@@ -187,10 +189,10 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S0-16` Confirm Firestore location matches `REGION`; set a **GCP budget alert** (README checklist)
 
 **iOS — currently unbuildable against Firebase (B6)**
-- [ ] `S0-17` Add `ios/Runner/GoogleService-Info.plist`
-- [ ] `S0-18` Add URL schemes for Google Sign-In in `Info.plist`
-- [ ] `S0-19` Add `Runner.entitlements` — Sign in with Apple + push
-- [ ] `S0-20` Verify a clean iOS build reaches the sign-in screen
+- [ ] `S0-17` *(iOS fast-follow)* Add `ios/Runner/GoogleService-Info.plist` — obtainable now via `firebase apps:sdkconfig`
+- [ ] `S0-18` *(iOS fast-follow)* URL schemes for Google Sign-In
+- [ ] `S0-19` *(iOS fast-follow)* `Runner.entitlements` — Sign in with Apple + push
+- [ ] `S0-20` *(iOS fast-follow)* Verify a clean iOS build — **needs a Mac; cannot be done here**
 
 **Foundation**
 - [ ] `S0-21` GitHub Actions CI: `flutter analyze` + `flutter test` + `npm run verify` on every push (B16)
@@ -283,7 +285,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 
 **Goal:** survive review, and survive users.
 
-- [ ] `S5-1` Store listings both platforms — Doc 6 §4 title/subtitle/keywords; **first screenshot = the dependence-badge moment**
+- [ ] `S5-1` **Play** store listing (iOS listing moves to the fast-follow) — Doc 6 §4 title/subtitle/keywords; **first screenshot = the dependence-badge moment**
 - [ ] `S5-2` Privacy labels: "Data not collected for tracking". We ship no ad SDKs — market it (PRD §6)
 - [ ] `S5-3` Age rating 17+/18+; medical disclaimer; "support tool, not medical treatment"
 - [ ] `S5-4` Privacy policy + terms **live at real URLs**; auto-renew disclosures on the paywall
@@ -292,7 +294,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S5-7` **Doc 3 §12 acceptance checklist**, all gates — incl. 400 puffs/day × 3 days offline with zero loss, and Comeback ×2 verified at 47h59m / expired at 48h01m
 - [ ] `S5-8` **Crash-free ≥ 99.5%** on the beta cohort
 - [ ] `S5-9` Widen test coverage — Firebase repositories, onboarding, paywall, entitlement transitions all currently have **zero** tests
-- [ ] `S5-10` **Submit to App Store + Play**
+- [ ] `S5-10` **Submit to Google Play**
 
 **Exit criteria:** both submissions in review · crash-free ≥ 99.5% · acceptance checklist green.
 
