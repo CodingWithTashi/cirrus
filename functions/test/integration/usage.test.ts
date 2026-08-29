@@ -5,7 +5,7 @@
  * these functions sits between a user and a paid model call, so a bug here is
  * either an unmetered spend or a paying customer being told no.
  */
-import {beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {Timestamp, userDoc} from '../../src/lib/firestore';
 import {
   claimCoachMessage,
@@ -190,5 +190,61 @@ describe('countPanicSession — free tier gets one AI-backed session a day', () 
     const stored = (await userDoc('alice').get()).data();
     expect(stored?.['aiUsage']).toMatchObject({msgCount: 1});
     expect(stored?.['panicUsage']).toMatchObject({count: 1});
+  });
+});
+
+/**
+ * Pre-monetization mode (founder decision, Aug 29 2026).
+ *
+ * RevenueCat comes last: the app must first work end-to-end with nothing
+ * locked. Rather than delete the gating — which we need back the day billing
+ * lands, and which is the hardest code to re-add correctly — it hides behind
+ * one deploy-time param. `ungated` makes everyone premium; `mirror` restores
+ * the real RevenueCat behaviour.
+ */
+describe('ENTITLEMENT_MODE — the pre-monetization switch', () => {
+  const previous = process.env['ENTITLEMENT_MODE'];
+  afterEach(() => {
+    if (previous === undefined) delete process.env['ENTITLEMENT_MODE'];
+    else process.env['ENTITLEMENT_MODE'] = previous;
+  });
+
+  it('ungated: a user with no entitlement is premium', async () => {
+    process.env['ENTITLEMENT_MODE'] = 'ungated';
+    expect(await tierFor('nobody')).toBe('premium');
+  });
+
+  it('ungated: an explicitly free user is still premium', async () => {
+    process.env['ENTITLEMENT_MODE'] = 'ungated';
+    await userDoc('alice').set({entitlement: {tier: 'free'}});
+    expect(await tierFor('alice')).toBe('premium');
+  });
+
+  it('ungated: a lapsed entitlement does not demote anyone', async () => {
+    process.env['ENTITLEMENT_MODE'] = 'ungated';
+    await userDoc('alice').set({
+      entitlement: {
+        tier: 'premium',
+        expiresAt: Timestamp.fromMillis(Date.now() - 60_000),
+      },
+    });
+    expect(await tierFor('alice')).toBe('premium');
+  });
+
+  // The flip back is the part that must not rot. When RevenueCat lands, this
+  // single param restores every gate without touching handler code.
+  it('mirror: restores real entitlement enforcement', async () => {
+    process.env['ENTITLEMENT_MODE'] = 'mirror';
+    expect(await tierFor('nobody')).toBe('free');
+
+    await userDoc('alice').set({entitlement: {tier: 'premium'}});
+    expect(await tierFor('alice')).toBe('premium');
+  });
+
+  it('ungated users get the premium coach allowance, not the free one', async () => {
+    process.env['ENTITLEMENT_MODE'] = 'ungated';
+    expect(await tierFor('alice')).toBe('premium');
+    // panicSession/aiCoachChat pick their limit off this tier, so premium
+    // here is what removes the 5-a-day cap.
   });
 });

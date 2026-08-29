@@ -10,8 +10,17 @@
  * taps each see "4 used" and both spend, which is exactly the shape of bug
  * that turns a $0.25/user/month budget into an incident.
  */
+import {ENTITLEMENT_MODE} from '../config';
 import {db, userDoc, type UserDoc} from './firestore';
 import type {SubscriptionTier} from '../domain/types';
+
+/**
+ * True while the app ships with nothing locked. Read this rather than
+ * comparing tiers by hand, so the flip to real entitlements is one param.
+ */
+export function ungated(): boolean {
+  return ENTITLEMENT_MODE.value() === 'ungated';
+}
 
 export interface QuotaClaim {
   readonly allowed: boolean;
@@ -27,6 +36,9 @@ export interface QuotaClaim {
  * failing open costs us the paywall.
  */
 export async function tierFor(uid: string): Promise<SubscriptionTier> {
+  // Pre-monetization: nothing is locked, so skip the read entirely.
+  if (ungated()) return 'premium';
+
   const snap = await userDoc(uid).get();
   const entitlement = (snap.data() as UserDoc | undefined)?.entitlement;
   if (!entitlement) return 'free';

@@ -15,6 +15,7 @@ import {insightPrompt} from '../ai/prompts';
 import {ModelUnavailableError} from '../ai/model';
 import {db, FieldValue, insightDoc, journeyDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
+import {ungated} from '../lib/usage';
 import {decodeJourney} from '../domain/journeyCodec';
 import {dayKeyIn} from '../domain/dateKey';
 import {dangerHours, trailingDays} from '../domain/streakEngine';
@@ -58,7 +59,11 @@ export const weeklyInsight = onSchedule(
 
       for (const doc of page.docs) {
         const data = doc.data() as UserDoc;
-        if (data.entitlement?.tier === 'free' || !data.entitlement) continue;
+        // Bypasses tierFor to avoid a second read per user, so it needs the
+        // ungated check explicitly.
+        if (!ungated() && (data.entitlement?.tier === 'free' || !data.entitlement)) {
+          continue;
+        }
         const tz = data.tz ?? 'UTC';
         const today = new Date();
         // Only fire on the user's local Sunday.

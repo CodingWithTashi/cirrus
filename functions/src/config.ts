@@ -58,6 +58,23 @@ export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
   default: 'gemini-3.1-flash-lite',
 });
 
+/**
+ * Pre-monetization switch (founder decision, Aug 29 2026).
+ *
+ *   'ungated' — everyone is premium. RevenueCat is not wired yet and the app
+ *               must work end-to-end with nothing locked.
+ *   'mirror'  — the real behaviour: tier comes from users/{uid}.entitlement,
+ *               written only by rcWebhook.
+ *
+ * The gating code stays live and tested in both modes on purpose. Deleting it
+ * now and re-adding it at billing time is how paywalls ship broken; flipping
+ * one param is not. **Set this to 'mirror' the day RevenueCat goes live.**
+ */
+export const ENTITLEMENT_MODE = defineString('ENTITLEMENT_MODE', {
+  default: 'ungated',
+  description: "'ungated' (everyone premium, pre-launch) or 'mirror' (real entitlements).",
+});
+
 /** Kill-switch: flip to "true" to route all AI traffic to the cheap model. */
 export const AI_COST_PANIC = defineString('AI_COST_PANIC', {default: 'false'});
 

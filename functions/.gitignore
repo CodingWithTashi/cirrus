@@ -5,6 +5,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.alastpuff
 ui-debug.log
 firebase-debug.log
 firestore-debug.log
