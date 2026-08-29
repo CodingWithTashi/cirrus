@@ -114,3 +114,32 @@ export async function countPanicSession(
     return next;
   });
 }
+
+/**
+ * Claims one community post against the day's allowance (docs/03 §9).
+ *
+ * Replaces createPost's original count-then-write, which was decorative under
+ * concurrency: five requests arriving together all read "0 posted" and all
+ * proceeded. Same transactional counter as the coach and panic quotas.
+ *
+ * This also moves the cap from a rolling trailing-24h window to a per-local-day
+ * one, which is what docs/03 §9 actually says ("3 posts/day") and matches how
+ * every other quota in the app rolls over.
+ */
+export async function claimDailyPost(
+  uid: string,
+  todayKey: string,
+  limit: number,
+): Promise<QuotaClaim> {
+  return db.runTransaction(async (tx) => {
+    const ref = userDoc(uid);
+    const snap = await tx.get(ref);
+    const usage = (snap.data() as UserDoc | undefined)?.postUsage;
+    const used = usage && usage.day === todayKey ? usage.count : 0;
+
+    if (used >= limit) return {allowed: false, used, limit};
+
+    tx.set(ref, {postUsage: {day: todayKey, count: used + 1}}, {merge: true});
+    return {allowed: true, used: used + 1, limit};
+  });
+}

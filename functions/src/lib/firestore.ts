@@ -100,6 +100,8 @@ export interface UserDoc {
   /** docs/04 §7 coach quota. `day` is a local `yyyy-MM-dd` key. */
   readonly aiUsage?: {readonly day: string; readonly msgCount: number};
   readonly panicUsage?: DailyCounter;
+  /** docs/03 §9 community post cap. Same shape, same rollover rule. */
+  readonly postUsage?: DailyCounter;
   readonly planAdvice?: {
     readonly forDay: string;
     readonly limit: number;

@@ -22,7 +22,8 @@
     "logs": "firebase functions:log",
     "verify": "npm run typecheck && npm run lint && npm run test",
     "test:rules": "firebase emulators:exec --only firestore --project demo-cirrus \"vitest run --config vitest.rules.config.ts\"",
-    "test:all": "npm run test && npm run test:rules"
+    "test:all": "npm run test && npm run test:rules && npm run test:integration",
+    "test:integration": "firebase emulators:exec --only firestore,auth --project demo-cirrus \"vitest run --config vitest.integration.config.ts\""
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
