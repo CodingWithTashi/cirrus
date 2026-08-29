@@ -2,6 +2,14 @@
     <!-- Connectivity probe + the (future) real backend. Debug/profile builds
          inherit this from Flutter's tooling manifests; release needs it here. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ requires a runtime grant before any notification can be
+         shown. Asked from the onboarding D4 screen, never cold. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Danger-hour reminders are scheduled on-device at exact local times
+         (docs/03 SS8); without this they drift with Doze. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="Cirrus"
         android:name="${applicationName}"

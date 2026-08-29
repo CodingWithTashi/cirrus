@@ -9,6 +9,7 @@ import '../../../app/theme/lp_colors.dart';
 import '../../../app/theme/lp_dimens.dart';
 import '../../../app/theme/lp_typography.dart';
 import '../../../core/utils/l10n_ext.dart';
+import '../../../data/api/firebase/push_service.dart';
 import '../../../core/utils/lp_format.dart';
 import '../../../core/utils/lp_haptics.dart';
 import '../../../core/widgets/confetti_burst.dart';
@@ -564,7 +565,17 @@ class NotificationsStep extends ConsumerWidget {
         bullet(l10n.obNotifBullet2),
         bullet(l10n.obNotifBullet3),
         const Spacer(),
-        LpButton(l10n.obNotifCta, onTap: () => context.go(Routes.paywall)),
+        LpButton(
+          l10n.obNotifCta,
+          onTap: () async {
+            // The screen above IS the pre-permission ask (docs/02 D4), so the
+            // OS prompt only ever fires from this tap — never cold. A denial
+            // is not a dead end: the flow continues either way, and docs/03
+            // §8 re-asks after the first survived craving.
+            await PushService.requestPermission();
+            if (context.mounted) context.go(Routes.paywall);
+          },
+        ),
         const SizedBox(height: 4),
         LpTextButton(
           l10n.commonMaybeLater,

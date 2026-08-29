@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'settings_persistence.dart';
+
 class SettingsState {
   const SettingsState({
     this.themeMode = ThemeMode.system,
@@ -52,22 +54,54 @@ class SettingsState {
 }
 
 class SettingsStore extends Notifier<SettingsState> {
-  @override
-  SettingsState build() => const SettingsState();
+  /// Starts at the defaults and adopts the stored values as soon as disk
+  /// answers. `build()` cannot be async, and blocking the first frame on a
+  /// preferences read to avoid a one-frame theme flicker is a bad trade.
+  ///
+  /// Restore is skipped when [restore] is false — tests want deterministic
+  /// defaults, not whatever the host machine last wrote.
+  SettingsStore({bool restore = true}) : _restore = restore;
 
-  void setThemeMode(ThemeMode mode) => state = state.copyWith(themeMode: mode);
+  final bool _restore;
+
+  @override
+  SettingsState build() {
+    if (_restore) _hydrate();
+    return const SettingsState();
+  }
+
+  Future<void> _hydrate() async {
+    final stored = await SettingsPersistence.load();
+    // The user may have changed something while disk was answering; their
+    // action wins over the older stored value.
+    if (_dirty) return;
+    state = stored;
+  }
+
+  bool _dirty = false;
+
+  /// Sets state and persists write-behind, mirroring `JourneyStore._commit`:
+  /// the change is already on screen, so a failed write is not worth a dialog.
+  void _commit(SettingsState next) {
+    _dirty = true;
+    state = next;
+    SettingsPersistence.save(next).ignore();
+  }
+
+  void setThemeMode(ThemeMode mode) => _commit(state.copyWith(themeMode: mode));
 
   void setLocale(Locale? locale) =>
-      state = state.copyWith(locale: () => locale);
+      _commit(state.copyWith(locale: () => locale));
 
-  void setNotifications(bool on) => state = state.copyWith(notificationsOn: on);
+  void setNotifications(bool on) =>
+      _commit(state.copyWith(notificationsOn: on));
 
-  void setDangerWindow(int startHour, int endHour) => state = state.copyWith(
-    dangerStartHour: startHour,
-    dangerEndHour: endHour,
+  void setDangerWindow(int startHour, int endHour) => _commit(
+    state.copyWith(dangerStartHour: startHour, dangerEndHour: endHour),
   );
 
-  void setTrialReminder(bool on) => state = state.copyWith(trialReminderOn: on);
+  void setTrialReminder(bool on) =>
+      _commit(state.copyWith(trialReminderOn: on));
 
-  void markWinbackShown() => state = state.copyWith(winbackShown: true);
+  void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
 }

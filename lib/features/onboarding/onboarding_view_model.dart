@@ -1,3 +1,4 @@
+import '../../data/api/firebase/lp_analytics.dart';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -238,15 +239,32 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
 
   // ---- navigation -----------------------------------------------------------
 
+  /// When the current screen was reached, for the dwell time in
+  /// `screen_completed`. Set on every advance so the funnel alert in
+  /// docs/02 §7 (>15% drop-off on any screen) has something to alert on.
+  DateTime _stepEnteredAt = DateTime.now();
+
+  /// Emits `screen_completed` for the screen being left and restarts the
+  /// clock. Central on purpose: 19 widgets each remembering to log is 19
+  /// chances to miss one, and a hole in the funnel looks like a healthy step.
+  void _completeStep() {
+    LpAnalytics.screenCompleted(
+      state.step.name,
+      DateTime.now().difference(_stepEnteredAt).inMilliseconds,
+    );
+    _stepEnteredAt = DateTime.now();
+  }
+
   void next() {
+    _completeStep();
     final order = ObStep.values;
     var i = order.indexOf(state.step) + 1;
     // Age gate: under-18 goes to the resource screen, everyone else skips it.
     if (state.step == ObStep.birthYear) {
       final age = DateTime.now().year - (state.birthYear ?? 0);
-      state = state.copyWith(
-        step: age < minAge ? ObStep.under18 : ObStep.tried,
-      );
+      final blocked = age < minAge;
+      if (blocked) LpAnalytics.ageGateBlocked();
+      state = state.copyWith(step: blocked ? ObStep.under18 : ObStep.tried);
       return;
     }
     if (i < order.length) state = state.copyWith(step: order[i]);
