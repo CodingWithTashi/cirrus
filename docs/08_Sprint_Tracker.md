@@ -104,7 +104,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 
 | ID | Blocker | Evidence | Sprint |
 |---|---|---|---|
-| **B1** | **Backend cannot compile.** `functions/src/lib/` does not exist, yet **23 imports across all 9 handlers** reference `../lib/{firestore,guards,logger,usage}`. `tsc` fails → `verify` fails → `predeploy` blocks deploy. | `ls functions/src/`; `grep -rn "from '\.\./lib/" functions/src` | S0 |
+| ~~**B1**~~ | ✅ **RESOLVED Aug 29.** The four modules are written and committed (`09305ad`). **Root cause:** `lib/` in `functions/.gitignore` was unanchored, so it matched `functions/src/lib/` as well as the tsc output — the modules were almost certainly written once and silently never committed. Pattern anchored to `/lib/`. | `npm run verify` green: typecheck + lint + **33 tests / 4 files**, incl. `parsers.test.ts` which could not previously resolve its imports. `npm run build` emits to `lib/src/`; barrel loads all 9 functions. | S0 ✅ |
 | **B2** | **Functions never deployed.** Cloud Functions API has never been *enabled* on `alastpuff` (403 `SERVICE_DISABLED`). No `functions/lib/`, no `node_modules/`, no `.firebase/`. | `firebase functions:list --debug` | S0 |
 | **B3** | **Client cannot call the backend.** No `cloud_functions`, no `firebase_app_check` in `pubspec.yaml`; zero `httpsCallable` in `lib/`. All 5 callables set `enforceAppCheck: true` and would reject the app anyway. | `pubspec.yaml`, import grep | S1 |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
@@ -116,7 +116,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B10** | **`createReply` promised but missing.** Rules set `create: if false` on replies citing a callable that doesn't exist → replies can never be created. `moderatePost` also only triggers on `posts/{postId}`, so replies would go unmoderated. | `firestore.rules:70`, `functions/src/index.ts` | S3 |
 | **B11** | **Coach's actual words discarded.** `CoachReplyCodec.decode` reads only `template`/`args`/`showWeekCard`, dropping the `text` field `aiCoachChat` returns — the client would render a canned template instead of Ember's real reply. | `lib/data/dto/coach_codec.dart` | S2 |
 | **B12** | **Streak parity broken.** The TS port omits the repair-token exception present in Dart, so the server counts a token-saved day as a break — Ember would quote a lower streak than Home shows. | `streakEngine.ts:21` vs `streak_engine.dart:29-30` | S2 |
-| **B13** | **Service-account private key unprotected.** `functions/alastpuff-…json` holds a live `private_key`. Never committed, but the `.gitignore` line protecting it is **itself uncommitted**. | `git show HEAD:.gitignore` → no match | S0 |
+| **B13** | 🔨 **HALF DONE.** The `.gitignore` line protecting the service-account key is now **committed** (`09305ad`), so the protection survives a `git checkout`. **Still open: rotate the key** in the GCP console — it sat unencrypted in the working tree and only the founder can rotate it. | `git show HEAD:.gitignore`; key confirmed never tracked | S0 |
 | **B14** | **Lock-screen widget absent** though founder-locked for MVP (Doc 3 header). No iOS widget extension target, no Android app widget. | `ios/Runner.xcodeproj` targets, `android/` | S0 decision |
 | **B15** | **Name unresolved.** Firebase says "Cirrus: Quit Vaping & Puff Tracker"; all code, ARB and docs say "LastPuff". PRD §15 still lists it OPEN. Blocks ASO, listings, domain, handles, wordmark. | `AndroidManifest.xml`, `Info.plist`, `app_en.arb` | S0 |
 | **B16** | **No CI, no fastlane, no store assets**, default Flutter launcher icons. | repo root, `assets/` | S0 |
@@ -171,14 +171,15 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S0-6` Widget in-or-out decision (see above)
 
 **Security**
-- [ ] `S0-7` **Commit the `.gitignore` line** protecting the service-account key, then **rotate the key** in GCP console (B13). It has sat unencrypted in the working tree.
+- [x] `S0-7` **Commit the `.gitignore` line** protecting the service-account key — done (`09305ad`); also anchored `functions/.gitignore`'s `lib/` pattern, which was hiding `src/lib/`
+- [ ] `S0-7b` **Rotate the service-account key** in the GCP console (B13). Founder-only; it has sat unencrypted in the working tree.
 
 **Backend — make it compile and deploy**
-- [ ] `S0-8` Write `functions/src/lib/firestore.ts` — `db`, `FieldValue`, `Timestamp`, `journeyDoc`, `userDoc`, `postsCol`, `moderationDoc`, `coachMessages`, `insightDoc`, `UserDoc` type (B1)
-- [ ] `S0-9` Write `functions/src/lib/guards.ts` — `requireCaller` (uid + `timeZone` + `locale`), `requireText`, `asEnum` (B1)
-- [ ] `S0-10` Write `functions/src/lib/logger.ts` — `log`, `safeMeta` (B1)
-- [ ] `S0-11` Write `functions/src/lib/usage.ts` — `tierFor`, `claimCoachMessage`, `refundCoachMessage`, `countPanicSession`. **Transactional**; watch the pre/post-increment boundary that decides the free-tier off-by-one.
-- [ ] `S0-12` `npm install && npm run verify` green (typecheck + lint + 4 vitest files)
+- [x] `S0-8` Write `functions/src/lib/firestore.ts` — `db`, `FieldValue`, `Timestamp`, `journeyDoc`, `userDoc`, `postsCol`, `moderationDoc`, `coachMessages`, `insightDoc`, `UserDoc` type (B1)
+- [x] `S0-9` Write `functions/src/lib/guards.ts` — `requireCaller` (uid + `timeZone` + `locale`), `requireText`, `asEnum` (B1)
+- [x] `S0-10` Write `functions/src/lib/logger.ts` — `log`, `safeMeta` (B1)
+- [x] `S0-11` Write `functions/src/lib/usage.ts` — `tierFor`, `claimCoachMessage`, `refundCoachMessage`, `countPanicSession`. **Transactional**; watch the pre/post-increment boundary that decides the free-tier off-by-one.
+- [x] `S0-12` `npm install && npm run verify` green (typecheck + lint + 4 vitest files)
 - [ ] `S0-13` Enable Cloud Functions API + **upgrade project to Blaze** (B2)
 - [ ] `S0-14` `firebase functions:secrets:set GEMINI_API_KEY` and `REVENUECAT_WEBHOOK_TOKEN`
 - [ ] `S0-15` Deploy rules + indexes, then functions. Verify `firebase functions:list` returns 9.
