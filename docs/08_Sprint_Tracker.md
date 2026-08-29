@@ -195,7 +195,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S0-20` *(iOS fast-follow)* Verify a clean iOS build — **needs a Mac; cannot be done here**
 
 **Foundation**
-- [ ] `S0-21` GitHub Actions CI: `flutter analyze` + `flutter test` + `npm run verify` on every push (B16)
+- [x] `S0-21` CI running three jobs: Flutter (incl. an l10n-drift check), functions verify, and an emulator job for rules + integration
 - [ ] `S0-22` Branded app icons both platforms; replace default Flutter icons (B16)
 
 **Exit criteria:** `npm run verify` green · 9 functions deployed and listed · iOS builds against Firebase · both store accounts submitted with banking started · name decided · key rotated · CI green.
@@ -251,9 +251,9 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S3-4` Extend `moderatePost` to trigger on replies too
 - [ ] `S3-5` Tighten reply read rule with a `status == 'live'` filter (today any signed-in user reads unmoderated replies)
 - [ ] `S3-6` Validate `alias`/`avatarEmoji`/`dayN` server-side against the real journey; make the 3-post cap **transactional**
-- [~] `S3-7` Rules: `reportCount` now increment-only and replies gated on `status == 'live'` (done Aug 29, `test/rules/` 28 tests). **Still open: `reactions` per-user keying** — needs the data-model change from `reactions{emoji: count}` to `reactions{uid: emoji}`
+- [x] `S3-7` Done Aug 29. `reportCount` increment-only, replies gated on status, and reaction counts moved server-side: clients write only `posts/{id}/reactors/{uid}` and `onReaction` derives the aggregate. **Not** `reactions{uid: emoji}` as docs/05 suggests — that would have made every reactor's uid public on a world-readable post
 - [ ] `S3-8` `moderatePost` fail-closed on model outage — hold as `pending`, not `live`
-- [ ] `S3-9` **Build the moderation queue reader** — nothing on disk can surface `moderation/*`. Required for the Guideline 1.2 24h commitment.
+- [x] `S3-9` **Moderation queue reader built** (`moderationQueue`/`resolveModeration`, admin custom claim) — nothing on disk can surface `moderation/*`. Required for the Guideline 1.2 24h commitment.
 - [ ] `S3-10` Real report / block / delete-own-content paths
 - [ ] `S3-11` SOS: 60-min pin, buddy + last-5 notify, "23 people had your back" (Doc 3 §9)
 - [ ] `S3-12` Seed the feed — founder posts + beta testers, via `seedTextId` ids so l10n still resolves
@@ -449,14 +449,12 @@ Real runs on a real device against the real backend. Nothing here is inferred.
 |---|---|
 | `B13` rotate the service-account key | GCP console — founder only |
 | `B14` lock-screen widget | Deferred to V1.1 by the S0 scope decision |
-| `B16` CI, fastlane, store assets | Nothing — just not done yet |
-| `S3-7` `reactions{uid: emoji}` per-user keying | Data-model change; `isMine`/`myReactions` are session-scoped until then |
-| `S3-9` moderation queue reader | Nothing — next up |
-| Reminder wiring | Planner + scheduler exist and are tested; nothing calls `apply()` on journey/settings change yet |
+| `B16` fastlane + store assets | Nothing — CI is done, these are not |
+| `isMine` on a post | Undecidable without exposing `postAuthors` to readers, which is what keeps the feed anonymous. Session-scoped on purpose |
 | Mixpanel | Needs a project token |
 | RevenueCat / `ENTITLEMENT_MODE=mirror` | Deliberately last, per founder |
 | Play Console, banking | Founder |
 
-**Test coverage:** Flutter 75 · functions 42 · rules 29 · integration 56 — **202 tests**, from 0 runnable at session start.
+**Test coverage:** Flutter 81 · functions 47 · rules 35 · integration 67 — **230 tests**, from 0 runnable at session start.
 
-**Deployed:** 11 Cloud Functions, Firestore rules (twice — the second closed two live holes), indexes.
+**Deployed:** 14 Cloud Functions, Firestore rules (three times — the second closed two live holes, the third took reaction counts away from clients), indexes.
