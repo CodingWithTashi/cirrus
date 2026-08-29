@@ -107,7 +107,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ID | Blocker | Evidence | Sprint |
 |---|---|---|---|
 | ~~**B1**~~ | ✅ **RESOLVED Aug 29.** The four modules are written and committed (`09305ad`). **Root cause:** `lib/` in `functions/.gitignore` was unanchored, so it matched `functions/src/lib/` as well as the tsc output — the modules were almost certainly written once and silently never committed. Pattern anchored to `/lib/`. | `npm run verify` green: typecheck + lint + **33 tests / 4 files**, incl. `parsers.test.ts` which could not previously resolve its imports. `npm run build` emits to `lib/src/`; barrel loads all 9 functions. | S0 ✅ |
-| **B2** | [UNBLOCKED, not yet deployed] Billing was **already on Blaze** - the tracker assumed an upgrade was needed and that was wrong - and the Cloud Functions API is now enabled, so `functions:list` answers instead of 403. Deps installed, build emits, barrel loads all 9. **Remaining: the two secret values** (`GEMINI_API_KEY`, `REVENUECAT_WEBHOOK_TOKEN`); deploy fails without them. Gen-2 also wants `cloudbuild`/`artifactregistry`/`run`/`eventarc`. | `gcloud billing projects describe alastpuff` -> `billingEnabled: true` | S0 |
+| ~~**B2**~~ | [RESOLVED Aug 29] **All 9 functions live** in us-central1 (Node 22, gen-2). Needed 3 service-agent IAM bindings, one retry past first-deploy Eventarc/bucket races, and an Artifact Registry cleanup policy (1 day) so old images stop billing. | `firebase functions:list` -> 9 of 9 | S0 done |
 | **B3** | **Client cannot call the backend.** No `cloud_functions`, no `firebase_app_check` in `pubspec.yaml`; zero `httpsCallable` in `lib/`. All 5 callables set `enforceAppCheck: true` and would reject the app anyway. | `pubspec.yaml`, import grep | S1 |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
 | **B5** | **Community + Coach fake in production.** Their providers have no `switch` on `backendModeProvider` → `FakeCommunityApi`/`FakeCoachApi` on a real phone, over memory that resets on restart. The "AI coach" is `if (text.contains('crav'))` over 18 canned templates. | `lib/data/stores/providers.dart:59-87` | S2, S3 |
@@ -118,7 +118,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B10** | **`createReply` promised but missing.** Rules set `create: if false` on replies citing a callable that doesn't exist → replies can never be created. `moderatePost` also only triggers on `posts/{postId}`, so replies would go unmoderated. | `firestore.rules:70`, `functions/src/index.ts` | S3 |
 | **B11** | **Coach's actual words discarded.** `CoachReplyCodec.decode` reads only `template`/`args`/`showWeekCard`, dropping the `text` field `aiCoachChat` returns — the client would render a canned template instead of Ember's real reply. | `lib/data/dto/coach_codec.dart` | S2 |
 | **B12** | **Streak parity broken.** The TS port omits the repair-token exception present in Dart, so the server counts a token-saved day as a break — Ember would quote a lower streak than Home shows. | `streakEngine.ts:21` vs `streak_engine.dart:29-30` | S2 |
-| **B13** | 🔨 **HALF DONE.** The `.gitignore` line protecting the service-account key is now **committed** (`09305ad`), so the protection survives a `git checkout`. **Still open: rotate the key** in the GCP console — it sat unencrypted in the working tree and only the founder can rotate it. | `git show HEAD:.gitignore`; key confirmed never tracked | S0 |
+| **B13** | 🔨 **HALF DONE.** The `.gitignore` line protecting the service-account key is now **committed** (`09305ad`), so the protection survives a `git checkout`. **Still open: rotate the key** in the GCP console — it sat unencrypted in the working tree and only the founder can rotate it. | `git show HEAD:.gitignore`; key confirmed never tracked | S0 - key rotation still open |
 | **B14** | **Lock-screen widget absent** though founder-locked for MVP (Doc 3 header). No iOS widget extension target, no Android app widget. | `ios/Runner.xcodeproj` targets, `android/` | S0 decision |
 | ~~**B15**~~ | [RESOLVED Aug 29] **The name is Cirrus** (founder). Renamed test-first: 4 keys x 5 locales, `android:label`, `CFBundleDisplayName`, pubspec. Internal identifiers (`last_puff` package, `LastPuffApp`, `undoLastPuff`) deliberately unchanged - no user sees them. **Bundle IDs unchanged and still a founder call:** moving off `com.quitvape.last_puff` means re-registering both Firebase apps. | `flutter test` 52/52; `test/brand_name_test.dart` guards all 5 locales | S0 done |
 | **B16** | **No CI, no fastlane, no store assets**, default Flutter launcher icons. | repo root, `assets/` | S0 |
@@ -418,3 +418,21 @@ D1 ≥ 45% · D7 ≥ 25% · D30 ≥ 12% · craving-survived rate ≥ 70% · stor
 ---
 
 *Built from a full repo audit on Aug 29, 2026. Every ✅ and every blocker in §3 carries its evidence. Anything unverified is marked ❓ and treated as not done.*
+
+---
+
+## 10. END-TO-END VERIFICATION LOG
+
+Real runs on a real device against the real backend. Nothing here is inferred.
+
+| Date | What was exercised | Result |
+|---|---|---|
+| Aug 29, 2026 | Debug APK on `emulator-5554` (Android 17 / API 37) | Installs, launches, `FirebaseApp initialization successful`, no crash |
+| Aug 29, 2026 | Brand rename on device | Wordmark renders **Cirrus** |
+| Aug 29, 2026 | Email registration → **production Firebase Auth** | Account `e2e012809@…` created, uid `ySMGMESFRoSPOt34…`; verified via `firebase auth:export` |
+| Aug 29, 2026 | Post-register routing | Lands on onboarding A1, as the router intends |
+| Aug 29, 2026 | Cloud Functions deploy | 9/9 live; `moderatePost` + `aiCoachChat` needed one retry past first-deploy propagation |
+
+**Test data left in production:** one Auth account (`e2e012809@cirrus.app`). Harmless, but delete it before launch — or sooner if you'd rather keep Auth clean.
+
+**Not yet exercised end-to-end, because the client cannot reach the backend (B3):** the coach, the community, moderation, and both crons. That gap is the next piece of work, not an oversight.
