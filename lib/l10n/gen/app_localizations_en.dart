@@ -9,14 +9,14 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'LastPuff';
+  String get appName => 'Cirrus';
 
   @override
   String get appTagline => 'Your last puff is closer\nthan you think.';
 
   @override
   String appVersionFooter(String version) {
-    return 'LastPuff $version · made by people who quit';
+    return 'Cirrus $version · made by people who quit';
   }
 
   @override
@@ -290,7 +290,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obUnder18Subtitle =>
-      'LastPuff is built for 18+. These two are free, private, and made for people your age. They work.';
+      'Cirrus is built for 18+. These two are free, private, and made for people your age. They work.';
 
   @override
   String get obUnder18TiqTitle => 'This is Quitting';
@@ -705,7 +705,7 @@ class AppLocalizationsEn extends AppLocalizations {
       '\"First app that didn\'t talk to me like a doctor or my mom.\"';
 
   @override
-  String get obRatingCardTitle => 'Enjoying LastPuff?';
+  String get obRatingCardTitle => 'Enjoying Cirrus?';
 
   @override
   String get obRatingCardSubtitle => 'Tap a star to rate it on the App Store.';

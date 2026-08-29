@@ -1,9 +1,9 @@
 {
   "@@locale": "en",
 
-  "appName": "LastPuff",
+  "appName": "Cirrus",
   "appTagline": "Your last puff is closer\nthan you think.",
-  "appVersionFooter": "LastPuff {version} · made by people who quit",
+  "appVersionFooter": "Cirrus {version} · made by people who quit",
   "@appVersionFooter": { "placeholders": { "version": { "type": "String" } } },
 
   "commonContinue": "Continue",
@@ -93,7 +93,7 @@
   "obBirthYearTitle": "What year were you born?",
   "obBirthYearSubtitle": "Your plan adapts to your age.",
   "obUnder18Title": "We can't help you here — but this can.",
-  "obUnder18Subtitle": "LastPuff is built for 18+. These two are free, private, and made for people your age. They work.",
+  "obUnder18Subtitle": "Cirrus is built for 18+. These two are free, private, and made for people your age. They work.",
   "obUnder18TiqTitle": "This is Quitting",
   "obUnder18TiqBody": "Daily texts from people who get it. 500,000+ young people enrolled.",
   "obUnder18TiqCta": "Text DITCHVAPE to 88709",
@@ -228,7 +228,7 @@
   "obRatingBetaTester": "BETA TESTER",
   "obRatingQuote1": "\"The panic button got me through week one. I'd have caved on day 3 without it.\"",
   "obRatingQuote2": "\"First app that didn't talk to me like a doctor or my mom.\"",
-  "obRatingCardTitle": "Enjoying LastPuff?",
+  "obRatingCardTitle": "Enjoying Cirrus?",
   "obRatingCardSubtitle": "Tap a star to rate it on the App Store.",
   "obNotifTitle": "Backup, exactly when you cave.",
   "obNotifSubtitle": "Not spam. One nudge before your danger hours, one when you hit a milestone.",

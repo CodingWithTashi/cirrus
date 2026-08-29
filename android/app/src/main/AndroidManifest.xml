@@ -3,7 +3,7 @@
          inherit this from Flutter's tooling manifests; release needs it here. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="LastPuff"
+        android:label="Cirrus"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

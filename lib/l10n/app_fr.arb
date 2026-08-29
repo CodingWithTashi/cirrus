@@ -1,9 +1,9 @@
 {
   "@@locale": "fr",
 
-  "appName": "LastPuff",
+  "appName": "Cirrus",
   "appTagline": "Ta dernière taffe est plus proche\nque tu ne le crois.",
-  "appVersionFooter": "LastPuff {version} · fait par des gens qui ont arrêté",
+  "appVersionFooter": "Cirrus {version} · fait par des gens qui ont arrêté",
 
   "commonContinue": "Continuer",
   "commonCancel": "Annuler",
@@ -86,7 +86,7 @@
   "obBirthYearTitle": "Tu es né·e en quelle année ?",
   "obBirthYearSubtitle": "Ton plan s'adapte à ton âge.",
   "obUnder18Title": "On ne peut pas t'aider ici — mais ça, oui.",
-  "obUnder18Subtitle": "LastPuff est réservé aux 18+. Ces deux options sont gratuites, privées et faites pour ton âge. Elles marchent.",
+  "obUnder18Subtitle": "Cirrus est réservé aux 18+. Ces deux options sont gratuites, privées et faites pour ton âge. Elles marchent.",
   "obUnder18TiqTitle": "This is Quitting",
   "obUnder18TiqBody": "Des textos quotidiens de gens qui comprennent. Plus de 500 000 jeunes inscrits.",
   "obUnder18TiqCta": "Envoie DITCHVAPE au 88709",
@@ -207,7 +207,7 @@
   "obRatingBetaTester": "BÊTA-TESTEUR",
   "obRatingQuote1": "« Le bouton panique m'a fait passer la première semaine. J'aurais craqué au jour 3 sans lui. »",
   "obRatingQuote2": "« La première appli qui ne me parle pas comme un médecin ou ma mère. »",
-  "obRatingCardTitle": "Tu aimes LastPuff ?",
+  "obRatingCardTitle": "Tu aimes Cirrus ?",
   "obRatingCardSubtitle": "Touche une étoile pour noter sur l'App Store.",
   "obNotifTitle": "Du renfort, pile quand tu craques.",
   "obNotifSubtitle": "Pas de spam. Un rappel avant tes heures à risque, un autre à chaque étape franchie.",

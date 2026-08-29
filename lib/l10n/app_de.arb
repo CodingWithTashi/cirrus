@@ -1,9 +1,9 @@
 {
   "@@locale": "de",
 
-  "appName": "LastPuff",
+  "appName": "Cirrus",
   "appTagline": "Dein letzter Zug ist näher,\nals du denkst.",
-  "appVersionFooter": "LastPuff {version} · gebaut von Leuten, die aufgehört haben",
+  "appVersionFooter": "Cirrus {version} · gebaut von Leuten, die aufgehört haben",
 
   "commonContinue": "Weiter",
   "commonCancel": "Abbrechen",
@@ -86,7 +86,7 @@
   "obBirthYearTitle": "In welchem Jahr bist du geboren?",
   "obBirthYearSubtitle": "Dein Plan passt sich deinem Alter an.",
   "obUnder18Title": "Hier können wir dir nicht helfen — aber das hier kann es.",
-  "obUnder18Subtitle": "LastPuff ist ab 18. Diese zwei sind kostenlos, privat und für dein Alter gemacht. Sie funktionieren.",
+  "obUnder18Subtitle": "Cirrus ist ab 18. Diese zwei sind kostenlos, privat und für dein Alter gemacht. Sie funktionieren.",
   "obUnder18TiqTitle": "This is Quitting",
   "obUnder18TiqBody": "Tägliche Nachrichten von Leuten, die es verstehen. Über 500.000 junge Menschen dabei.",
   "obUnder18TiqCta": "Texte DITCHVAPE an 88709",
@@ -207,7 +207,7 @@
   "obRatingBetaTester": "BETA-TESTER",
   "obRatingQuote1": "„Der Panik-Button hat mich durch Woche eins getragen. Ohne ihn wäre ich an Tag 3 eingeknickt.“",
   "obRatingQuote2": "„Die erste App, die nicht mit mir redet wie ein Arzt oder meine Mutter.“",
-  "obRatingCardTitle": "Gefällt dir LastPuff?",
+  "obRatingCardTitle": "Gefällt dir Cirrus?",
   "obRatingCardSubtitle": "Tippe einen Stern, um im App Store zu bewerten.",
   "obNotifTitle": "Rückendeckung, genau wenn du einknickst.",
   "obNotifSubtitle": "Kein Spam. Ein Stups vor deinen Gefahrenstunden, einer bei jedem Meilenstein.",

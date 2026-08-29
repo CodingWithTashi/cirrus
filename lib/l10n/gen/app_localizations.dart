@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
-  /// **'LastPuff'**
+  /// **'Cirrus'**
   String get appName;
 
   /// No description provided for @appTagline.
@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @appVersionFooter.
   ///
   /// In en, this message translates to:
-  /// **'LastPuff {version} · made by people who quit'**
+  /// **'Cirrus {version} · made by people who quit'**
   String appVersionFooter(String version);
 
   /// No description provided for @commonContinue.
@@ -599,7 +599,7 @@ abstract class AppLocalizations {
   /// No description provided for @obUnder18Subtitle.
   ///
   /// In en, this message translates to:
-  /// **'LastPuff is built for 18+. These two are free, private, and made for people your age. They work.'**
+  /// **'Cirrus is built for 18+. These two are free, private, and made for people your age. They work.'**
   String get obUnder18Subtitle;
 
   /// No description provided for @obUnder18TiqTitle.
@@ -1325,7 +1325,7 @@ abstract class AppLocalizations {
   /// No description provided for @obRatingCardTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enjoying LastPuff?'**
+  /// **'Enjoying Cirrus?'**
   String get obRatingCardTitle;
 
   /// No description provided for @obRatingCardSubtitle.
