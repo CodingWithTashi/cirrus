@@ -32,12 +32,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSave => 'Save';
 
   @override
-  String get commonSkip => 'Skip';
-
-  @override
-  String get commonBack => 'Back';
-
-  @override
   String get commonRetry => 'Retry';
 
   @override
@@ -56,30 +50,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonMaybeLater => 'Maybe later';
 
   @override
-  String get commonComingSoon => 'Coming soon';
-
-  @override
-  String get commonToday => 'Today';
-
-  @override
-  String get commonDay => 'Day';
-
-  @override
-  String get commonYou => 'you';
-
-  @override
-  String get commonPremium => 'Premium';
-
-  @override
-  String get commonFree => 'Free';
-
-  @override
-  String get commonUpgrade => 'Upgrade';
-
-  @override
-  String get commonSeeAll => 'See all';
-
-  @override
   String get commonOfflineBanner =>
       'Offline — logs saved on your phone, syncing when you\'re back.';
 
@@ -90,39 +60,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonErrorBody => 'Your data is fine. Tap to retry.';
 
   @override
-  String commonDayOfDay(int day, int total) {
-    return 'Day $day of $total';
-  }
-
-  @override
   String commonDayN(int day) {
     return 'day $day';
   }
-
-  @override
-  String commonStreakDays(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count days',
-      one: '$count day',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String commonPuffsUnit(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count puffs',
-      one: '$count puff',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get authSplashAutoAdvance => 'Loading your plan…';
 
   @override
   String get authSignInTitle => 'Let\'s keep your\nplan safe.';
@@ -923,9 +863,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeOverLine => 'Over today\'s line. Breathe — tomorrow adjusts.';
-
-  @override
   String homeVsDay1(String percent) {
     return '$percent vs day 1';
   }
@@ -964,14 +901,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeLoggedSnack => 'Logged 1 puff';
-
-  @override
-  String get homeLogPlusOne => '+1 logged';
-
-  @override
-  String homeLogRingNote(int count) {
-    return 'ring ticks with a bounce · $count left today';
-  }
 
   @override
   String get homeOverLimitTitle => 'Over today\'s line';
@@ -1081,12 +1010,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'occupies the exact itch — thumbs busy, brain busy';
 
   @override
-  String get panicLoopBuddy => 'Text my buddy';
+  String get panicLoopSos => 'Ask the community';
 
   @override
-  String panicLoopBuddySub(String name) {
-    return '$name gets a ping: \"craving — talk me down\"';
-  }
+  String get panicLoopSosSub => 'post an SOS — it pins to the top for an hour';
 
   @override
   String get panicLoopCoach => 'Talk to coach';
@@ -1100,26 +1027,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panicLoopCoachLocked => 'you\'ve used today\'s free AI session';
 
   @override
-  String panicBuddyPinged(String name) {
-    return 'Ping sent. $name has your back.';
-  }
-
-  @override
   String get gameTitle => 'Tap every spark';
 
   @override
   String get gameSubtitle => '60 seconds. Thumbs busy, brain busy.';
 
   @override
-  String get gameScore => 'sparks';
-
-  @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
-
-  @override
-  String get gameDone => 'Time. Look at that — the wave broke.';
 
   @override
   String get survivedPlusOne => '+1 craving beaten';
@@ -1595,16 +1511,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAddVoice => 'Add your voice…';
 
   @override
-  String communityPostAge(int minutes) {
-    return '${minutes}m';
-  }
-
-  @override
-  String communityPostAgeHours(int hours) {
-    return '${hours}h';
-  }
-
-  @override
   String communityDayTag(int day) {
     return 'day $day';
   }
@@ -1620,48 +1526,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPosted => 'Posted. Someone needed to read that.';
 
   @override
-  String get buddyTitle => 'Your buddy';
-
-  @override
-  String get buddyCombinedStreak => 'combined streak';
-
-  @override
-  String get buddyNeitherCaves => 'neither of you caves alone';
-
-  @override
-  String buddyNudge(String name) {
-    return '👊 Nudge $name';
-  }
-
-  @override
-  String get buddyMessage => '💬 Message';
-
-  @override
-  String buddyPrivacyNote(String name) {
-    return '$name sees your SOS pings and gets one nudge if you go quiet for 2 days. That\'s it — no puff counts shared unless you opt in.';
-  }
-
-  @override
-  String get buddyPairsLabel => 'QUITTING IS EASIER IN PAIRS';
-
-  @override
-  String get buddyInviteTitle => 'Invite another friend';
-
-  @override
-  String get buddyCopyLink => 'Copy link';
-
-  @override
   String get buddyLinkCopied =>
       'Link copied — quitting hits different with backup.';
-
-  @override
-  String buddyNudged(String name) {
-    return 'Nudge sent. $name will feel it.';
-  }
-
-  @override
-  String get buddyNudgeCap =>
-      'Two nudges a day keeps it friendly. More tomorrow.';
 
   @override
   String get moneyTitle => 'Money back';
@@ -1894,9 +1760,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mFiveHundredSaved => '\$500 saved';
 
   @override
-  String get mBuddyBond => 'Buddy bond';
-
-  @override
   String get mComeback => 'Comeback';
 
   @override
@@ -1967,66 +1830,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHoursChartLabel => 'PUFFS BY HOUR, LAST 14 DAYS';
 
   @override
+  String get insightPendingTitle => 'No report yet';
+
+  @override
+  String get insightPendingBody =>
+      'Ember writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there\'s a week to read.';
+
+  @override
   String insightCounter(int index, int total) {
     return 'INSIGHT $index OF $total';
   }
-
-  @override
-  String get insight1Headline => 'You vape 3× more after 10 p.m. on weekends.';
-
-  @override
-  String get insight1Body =>
-      'Friday and Saturday nights account for 41% of your weekly puffs. That\'s a social trigger, not a nicotine one — different playbook.';
-
-  @override
-  String get insight1ChartLabel => 'PUFFS BY HOUR · WEEKEND';
-
-  @override
-  String get insight1Action =>
-      'Coach suggestion: pre-set a Friday 9:45 p.m. nudge + keep your hands busy at the party (game link ready).';
-
-  @override
-  String get insight2Headline => 'Your mornings are already free.';
-
-  @override
-  String get insight2Body =>
-      'You didn\'t log a single puff before 11 a.m. for five straight days. The nicotine clock that owned your wake-up? Broken.';
-
-  @override
-  String get insight2ChartLabel => 'FIRST PUFF OF THE DAY';
-
-  @override
-  String get insight2Action =>
-      'Coach suggestion: protect it — keep the vape out of the bedroom and the first hour stays yours.';
-
-  @override
-  String get insight3Headline =>
-      'Cravings beaten: 9. Cravings that beat you: 2.';
-
-  @override
-  String get insight3Body =>
-      'An 82% win rate. Both losses were within an hour of skipped meals — hunger wears nicotine\'s jacket.';
-
-  @override
-  String get insight3ChartLabel => 'CRAVING OUTCOMES';
-
-  @override
-  String get insight3Action =>
-      'Coach suggestion: snack before your 9 p.m. window. Boring advice, measurable difference.';
-
-  @override
-  String get insight4Headline => 'Next week: the halfway bend.';
-
-  @override
-  String get insight4Body =>
-      'Your line drops to 100/day Tuesday. The curve gets steeper here — this is the week the Panic Button earns its keep.';
-
-  @override
-  String get insight4ChartLabel => 'THE WEEK AHEAD';
-
-  @override
-  String get insight4Action =>
-      'Coach suggestion: pre-book one thing you love for Saturday. Reward the bend, don\'t white-knuckle it.';
 
   @override
   String get slipTitle => 'A slip is data, not defeat.';
@@ -2252,9 +2065,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'We never sell your data. No ad trackers. Ever.';
 
   @override
-  String get settingsExportData => 'Export my data';
-
-  @override
   String get settingsDeleteEverything => 'Delete everything';
 
   @override
@@ -2266,10 +2076,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteConfirmCta => 'Yes, delete it all';
-
-  @override
-  String get settingsExported =>
-      'Data package ready — it\'s yours, always was.';
 
   @override
   String get settingsAppearance => 'Appearance';
@@ -2288,15 +2094,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageSystem => 'Match system';
-
-  @override
-  String get settingsSupport => 'Support & FAQ';
-
-  @override
-  String get settingsRestorePurchases => 'Restore purchases';
-
-  @override
-  String get settingsRestored => 'Purchases restored — welcome back.';
 
   @override
   String get settingsSignOut => 'Sign out';

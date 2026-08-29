@@ -30,7 +30,4 @@ class ApiCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> blockAuthor(String alias) => _api.blockAuthor(alias);
-
-  @override
-  Future<void> nudgeBuddy() => _api.nudgeBuddy();
 }

@@ -8,7 +8,7 @@ import '../../core/widgets/lp_error.dart';
 import '../../data/stores/providers.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
-import '../../features/buddy/buddy_screen.dart';
+import '../../domain/models/models.dart';
 import '../../features/coach/coach_screen.dart';
 import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
@@ -55,7 +55,6 @@ abstract final class Routes {
   static const health = '/health';
   static const milestones = '/milestones';
   static const insight = '/insight';
-  static const buddy = '/buddy';
   static const profile = '/profile';
   static const settings = '/settings';
 
@@ -123,7 +122,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.health) ||
           path.startsWith(Routes.milestones) ||
           path.startsWith(Routes.insight) ||
-          path.startsWith(Routes.buddy) ||
           path.startsWith(Routes.profile) ||
           path.startsWith(Routes.settings) ||
           path.startsWith(Routes.moderation) ||
@@ -193,7 +191,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(path: Routes.compose, builder: (_, _) => const ComposerScreen()),
+      GoRoute(
+        path: Routes.compose,
+        // `?tag=sos` pre-selects a tag — the panic flow's route into the
+        // community. A query parameter rather than `extra` so the deep link
+        // survives a restart and can be opened from a push.
+        builder: (_, state) => ComposerScreen(
+          initialTag: PostTag.values
+              .where((t) => t.name == state.uri.queryParameters['tag'])
+              .firstOrNull,
+        ),
+      ),
       GoRoute(
         path: '/community/post/:id',
         builder: (_, state) =>
@@ -227,7 +235,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const MilestonesScreen(),
       ),
       GoRoute(path: Routes.insight, builder: (_, _) => const InsightScreen()),
-      GoRoute(path: Routes.buddy, builder: (_, _) => const BuddyScreen()),
       GoRoute(path: Routes.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
       GoRoute(

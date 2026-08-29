@@ -18,7 +18,6 @@ abstract final class JourneyCodec {
     'longestStreak': s.longestStreak,
     'goals': [for (final g in s.goals) _encodeGoal(g)],
     'earnedBadges': s.earnedBadges.toList(),
-    'buddy': _encodeBuddy(s.buddy),
     'lastPuffAt': s.lastPuffAt == null ? null : encodeTimestamp(s.lastPuffAt!),
     'day1TasksDone': s.day1TasksDone.toList(),
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
@@ -44,7 +43,6 @@ abstract final class JourneyCodec {
         _decodeGoal(g as Map<String, dynamic>),
     ],
     earnedBadges: (json['earnedBadges'] as List).cast<String>().toSet(),
-    buddy: _decodeBuddy(json['buddy'] as Map<String, dynamic>),
     lastPuffAt: json['lastPuffAt'] == null
         ? null
         : decodeTimestamp(json['lastPuffAt'] as String),
@@ -187,17 +185,4 @@ abstract final class JourneyCodec {
     fromOnboarding: json['fromOnboarding'] as bool? ?? false,
   );
 
-  static Map<String, dynamic> _encodeBuddy(Buddy b) => {
-    'alias': b.alias,
-    'avatarEmoji': b.avatarEmoji,
-    'name': b.name,
-    'streakDays': b.streakDays,
-  };
-
-  static Buddy _decodeBuddy(Map<String, dynamic> json) => Buddy(
-    alias: json['alias'] as String,
-    avatarEmoji: json['avatarEmoji'] as String,
-    name: json['name'] as String,
-    streakDays: json['streakDays'] as int,
-  );
 }

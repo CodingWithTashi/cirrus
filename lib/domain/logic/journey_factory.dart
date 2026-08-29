@@ -2,10 +2,18 @@ import '../models/journey_state.dart';
 import '../models/models.dart';
 import 'taper_engine.dart';
 
-/// Server-side journey creation, shared by every backend implementation so
-/// the fake and the real backend mint identical day-1 journeys: the day-1
-/// log at the curve limit, the onboarding savings goal, and buddy
-/// matchmaking.
+/// Server-side journey creation, shared by every backend implementation so the
+/// fake and the real backend mint identical day-1 journeys.
+///
+/// A day-1 journey contains exactly what the user gave us and nothing else.
+/// It used to also invent a savings goal ("Tokyo flight, $1300") and a buddy
+/// ("Sam, 19-day streak") for every account — data the user never entered,
+/// rendered everywhere as if they had. The Money screen showed progress toward
+/// someone else's holiday, and once the coach's user card learned to read
+/// goals it began quoting that holiday back to them.
+///
+/// "No invented numbers" is the brand rule; a fabricated goal is the same
+/// failure as a fabricated stat, just wearing the user's handwriting.
 abstract final class InitialJourney {
   static JourneyState build({
     required UserProfile profile,
@@ -27,23 +35,8 @@ abstract final class InitialJourney {
       cravingsSurvivedTotal: 0,
       repairTokens: 0,
       longestStreak: 0,
-      goals: [
-        if (plan.weeklySpend > 0)
-          const SavingsGoal(
-            id: 'onboarding-goal',
-            emoji: '✈️',
-            name: 'Tokyo flight',
-            price: 1300,
-            fromOnboarding: true,
-          ),
-      ],
+      goals: const [],
       earnedBadges: const {},
-      buddy: const Buddy(
-        alias: '@trashpanda',
-        avatarEmoji: '🦝',
-        name: 'Sam',
-        streakDays: 19,
-      ),
       day1TasksDone: const {},
     );
   }

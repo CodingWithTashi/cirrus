@@ -14,36 +14,15 @@
   "commonCancel": "Cancel",
   "commonDone": "Done",
   "commonSave": "Save",
-  "commonSkip": "Skip",
-  "commonBack": "Back",
   "commonRetry": "Retry",
   "commonUndo": "Undo",
   "commonEdit": "Edit",
   "commonClose": "Close",
   "commonNotNow": "Not now",
   "commonMaybeLater": "Maybe later",
-  "commonComingSoon": "Coming soon",
-  "commonToday": "Today",
-  "commonDay": "Day",
-  "commonYou": "you",
-  "commonPremium": "Premium",
-  "commonFree": "Free",
-  "commonUpgrade": "Upgrade",
-  "commonSeeAll": "See all",
   "commonOfflineBanner": "Offline — logs saved on your phone, syncing when you're back.",
   "commonErrorTitle": "Something hiccuped.",
   "commonErrorBody": "Your data is fine. Tap to retry.",
-  "commonDayOfDay": "Day {day} of {total}",
-  "@commonDayOfDay": {
-    "placeholders": {
-      "day": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "commonDayN": "day {day}",
   "@commonDayN": {
     "placeholders": {
@@ -52,23 +31,6 @@
       }
     }
   },
-  "commonStreakDays": "{count, plural, one{{count} day} other{{count} days}}",
-  "@commonStreakDays": {
-    "placeholders": {
-      "count": {
-        "type": "num"
-      }
-    }
-  },
-  "commonPuffsUnit": "{count, plural, one{{count} puff} other{{count} puffs}}",
-  "@commonPuffsUnit": {
-    "placeholders": {
-      "count": {
-        "type": "num"
-      }
-    }
-  },
-  "authSplashAutoAdvance": "Loading your plan…",
   "authSignInTitle": "Let's keep your\nplan safe.",
   "authSignInSubtitle": "Anonymous by default — you'll pick an alias for community.",
   "authSignInWithApple": "Sign in with Apple",
@@ -478,7 +440,6 @@
       }
     }
   },
-  "homeOverLine": "Over today's line. Breathe — tomorrow adjusts.",
   "homeVsDay1": "{percent} vs day 1",
   "@homeVsDay1": {
     "placeholders": {
@@ -511,15 +472,6 @@
   "homeVapeFreeCta": "Confirm vape-free day ✓",
   "homeVapeFreeDone": "Vape-free day locked in. That's the whole game. 🔥",
   "homeLoggedSnack": "Logged 1 puff",
-  "homeLogPlusOne": "+1 logged",
-  "homeLogRingNote": "ring ticks with a bounce · {count} left today",
-  "@homeLogRingNote": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "homeOverLimitTitle": "Over today's line",
   "homeOverLimitBody": "Breathe — tomorrow's line adjusts. No shame.",
   "homeOverLimitBreathe": "Breathe 60s",
@@ -582,15 +534,8 @@
   "panicLoopSubtitle": "Your hands and brain need a job for 60 seconds. Pick one.",
   "panicLoopGame": "60-second game",
   "panicLoopGameSub": "occupies the exact itch — thumbs busy, brain busy",
-  "panicLoopBuddy": "Text my buddy",
-  "panicLoopBuddySub": "{name} gets a ping: \"craving — talk me down\"",
-  "@panicLoopBuddySub": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "panicLoopSos": "Ask the community",
+  "panicLoopSosSub": "post an SOS — it pins to the top for an hour",
   "panicLoopCoach": "Talk to coach",
   "panicLoopCoachSub": "it knows this is your {hour} stress pattern",
   "@panicLoopCoachSub": {
@@ -601,17 +546,8 @@
     }
   },
   "panicLoopCoachLocked": "you've used today's free AI session",
-  "panicBuddyPinged": "Ping sent. {name} has your back.",
-  "@panicBuddyPinged": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "gameTitle": "Tap every spark",
   "gameSubtitle": "60 seconds. Thumbs busy, brain busy.",
-  "gameScore": "sparks",
   "gameTimeLeft": "{seconds}s",
   "@gameTimeLeft": {
     "placeholders": {
@@ -620,7 +556,6 @@
       }
     }
   },
-  "gameDone": "Time. Look at that — the wave broke.",
   "survivedPlusOne": "+1 craving beaten",
   "survivedLine1": "That one had nothing on you.",
   "survivedLine2": "The wave broke. You didn't.",
@@ -1002,22 +937,6 @@
     }
   },
   "communityAddVoice": "Add your voice…",
-  "communityPostAge": "{minutes}m",
-  "@communityPostAge": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
-  "communityPostAgeHours": "{hours}h",
-  "@communityPostAgeHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
   "communityDayTag": "day {day}",
   "@communityDayTag": {
     "placeholders": {
@@ -1029,39 +948,7 @@
   "communityEmptyTitle": "No posts yet — say hi.",
   "communityEmptyBody": "Your Day 1 post is the one someone on Day 0 needs to read.",
   "communityPosted": "Posted. Someone needed to read that.",
-  "buddyTitle": "Your buddy",
-  "buddyCombinedStreak": "combined streak",
-  "buddyNeitherCaves": "neither of you caves alone",
-  "buddyNudge": "👊 Nudge {name}",
-  "@buddyNudge": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "buddyMessage": "💬 Message",
-  "buddyPrivacyNote": "{name} sees your SOS pings and gets one nudge if you go quiet for 2 days. That's it — no puff counts shared unless you opt in.",
-  "@buddyPrivacyNote": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "buddyPairsLabel": "QUITTING IS EASIER IN PAIRS",
-  "buddyInviteTitle": "Invite another friend",
-  "buddyCopyLink": "Copy link",
   "buddyLinkCopied": "Link copied — quitting hits different with backup.",
-  "buddyNudged": "Nudge sent. {name} will feel it.",
-  "@buddyNudged": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "buddyNudgeCap": "Two nudges a day keeps it friendly. More tomorrow.",
   "moneyTitle": "Money back",
   "moneySavedSince": "saved since {date} · {perDay} rolling in daily",
   "@moneySavedSince": {
@@ -1213,7 +1100,6 @@
   "mFreedomDay": "Freedom Day",
   "mFirstPost": "First post",
   "mFiveHundredSaved": "$500 saved",
-  "mBuddyBond": "Buddy bond",
   "mComeback": "Comeback",
   "moodTitle": "How's today feeling?",
   "moodSubtitle": "10 seconds. It matters more than you'd think.",
@@ -1262,6 +1148,8 @@
   "insightWeekChartLabel": "PUFFS, LAST 7 DAYS",
   "insightCravingsChartLabel": "CRAVINGS SURVIVED, LAST 7 DAYS",
   "insightHoursChartLabel": "PUFFS BY HOUR, LAST 14 DAYS",
+  "insightPendingTitle": "No report yet",
+  "insightPendingBody": "Ember writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there's a week to read.",
   "insightCounter": "INSIGHT {index} OF {total}",
   "@insightCounter": {
     "placeholders": {
@@ -1273,22 +1161,6 @@
       }
     }
   },
-  "insight1Headline": "You vape 3× more after 10 p.m. on weekends.",
-  "insight1Body": "Friday and Saturday nights account for 41% of your weekly puffs. That's a social trigger, not a nicotine one — different playbook.",
-  "insight1ChartLabel": "PUFFS BY HOUR · WEEKEND",
-  "insight1Action": "Coach suggestion: pre-set a Friday 9:45 p.m. nudge + keep your hands busy at the party (game link ready).",
-  "insight2Headline": "Your mornings are already free.",
-  "insight2Body": "You didn't log a single puff before 11 a.m. for five straight days. The nicotine clock that owned your wake-up? Broken.",
-  "insight2ChartLabel": "FIRST PUFF OF THE DAY",
-  "insight2Action": "Coach suggestion: protect it — keep the vape out of the bedroom and the first hour stays yours.",
-  "insight3Headline": "Cravings beaten: 9. Cravings that beat you: 2.",
-  "insight3Body": "An 82% win rate. Both losses were within an hour of skipped meals — hunger wears nicotine's jacket.",
-  "insight3ChartLabel": "CRAVING OUTCOMES",
-  "insight3Action": "Coach suggestion: snack before your 9 p.m. window. Boring advice, measurable difference.",
-  "insight4Headline": "Next week: the halfway bend.",
-  "insight4Body": "Your line drops to 100/day Tuesday. The curve gets steeper here — this is the week the Panic Button earns its keep.",
-  "insight4ChartLabel": "THE WEEK AHEAD",
-  "insight4Action": "Coach suggestion: pre-book one thing you love for Saturday. Reward the bend, don't white-knuckle it.",
   "slipTitle": "A slip is data, not defeat.",
   "slipSubtitle": "You logged puffs after {days} clean days. That's information — it tells us exactly where the plan needs armor.",
   "@slipSubtitle": {
@@ -1423,21 +1295,16 @@
   },
   "settingsPrivacy": "Privacy",
   "settingsPrivacyNote": "We never sell your data. No ad trackers. Ever.",
-  "settingsExportData": "Export my data",
   "settingsDeleteEverything": "Delete everything",
   "settingsDeleteConfirmTitle": "Delete everything?",
   "settingsDeleteConfirmBody": "Your plan, logs, streak, and community posts — gone for good. This is the one button we can't undo.",
   "settingsDeleteConfirmCta": "Yes, delete it all",
-  "settingsExported": "Data package ready — it's yours, always was.",
   "settingsAppearance": "Appearance",
   "settingsAppearanceSystem": "Match system",
   "settingsAppearanceMidnight": "Midnight",
   "settingsAppearanceDaylight": "Daylight",
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "Match system",
-  "settingsSupport": "Support & FAQ",
-  "settingsRestorePurchases": "Restore purchases",
-  "settingsRestored": "Purchases restored — welcome back.",
   "settingsSignOut": "Sign out",
   "settingsSignOutConfirmTitle": "Sign out?",
   "settingsSignOutConfirmBody": "Your data stays on your account. The streak keeps burning.",

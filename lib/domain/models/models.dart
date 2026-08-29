@@ -182,20 +182,6 @@ class SavingsGoal {
   final bool fromOnboarding;
 }
 
-class Buddy {
-  const Buddy({
-    required this.alias,
-    required this.avatarEmoji,
-    required this.name,
-    required this.streakDays,
-  });
-
-  final String alias;
-  final String avatarEmoji;
-  final String name;
-  final int streakDays;
-}
-
 class Reply {
   const Reply({
     required this.alias,

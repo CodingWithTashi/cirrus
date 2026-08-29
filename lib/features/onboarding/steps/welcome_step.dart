@@ -88,12 +88,10 @@ class WelcomeStep extends ConsumerWidget {
               l10n.obWelcomeCta,
               onTap: () => ref.read(onboardingProvider.notifier).next(),
             ),
-            const SizedBox(height: 4),
-            LpTextButton(
-              l10n.authRestorePurchase,
-              size: 12,
-              onTap: () => showLpSnack(context, l10n.settingsRestored),
-            ),
+            // "Restore purchase" lived here and only showed a snack. There is
+            // no billing SDK to restore from (docs/08 B4), so it was claiming
+            // to restore purchases that cannot exist. It returns with
+            // subscriptions (S1-7), where it is a store requirement.
           ],
         ),
       ),

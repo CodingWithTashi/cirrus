@@ -196,31 +196,13 @@ class SettingsScreen extends ConsumerWidget {
                       style: LpType.caption(lp.textSecondary),
                     ),
                     const SizedBox(height: 10),
+                    // Only Delete here. There was an "Export my data"
+                    // button beside it that showed a success snack and
+                    // exported nothing — a privacy control that lies is worse
+                    // than one that is missing. It comes back when it writes a
+                    // real file (docs/08 S5).
                     Row(
                       children: [
-                        PressScale(
-                          onTap: () =>
-                              showLpSnack(context, l10n.settingsExported),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: lp.surfaceInset,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: lp.border),
-                            ),
-                            child: Text(
-                              l10n.settingsExportData,
-                              style: LpType.caption11(
-                                lp.textBody,
-                                weight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         PressScale(
                           onTap: () => _confirmDelete(context, ref),
                           child: Container(
@@ -278,18 +260,11 @@ class SettingsScreen extends ConsumerWidget {
                 value: '',
                 onTap: () => context.push(Routes.moderation),
               ),
-            row(
-              emoji: '💬',
-              label: l10n.settingsSupport,
-              value: '',
-              onTap: () => showLpSnack(context, l10n.commonComingSoon),
-            ),
-            row(
-              emoji: '↺',
-              label: l10n.settingsRestorePurchases,
-              value: '',
-              onTap: () => showLpSnack(context, l10n.settingsRestored),
-            ),
+            // Support and Restore Purchases both used to live here and both
+            // only showed a snack. There is no support channel yet, and no
+            // billing SDK at all (docs/08 B4) — so "Restored" was claiming to
+            // have restored purchases that cannot exist. Restore is REQUIRED
+            // the day subscriptions ship (S1-7); it returns with them.
             const SizedBox(height: 10),
             Center(
               child: LpTextButton(

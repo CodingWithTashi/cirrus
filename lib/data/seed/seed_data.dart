@@ -108,12 +108,6 @@ abstract final class SeedData {
         'helpedSos',
         'tenCravings',
       },
-      buddy: const Buddy(
-        alias: '@trashpanda',
-        avatarEmoji: '🦝',
-        name: 'Sam',
-        streakDays: 19,
-      ),
       lastPuffAt: now.subtract(const Duration(minutes: 38)),
       day1TasksDone: const {0, 1, 2},
       moodCheckIns: 4,

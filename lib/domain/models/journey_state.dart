@@ -15,7 +15,6 @@ class JourneyState {
     required this.longestStreak,
     required this.goals,
     required this.earnedBadges,
-    required this.buddy,
     this.lastPuffAt,
     this.day1TasksDone = const {},
     this.pendingSlipCleanDays,
@@ -33,7 +32,6 @@ class JourneyState {
   final int longestStreak;
   final List<SavingsGoal> goals;
   final Set<String> earnedBadges;
-  final Buddy buddy;
   final DateTime? lastPuffAt;
 
   /// Day-1 checklist: which of tasks 1..3 are done.
@@ -75,7 +73,6 @@ class JourneyState {
     int? longestStreak,
     List<SavingsGoal>? goals,
     Set<String>? earnedBadges,
-    Buddy? buddy,
     DateTime? lastPuffAt,
     Set<int>? day1TasksDone,
     int? Function()? pendingSlipCleanDays,
@@ -90,7 +87,6 @@ class JourneyState {
     longestStreak: longestStreak ?? this.longestStreak,
     goals: goals ?? this.goals,
     earnedBadges: earnedBadges ?? this.earnedBadges,
-    buddy: buddy ?? this.buddy,
     lastPuffAt: lastPuffAt ?? this.lastPuffAt,
     day1TasksDone: day1TasksDone ?? this.day1TasksDone,
     pendingSlipCleanDays: pendingSlipCleanDays != null

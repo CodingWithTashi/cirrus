@@ -523,8 +523,6 @@ class _BreakLoopStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
-    final journey = ref.watch(quitStoreProvider);
-    final buddyName = journey?.buddy.name ?? 'Sam';
     final danger = ref.watch(todayProvider)?.dangerWindow;
     final hourLabel = LpFormat.hour(danger?.$1 ?? 22, context.localeTag);
     // docs/04 §7: past the free allowance the AI layer drops away — the
@@ -606,14 +604,21 @@ class _BreakLoopStep extends ConsumerWidget {
             sub: l10n.panicLoopGameSub,
             onTap: () => context.push(Routes.game),
           ),
+          // The social loop-breaker (docs/03 §7). This used to be "ping your
+          // buddy", which pinged nobody: Quit Buddies was descoped in Aug 2026
+          // and the buddy it named was invented by the app. The stage it
+          // occupies in the hook — someone else pulling you out — is real and
+          // worth keeping, so it now opens the composer pre-tagged SOS. Live
+          // SOS posts pin to the top of the feed for an hour and real quitters
+          // answer them, which is what the fake ping was pretending to do.
           option(
-            icon: const Text('🤝', style: TextStyle(fontSize: 22)),
+            icon: const Text('🆘', style: TextStyle(fontSize: 22)),
             tint: lp.ember,
-            title: l10n.panicLoopBuddy,
-            sub: l10n.panicLoopBuddySub(buddyName),
+            title: l10n.panicLoopSos,
+            sub: l10n.panicLoopSosSub,
             onTap: () {
               LpHaptics.medium();
-              showLpSnack(context, l10n.panicBuddyPinged(buddyName));
+              context.push('${Routes.compose}?tag=${PostTag.sos.name}');
             },
           ),
           option(

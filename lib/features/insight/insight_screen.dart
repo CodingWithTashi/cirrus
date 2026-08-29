@@ -40,11 +40,16 @@ class _InsightCard {
 
 /// Frame 42 — the weekly report as swipeable story cards.
 ///
-/// Two sources, one layout. When `weeklyInsight` has generated a report for
-/// this user it is rendered verbatim, over charts built from that user's own
-/// logs. When it hasn't — free tier, a week too short to say anything true,
-/// a model outage the cron skipped, or the demo backend — the authored cards
-/// stand in.
+/// One source only: the report `weeklyInsight` generated for THIS user,
+/// rendered verbatim over charts built from their own logs.
+///
+/// There used to be a set of authored cards standing in whenever no report
+/// existed — free tier, a short week, the demo backend. They read as findings
+/// about the reader ("You vape 3x more after 10 p.m. on weekends", "Friday and
+/// Saturday account for 41% of your weekly puffs") and were the same four
+/// paragraphs for everybody. Invented statistics wearing the user's name are
+/// the exact thing the "no invented numbers" rule exists to prevent, so when
+/// there is no report the screen now says so.
 ///
 /// The model's prose is NOT localized (see [WeeklyInsight]): it is generated
 /// in the locale `syncUserContext` recorded, and translating a summary of
@@ -79,12 +84,9 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     final range =
         '${LpFormat.shortDate(now.subtract(const Duration(days: 6)), locale)}–${LpFormat.shortDate(now, locale)}';
 
-    // A pending or failed fetch falls through to the authored cards rather
-    // than showing a spinner: this screen is opened from a push and from the
-    // Stats tab, and an empty frame would read as the report being gone.
     final report = ref.watch(weeklyInsightProvider).valueOrNull;
     final cards = report == null || journey == null
-        ? _authoredCards(context)
+        ? const <_InsightCard>[]
         : _reportCards(context, report, journey);
 
     return Scaffold(
@@ -117,19 +119,21 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
               ),
             ),
             Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                itemCount: cards.length,
-                onPageChanged: (i) => setState(() => _page = i),
-                itemBuilder: (context, i) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _CardView(
-                    card: cards[i],
-                    index: i,
-                    total: cards.length,
-                  ),
-                ),
-              ),
+              child: cards.isEmpty
+                  ? const _PendingReport()
+                  : PageView.builder(
+                      controller: _controller,
+                      itemCount: cards.length,
+                      onPageChanged: (i) => setState(() => _page = i),
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _CardView(
+                          card: cards[i],
+                          index: i,
+                          total: cards.length,
+                        ),
+                      ),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 20, top: 4),
@@ -199,44 +203,6 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
         values: [for (var h = 0; h < 24; h++) hours[h] ?? 0],
         highlight: hot,
         action: report.move,
-      ),
-    ];
-  }
-
-  /// The demo/fallback cards. Authored copy over authored shapes — these are
-  /// illustrative by construction and carry no claim about the user's data.
-  List<_InsightCard> _authoredCards(BuildContext context) {
-    final l10n = context.l10n;
-    return [
-      _InsightCard(
-        headline: l10n.insight1Headline,
-        body: l10n.insight1Body,
-        chartLabel: l10n.insight1ChartLabel,
-        values: const [18, 12, 20, 26, 34, 42, 88, 100, 72],
-        highlight: const {6, 7, 8},
-        action: l10n.insight1Action,
-      ),
-      _InsightCard(
-        headline: l10n.insight2Headline,
-        body: l10n.insight2Body,
-        chartLabel: l10n.insight2ChartLabel,
-        values: const [0, 0, 0, 14, 30, 44, 52, 40, 28],
-        action: l10n.insight2Action,
-      ),
-      _InsightCard(
-        headline: l10n.insight3Headline,
-        body: l10n.insight3Body,
-        chartLabel: l10n.insight3ChartLabel,
-        values: const [82, 18],
-        highlight: const {1},
-        action: l10n.insight3Action,
-      ),
-      _InsightCard(
-        headline: l10n.insight4Headline,
-        body: l10n.insight4Body,
-        chartLabel: l10n.insight4ChartLabel,
-        values: const [100, 90, 78, 66, 52, 40, 30],
-        action: l10n.insight4Action,
       ),
     ];
   }
@@ -367,6 +333,44 @@ class _CardView extends StatelessWidget {
           ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Shown until `weeklyInsight` has actually written a report.
+///
+/// Says what it is waiting for rather than filling the space. An empty state
+/// that explains itself keeps the promise; four paragraphs of invented
+/// statistics would have broken it.
+class _PendingReport extends StatelessWidget {
+  const _PendingReport();
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('📄', style: TextStyle(fontSize: 40, color: lp.textFaint)),
+            const SizedBox(height: 18),
+            Text(
+              l10n.insightPendingTitle,
+              textAlign: TextAlign.center,
+              style: LpType.titleSm(lp.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.insightPendingBody,
+              textAlign: TextAlign.center,
+              style: LpType.body13(lp.textSecondary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

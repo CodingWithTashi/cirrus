@@ -65,7 +65,6 @@ abstract interface class CommunityRepository {
 
   Future<void> blockAuthor(String alias);
 
-  Future<void> nudgeBuddy();
 }
 
 /// Craving sessions (docs/03 §7).

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/auth/auth_screens.dart';
-import 'package:last_puff/features/buddy/buddy_screen.dart';
 import 'package:last_puff/features/coach/coach_screen.dart';
 import 'package:last_puff/features/coach/memories_screen.dart';
 import 'package:last_puff/features/community/community_screens.dart';
@@ -55,7 +54,6 @@ void main() {
     'Health': const HealthScreen(),
     'Milestones': const MilestonesScreen(),
     'Insight': const InsightScreen(),
-    'Buddy': const BuddyScreen(),
     'Profile': const ProfileScreen(),
     'Settings': const SettingsScreen(),
     'Slip': const SlipFlow(),

@@ -88,12 +88,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                     l10n.communityTitle,
                     style: LpType.titleSm(lp.textPrimary),
                   ),
-                  PressScale(
-                    onTap: () => context.push(Routes.buddy),
-                    child: Text(
-                      l10n.communityYouAre(journey?.profile.alias ?? ''),
-                      style: LpType.caption(lp.textSecondary),
-                    ),
+                  Text(
+                    l10n.communityYouAre(journey?.profile.alias ?? ''),
+                    style: LpType.caption(lp.textSecondary),
                   ),
                 ],
               ),
@@ -445,7 +442,11 @@ class _PostMenu extends ConsumerWidget {
 /// Frame 44 — composer: tag required, kindness line persistent, always
 /// anonymous, day count auto-attached.
 class ComposerScreen extends ConsumerStatefulWidget {
-  const ComposerScreen({super.key});
+  const ComposerScreen({super.key, this.initialTag});
+
+  /// Pre-selects a tag. The panic flow opens this pre-tagged `sos` so that
+  /// reaching for people mid-craving is one tap and not a form.
+  final PostTag? initialTag;
 
   @override
   ConsumerState<ComposerScreen> createState() => _ComposerScreenState();
@@ -453,7 +454,7 @@ class ComposerScreen extends ConsumerStatefulWidget {
 
 class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   final _text = TextEditingController();
-  PostTag? _tag;
+  late PostTag? _tag = widget.initialTag;
 
   @override
   void dispose() {

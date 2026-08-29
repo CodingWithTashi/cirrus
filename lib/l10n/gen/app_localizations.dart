@@ -146,18 +146,6 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get commonSave;
 
-  /// No description provided for @commonSkip.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip'**
-  String get commonSkip;
-
-  /// No description provided for @commonBack.
-  ///
-  /// In en, this message translates to:
-  /// **'Back'**
-  String get commonBack;
-
   /// No description provided for @commonRetry.
   ///
   /// In en, this message translates to:
@@ -194,54 +182,6 @@ abstract class AppLocalizations {
   /// **'Maybe later'**
   String get commonMaybeLater;
 
-  /// No description provided for @commonComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get commonComingSoon;
-
-  /// No description provided for @commonToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get commonToday;
-
-  /// No description provided for @commonDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Day'**
-  String get commonDay;
-
-  /// No description provided for @commonYou.
-  ///
-  /// In en, this message translates to:
-  /// **'you'**
-  String get commonYou;
-
-  /// No description provided for @commonPremium.
-  ///
-  /// In en, this message translates to:
-  /// **'Premium'**
-  String get commonPremium;
-
-  /// No description provided for @commonFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Free'**
-  String get commonFree;
-
-  /// No description provided for @commonUpgrade.
-  ///
-  /// In en, this message translates to:
-  /// **'Upgrade'**
-  String get commonUpgrade;
-
-  /// No description provided for @commonSeeAll.
-  ///
-  /// In en, this message translates to:
-  /// **'See all'**
-  String get commonSeeAll;
-
   /// No description provided for @commonOfflineBanner.
   ///
   /// In en, this message translates to:
@@ -260,35 +200,11 @@ abstract class AppLocalizations {
   /// **'Your data is fine. Tap to retry.'**
   String get commonErrorBody;
 
-  /// No description provided for @commonDayOfDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Day {day} of {total}'**
-  String commonDayOfDay(int day, int total);
-
   /// No description provided for @commonDayN.
   ///
   /// In en, this message translates to:
   /// **'day {day}'**
   String commonDayN(int day);
-
-  /// No description provided for @commonStreakDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} day} other{{count} days}}'**
-  String commonStreakDays(num count);
-
-  /// No description provided for @commonPuffsUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} puff} other{{count} puffs}}'**
-  String commonPuffsUnit(num count);
-
-  /// No description provided for @authSplashAutoAdvance.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading your plan…'**
-  String get authSplashAutoAdvance;
 
   /// No description provided for @authSignInTitle.
   ///
@@ -1706,12 +1622,6 @@ abstract class AppLocalizations {
   /// **'{count} left on today\'s line. Tight — you\'ve got this.'**
   String homeLeftTight(int count);
 
-  /// No description provided for @homeOverLine.
-  ///
-  /// In en, this message translates to:
-  /// **'Over today\'s line. Breathe — tomorrow adjusts.'**
-  String get homeOverLine;
-
   /// No description provided for @homeVsDay1.
   ///
   /// In en, this message translates to:
@@ -1777,18 +1687,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logged 1 puff'**
   String get homeLoggedSnack;
-
-  /// No description provided for @homeLogPlusOne.
-  ///
-  /// In en, this message translates to:
-  /// **'+1 logged'**
-  String get homeLogPlusOne;
-
-  /// No description provided for @homeLogRingNote.
-  ///
-  /// In en, this message translates to:
-  /// **'ring ticks with a bounce · {count} left today'**
-  String homeLogRingNote(int count);
 
   /// No description provided for @homeOverLimitTitle.
   ///
@@ -1976,17 +1874,17 @@ abstract class AppLocalizations {
   /// **'occupies the exact itch — thumbs busy, brain busy'**
   String get panicLoopGameSub;
 
-  /// No description provided for @panicLoopBuddy.
+  /// No description provided for @panicLoopSos.
   ///
   /// In en, this message translates to:
-  /// **'Text my buddy'**
-  String get panicLoopBuddy;
+  /// **'Ask the community'**
+  String get panicLoopSos;
 
-  /// No description provided for @panicLoopBuddySub.
+  /// No description provided for @panicLoopSosSub.
   ///
   /// In en, this message translates to:
-  /// **'{name} gets a ping: \"craving — talk me down\"'**
-  String panicLoopBuddySub(String name);
+  /// **'post an SOS — it pins to the top for an hour'**
+  String get panicLoopSosSub;
 
   /// No description provided for @panicLoopCoach.
   ///
@@ -2006,12 +1904,6 @@ abstract class AppLocalizations {
   /// **'you\'ve used today\'s free AI session'**
   String get panicLoopCoachLocked;
 
-  /// No description provided for @panicBuddyPinged.
-  ///
-  /// In en, this message translates to:
-  /// **'Ping sent. {name} has your back.'**
-  String panicBuddyPinged(String name);
-
   /// No description provided for @gameTitle.
   ///
   /// In en, this message translates to:
@@ -2024,23 +1916,11 @@ abstract class AppLocalizations {
   /// **'60 seconds. Thumbs busy, brain busy.'**
   String get gameSubtitle;
 
-  /// No description provided for @gameScore.
-  ///
-  /// In en, this message translates to:
-  /// **'sparks'**
-  String get gameScore;
-
   /// No description provided for @gameTimeLeft.
   ///
   /// In en, this message translates to:
   /// **'{seconds}s'**
   String gameTimeLeft(int seconds);
-
-  /// No description provided for @gameDone.
-  ///
-  /// In en, this message translates to:
-  /// **'Time. Look at that — the wave broke.'**
-  String get gameDone;
 
   /// No description provided for @survivedPlusOne.
   ///
@@ -2798,18 +2678,6 @@ abstract class AppLocalizations {
   /// **'Add your voice…'**
   String get communityAddVoice;
 
-  /// No description provided for @communityPostAge.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes}m'**
-  String communityPostAge(int minutes);
-
-  /// No description provided for @communityPostAgeHours.
-  ///
-  /// In en, this message translates to:
-  /// **'{hours}h'**
-  String communityPostAgeHours(int hours);
-
   /// No description provided for @communityDayTag.
   ///
   /// In en, this message translates to:
@@ -2834,77 +2702,11 @@ abstract class AppLocalizations {
   /// **'Posted. Someone needed to read that.'**
   String get communityPosted;
 
-  /// No description provided for @buddyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Your buddy'**
-  String get buddyTitle;
-
-  /// No description provided for @buddyCombinedStreak.
-  ///
-  /// In en, this message translates to:
-  /// **'combined streak'**
-  String get buddyCombinedStreak;
-
-  /// No description provided for @buddyNeitherCaves.
-  ///
-  /// In en, this message translates to:
-  /// **'neither of you caves alone'**
-  String get buddyNeitherCaves;
-
-  /// No description provided for @buddyNudge.
-  ///
-  /// In en, this message translates to:
-  /// **'👊 Nudge {name}'**
-  String buddyNudge(String name);
-
-  /// No description provided for @buddyMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'💬 Message'**
-  String get buddyMessage;
-
-  /// No description provided for @buddyPrivacyNote.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} sees your SOS pings and gets one nudge if you go quiet for 2 days. That\'s it — no puff counts shared unless you opt in.'**
-  String buddyPrivacyNote(String name);
-
-  /// No description provided for @buddyPairsLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'QUITTING IS EASIER IN PAIRS'**
-  String get buddyPairsLabel;
-
-  /// No description provided for @buddyInviteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Invite another friend'**
-  String get buddyInviteTitle;
-
-  /// No description provided for @buddyCopyLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy link'**
-  String get buddyCopyLink;
-
   /// No description provided for @buddyLinkCopied.
   ///
   /// In en, this message translates to:
   /// **'Link copied — quitting hits different with backup.'**
   String get buddyLinkCopied;
-
-  /// No description provided for @buddyNudged.
-  ///
-  /// In en, this message translates to:
-  /// **'Nudge sent. {name} will feel it.'**
-  String buddyNudged(String name);
-
-  /// No description provided for @buddyNudgeCap.
-  ///
-  /// In en, this message translates to:
-  /// **'Two nudges a day keeps it friendly. More tomorrow.'**
-  String get buddyNudgeCap;
 
   /// No description provided for @moneyTitle.
   ///
@@ -3302,12 +3104,6 @@ abstract class AppLocalizations {
   /// **'\$500 saved'**
   String get mFiveHundredSaved;
 
-  /// No description provided for @mBuddyBond.
-  ///
-  /// In en, this message translates to:
-  /// **'Buddy bond'**
-  String get mBuddyBond;
-
   /// No description provided for @mComeback.
   ///
   /// In en, this message translates to:
@@ -3434,107 +3230,23 @@ abstract class AppLocalizations {
   /// **'PUFFS BY HOUR, LAST 14 DAYS'**
   String get insightHoursChartLabel;
 
+  /// No description provided for @insightPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No report yet'**
+  String get insightPendingTitle;
+
+  /// No description provided for @insightPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ember writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there\'s a week to read.'**
+  String get insightPendingBody;
+
   /// No description provided for @insightCounter.
   ///
   /// In en, this message translates to:
   /// **'INSIGHT {index} OF {total}'**
   String insightCounter(int index, int total);
-
-  /// No description provided for @insight1Headline.
-  ///
-  /// In en, this message translates to:
-  /// **'You vape 3× more after 10 p.m. on weekends.'**
-  String get insight1Headline;
-
-  /// No description provided for @insight1Body.
-  ///
-  /// In en, this message translates to:
-  /// **'Friday and Saturday nights account for 41% of your weekly puffs. That\'s a social trigger, not a nicotine one — different playbook.'**
-  String get insight1Body;
-
-  /// No description provided for @insight1ChartLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'PUFFS BY HOUR · WEEKEND'**
-  String get insight1ChartLabel;
-
-  /// No description provided for @insight1Action.
-  ///
-  /// In en, this message translates to:
-  /// **'Coach suggestion: pre-set a Friday 9:45 p.m. nudge + keep your hands busy at the party (game link ready).'**
-  String get insight1Action;
-
-  /// No description provided for @insight2Headline.
-  ///
-  /// In en, this message translates to:
-  /// **'Your mornings are already free.'**
-  String get insight2Headline;
-
-  /// No description provided for @insight2Body.
-  ///
-  /// In en, this message translates to:
-  /// **'You didn\'t log a single puff before 11 a.m. for five straight days. The nicotine clock that owned your wake-up? Broken.'**
-  String get insight2Body;
-
-  /// No description provided for @insight2ChartLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'FIRST PUFF OF THE DAY'**
-  String get insight2ChartLabel;
-
-  /// No description provided for @insight2Action.
-  ///
-  /// In en, this message translates to:
-  /// **'Coach suggestion: protect it — keep the vape out of the bedroom and the first hour stays yours.'**
-  String get insight2Action;
-
-  /// No description provided for @insight3Headline.
-  ///
-  /// In en, this message translates to:
-  /// **'Cravings beaten: 9. Cravings that beat you: 2.'**
-  String get insight3Headline;
-
-  /// No description provided for @insight3Body.
-  ///
-  /// In en, this message translates to:
-  /// **'An 82% win rate. Both losses were within an hour of skipped meals — hunger wears nicotine\'s jacket.'**
-  String get insight3Body;
-
-  /// No description provided for @insight3ChartLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'CRAVING OUTCOMES'**
-  String get insight3ChartLabel;
-
-  /// No description provided for @insight3Action.
-  ///
-  /// In en, this message translates to:
-  /// **'Coach suggestion: snack before your 9 p.m. window. Boring advice, measurable difference.'**
-  String get insight3Action;
-
-  /// No description provided for @insight4Headline.
-  ///
-  /// In en, this message translates to:
-  /// **'Next week: the halfway bend.'**
-  String get insight4Headline;
-
-  /// No description provided for @insight4Body.
-  ///
-  /// In en, this message translates to:
-  /// **'Your line drops to 100/day Tuesday. The curve gets steeper here — this is the week the Panic Button earns its keep.'**
-  String get insight4Body;
-
-  /// No description provided for @insight4ChartLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'THE WEEK AHEAD'**
-  String get insight4ChartLabel;
-
-  /// No description provided for @insight4Action.
-  ///
-  /// In en, this message translates to:
-  /// **'Coach suggestion: pre-book one thing you love for Saturday. Reward the bend, don\'t white-knuckle it.'**
-  String get insight4Action;
 
   /// No description provided for @slipTitle.
   ///
@@ -3932,12 +3644,6 @@ abstract class AppLocalizations {
   /// **'We never sell your data. No ad trackers. Ever.'**
   String get settingsPrivacyNote;
 
-  /// No description provided for @settingsExportData.
-  ///
-  /// In en, this message translates to:
-  /// **'Export my data'**
-  String get settingsExportData;
-
   /// No description provided for @settingsDeleteEverything.
   ///
   /// In en, this message translates to:
@@ -3961,12 +3667,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes, delete it all'**
   String get settingsDeleteConfirmCta;
-
-  /// No description provided for @settingsExported.
-  ///
-  /// In en, this message translates to:
-  /// **'Data package ready — it\'s yours, always was.'**
-  String get settingsExported;
 
   /// No description provided for @settingsAppearance.
   ///
@@ -4003,24 +3703,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Match system'**
   String get settingsLanguageSystem;
-
-  /// No description provided for @settingsSupport.
-  ///
-  /// In en, this message translates to:
-  /// **'Support & FAQ'**
-  String get settingsSupport;
-
-  /// No description provided for @settingsRestorePurchases.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore purchases'**
-  String get settingsRestorePurchases;
-
-  /// No description provided for @settingsRestored.
-  ///
-  /// In en, this message translates to:
-  /// **'Purchases restored — welcome back.'**
-  String get settingsRestored;
 
   /// No description provided for @settingsSignOut.
   ///

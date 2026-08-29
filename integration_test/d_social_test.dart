@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/features/panic/panic_screens.dart';
 import 'package:last_puff/domain/models/models.dart';
 
 import 'harness.dart';
@@ -181,6 +182,36 @@ void main() {
     // "Nothing here yet" and "we could not load" are the same picture and
     // very different facts.
     expect(e2e.visible(e2e.l10n.communityEmptyTitle), isFalse);
+  });
+
+  testWidgets('the panic flow reaches real people, pre-tagged SOS', (
+    tester,
+  ) async {
+    // The social loop-breaker used to "ping your buddy" and ping nobody. It
+    // now opens the composer pre-tagged SOS, which live-pins to the feed for
+    // an hour — the same stage of the hook, actually implemented.
+    final e2e = await signedIn(tester);
+    await e2e.tapText(e2e.l10n.homeSos);
+    await e2e.waitFor(const Duration(seconds: 2));
+    e2e.container.read(panicProvider.notifier).previewStep(2);
+    await e2e.settle();
+
+    await e2e.tapText(e2e.l10n.panicLoopSos);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    // Landed in the composer with the tag already chosen, so reaching for
+    // people mid-craving is one tap rather than a form.
+    expect(e2e.showing(e2e.l10n.communityComposerTitle), isTrue,
+        reason: 'on screen: ${e2e.texts()}');
+    const body = 'e2e: sos from the panic flow';
+    await tester.enterText(find.byType(TextField).first, body);
+    await e2e.settle();
+    await e2e.tapText(e2e.l10n.communityComposerPost);
+    await e2e.waitFor(const Duration(seconds: 3));
+
+    final posted = e2e.container.read(communityStoreProvider).posts.first;
+    expect(posted.text, body);
+    expect(posted.tag, PostTag.sos, reason: 'the SOS tag was not pre-selected');
   });
 
   testWidgets('Ember answers, and the answer renders as a message', (

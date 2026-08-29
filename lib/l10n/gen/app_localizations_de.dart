@@ -32,12 +32,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonSave => 'Speichern';
 
   @override
-  String get commonSkip => 'Überspringen';
-
-  @override
-  String get commonBack => 'Zurück';
-
-  @override
   String get commonRetry => 'Erneut versuchen';
 
   @override
@@ -56,30 +50,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonMaybeLater => 'Vielleicht später';
 
   @override
-  String get commonComingSoon => 'Kommt bald';
-
-  @override
-  String get commonToday => 'Heute';
-
-  @override
-  String get commonDay => 'Tag';
-
-  @override
-  String get commonYou => 'du';
-
-  @override
-  String get commonPremium => 'Premium';
-
-  @override
-  String get commonFree => 'Gratis';
-
-  @override
-  String get commonUpgrade => 'Upgraden';
-
-  @override
-  String get commonSeeAll => 'Alle ansehen';
-
-  @override
   String get commonOfflineBanner =>
       'Offline — deine Züge werden lokal gespeichert und später synchronisiert.';
 
@@ -91,39 +61,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deinen Daten geht\'s gut. Tippe zum Wiederholen.';
 
   @override
-  String commonDayOfDay(int day, int total) {
-    return 'Tag $day von $total';
-  }
-
-  @override
   String commonDayN(int day) {
     return 'Tag $day';
   }
-
-  @override
-  String commonStreakDays(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count Tage',
-      one: '$count Tag',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String commonPuffsUnit(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count Züge',
-      one: '$count Zug',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get authSplashAutoAdvance => 'Dein Plan lädt…';
 
   @override
   String get authSignInTitle => 'Bringen wir deinen\nPlan in Sicherheit.';
@@ -929,10 +869,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get homeOverLine =>
-      'Über der heutigen Linie. Atme — morgen passt sie sich an.';
-
-  @override
   String homeVsDay1(String percent) {
     return '$percent vs. Tag 1';
   }
@@ -971,14 +907,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get homeLoggedSnack => '1 Zug geloggt';
-
-  @override
-  String get homeLogPlusOne => '+1 geloggt';
-
-  @override
-  String homeLogRingNote(int count) {
-    return 'der Ring tickt mit Schwung · noch $count heute';
-  }
 
   @override
   String get homeOverLimitTitle => 'Über deiner Linie';
@@ -1088,12 +1016,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'besetzt genau das Jucken — Daumen beschäftigt, Kopf beschäftigt';
 
   @override
-  String get panicLoopBuddy => 'Buddy anschreiben';
+  String get panicLoopSos => 'Frag die Community';
 
   @override
-  String panicLoopBuddySub(String name) {
-    return '$name bekommt: „Craving — red\'s mir aus“';
-  }
+  String get panicLoopSosSub =>
+      'poste ein SOS — es steht eine Stunde ganz oben';
 
   @override
   String get panicLoopCoach => 'Mit Coach reden';
@@ -1108,11 +1035,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'deine kostenlose KI-Sitzung heute ist aufgebraucht';
 
   @override
-  String panicBuddyPinged(String name) {
-    return 'Ping raus. $name hat deinen Rücken.';
-  }
-
-  @override
   String get gameTitle => 'Fang jeden Funken';
 
   @override
@@ -1120,15 +1042,9 @@ class AppLocalizationsDe extends AppLocalizations {
       '60 Sekunden. Daumen beschäftigt, Kopf beschäftigt.';
 
   @override
-  String get gameScore => 'Funken';
-
-  @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
-
-  @override
-  String get gameDone => 'Zeit. Sieh an — die Welle ist gebrochen.';
 
   @override
   String get survivedPlusOne => '+1 Craving besiegt';
@@ -1609,16 +1525,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get communityAddVoice => 'Gib deine Stimme dazu…';
 
   @override
-  String communityPostAge(int minutes) {
-    return '${minutes}m';
-  }
-
-  @override
-  String communityPostAgeHours(int hours) {
-    return '${hours}h';
-  }
-
-  @override
   String communityDayTag(int day) {
     return 'Tag $day';
   }
@@ -1634,48 +1540,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get communityPosted => 'Gepostet. Jemand musste genau das lesen.';
 
   @override
-  String get buddyTitle => 'Dein Buddy';
-
-  @override
-  String get buddyCombinedStreak => 'gemeinsame Serie';
-
-  @override
-  String get buddyNeitherCaves => 'keiner knickt allein ein';
-
-  @override
-  String buddyNudge(String name) {
-    return '👊 $name anstupsen';
-  }
-
-  @override
-  String get buddyMessage => '💬 Nachricht';
-
-  @override
-  String buddyPrivacyNote(String name) {
-    return '$name sieht deine SOS-Pings und bekommt einen Stups, wenn du 2 Tage still bist. Mehr nicht — Zugzahlen werden nur geteilt, wenn du zustimmst.';
-  }
-
-  @override
-  String get buddyPairsLabel => 'ZU ZWEIT IST AUFHÖREN LEICHTER';
-
-  @override
-  String get buddyInviteTitle => 'Lade noch jemanden ein';
-
-  @override
-  String get buddyCopyLink => 'Link kopieren';
-
-  @override
   String get buddyLinkCopied =>
       'Link kopiert — Aufhören mit Rückendeckung fühlt sich anders an.';
-
-  @override
-  String buddyNudged(String name) {
-    return 'Stups gesendet. $name wird\'s spüren.';
-  }
-
-  @override
-  String get buddyNudgeCap =>
-      'Zwei Stupser am Tag bleiben freundlich. Morgen wieder.';
 
   @override
   String get moneyTitle => 'Geld zurück';
@@ -1910,9 +1776,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mFiveHundredSaved => '500 \$ gespart';
 
   @override
-  String get mBuddyBond => 'Buddy-Band';
-
-  @override
   String get mComeback => 'Comeback';
 
   @override
@@ -1984,67 +1847,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get insightHoursChartLabel => 'ZÜGE NACH STUNDE, LETZTE 14 TAGE';
 
   @override
+  String get insightPendingTitle => 'Noch kein Bericht';
+
+  @override
+  String get insightPendingBody =>
+      'Ember schreibt jeden Sonntag einen — aus der Woche, die du wirklich protokolliert hast: deine Stunden, deine Stimmungen, deine Erfolge. Bis es eine Woche zu lesen gibt, gibt es nichts zu zeigen.';
+
+  @override
   String insightCounter(int index, int total) {
     return 'INSIGHT $index VON $total';
   }
-
-  @override
-  String get insight1Headline =>
-      'Am Wochenende dampfst du nach 22 Uhr 3× mehr.';
-
-  @override
-  String get insight1Body =>
-      'Freitag- und Samstagabend machen 41% deiner Wochen-Züge aus. Das ist ein sozialer Trigger, kein Nikotin-Trigger — anderes Playbook.';
-
-  @override
-  String get insight1ChartLabel => 'ZÜGE PRO STUNDE · WOCHENENDE';
-
-  @override
-  String get insight1Action =>
-      'Coach-Vorschlag: Freitag 21:45 einen Stups vorplanen + auf der Party die Hände beschäftigen (Spiel liegt bereit).';
-
-  @override
-  String get insight2Headline => 'Deine Morgen sind schon frei.';
-
-  @override
-  String get insight2Body =>
-      'Fünf Tage in Folge kein einziger Zug vor 11 Uhr. Die Nikotin-Uhr, der dein Aufwachen gehörte? Kaputt.';
-
-  @override
-  String get insight2ChartLabel => 'ERSTER ZUG DES TAGES';
-
-  @override
-  String get insight2Action =>
-      'Coach-Vorschlag: schütze das — Vape raus aus dem Schlafzimmer, und die erste Stunde bleibt deine.';
-
-  @override
-  String get insight3Headline =>
-      'Cravings besiegt: 9. Cravings, die dich hatten: 2.';
-
-  @override
-  String get insight3Body =>
-      '82% Siegquote. Beide Niederlagen lagen unter einer Stunde nach ausgelassenen Mahlzeiten — Hunger trägt Nikotins Jacke.';
-
-  @override
-  String get insight3ChartLabel => 'CRAVING-AUSGÄNGE';
-
-  @override
-  String get insight3Action =>
-      'Coach-Vorschlag: Snack vor deinem 21-Uhr-Fenster. Langweiliger Rat, messbarer Unterschied.';
-
-  @override
-  String get insight4Headline => 'Nächste Woche: die Halbzeit-Kurve.';
-
-  @override
-  String get insight4Body =>
-      'Deine Linie fällt am Dienstag auf 100/Tag. Hier wird die Kurve steiler — das ist die Woche, in der sich der Panik-Button bezahlt macht.';
-
-  @override
-  String get insight4ChartLabel => 'DIE WOCHE VORAUS';
-
-  @override
-  String get insight4Action =>
-      'Coach-Vorschlag: buch dir für Samstag etwas, das du liebst. Belohn die Kurve, statt nur die Zähne zusammenzubeißen.';
 
   @override
   String get slipTitle => 'Ein Ausrutscher ist Information, keine Niederlage.';
@@ -2271,9 +2083,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wir verkaufen nie deine Daten. Keine Tracker. Niemals.';
 
   @override
-  String get settingsExportData => 'Meine Daten exportieren';
-
-  @override
   String get settingsDeleteEverything => 'Alles löschen';
 
   @override
@@ -2285,10 +2094,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsDeleteConfirmCta => 'Ja, alles löschen';
-
-  @override
-  String get settingsExported =>
-      'Datenpaket bereit — es gehört dir, schon immer.';
 
   @override
   String get settingsAppearance => 'Erscheinungsbild';
@@ -2307,15 +2112,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLanguageSystem => 'Wie das System';
-
-  @override
-  String get settingsSupport => 'Support & FAQ';
-
-  @override
-  String get settingsRestorePurchases => 'Käufe wiederherstellen';
-
-  @override
-  String get settingsRestored => 'Käufe wiederhergestellt — willkommen zurück.';
 
   @override
   String get settingsSignOut => 'Abmelden';

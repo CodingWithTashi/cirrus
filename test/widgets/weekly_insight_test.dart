@@ -5,6 +5,7 @@ import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
+import 'package:last_puff/core/widgets/lp_charts.dart';
 import 'package:last_puff/features/insight/insight_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
@@ -65,10 +66,10 @@ void main() {
 
     expect(find.text(report.headline), findsOneWidget);
     expect(find.text(report.pattern), findsOneWidget);
-    // The authored week-one copy must be gone, not merely pushed off-screen —
-    // showing both would be two contradictory claims about the same week.
+    // The pending state must be gone once a real report exists — showing both
+    // would be two contradictory claims about the same week.
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    expect(find.text(l10n.insight1Headline), findsNothing);
+    expect(find.text(l10n.insightPendingTitle), findsNothing);
   });
 
   testWidgets("the report's next move rides the last card", (tester) async {
@@ -85,13 +86,19 @@ void main() {
     expect(find.text(report.move), findsOneWidget);
   });
 
-  testWidgets('no report falls back to the authored cards', (tester) async {
+  testWidgets('no report says so — it never invents one', (tester) async {
+    // The old fallback rendered four authored cards that read as findings
+    // about the reader ("You vape 3x more after 10 p.m. on weekends"), the
+    // same for everybody. An honest empty state is the whole point.
     final container = containerWith(null);
     await pumpScreen(tester, container);
 
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    expect(find.text(l10n.insight1Headline), findsOneWidget);
+    expect(find.text(l10n.insightPendingTitle), findsOneWidget);
     expect(find.text(report.headline), findsNothing);
+    // No charts either: a bar chart with no data behind it is a made-up
+    // number in a different costume.
+    expect(find.byType(BarChart), findsNothing);
   });
 }
 

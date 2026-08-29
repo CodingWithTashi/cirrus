@@ -16,7 +16,6 @@ class CommunityState {
     this.status = FeedStatus.loading,
     this.blocked = const {},
     this.muted = const {},
-    this.nudgesToday = 0,
   });
 
   final List<Post> posts;
@@ -26,8 +25,6 @@ class CommunityState {
   /// Muted authors: their posts hide for you, without mutual invisibility.
   final Set<String> muted;
 
-  /// Buddy nudges sent today — capped at 2/day (Run 3 frame 46).
-  final int nudgesToday;
 
   /// Feed order: live SOS posts pinned first, then reverse-chron (docs/03 §9).
   List<Post> visible(DateTime now) {
@@ -58,13 +55,11 @@ class CommunityState {
     FeedStatus? status,
     Set<String>? blocked,
     Set<String>? muted,
-    int? nudgesToday,
   }) => CommunityState(
     posts: posts ?? this.posts,
     status: status ?? this.status,
     blocked: blocked ?? this.blocked,
     muted: muted ?? this.muted,
-    nudgesToday: nudgesToday ?? this.nudgesToday,
   );
 }
 
@@ -117,11 +112,16 @@ class CommunityStore extends Notifier<CommunityState> {
 
   List<Post> get posts => state.posts;
 
+  /// The router gates every community path behind a live journey, so these
+  /// fallbacks are unreachable. They are neutral rather than the seeded demo
+  /// identity ('@quietfox'/🦊) on purpose: if that gate ever slips, a post
+  /// should be obviously unattributed, not silently signed with a fixture's
+  /// name.
   String get _myAlias =>
-      ref.read(quitStoreProvider)?.profile.alias ?? '@quietfox';
+      ref.read(quitStoreProvider)?.profile.alias ?? '@quitter';
 
   String get _myAvatar =>
-      ref.read(quitStoreProvider)?.profile.avatarEmoji ?? '🦊';
+      ref.read(quitStoreProvider)?.profile.avatarEmoji ?? '🔥';
 
   int get _myDay {
     final j = ref.read(quitStoreProvider);
@@ -240,17 +240,5 @@ class CommunityStore extends Notifier<CommunityState> {
   void muteAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(muted: {...state.muted, post.alias});
-  }
-
-  static const int nudgeDailyCap = 2;
-
-  int get nudgesLeftToday =>
-      (nudgeDailyCap - state.nudgesToday).clamp(0, nudgeDailyCap);
-
-  void nudgeBuddy() {
-    if (nudgesLeftToday == 0) return;
-    state = state.copyWith(nudgesToday: state.nudgesToday + 1);
-    _repo.nudgeBuddy().ignore();
-    ref.read(quitStoreProvider.notifier).awardBadge('buddyBond');
   }
 }

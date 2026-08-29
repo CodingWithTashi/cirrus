@@ -38,7 +38,6 @@ void main() {
     Routes.health,
     Routes.milestones,
     Routes.insight,
-    Routes.buddy,
     Routes.profile,
     Routes.settings,
     Routes.slip,

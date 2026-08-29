@@ -160,14 +160,6 @@ class FirebaseCommunityRepository implements CommunityRepository {
     _blockedAliases.add(alias);
   }
 
-  @override
-  Future<void> nudgeBuddy() async {
-    // Quit Buddies is descoped (founder decision, Aug 2026 — functions/README).
-    // The UI still ships, so this is a no-op rather than a throw: a button
-    // that does nothing quietly beats one that shows an error for a feature
-    // that was cut on purpose.
-  }
-
   Post _toPost(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
     List<Reply> replies,

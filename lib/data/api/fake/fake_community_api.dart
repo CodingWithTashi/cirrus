@@ -50,6 +50,4 @@ class FakeCommunityApi implements CommunityApi {
   @override
   Future<void> blockAuthor(String alias) => _server.respond(() {});
 
-  @override
-  Future<void> nudgeBuddy() => _server.respond(() {});
 }

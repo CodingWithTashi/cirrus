@@ -172,7 +172,6 @@ class FrameMapScreen extends ConsumerWidget {
         'SOS post + rally',
         () => _withJourney(ref, context, '/community/post/seed-sos'),
       ),
-      (46, 'Buddy / invite', () => _withJourney(ref, context, Routes.buddy)),
       (47, 'Milestones', () => _withJourney(ref, context, Routes.milestones)),
       (
         48,
