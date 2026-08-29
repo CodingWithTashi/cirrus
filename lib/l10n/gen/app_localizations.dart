@@ -2000,6 +2000,12 @@ abstract class AppLocalizations {
   /// **'it knows this is your {hour} stress pattern'**
   String panicLoopCoachSub(String hour);
 
+  /// No description provided for @panicLoopCoachLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'you\'ve used today\'s free AI session'**
+  String get panicLoopCoachLocked;
+
   /// No description provided for @panicBuddyPinged.
   ///
   /// In en, this message translates to:
@@ -2449,6 +2455,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'pace + method editable · no reset, no lost history'**
   String get planAdjustNote;
+
+  /// No description provided for @planAdaptiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'TONIGHT\'S ADJUSTMENT'**
+  String get planAdaptiveLabel;
+
+  /// No description provided for @planAdaptiveCrushing.
+  ///
+  /// In en, this message translates to:
+  /// **'You came in under your line three days running, so today\'s target drops to {limit}. Momentum, not punishment.'**
+  String planAdaptiveCrushing(int limit);
+
+  /// No description provided for @planAdaptiveOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re holding the line. Today\'s target stays at {limit}.'**
+  String planAdaptiveOnTrack(int limit);
+
+  /// No description provided for @planAdaptiveStruggling.
+  ///
+  /// In en, this message translates to:
+  /// **'The last two days ran over, so today\'s target bends to {limit}. A line you can actually hold beats a line you can\'t.'**
+  String planAdaptiveStruggling(int limit);
+
+  /// No description provided for @planAdaptiveStretched.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day moved back a day to match.'**
+  String get planAdaptiveStretched;
 
   /// No description provided for @planAdjustSheetTitle.
   ///
@@ -3367,6 +3403,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Week {week} report · {range}'**
   String insightTitle(int week, String range);
+
+  /// No description provided for @insightWinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your win'**
+  String get insightWinLabel;
+
+  /// No description provided for @insightWatchoutLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch out'**
+  String get insightWatchoutLabel;
+
+  /// No description provided for @insightWeekChartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PUFFS, LAST 7 DAYS'**
+  String get insightWeekChartLabel;
+
+  /// No description provided for @insightCravingsChartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CRAVINGS SURVIVED, LAST 7 DAYS'**
+  String get insightCravingsChartLabel;
+
+  /// No description provided for @insightHoursChartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PUFFS BY HOUR, LAST 14 DAYS'**
+  String get insightHoursChartLabel;
 
   /// No description provided for @insightCounter.
   ///

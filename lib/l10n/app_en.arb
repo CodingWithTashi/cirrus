@@ -600,6 +600,7 @@
       }
     }
   },
+  "panicLoopCoachLocked": "you've used today's free AI session",
   "panicBuddyPinged": "Ping sent. {name} has your back.",
   "@panicBuddyPinged": {
     "placeholders": {
@@ -840,6 +841,32 @@
   },
   "planAdjustCta": "Adjust my plan",
   "planAdjustNote": "pace + method editable · no reset, no lost history",
+  "planAdaptiveLabel": "TONIGHT'S ADJUSTMENT",
+  "planAdaptiveCrushing": "You came in under your line three days running, so today's target drops to {limit}. Momentum, not punishment.",
+  "@planAdaptiveCrushing": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "planAdaptiveOnTrack": "You're holding the line. Today's target stays at {limit}.",
+  "@planAdaptiveOnTrack": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "planAdaptiveStruggling": "The last two days ran over, so today's target bends to {limit}. A line you can actually hold beats a line you can't.",
+  "@planAdaptiveStruggling": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "planAdaptiveStretched": "Freedom Day moved back a day to match.",
   "planAdjustSheetTitle": "Adjust your plan",
   "planAdjustSheetNote": "Curve regenerates from today with your real numbers. History stays. Freedom Day moves honestly.",
   "planAdjustApply": "Apply — reflow my curve",
@@ -1230,6 +1257,11 @@
       }
     }
   },
+  "insightWinLabel": "Your win",
+  "insightWatchoutLabel": "Watch out",
+  "insightWeekChartLabel": "PUFFS, LAST 7 DAYS",
+  "insightCravingsChartLabel": "CRAVINGS SURVIVED, LAST 7 DAYS",
+  "insightHoursChartLabel": "PUFFS BY HOUR, LAST 14 DAYS",
   "insightCounter": "INSIGHT {index} OF {total}",
   "@insightCounter": {
     "placeholders": {

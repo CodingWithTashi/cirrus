@@ -68,6 +68,23 @@ abstract interface class CommunityRepository {
   Future<void> nudgeBuddy();
 }
 
+/// Craving sessions (docs/03 §7).
+///
+/// The 3-step script itself is entirely on-device — a craving cannot wait on
+/// a network round-trip — so this exists only for the two facts the client
+/// must not own: the session count that feeds the guardrail metric, and the
+/// tier read that decides whether the AI layer is offered.
+abstract interface class PanicRepository {
+  /// Opens a session. Counted server-side; the answer only ever *enables* the
+  /// AI option, so a failure degrades to [PanicAvailability.unknown] rather
+  /// than to a blocked screen.
+  Future<PanicAvailability> begin();
+
+  /// The craving passed. Fire-and-forget: the session is already counted, and
+  /// a lost outcome costs one data point, never the user anything.
+  Future<void> survived({required int intensity});
+}
+
 /// Ember — the backend decides *what* to say ([CoachReply]); views localize.
 abstract interface class CoachRepository {
   Future<CoachReply> requestReply({
@@ -75,6 +92,28 @@ abstract interface class CoachRepository {
     CoachChip? chip,
     required bool capped,
   });
+}
+
+/// The read side of the server-owned `users/{uid}` document.
+///
+/// Everything here is computed where the client cannot be trusted or cannot
+/// reach: the nightly taper advice (`taperRecalc`), the Sunday report
+/// (`weeklyInsight`), and — next — the RevenueCat entitlement mirror, which
+/// is the whole reason the ownership split exists. The client reads this
+/// tree and never writes it; `firestore.rules` enforces that, not politeness.
+///
+/// Every method answers null rather than throwing on "nothing there yet",
+/// because "no report this week" and "cron hasn't run for you" are ordinary
+/// states, not failures. Wire failures still throw, so the caller can tell a
+/// missing report from a dead connection.
+abstract interface class ServerStateRepository {
+  /// The nightly adaptive taper verdict, or null before the first cron run
+  /// (and for anyone past Freedom Day, where there is no limit to bend).
+  Future<PlanAdvice?> planAdvice();
+
+  /// The most recent weekly report, or null when none has been generated —
+  /// free tier, a short week, or a model outage the cron skipped silently.
+  Future<WeeklyInsight?> latestInsight();
 }
 
 sealed class AuthException implements Exception {

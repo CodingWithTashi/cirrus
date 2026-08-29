@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
@@ -381,49 +384,25 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Leaves the session: optimistic sign-out/delete (the API ack rides
-  /// behind), per-account stores reset, back to auth. One path for both
-  /// dialogs so they can't drift apart.
-  void _leaveJourney(
-    BuildContext dialogContext,
-    BuildContext context,
-    WidgetRef ref, {
-    required bool deleteAccount,
-  }) {
-    Navigator.of(dialogContext).pop();
-    final store = ref.read(quitStoreProvider.notifier);
-    deleteAccount ? store.deleteAccount() : store.signOut();
+  /// Drops the local session and lands back on auth. Shared by sign-out and
+  /// the tail of a confirmed deletion so the two can't drift apart.
+  static void _leaveJourney(BuildContext context, WidgetRef ref) {
     ref.invalidate(coachStoreProvider);
     ref.invalidate(communityStoreProvider);
     context.go(Routes.auth);
   }
 
+  /// Deletion is the one destructive action here, and the only lifecycle CTA
+  /// that awaits its backend ack. Sign-out can be optimistic — worst case the
+  /// session lingers server-side for a moment. Erasure cannot: telling
+  /// someone their data is gone and navigating away, while the request failed
+  /// offline, is a lie the UI would never correct.
   void _confirmDelete(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final lp = context.lp;
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.settingsDeleteConfirmTitle),
-        content: Text(l10n.settingsDeleteConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              l10n.commonCancel,
-              style: LpType.body14(lp.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () =>
-                _leaveJourney(dialogContext, context, ref, deleteAccount: true),
-            child: Text(
-              l10n.settingsDeleteConfirmCta,
-              style: LpType.body14(lp.dangerText, weight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
+      // The request must survive a stray tap outside the sheet.
+      barrierDismissible: false,
+      builder: (_) => const _DeleteAccountDialog(),
     );
   }
 
@@ -444,12 +423,11 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           TextButton(
-            onPressed: () => _leaveJourney(
-              dialogContext,
-              context,
-              ref,
-              deleteAccount: false,
-            ),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ref.read(quitStoreProvider.notifier).signOut();
+              _leaveJourney(context, ref);
+            },
             child: Text(
               l10n.settingsSignOut,
               style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
@@ -457,6 +435,80 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The delete-account confirmation, with a busy state, because deletion is
+/// the one action here that waits on the network.
+///
+/// It runs `deleteUserData` server-side: the journey, the server-owned user
+/// tree (entitlement, coach transcript, cravings, insights) and the uid↔post
+/// mapping all go, and community posts are anonymized rather than removed so
+/// the threads other quitters are reading don't develop holes (docs/03 §11).
+class _DeleteAccountDialog extends ConsumerStatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  ConsumerState<_DeleteAccountDialog> createState() =>
+      _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
+  bool _busy = false;
+
+  Future<void> _delete() async {
+    setState(() => _busy = true);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(quitStoreProvider.notifier).deleteAccount();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      navigator.pop();
+      // The account still exists and the user is still signed in — the
+      // standard offline/generic copy is exactly right here, and the retry
+      // is simply tapping Delete again.
+      unawaited(showLpErrorDialog(context, error: error));
+      return;
+    }
+    if (!mounted) return;
+    navigator.pop();
+    SettingsScreen._leaveJourney(context, ref);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final lp = context.lp;
+    return AlertDialog(
+      title: Text(l10n.settingsDeleteConfirmTitle),
+      content: Text(l10n.settingsDeleteConfirmBody),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(
+            l10n.commonCancel,
+            style: LpType.body14(lp.textSecondary),
+          ),
+        ),
+        TextButton(
+          onPressed: _busy ? null : _delete,
+          child: _busy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: lp.dangerText,
+                  ),
+                )
+              : Text(
+                  l10n.settingsDeleteConfirmCta,
+                  style: LpType.body14(lp.dangerText, weight: FontWeight.w600),
+                ),
+        ),
+      ],
     );
   }
 }

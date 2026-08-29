@@ -29,7 +29,9 @@ class LastPuffApp extends ConsumerWidget {
         children: [
           // Wraps the tree so it sits under a Localizations scope — the
           // reminder copy has to be in the user's language.
-          _ReminderSync(child: child ?? const SizedBox.shrink()),
+          _ServerStateSync(
+            child: _ReminderSync(child: child ?? const SizedBox.shrink()),
+          ),
           const Align(alignment: Alignment.topCenter, child: OfflineBanner()),
         ],
       ),
@@ -72,4 +74,47 @@ class _ReminderSync extends ConsumerWidget {
     }
     return child;
   }
+}
+
+/// Re-reads the server-owned nightly advice when the app comes back to the
+/// foreground.
+///
+/// `taperRecalc` writes just after the user's local midnight. Sessions are
+/// long-lived — a phone left open overnight never re-runs the sign-in path —
+/// so without this the advice would only ever be picked up on a cold start,
+/// and the user would spend the day on yesterday's curve.
+///
+/// Renders nothing, and is a no-op on the fake backend, where the repository
+/// answers null.
+class _ServerStateSync extends ConsumerStatefulWidget {
+  const _ServerStateSync({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_ServerStateSync> createState() => _ServerStateSyncState();
+}
+
+class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
+  AppLifecycleListener? _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    // Constructed here rather than as a field initializer: the listener
+    // registers itself with the binding on construction, so it must not be
+    // built lazily on first access.
+    _listener = AppLifecycleListener(
+      onResume: () => ref.read(quitStoreProvider.notifier).pullPlanAdvice(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

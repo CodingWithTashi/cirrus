@@ -23,6 +23,7 @@ abstract final class JourneyCodec {
     'day1TasksDone': s.day1TasksDone.toList(),
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
     'moodCheckIns': s.moodCheckIns,
+    'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
   };
 
   static JourneyState decode(Map<String, dynamic> json) => JourneyState(
@@ -50,6 +51,9 @@ abstract final class JourneyCodec {
     day1TasksDone: (json['day1TasksDone'] as List).cast<int>().toSet(),
     pendingSlipCleanDays: json['pendingSlipCleanDays'] as int?,
     moodCheckIns: json['moodCheckIns'] as int,
+    planAdvice: json['planAdvice'] == null
+        ? null
+        : decodeAdvice(json['planAdvice'] as Map<String, dynamic>),
   );
 
   static Map<String, dynamic> encodeProfile(UserProfile p) => {
@@ -145,6 +149,27 @@ abstract final class JourneyCodec {
         slipTrigger: enumByNameOrNull(SlipTrigger.values, json['slipTrigger']),
         repairTokenUsed: json['repairTokenUsed'] as bool? ?? false,
       );
+
+  static Map<String, dynamic> _encodeAdvice(PlanAdvice a) => {
+    'forDay': encodeDayKey(a.forDay),
+    'limit': a.limit,
+    'adherence': a.adherence.name,
+    'stretchDelta': a.stretchDelta,
+  };
+
+  /// Public because the same shape arrives from two places: this journey
+  /// document (the client's accepted copy) and the server-owned `users/{uid}`
+  /// document `taperRecalc` writes. One decoder means they cannot drift.
+  static PlanAdvice decodeAdvice(Map<String, dynamic> json) => PlanAdvice(
+    forDay: decodeDayKey(json['forDay'] as String),
+    limit: json['limit'] as int,
+    adherence: enumByName(
+      PlanAdherence.values,
+      json['adherence'],
+      PlanAdherence.onTrack,
+    ),
+    stretchDelta: json['stretchDelta'] as int? ?? 0,
+  );
 
   static Map<String, dynamic> _encodeGoal(SavingsGoal g) => {
     'id': g.id,

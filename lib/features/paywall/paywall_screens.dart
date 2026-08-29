@@ -17,6 +17,7 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../data/api/firebase/lp_analytics.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 import '../onboarding/onboarding_view_model.dart';
@@ -38,8 +39,21 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   bool get _fromOnboarding => ref.read(quitStoreProvider) == null;
 
+  @override
+  void initState() {
+    super.initState();
+    // `variant` is the A/B slot docs/06 §3's paywall tests read. There is one
+    // layout today, so it is named rather than left blank — an empty string
+    // would make the first test's data indistinguishable from history.
+    LpAnalytics.paywallViewed('d5_default');
+  }
+
   Future<void> _startTrial() async {
     unawaited(LpHaptics.celebrate());
+    // Reported at the moment of intent, before the (currently non-existent)
+    // billing round-trip, so trial-start rate stays comparable once
+    // RevenueCat lands and the call can fail.
+    unawaited(LpAnalytics.trialStarted(_selected.name));
     if (_fromOnboarding) {
       setState(() => _busy = true);
       try {
@@ -322,6 +336,7 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
   bool _busy = false;
 
   Future<void> _continueFree() async {
+    unawaited(LpAnalytics.freeContinued());
     final fromOnboarding = ref.read(quitStoreProvider) == null;
     if (fromOnboarding) {
       setState(() => _busy = true);
@@ -411,6 +426,7 @@ class _WinbackScreenState extends ConsumerState<WinbackScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(settingsStoreProvider.notifier).markWinbackShown();
+      LpAnalytics.winbackShown();
     });
   }
 
@@ -519,6 +535,7 @@ class _WinbackScreenState extends ConsumerState<WinbackScreen> {
                   ref
                       .read(quitStoreProvider.notifier)
                       .setTier(SubscriptionTier.premium);
+                  LpAnalytics.winbackConverted();
                   LpHaptics.celebrate();
                   context.go(Routes.home);
                 },
@@ -612,6 +629,7 @@ class TrialEndingScreen extends ConsumerWidget {
                   ref
                       .read(quitStoreProvider.notifier)
                       .setTier(SubscriptionTier.premium);
+                  LpAnalytics.trialStarted(_Tier.yearly.name);
                   context.pop();
                 },
               ),
@@ -622,6 +640,7 @@ class TrialEndingScreen extends ConsumerWidget {
                   ref
                       .read(quitStoreProvider.notifier)
                       .setTier(SubscriptionTier.free);
+                  LpAnalytics.freeContinued();
                   context.pop();
                 },
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/journey_state.dart';
+import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/auth_api.dart';
 import '../api/coach_api.dart';
@@ -23,6 +24,8 @@ import 'reminder_coordinator.dart';
 import '../repositories/firebase_coach_repository.dart';
 import '../repositories/firebase_community_repository.dart';
 import '../repositories/firebase_journey_repository.dart';
+import '../repositories/firebase_panic_repository.dart';
+import '../repositories/firebase_server_state_repository.dart';
 import '../repositories/firebase_user_context_repository.dart';
 import 'coach_store.dart';
 import 'community_store.dart';
@@ -99,6 +102,24 @@ final communityRepositoryProvider = Provider<CommunityRepository>(
   },
 );
 
+/// Craving sessions. The fake backend has no entitlement to read, so it
+/// answers "AI available" rather than inventing a quota.
+final panicRepositoryProvider = Provider<PanicRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => const NoopPanicRepository(),
+    BackendMode.firebase => FirebasePanicRepository(),
+  },
+);
+
+/// Read side of the server-owned user document: nightly taper advice and the
+/// weekly AI report today, the entitlement mirror next.
+final serverStateRepositoryProvider = Provider<ServerStateRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => const NoopServerStateRepository(),
+    BackendMode.firebase => FirebaseServerStateRepository(),
+  },
+);
+
 final coachRepositoryProvider = Provider<CoachRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => ApiCoachRepository(ref.watch(coachApiProvider)),
@@ -136,6 +157,17 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
     BackendMode.fake => null,
     BackendMode.firebase => ReminderCoordinator(ReminderScheduler()),
   },
+);
+
+/// The most recent weekly AI report, or null when the cron has not produced
+/// one (free tier, a short week, a skipped model outage, or the fake backend).
+///
+/// A `FutureProvider` rather than store state: it is read by exactly one
+/// screen, it is never mutated, and `ref.invalidate` is the whole refresh
+/// story. Auto-disposal keeps it from pinning a stale week in memory for a
+/// session that stays open past Sunday.
+final weeklyInsightProvider = FutureProvider.autoDispose<WeeklyInsight?>(
+  (ref) => ref.watch(serverStateRepositoryProvider).latestInsight(),
 );
 
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(

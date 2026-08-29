@@ -69,7 +69,8 @@ export const taperRecalc = onSchedule(
   },
 );
 
-async function recalcOne(uid: string, timeZone: string): Promise<void> {
+/** Exported for the integration suite — the scheduled wrapper is untestable. */
+export async function recalcOne(uid: string, timeZone: string): Promise<void> {
   const snap = await journeyDoc(uid).get();
   if (!snap.exists) return;
 
@@ -84,8 +85,13 @@ async function recalcOne(uid: string, timeZone: string): Promise<void> {
   const todayKey = dayKeyIn(new Date(), timeZone);
   const day = dayNumber(journey.plan, todayKey);
   // Past Freedom Day the plan is over; maintenance mode has no limit to bend.
-  if (day < 1 || day > totalDays(journey.plan)) return;
+  // Day 1 is excluded too: there is no completed day to read, so the advice
+  // could only ever restate the curve.
+  if (day < 2 || day > totalDays(journey.plan)) return;
 
+  // `trailingDays` EXCLUDES todayKey, so this window is the three completed
+  // days D-1..D-3 — which is the whole point of running just after the user's
+  // local midnight.
   const window = trailingDays(journey.days, todayKey, 3).map((d) => ({
     puffs: d.puffs,
     limit: d.limit,
@@ -95,7 +101,13 @@ async function recalcOne(uid: string, timeZone: string): Promise<void> {
     lastTwo.length === 2 &&
     lastTwo.every((d) => d.limit > 0 && d.puffs / d.limit > 1.1);
 
-  const advice = adviseTomorrow(journey.plan, day, window, strugglingTwoDays);
+  // `adviseTomorrow` advises for `todayDayNumber + 1`, so the day being
+  // advised is `day` only when we pass `day - 1`. Passing `day` produced
+  // advice for TOMORROW while stamping it `forDay: todayKey` — and since the
+  // cron overwrites the document every night, that advice was replaced before
+  // the day it applied to ever arrived. The client read a limit that was
+  // never meant for the day it was labelled with.
+  const advice = adviseTomorrow(journey.plan, day - 1, window, strugglingTwoDays);
 
   await userDoc(uid).set(
     {

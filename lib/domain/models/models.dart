@@ -401,3 +401,96 @@ class QuitBadge {
   /// Streak-family badges glow Ember instead of Volt.
   final bool ember;
 }
+
+/// What the server says about a craving session that just opened
+/// (docs/03 §7, docs/04 §7).
+///
+/// It gates the AI layer and NOTHING else. The breathing screen, the reframe
+/// card and the tap game always run, whatever this says — we do not paywall
+/// someone mid-crisis, and a craving must never wait on a round-trip.
+class PanicAvailability {
+  const PanicAvailability({
+    required this.aiAvailable,
+    required this.sessionsToday,
+  });
+
+  /// The optimistic local answer, used before the server replies and whenever
+  /// it can't be reached. Assuming "available" is deliberate: the worst case
+  /// is one over-quota model call, versus withholding help from someone
+  /// mid-craving because their wifi dropped.
+  static const unknown = PanicAvailability(aiAvailable: true, sessionsToday: 0);
+
+  final bool aiAvailable;
+
+  /// Sessions counted today, this one included. Server-owned — the client
+  /// can't be trusted with the free-tier allowance.
+  final int sessionsToday;
+}
+
+/// How the trailing days compare to the curve (docs/03 §3.3). Server-derived.
+enum PlanAdherence { crushing, onTrack, struggling }
+
+/// The nightly adaptive layer's verdict, computed by `taperRecalc` just after
+/// the user's local midnight and read from the server-owned `users/{uid}`.
+///
+/// The advice is *bent* curve, never a new curve: the server has the trailing
+/// three days the client also has, but it is the only side that can be
+/// trusted to apply them (docs/03 §3.3), and it can do it while the phone is
+/// asleep. Once the client accepts a day's advice it stores the accepted copy
+/// in its own journey document — which is why this type is client-persisted
+/// even though the server owns the original. Writing back into `users/{uid}`
+/// is not possible and not wanted.
+class PlanAdvice {
+  const PlanAdvice({
+    required this.forDay,
+    required this.limit,
+    required this.adherence,
+    required this.stretchDelta,
+  });
+
+  /// Local midnight of the day [limit] applies to.
+  final DateTime forDay;
+
+  /// The limit to show instead of the raw curve value for [forDay].
+  final int limit;
+  final PlanAdherence adherence;
+
+  /// Days the runway grows by, already capped server-side at +50% of pace.
+  /// Applied exactly once per [forDay] — see `JourneyStore.applyPlanAdvice`.
+  final int stretchDelta;
+
+  bool appliesTo(DateTime day) =>
+      forDay.year == day.year &&
+      forDay.month == day.month &&
+      forDay.day == day.day;
+}
+
+/// The Sunday AI report `weeklyInsight` generates (docs/04 §5).
+///
+/// Unlike coach replies, these five strings are NOT localizable ids: they are
+/// the model's own prose about this user's own week, generated in the locale
+/// `syncUserContext` recorded. Nothing here can be resolved through the ARB
+/// files, and nothing here should be — a translated summary of numbers the
+/// model never saw would be a different claim.
+class WeeklyInsight {
+  const WeeklyInsight({
+    required this.weekId,
+    required this.headline,
+    required this.pattern,
+    required this.win,
+    required this.watchout,
+    required this.move,
+  });
+
+  /// The user's local Sunday, `yyyy-MM-dd`. One report per week.
+  final String weekId;
+  final String headline;
+
+  /// What the week's data showed.
+  final String pattern;
+  final String win;
+  final String watchout;
+
+  /// The single concrete thing to do next week.
+  final String move;
+}

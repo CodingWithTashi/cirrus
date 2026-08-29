@@ -20,6 +20,7 @@ class JourneyState {
     this.day1TasksDone = const {},
     this.pendingSlipCleanDays,
     this.moodCheckIns = 0,
+    this.planAdvice,
   });
 
   final UserProfile profile;
@@ -43,9 +44,27 @@ class JourneyState {
   final int? pendingSlipCleanDays;
   final int moodCheckIns;
 
+  /// The most recent nightly advice the client has accepted (docs/03 §3.3).
+  /// Null until `taperRecalc` has produced one, on the fake backend, and for
+  /// anyone whose plan has already finished.
+  final PlanAdvice? planAdvice;
+
   static DateTime dateKey(DateTime d) => DateTime(d.year, d.month, d.day);
 
   DayLog? logFor(DateTime date) => days[dateKey(date)];
+
+  /// The limit in force on [date] — the single answer the whole app reads.
+  ///
+  /// The raw curve is the floor of this, not the whole of it: the nightly
+  /// adaptive layer may bend today's number up (a struggling stretch) or down
+  /// (crushing it), and `TodaySnapshot`, `logPuff`'s over-limit test and the
+  /// Plan screen must never disagree about which number is live.
+  int limitOn(DateTime date) {
+    final advice = planAdvice;
+    if (advice != null && advice.appliesTo(date)) return advice.limit;
+    final d = plan.dayNumber(date).clamp(1, 9999);
+    return d <= plan.totalDays ? TaperEngine.limitFor(plan, d) : 0;
+  }
 
   JourneyState copyWith({
     UserProfile? profile,
@@ -61,6 +80,7 @@ class JourneyState {
     Set<int>? day1TasksDone,
     int? Function()? pendingSlipCleanDays,
     int? moodCheckIns,
+    PlanAdvice? Function()? planAdvice,
   }) => JourneyState(
     profile: profile ?? this.profile,
     plan: plan ?? this.plan,
@@ -77,6 +97,7 @@ class JourneyState {
         ? pendingSlipCleanDays()
         : this.pendingSlipCleanDays,
     moodCheckIns: moodCheckIns ?? this.moodCheckIns,
+    planAdvice: planAdvice != null ? planAdvice() : this.planAdvice,
   );
 }
 
@@ -107,7 +128,7 @@ class TodaySnapshot {
     final plan = s.plan;
     final day = plan.dayNumber(now).clamp(1, 9999);
     final todayLog = s.logFor(now);
-    final limit = day <= plan.totalDays ? TaperEngine.limitFor(plan, day) : 0;
+    final limit = s.limitOn(now);
     final streak = StreakEngine.currentStreak(s.days, now);
     final logs = s.days.values.toList()
       ..sort((a, b) => a.date.compareTo(b.date));

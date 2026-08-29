@@ -217,7 +217,13 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
 
   void selectPace(int days) => state = state.copyWith(paceDays: days);
 
-  void markCommitted() => state = state.copyWith(committed: true);
+  void markCommitted() {
+    // The hold gesture itself, not the screen advance — someone can complete
+    // the commit screen without ever holding, and the two are different
+    // numbers (docs/02 §7).
+    LpAnalytics.commitHeld();
+    state = state.copyWith(committed: true);
+  }
 
   /// Frame-map preview: seed the draft with the demo answers every design
   /// frame depicts (200/day, $25/wk, 30-day taper) and jump straight to [step].
@@ -244,14 +250,56 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// docs/02 §7 (>15% drop-off on any screen) has something to alert on.
   DateTime _stepEnteredAt = DateTime.now();
 
-  /// Emits `screen_completed` for the screen being left and restarts the
-  /// clock. Central on purpose: 19 widgets each remembering to log is 19
-  /// chances to miss one, and a hole in the funnel looks like a healthy step.
+  /// Emits `screen_completed` for the screen being left, plus that screen's
+  /// own docs/02 §7 event, and restarts the clock.
+  ///
+  /// Central on purpose: 19 widgets each remembering to log is 19 chances to
+  /// miss one, and a hole in the funnel looks like a healthy step. The switch
+  /// is exhaustive over the steps that carry an answer worth reporting —
+  /// adding a step therefore forces a decision here rather than silently
+  /// shipping an unmeasured screen.
   void _completeStep() {
+    final step = state.step;
     LpAnalytics.screenCompleted(
-      state.step.name,
+      step.name,
       DateTime.now().difference(_stepEnteredAt).inMilliseconds,
     );
+    switch (step) {
+      // The funnel's denominator. Fired on leaving welcome rather than on
+      // mount so the Frame Map's `previewStep` jumps — which never pass
+      // through welcome — cannot inflate it.
+      case ObStep.welcome:
+        LpAnalytics.onboardingStart();
+      case ObStep.puffs:
+        LpAnalytics.puffsEntered(state.puffsPerDay, state.dependence.name);
+      case ObStep.spend:
+        LpAnalytics.spendEntered(
+          state.weeklySpend.round(),
+          state.yearlySpend.round(),
+        );
+      case ObStep.method:
+        LpAnalytics.methodChosen(state.method.name);
+      case ObStep.pace:
+        LpAnalytics.paceChosen(state.paceDays);
+      case ObStep.reveal:
+        LpAnalytics.planRevealed();
+      // `commit_held` rides the hold gesture (markCommitted) and `notif_prompt`
+      // needs the OS answer, so both fire from where that fact exists.
+      case ObStep.gender:
+      case ObStep.birthYear:
+      case ObStep.under18:
+      case ObStep.tried:
+      case ObStep.frequency:
+      case ObStep.strength:
+      case ObStep.firstPuff:
+      case ObStep.why:
+      case ObStep.worries:
+      case ObStep.building:
+      case ObStep.commit:
+      case ObStep.rating:
+      case ObStep.notifications:
+        break;
+    }
     _stepEnteredAt = DateTime.now();
   }
 

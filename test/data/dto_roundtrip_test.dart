@@ -51,6 +51,46 @@ void main() {
       expect(day7.hourBuckets, isNotEmpty);
       expect(day7.moodNote, 'work party tonight, nervous');
     });
+
+    test('planAdvice round-trips, and its absence stays absent', () {
+      // The seed journey carries no advice — the nightly cron has never run
+      // for it — so the null case is the one the demo backend exercises daily.
+      expect(journey.planAdvice, isNull);
+      expect(
+        JourneyCodec.encode(journey)['planAdvice'],
+        isNull,
+        reason: 'a journey with no advice must not invent one',
+      );
+
+      final advised = journey.copyWith(
+        planAdvice: () => PlanAdvice(
+          forDay: DateTime(2026, 8, 18),
+          limit: 91,
+          adherence: PlanAdherence.struggling,
+          stretchDelta: 1,
+        ),
+      );
+      final wire = jsonEncode(JourneyCodec.encode(advised));
+      final decoded = JourneyCodec.decode(
+        jsonDecode(wire) as Map<String, dynamic>,
+      );
+      expect(jsonEncode(JourneyCodec.encode(decoded)), wire);
+      expect(decoded.planAdvice!.limit, 91);
+      expect(decoded.planAdvice!.adherence, PlanAdherence.struggling);
+      expect(decoded.planAdvice!.stretchDelta, 1);
+      // Local midnight, never an epoch shift.
+      expect(decoded.planAdvice!.forDay, DateTime(2026, 8, 18));
+    });
+
+    test('an unknown adherence decodes to onTrack, never a crash', () {
+      final advice = JourneyCodec.decodeAdvice(const {
+        'forDay': '2026-08-18',
+        'limit': 40,
+        'adherence': 'sandbagging',
+        'stretchDelta': 0,
+      });
+      expect(advice.adherence, PlanAdherence.onTrack);
+    });
   });
 
   group('PostCodec', () {

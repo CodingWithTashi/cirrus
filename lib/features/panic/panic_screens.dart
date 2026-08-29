@@ -21,27 +21,71 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/rolling_number.dart';
+import '../../data/api/firebase/lp_analytics.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/models/models.dart';
 
 /// Session state shared by the three panic steps (feature-local VM).
 class PanicSession {
-  const PanicSession({this.step = 0, this.intensity = 7, this.startedAt});
+  const PanicSession({
+    this.step = 0,
+    this.intensity = 7,
+    this.startedAt,
+    this.availability = PanicAvailability.unknown,
+  });
 
   final int step;
   final int intensity;
   final DateTime? startedAt;
 
-  PanicSession copyWith({int? step, int? intensity, DateTime? startedAt}) =>
-      PanicSession(
-        step: step ?? this.step,
-        intensity: intensity ?? this.intensity,
-        startedAt: startedAt ?? this.startedAt,
-      );
+  /// What the server said when this session opened. Starts optimistic and is
+  /// only ever narrowed by a reply that actually arrived.
+  final PanicAvailability availability;
+
+  PanicSession copyWith({
+    int? step,
+    int? intensity,
+    DateTime? startedAt,
+    PanicAvailability? availability,
+  }) => PanicSession(
+    step: step ?? this.step,
+    intensity: intensity ?? this.intensity,
+    startedAt: startedAt ?? this.startedAt,
+    availability: availability ?? this.availability,
+  );
 }
 
 class PanicViewModel extends Notifier<PanicSession> {
   @override
-  PanicSession build() => PanicSession(startedAt: DateTime.now());
+  PanicSession build() {
+    ref.onDispose(() => _disposed = true);
+    _openSession();
+    return PanicSession(startedAt: DateTime.now());
+  }
+
+  /// True once the session reached a recorded outcome, so an abandoned flow
+  /// can be told apart from a survived one.
+  bool _resolved = false;
+
+  /// The flow can close (or `survive()` can invalidate this notifier) while
+  /// the availability call is still in flight; writing `state` after that
+  /// throws.
+  bool _disposed = false;
+
+  /// Tells the server a craving started, and folds the answer in when it
+  /// arrives. Deliberately not awaited anywhere: the breathing screen is
+  /// already on screen before this resolves, which is the point — a craving
+  /// does not wait on a round-trip (docs/04 §7).
+  void _openSession() {
+    ref
+        .read(panicRepositoryProvider)
+        .begin()
+        .then((availability) {
+          // The notifier may already be gone (flow closed mid-flight).
+          if (!_disposed) state = state.copyWith(availability: availability);
+        })
+        .ignore();
+  }
 
   void next() => state = state.copyWith(step: state.step + 1);
 
@@ -57,8 +101,26 @@ class PanicViewModel extends Notifier<PanicSession> {
 
   /// Craving survived → celebrate, then reset for the next session.
   void survive() {
+    _resolved = true;
+    unawaited(LpAnalytics.cravingSurvived(survived: true));
+    ref
+        .read(panicRepositoryProvider)
+        .survived(intensity: state.intensity)
+        .ignore();
     ref.read(quitStoreProvider.notifier).recordCravingSurvived();
     ref.invalidateSelf();
+  }
+
+  /// The takeover closed without "it passed" being tapped.
+  ///
+  /// Reported to analytics only, never to the server: leaving the flow is not
+  /// the same claim as slipping, and `panicSession` records outcomes people
+  /// actually stated. The guardrail rate (docs/06 §1, craving-survived ≥ 70%)
+  /// reads sessions-opened as its denominator either way.
+  void abandon() {
+    if (_resolved) return;
+    _resolved = true;
+    unawaited(LpAnalytics.cravingSurvived(survived: false));
   }
 }
 
@@ -83,6 +145,14 @@ class _PanicFlowState extends ConsumerState<PanicFlow> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
     });
+  }
+
+  @override
+  void dispose() {
+    // `survive()` invalidates the notifier and marks itself resolved before
+    // this runs, so a survived session is never double-counted here.
+    ref.read(panicProvider.notifier).abandon();
+    super.dispose();
   }
 
   @override
@@ -446,6 +516,11 @@ class _BreakLoopStep extends ConsumerWidget {
     final buddyName = journey?.buddy.name ?? 'Sam';
     final danger = ref.watch(todayProvider)?.dangerWindow;
     final hourLabel = LpFormat.hour(danger?.$1 ?? 22, context.localeTag);
+    // docs/04 §7: past the free allowance the AI layer drops away — the
+    // option stays on screen and routes to the paywall instead of
+    // disappearing, because a door that vanishes mid-craving reads as the app
+    // giving up on you.
+    final aiAvailable = ref.watch(panicProvider).availability.aiAvailable;
 
     Widget option({
       required Widget icon,
@@ -537,8 +612,11 @@ class _BreakLoopStep extends ConsumerWidget {
             ),
             tint: lp.oxygen,
             title: l10n.panicLoopCoach,
-            sub: l10n.panicLoopCoachSub(hourLabel),
-            onTap: () => context.go(Routes.coach),
+            sub: aiAvailable
+                ? l10n.panicLoopCoachSub(hourLabel)
+                : l10n.panicLoopCoachLocked,
+            onTap: () =>
+                aiAvailable ? context.go(Routes.coach) : context.push(Routes.paywall),
           ),
           const Spacer(),
           const Center(child: _CravingTimer(late: true)),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/logic/dependence_engine.dart';
@@ -9,6 +10,7 @@ import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import '../api/firebase/lp_analytics.dart';
 import '../seed/seed_data.dart';
 import 'providers.dart';
 
@@ -36,6 +38,57 @@ class JourneyStore extends Notifier<JourneyState?> {
   void _syncUserContext() =>
       ref.read(userContextRepositoryProvider).sync().ignore();
 
+  /// Everything a freshly-established session should pull from the server.
+  /// One call so a new session path cannot wire half of it.
+  void _onSessionEstablished() {
+    _syncUserContext();
+    pullPlanAdvice();
+  }
+
+  /// Reads the nightly taper verdict from the server-owned user document and
+  /// folds it into the journey (docs/03 §3.3).
+  ///
+  /// Fire-and-forget, and called on every session start and app resume: the
+  /// cron writes just after the user's local midnight, so a phone left open
+  /// overnight would otherwise run all of the next day on yesterday's curve.
+  /// A failure costs one day of adaptation — the raw curve still stands — so
+  /// there is nothing here worth a dialog.
+  void pullPlanAdvice() {
+    ref
+        .read(serverStateRepositoryProvider)
+        .planAdvice()
+        .then((advice) {
+          if (advice != null) applyPlanAdvice(advice);
+        })
+        .ignore();
+  }
+
+  /// Folds a server verdict into the local journey.
+  ///
+  /// Two guards carry the whole correctness of this: advice is applied only
+  /// on the day it is FOR (yesterday's verdict must not bend today's limit),
+  /// and only once (it is re-read on every launch, and re-applying
+  /// `stretchDelta` would push Freedom Day back a day per app open).
+  void applyPlanAdvice(PlanAdvice advice) {
+    final s = state;
+    if (s == null) return;
+    if (!advice.appliesTo(_now)) return;
+    if (s.planAdvice?.appliesTo(advice.forDay) ?? false) return;
+    _commit(
+      s.copyWith(
+        planAdvice: () => advice,
+        // The +50% cap lives in the engine, so client and server agree on the
+        // ceiling even if one of them is a build behind.
+        plan: advice.stretchDelta > 0
+            ? TaperEngine.reflowAfterSlip(
+                s.plan,
+                extraDays: advice.stretchDelta,
+              )
+            : s.plan,
+      ),
+    );
+  }
+
   DateTime get _now => DateTime.now();
 
   DateTime get _todayKey => JourneyState.dateKey(_now);
@@ -59,7 +112,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     try {
       final restored = await _auth.restoreSession();
       if (restored != null && state == null) state = restored;
-      if (restored != null) _syncUserContext();
+      if (restored != null) _onSessionEstablished();
     } on Exception {
       // Offline or backend hiccup at launch — proceed signed out.
     }
@@ -74,7 +127,7 @@ class JourneyStore extends Notifier<JourneyState?> {
       password: password,
     );
     if (restored != null) state = restored;
-    _syncUserContext();
+    _onSessionEstablished();
     return restored != null;
   }
 
@@ -83,7 +136,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<bool> signInWithApple() async {
     final restored = await _auth.signInWithApple();
     if (restored != null) state = restored;
-    _syncUserContext();
+    _onSessionEstablished();
     return restored != null;
   }
 
@@ -92,7 +145,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<bool> signInWithGoogle() async {
     final restored = await _auth.signInWithGoogle();
     if (restored != null) state = restored;
-    _syncUserContext();
+    _onSessionEstablished();
     return restored != null;
   }
 
@@ -111,7 +164,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     state = await _journeys.create(profile: profile, plan: plan);
     // Guest onboarding mints an anonymous account here, so this is the first
     // moment that uid exists to sync for.
-    _syncUserContext();
+    _onSessionEstablished();
   }
 
   /// Optimistic: signed out locally at once, the API ack is write-behind.
@@ -120,10 +173,23 @@ class JourneyStore extends Notifier<JourneyState?> {
     _auth.signOut().ignore();
   }
 
-  void deleteAccount() {
+  /// Erasure, and the one lifecycle call that is deliberately NOT optimistic.
+  ///
+  /// Everything else in this store can fail write-behind and be re-synced
+  /// later; a deletion that quietly failed leaves the user believing their
+  /// data is gone when the server still holds all of it. The caller awaits
+  /// this and surfaces the failure — local state only clears once the backend
+  /// confirms.
+  Future<void> deleteAccount() async {
+    await _auth.deleteAccount();
     state = null;
-    _auth.deleteAccount().ignore();
   }
+
+  /// Test-only: installs a journey directly, for the states a public command
+  /// cannot reach (a day with no log yet, a mid-plan restart). Named so it is
+  /// obvious in a diff that production code has no business calling it.
+  @visibleForTesting
+  void replaceForTest(JourneyState journey) => _commit(journey);
 
   /// Frame-map/dev shortcut: seeds the demo journey synchronously (no router
   /// race) and plants it on the fake backend via the write-behind sync.
@@ -134,11 +200,16 @@ class JourneyStore extends Notifier<JourneyState?> {
   void logPuff({DateTime? at}) {
     final s = state;
     if (s == null) return;
+    // The north star is Weekly Active Quitters — people who log on 4+ days a
+    // week — so this is the one habit-loop event the metric cannot be
+    // computed without. Emitted from the store, not the four views that call
+    // logPuff, so a new entry point can't ship unmeasured.
+    LpAnalytics.puffLogged().ignore();
     final when = at ?? _now;
     final key = JourneyState.dateKey(when);
     final log =
         s.days[key] ??
-        DayLog(date: key, puffs: 0, limit: _limitOn(s.plan, when));
+        DayLog(date: key, puffs: 0, limit: s.limitOn(when));
 
     final wasOver = log.puffs > log.limit;
     final buckets = Map<int, int>.from(log.hourBuckets);
@@ -283,6 +354,8 @@ class JourneyStore extends Notifier<JourneyState?> {
       s.copyWith(
         plan: TaperEngine.reflowAfterSlip(s.plan),
         pendingSlipCleanDays: () => null,
+        // Same reason as adjustPlan: the runway just moved under the advice.
+        planAdvice: () => null,
       ),
     );
   }
@@ -336,6 +409,10 @@ class JourneyStore extends Notifier<JourneyState?> {
           paceDays: newPace,
           stretchDays: 0,
         ),
+        // Last night's verdict was about the plan the user just replaced.
+        // Keeping it would show today a limit derived from a curve that no
+        // longer exists; tonight's cron produces the first honest one.
+        planAdvice: () => null,
       ),
     );
   }
@@ -371,13 +448,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     _commit(s.copyWith(earnedBadges: {...s.earnedBadges, id}));
   }
 
-  int _limitToday(JourneyState s) => _limitOn(s.plan, _now);
-
-  /// The curve limit on [when]; 0 once the runway is complete.
-  static int _limitOn(QuitPlan plan, DateTime when) {
-    final d = plan.dayNumber(when).clamp(1, 9999);
-    return d <= plan.totalDays ? TaperEngine.limitFor(plan, d) : 0;
-  }
+  int _limitToday(JourneyState s) => s.limitOn(_now);
 
   /// Recomputes streak-derived numbers + auto-earned badges after a mutation.
   JourneyState _withBadges(JourneyState s) {

@@ -1103,6 +1103,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get panicLoopCoachLocked => 'ya usaste tu sesión de IA gratis de hoy';
+
+  @override
   String panicBuddyPinged(String name) {
     return 'Aviso enviado. $name te cubre.';
   }
@@ -1390,6 +1393,28 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get planAdjustNote =>
       'ritmo + método editables · sin reinicios, sin perder historial';
+
+  @override
+  String get planAdaptiveLabel => 'AJUSTE DE ANOCHE';
+
+  @override
+  String planAdaptiveCrushing(int limit) {
+    return 'Llevas tres días por debajo de tu línea, así que hoy el objetivo baja a $limit. Impulso, no castigo.';
+  }
+
+  @override
+  String planAdaptiveOnTrack(int limit) {
+    return 'Estás manteniendo la línea. Hoy el objetivo sigue en $limit.';
+  }
+
+  @override
+  String planAdaptiveStruggling(int limit) {
+    return 'Los últimos dos días te pasaste, así que hoy el objetivo se ajusta a $limit. Una línea que puedes sostener vale más que una que no.';
+  }
+
+  @override
+  String get planAdaptiveStretched =>
+      'El Día de la Libertad se movió un día para acompañarlo.';
 
   @override
   String get planAdjustSheetTitle => 'Ajusta tu plan';
@@ -1935,6 +1960,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String insightTitle(int week, String range) {
     return 'Informe semana $week · $range';
   }
+
+  @override
+  String get insightWinLabel => 'Tu victoria';
+
+  @override
+  String get insightWatchoutLabel => 'Ojo con esto';
+
+  @override
+  String get insightWeekChartLabel => 'CALADAS, ÚLTIMOS 7 DÍAS';
+
+  @override
+  String get insightCravingsChartLabel => 'ANTOJOS SUPERADOS, ÚLTIMOS 7 DÍAS';
+
+  @override
+  String get insightHoursChartLabel => 'CALADAS POR HORA, ÚLTIMOS 14 DÍAS';
 
   @override
   String insightCounter(int index, int total) {
