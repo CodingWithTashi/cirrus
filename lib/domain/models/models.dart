@@ -534,3 +534,26 @@ class ModerationItem {
   /// True when the subject is gone and only the flag is left.
   bool get subjectMissing => text == null && status == null;
 }
+
+/// What kind of thing Ember remembered. Shown as a label so the list reads as
+/// a person's notes rather than a database dump.
+enum MemoryKind { person, trigger, motivation, milestone, preference, context }
+
+/// One thing Ember remembers, as the user can see it.
+///
+/// The embedding never crosses the wire — the phone has nothing to do with 768
+/// floats, and a memory the user cannot read is not one they can meaningfully
+/// consent to.
+class CoachMemory {
+  const CoachMemory({
+    required this.id,
+    required this.text,
+    required this.kind,
+  });
+
+  final String id;
+
+  /// One sentence, in the third person, as the extraction wrote it.
+  final String text;
+  final MemoryKind kind;
+}

@@ -10,6 +10,7 @@ import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
 import '../../features/buddy/buddy_screen.dart';
 import '../../features/coach/coach_screen.dart';
+import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
 import '../../features/day1/day1_screen.dart';
 import '../../features/frame_map/frame_map_screen.dart';
@@ -62,6 +63,9 @@ abstract final class Routes {
   /// token, checked by the callables themselves — the route is simply hidden
   /// from everyone else's Settings.
   static const moderation = '/moderation';
+
+  /// What Ember remembers, and the button that takes it back.
+  static const memories = '/coach/memories';
   static const slip = '/slip';
   static const frames = '/frames';
   static const framesEdge = '/frames/edge';
@@ -123,6 +127,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.profile) ||
           path.startsWith(Routes.settings) ||
           path.startsWith(Routes.moderation) ||
+          path.startsWith(Routes.memories) ||
           path.startsWith(Routes.slip) ||
           path.startsWith(Routes.day1);
       if (!authed && needsJourney) return Routes.auth;
@@ -225,6 +230,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.buddy, builder: (_, _) => const BuddyScreen()),
       GoRoute(path: Routes.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: Routes.memories,
+        builder: (_, _) => const CoachMemoriesScreen(),
+      ),
       GoRoute(
         path: Routes.moderation,
         builder: (_, _) => const ModerationScreen(),

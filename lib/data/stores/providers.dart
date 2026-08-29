@@ -193,6 +193,15 @@ final moderationStoreProvider =
       ModerationStore.new,
     );
 
+/// What Ember remembers about this user.
+///
+/// Auto-disposed and re-fetched on open rather than cached in a store: it is
+/// read by one screen, invalidated by exactly one action (forgetting), and a
+/// stale list here would show someone a disclosure they had already deleted.
+final coachMemoriesProvider = FutureProvider.autoDispose<List<CoachMemory>>(
+  (ref) => ref.watch(coachRepositoryProvider).memories(),
+);
+
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(
   SettingsStore.new,
 );

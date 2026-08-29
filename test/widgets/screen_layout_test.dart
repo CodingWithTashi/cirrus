@@ -6,6 +6,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/auth/auth_screens.dart';
 import 'package:last_puff/features/buddy/buddy_screen.dart';
 import 'package:last_puff/features/coach/coach_screen.dart';
+import 'package:last_puff/features/coach/memories_screen.dart';
 import 'package:last_puff/features/community/community_screens.dart';
 import 'package:last_puff/features/frame_map/frame_map_screen.dart';
 import 'package:last_puff/features/health/health_screen.dart';
@@ -69,6 +70,7 @@ void main() {
     'FrameMap': const FrameMapScreen(),
     'EdgeStates': const EdgeStatesPreviewScreen(),
     'Moderation': const ModerationScreen(),
+    'CoachMemories': const CoachMemoriesScreen(),
   };
 
   /// A small phone and a large one, both logical pixels at dpr 1.

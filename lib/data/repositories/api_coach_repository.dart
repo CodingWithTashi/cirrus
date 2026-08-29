@@ -21,4 +21,14 @@ class ApiCoachRepository implements CoachRepository {
       'capped': capped,
     }),
   );
+
+  /// The fake backend has no coach memory: `aiCoachChat` is what writes it,
+  /// and the demo replies are scripted. An empty list is the honest answer —
+  /// seeding fixtures here would show the user "memories" of things they
+  /// never said.
+  @override
+  Future<List<CoachMemory>> memories() async => const [];
+
+  @override
+  Future<void> forgetMemory(String id) async {}
 }

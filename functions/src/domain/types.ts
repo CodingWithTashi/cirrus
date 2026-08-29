@@ -42,6 +42,21 @@ export type FirstPuffWindow = (typeof FIRST_PUFF_WINDOWS)[number];
 export const MOODS = ['rough', 'meh', 'okay', 'good', 'great'] as const;
 export type Mood = (typeof MOODS)[number];
 
+export const GENDERS = ['woman', 'man', 'nonBinary'] as const;
+export type Gender = (typeof GENDERS)[number];
+
+export const QUIT_ATTEMPTS = ['never', 'once', 'twoToFive', 'moreThanFive'] as const;
+export type QuitAttempts = (typeof QUIT_ATTEMPTS)[number];
+
+export const VAPE_FREQUENCIES = ['daily', 'often', 'always'] as const;
+export type VapeFrequency = (typeof VAPE_FREQUENCIES)[number];
+
+/** What the user blamed a slip on (docs/03 §5). Their answer, not ours. */
+export const SLIP_TRIGGERS = [
+  'party', 'stress', 'boredom', 'drinking', 'friends', 'justHappened',
+] as const;
+export type SlipTrigger = (typeof SLIP_TRIGGERS)[number];
+
 export const POST_TAGS = ['win', 'sos', 'day1', 'milestone', 'vent'] as const;
 export type PostTag = (typeof POST_TAGS)[number];
 
@@ -88,6 +103,22 @@ export interface UserProfile {
   readonly whys: readonly WhyChip[];
   readonly worries: readonly WorryChip[];
   readonly firstPuff: FirstPuffWindow | null;
+  // The rest of the 19-step quiz. The server used to drop these, so the coach
+  // could not tell a first-time quitter from someone on their sixth attempt,
+  // or an all-day vaper from a social one — the two facts that most change
+  // what is worth saying to them.
+  readonly gender: Gender | null;
+  readonly attempts: QuitAttempts | null;
+  readonly frequency: VapeFrequency | null;
+}
+
+/** What the user is saving toward (docs/03 §4). Their words, their price. */
+export interface SavingsGoal {
+  readonly id: string;
+  readonly emoji: string;
+  readonly name: string;
+  readonly price: number;
+  readonly fromOnboarding: boolean;
 }
 
 export interface DayLog {
@@ -99,6 +130,10 @@ export interface DayLog {
   readonly hourBuckets: Readonly<Record<number, number>>;
   readonly cravingsSurvived: number;
   readonly mood: Mood | null;
+  /** Free text the user wrote with their mood. Their own words — rare, and
+   *  the single most personal thing in the whole journey document. */
+  readonly moodNote: string | null;
+  readonly slipTrigger: SlipTrigger | null;
   readonly vapeFreeConfirmed: boolean;
   readonly repairTokenUsed: boolean;
 }
@@ -113,6 +148,8 @@ export interface Journey {
   readonly longestStreak: number;
   readonly lastPuffAt: string | null;
   readonly moodCheckIns: number;
+  readonly goals: readonly SavingsGoal[];
+  readonly earnedBadges: readonly string[];
 }
 
 /** Total plan length including slip stretch. */

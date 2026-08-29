@@ -498,7 +498,69 @@ integration 72 — **260 tests**.
 
 ---
 
-## 12. WHAT THE E2E PASS FOUND
+## 12. EMBER'S MEMORY — the coach becomes personal (Aug 29)
+
+Founder direction: the coach must be **tailored to the individual**, backed by
+a **vector database**, remembering both the onboarding answers and what the
+user says — and judged on whether people feel fulfilled enough to keep using
+the app. Retention, not chat.
+
+Built as **two layers, kept separate on purpose.**
+
+### Layer 1 — the user card (deterministic, exact, free)
+
+Everything derivable from the journey. It cannot be wrong and costs no model
+call, so anything that *can* live here does. It was carrying the numbers only;
+it now also carries what the 19-step quiz actually collected:
+
+| Was missing | Why it matters |
+|---|---|
+| `gender`, `attempts`, `frequency` — **decoded by the app, dropped by the server** | Ember could not tell a first-time quitter from someone on their sixth attempt, or an all-day vaper from a social one. The two facts that most change what is worth *saying* |
+| **Savings goals** | "You're 62% of the way to the Tokyo flight" lands; "$312 saved" is a number. Verified live — Ember quoted the goal unprompted |
+| **Mood notes and slip triggers** — the user's own words | The most personal thing in the whole document, and the card ignored it. Ember could see a bad day but not "work party tonight, nervous" next to it |
+
+### Layer 2 — semantic memory (`users/{uid}/memories`, Firestore vector search)
+
+For the half no amount of puff logging produces: *"my sister Maya is getting
+married in March"*. One embedding of the message, `findNearest` over what they
+have said before, injected as background knowledge.
+
+| Decision | Why |
+|---|---|
+| `gemini-embedding-001` at **768 dims**, pinned in code not config | Recall quality on short first-person sentences is unchanged from 3072, at a quarter the index and storage. Pinned because changing it invalidates every stored vector — a swap needs a re-embed migration, so it is a code change |
+| **Asymmetric task types** (`RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY`) | A stored fact and the question that should find it are worded nothing alike. This is what closed the gap, and it is free |
+| Extraction gated: skips chips and one-liners, runs on the **cheap** model, capped at 2/turn | The only part of the loop that costs money without producing anything the user sees today |
+| Near-duplicates **merge**, store **LRU-capped at 200** | Otherwise ten mentions of the same dog fill all five recall slots, and recall latency grows with tenure — the users who earned the best coach would get the slowest one |
+| Memories fenced as **background knowledge, never instructions** | Every memory is ultimately user-authored text. Unfenced, recall is a prompt-injection path straight into the system prompt |
+| Lives under `users/{uid}` | `deleteUserData`'s `recursiveDelete` already sweeps it — erasure needed no new code |
+
+### The surface: "What Ember remembers"
+
+Settings → Privacy, beside Export and Delete. Lists every memory in plain
+language with a **Forget this** button. An AI that quietly accumulates personal
+disclosures with no way to look is a thing to be uneasy about — the opposite of
+what makes someone keep opening the app — and "we never sell your data" (PRD §6)
+is worth less if we cannot show what we hold. Forgetting is **never optimistic**:
+a refused delete keeps the row and says so.
+
+### Verified in production, not assumed
+
+`f_firebase_backend_test.dart` is **10/10**. Two cases carry this feature: a
+fact stated in one conversation and recalled in a later, differently-worded one
+(`memory.recall` logged `kept=2 nearest=0.348`), and the see-it-then-forget-it
+round trip.
+
+One tuning note worth keeping: the first version of the recall test asked
+*"what am I working toward"*, which the **user card** answers just as well from
+the savings goal — so it passed for the wrong reason and then failed for the
+right one. The threshold (`RECALL_MAX_DISTANCE`) is the one number here that
+cannot be reasoned out from first principles, so `memory.recall` logs what was
+considered, what survived, and the nearest distance. Tune it from that, never
+from taste.
+
+---
+
+## 13. WHAT THE E2E PASS FOUND
 
 Three real bugs, none of which any unit or widget test could have caught,
 because all three need a real tree to be built, disposed, or navigated.
@@ -526,7 +588,7 @@ Two harness lessons worth keeping:
 
 ---
 
-## 13. STATE AS OF AUG 29, 2026 (end of first build session)
+## 14. STATE AS OF AUG 29, 2026 (end of first build session)
 
 **Closed:** B1 B2 B3 B5 B7 B8 B9 B10 B11 B12 B15 B17 · plus two live security holes and one concurrency bug found by tests rather than by reading.
 

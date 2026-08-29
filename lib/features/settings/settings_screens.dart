@@ -97,6 +97,15 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
+            // Sits with the privacy controls, not with the coach: the reason
+            // to open it is "what does this thing know about me", and the
+            // answer belongs beside Export and Delete.
+            row(
+              emoji: '🧠',
+              label: l10n.settingsMemories,
+              value: '',
+              onTap: () => context.push(Routes.memories),
+            ),
             row(
               emoji: '👤',
               label: l10n.settingsAccount,

@@ -235,6 +235,71 @@ void main() {
     );
   });
 
+  testWidgets('Ember remembers something told in an earlier conversation', (
+    tester,
+  ) async {
+    // The whole point of the vector layer: a fact stated once, recalled in a
+    // later, differently-worded turn. Nothing in the user card can do this —
+    // no amount of puff logging produces a sister's wedding.
+    final e2e = await session(tester);
+    final coach = e2e.container.read(coachRepositoryProvider);
+
+    await coach.requestReply(
+      text: "my sister Maya is getting married in March and I want to be "
+          "completely done with vaping before her wedding",
+      capped: false,
+    );
+    // Extraction and its embedding are awaited inside the callable, so by the
+    // time that returned the memory is written — but the vector index is
+    // eventually consistent, so give it a beat.
+    await e2e.waitFor(const Duration(seconds: 8));
+
+    // Asks something ONLY the vector memory can answer. The first attempt at
+    // this test asked "what am I working toward", which the user card answers
+    // just as well from the savings goal — so a correct reply proved nothing
+    // about recall.
+    final recalled = await coach.requestReply(
+      text: 'what did I tell you was happening in March?',
+      capped: false,
+    );
+
+    final said = (recalled.text ?? '').toLowerCase();
+    expect(said, isNotEmpty, reason: 'no reply: ${recalled.template}');
+    expect(
+      said.contains('maya') || said.contains('wedding') || said.contains('sister'),
+      isTrue,
+      reason: 'Ember did not recall the wedding. Said: "${recalled.text}"',
+    );
+  });
+
+  testWidgets('the user can see what Ember remembers, and take it back', (
+    tester,
+  ) async {
+    // The memory store is only trustworthy if it is legible and revocable.
+    final e2e = await session(tester);
+    final coach = e2e.container.read(coachRepositoryProvider);
+
+    await coach.requestReply(
+      text: 'I have a golden retriever called Rufus and walking him is the '
+          'only thing that reliably gets me past an evening craving',
+      capped: false,
+    );
+    await e2e.waitFor(const Duration(seconds: 8));
+
+    final stored = await coach.memories();
+    expect(stored, isNotEmpty, reason: 'nothing was remembered to show');
+
+    await coach.forgetMemory(stored.first.id);
+    await e2e.waitFor(const Duration(seconds: 4));
+
+    final after = await coach.memories();
+    expect(
+      after.any((m) => m.id == stored.first.id),
+      isFalse,
+      reason: 'a forgotten memory came back',
+    );
+  });
+
   testWidgets('createPost is accepted and the post carries no uid', (
     tester,
   ) async {

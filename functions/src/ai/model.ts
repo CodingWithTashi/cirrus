@@ -24,6 +24,17 @@ export interface GenerateRequest {
   readonly json?: boolean;
 }
 
+/**
+ * Which side of a search the text is on.
+ *
+ * Retrieval embeddings are ASYMMETRIC: a stored fact ("Their sister marries in
+ * March") and the question that should find it ("what am I working toward?")
+ * are worded nothing alike, and embedding both as if they were the same kind
+ * of text puts them further apart than they deserve. Telling the model which
+ * role each plays is what closes that gap, and it is free.
+ */
+export type EmbeddingTask = 'document' | 'query';
+
 export interface GenerateResult {
   readonly text: string;
   readonly inputTokens: number;
@@ -33,6 +44,20 @@ export interface GenerateResult {
 export interface TextModel {
   generate(request: GenerateRequest): Promise<GenerateResult>;
   generateStream(request: GenerateRequest): AsyncIterable<string>;
+
+  /**
+   * Embeds [texts] for semantic recall.
+   *
+   * On the seam rather than beside it so swapping providers stays a
+   * one-file change — an embedding is as much a model call as a completion,
+   * and a vector store keyed to one provider's geometry is not portable
+   * anyway: vectors written by one model are meaningless to another.
+   */
+  embed(
+    texts: readonly string[],
+    dimensions: number,
+    task: EmbeddingTask,
+  ): Promise<number[][]>;
 
   /**
    * Model ids this key can actually call.

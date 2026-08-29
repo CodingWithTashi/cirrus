@@ -92,6 +92,16 @@ abstract interface class CoachRepository {
     CoachChip? chip,
     required bool capped,
   });
+
+  /// Everything Ember remembers about this user, newest first.
+  ///
+  /// The coach stores what people tell it so it can be personal weeks later.
+  /// A store like that has to be legible and revocable, or it is something to
+  /// be uneasy about rather than the reason to keep coming back.
+  Future<List<CoachMemory>> memories();
+
+  /// Forgets one memory, permanently. The user's call, never ours.
+  Future<void> forgetMemory(String id);
 }
 
 /// The founder's moderation queue (docs/03 §9, App Store Guideline 1.2).

@@ -23,6 +23,13 @@ class _SpeakingCoach implements CoachRepository {
     CoachChip? chip,
     required bool capped,
   }) async => reply;
+
+  // This stub predates the memory layer and does not exercise it.
+  @override
+  Future<List<CoachMemory>> memories() async => const [];
+
+  @override
+  Future<void> forgetMemory(String id) async {}
 }
 
 void main() {

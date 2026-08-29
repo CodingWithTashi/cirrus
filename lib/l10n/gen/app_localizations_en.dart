@@ -2132,6 +2132,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAliasHint => 'anonymous — this is all anyone sees';
 
   @override
+  String get memoriesTitle => 'What Ember remembers';
+
+  @override
+  String get memoriesIntro =>
+      'Things you\'ve told Ember, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn\'t say.';
+
+  @override
+  String get memoriesEmpty =>
+      'Nothing yet. Ember starts remembering once you tell it something about your life.';
+
+  @override
+  String get memoriesFailed => 'Couldn\'t load these right now.';
+
+  @override
+  String get memoriesForget => 'Forget this';
+
+  @override
+  String get memoriesForgotten => 'Forgotten. Ember won\'t bring it up again.';
+
+  @override
+  String get memoriesForgetFailed =>
+      'That didn\'t go through — it\'s still remembered.';
+
+  @override
+  String get memoriesKindPerson => 'Someone in your life';
+
+  @override
+  String get memoriesKindTrigger => 'A trigger';
+
+  @override
+  String get memoriesKindMotivation => 'Why you\'re doing this';
+
+  @override
+  String get memoriesKindMilestone => 'Something you\'re working toward';
+
+  @override
+  String get memoriesKindPreference => 'How you like to be talked to';
+
+  @override
+  String get memoriesKindContext => 'About you';
+
+  @override
+  String get settingsMemories => 'What Ember remembers';
+
+  @override
   String get moderationTitle => 'Review queue';
 
   @override

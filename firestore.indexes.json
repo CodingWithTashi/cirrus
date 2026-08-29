@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "_comment": "Community feed: live posts, newest first (docs/03 \u00a79 reverse-chron).",
+      "_comment": "Community feed: live posts, newest first (docs/03 §9 reverse-chron).",
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
@@ -42,6 +42,20 @@
         {
           "fieldPath": "createdAt",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "_comment": "Ember's long-term memory. `findNearest` requires an explicit VECTOR index — without it every recall throws FAILED_PRECONDITION at runtime, and the coach silently loses its memory while still answering. Dimension must match EMBEDDING_DIMENSIONS in lib/memories.ts.",
+      "collectionGroup": "memories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": {
+            "dimension": 768,
+            "flat": {}
+          }
         }
       ]
     }

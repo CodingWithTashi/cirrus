@@ -28,12 +28,22 @@ import {
 } from '../config';
 import {geminiModel} from '../ai/gemini';
 import {buildMemoryCard} from '../ai/memoryCard';
-import {ModelUnavailableError, type Turn} from '../ai/model';
+import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
 import {
   EMBER_SYSTEM_PROMPT,
+  MEMORY_EXTRACTION_PROMPT,
   localeInstruction,
+  memorySection,
   panicAddendum,
 } from '../ai/prompts';
+import {
+  EMBEDDING_DIMENSIONS,
+  MEMORY_KINDS,
+  recallRelevant,
+  remember,
+  worthExtracting,
+  type MemoryKind,
+} from '../lib/memories';
 import {coachMessages, db, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log, safeMeta} from '../lib/logger';
@@ -92,13 +102,26 @@ export const aiCoachChat = onCall(
 
     const history = await recentTurns(caller.uid);
     const userText = text ?? `[${chip ?? 'craving'}]`;
+    const model = geminiModel(GEMINI_API_KEY.value());
+
+    // Long-term recall. One embedding of what they just said, then a vector
+    // search over what they have told us before (`lib/memories.ts`).
+    //
+    // Deliberately best-effort: a null vector means the embedding call failed,
+    // and the turn proceeds on the user card alone. A coach without its memory
+    // is a worse coach; a coach that refuses to answer is a broken product, and
+    // this path runs while someone is mid-craving.
+    const queryVector = await embedOrNull(model, userText);
+    const memories =
+      queryVector === null ? [] : await recallRelevant(caller.uid, queryVector);
+
     const systemInstruction =
       EMBER_SYSTEM_PROMPT +
       localeInstruction(caller.locale) +
       (panicIntensity !== null ? panicAddendum(panicIntensity) : '') +
-      `\n\n${card.text}`;
+      `\n\n${card.text}` +
+      memorySection(memories);
 
-    const model = geminiModel(GEMINI_API_KEY.value());
     const modelName =
       AI_COST_PANIC.value() === 'true' || tier === 'free'
         ? MODEL_FREE.value()
@@ -182,6 +205,10 @@ export const aiCoachChat = onCall(
 
     await persistTurns(caller.uid, userText, reply);
 
+    // Learn from the turn. After the reply is built — and, on the streaming
+    // path, after the user already has it — so nothing here delays an answer.
+    await learnFrom(model, caller.uid, userText, reply);
+
     return {
       // `generic1` is the graceful degradation for a client that predates the
       // `text` field — never send a template that contradicts the words.
@@ -192,6 +219,112 @@ export const aiCoachChat = onCall(
     };
   },
 );
+
+/** Embeds one string, or null when the provider is unhappy. Never throws. */
+async function embedOrNull(
+  model: TextModel,
+  text: string,
+): Promise<number[] | null> {
+  try {
+    // 'query': this is the question side of the search.
+    const [vector] = await model.embed([text], EMBEDDING_DIMENSIONS, 'query');
+    return vector ?? null;
+  } catch (error) {
+    log.warn('coach.embed_failed', {error: String(error)});
+    return null;
+  }
+}
+
+/**
+ * Extracts anything durable the user just said and files it for later.
+ *
+ * Gated three ways, because this is the one part of the loop that costs money
+ * without producing anything the user sees today:
+ *
+ *   1. `worthExtracting` skips chips and one-liners outright — no model call
+ *      at all for "[craving]" or "ok thanks".
+ *   2. It runs on the CHEAP model regardless of tier. Pulling a fact out of two
+ *      sentences into fixed JSON is a structured-output task, not a
+ *      conversational one, and the premium model buys nothing here.
+ *   3. At most two memories per exchange, enforced in `parseMemories` as well
+ *      as in the prompt — a prompt is a request, code is a guarantee.
+ *
+ * Every failure is swallowed. The reply already exists and, when streaming, has
+ * already been delivered; losing a memory must never turn a successful turn
+ * into an error the user sees.
+ */
+async function learnFrom(
+  model: TextModel,
+  uid: string,
+  userText: string,
+  reply: string,
+): Promise<void> {
+  if (!worthExtracting(userText)) return;
+  try {
+    const result = await model.generate({
+      model: MODEL_FREE.value(),
+      systemInstruction: MEMORY_EXTRACTION_PROMPT,
+      turns: [{role: 'user', text: `USER: ${userText}\nCOACH: ${reply}`}],
+      maxOutputTokens: 200,
+      temperature: 0,
+      json: true,
+    });
+    const facts = parseMemories(result.text);
+    if (facts.length === 0) return;
+
+    // 'document': these are the facts being filed, not a search for them.
+    const vectors = await model.embed(
+      facts.map((f) => f.text),
+      EMBEDDING_DIMENSIONS,
+      'document',
+    );
+    for (const [i, fact] of facts.entries()) {
+      const vector = vectors[i];
+      if (vector !== undefined) await remember(uid, fact.text, fact.kind, vector);
+    }
+    log.info('coach.remembered', {uid, count: facts.length});
+  } catch (error) {
+    log.warn('coach.extract_failed', {uid, error: String(error)});
+  }
+}
+
+/**
+ * Strips code fences and validates shape. Anything malformed yields [].
+ *
+ * Exported for `test/memoryExtraction.test.ts`: this is the boundary where
+ * model output becomes stored state, so it is the one place worth pinning
+ * against the shapes a model actually emits when it improvises.
+ */
+export function parseMemories(raw: string): {text: string; kind: MemoryKind}[] {
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/, '')
+    .trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return [];
+  }
+  if (parsed === null || typeof parsed !== 'object') return [];
+  const list = (parsed as Record<string, unknown>)['memories'];
+  if (!Array.isArray(list)) return [];
+
+  const out: {text: string; kind: MemoryKind}[] = [];
+  for (const item of list.slice(0, 2)) {
+    if (item === null || typeof item !== 'object') continue;
+    const m = item as Record<string, unknown>;
+    const text = typeof m['text'] === 'string' ? m['text'].trim() : '';
+    // Too short to be a fact; too long means the model summarized the whole
+    // conversation instead of isolating one, and a paragraph-length vector
+    // matches everything.
+    if (text.length < 8 || text.length > 240) continue;
+    const kind = MEMORY_KINDS.find((k) => k === m['kind']) ?? 'context';
+    out.push({text, kind});
+  }
+  return out;
+}
 
 /** Last N turns, oldest → newest. Never the full history (docs/05 §8). */
 async function recentTurns(uid: string): Promise<Turn[]> {

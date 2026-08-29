@@ -33,6 +33,8 @@ function log(
     hourBuckets: {},
     cravingsSurvived: 0,
     mood: null,
+    moodNote: null,
+    slipTrigger: null,
     vapeFreeConfirmed: extra.vapeFree ?? false,
     repairTokenUsed: extra.token ?? false,
   };

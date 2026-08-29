@@ -10,15 +10,20 @@
  */
 import {
   FIRST_PUFF_WINDOWS,
+  GENDERS,
   MOODS,
   NIC_STRENGTHS,
+  QUIT_ATTEMPTS,
   QUIT_METHODS,
+  SLIP_TRIGGERS,
   SUBSCRIPTION_TIERS,
+  VAPE_FREQUENCIES,
   WHY_CHIPS,
   WORRY_CHIPS,
   type DayLog,
   type Journey,
   type QuitPlan,
+  type SavingsGoal,
   type UserProfile,
 } from './types';
 import {isDayKey} from './dateKey';
@@ -37,7 +42,29 @@ export function decodeJourney(raw: unknown): Journey {
     longestStreak: asInt(json['longestStreak'], 0),
     lastPuffAt: typeof json['lastPuffAt'] === 'string' ? json['lastPuffAt'] : null,
     moodCheckIns: asInt(json['moodCheckIns'], 0),
+    goals: decodeGoals(json['goals']),
+    earnedBadges: Array.isArray(json['earnedBadges'])
+      ? json['earnedBadges'].filter((b): b is string => typeof b === 'string')
+      : [],
   };
+}
+
+function decodeGoals(raw: unknown): SavingsGoal[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SavingsGoal[] = [];
+  for (const item of raw) {
+    if (item === null || typeof item !== 'object') continue;
+    const g = item as Record<string, unknown>;
+    if (typeof g['id'] !== 'string' || typeof g['name'] !== 'string') continue;
+    out.push({
+      id: g['id'],
+      emoji: typeof g['emoji'] === 'string' ? g['emoji'] : '🎯',
+      name: g['name'],
+      price: typeof g['price'] === 'number' ? g['price'] : 0,
+      fromOnboarding: g['fromOnboarding'] === true,
+    });
+  }
+  return out;
 }
 
 function decodeProfile(json: Record<string, unknown>): UserProfile {
@@ -52,6 +79,9 @@ function decodeProfile(json: Record<string, unknown>): UserProfile {
     whys: asEnumList(json['whys'], WHY_CHIPS),
     worries: asEnumList(json['worries'], WORRY_CHIPS),
     firstPuff: asEnumOrNull(json['firstPuff'], FIRST_PUFF_WINDOWS),
+    gender: asEnumOrNull(json['gender'], GENDERS),
+    attempts: asEnumOrNull(json['attempts'], QUIT_ATTEMPTS),
+    frequency: asEnumOrNull(json['frequency'], VAPE_FREQUENCIES),
   };
 }
 
@@ -86,6 +116,13 @@ function decodeDays(raw: unknown): Record<string, DayLog> {
       hourBuckets: decodeHourBuckets(day['hourBuckets']),
       cravingsSurvived: asInt(day['cravingsSurvived'], 0),
       mood: asEnumOrNull(day['mood'], MOODS),
+      // Trimmed and capped: it goes into a prompt, and an unbounded free-text
+      // field is both a cost and an injection surface.
+      moodNote:
+        typeof day['moodNote'] === 'string' && day['moodNote'].trim().length > 0
+          ? day['moodNote'].trim().slice(0, 280)
+          : null,
+      slipTrigger: asEnumOrNull(day['slipTrigger'], SLIP_TRIGGERS),
       vapeFreeConfirmed: day['vapeFreeConfirmed'] === true,
       repairTokenUsed: day['repairTokenUsed'] === true,
     };

@@ -2150,6 +2150,52 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileAliasHint => 'anonym — mehr sieht niemand';
 
   @override
+  String get memoriesTitle => 'Woran Ember sich erinnert';
+
+  @override
+  String get memoriesIntro =>
+      'Was du Ember erzählt hast — aufbewahrt, damit es in Wochen noch nützlich ist, statt jedes Mal von vorn zu beginnen. Nur was du geschrieben hast: nie deine Zahlen, nie etwas Ungesagtes.';
+
+  @override
+  String get memoriesEmpty =>
+      'Noch nichts. Ember merkt sich etwas, sobald du von deinem Leben erzählst.';
+
+  @override
+  String get memoriesFailed => 'Konnte gerade nicht geladen werden.';
+
+  @override
+  String get memoriesForget => 'Das vergessen';
+
+  @override
+  String get memoriesForgotten =>
+      'Vergessen. Ember bringt es nicht wieder auf.';
+
+  @override
+  String get memoriesForgetFailed =>
+      'Das ging nicht durch — es ist noch gespeichert.';
+
+  @override
+  String get memoriesKindPerson => 'Jemand in deinem Leben';
+
+  @override
+  String get memoriesKindTrigger => 'Ein Auslöser';
+
+  @override
+  String get memoriesKindMotivation => 'Warum du das machst';
+
+  @override
+  String get memoriesKindMilestone => 'Worauf du hinarbeitest';
+
+  @override
+  String get memoriesKindPreference => 'Wie du angesprochen werden willst';
+
+  @override
+  String get memoriesKindContext => 'Über dich';
+
+  @override
+  String get settingsMemories => 'Woran Ember sich erinnert';
+
+  @override
   String get moderationTitle => 'Prüfliste';
 
   @override

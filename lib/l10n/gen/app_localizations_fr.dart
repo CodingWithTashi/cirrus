@@ -2144,6 +2144,51 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileAliasHint => 'anonyme — c\'est tout ce qu\'on voit de toi';
 
   @override
+  String get memoriesTitle => 'Ce qu\'Ember retient';
+
+  @override
+  String get memoriesIntro =>
+      'Ce que tu as confié à Ember, gardé pour qu\'il te soit utile dans des semaines au lieu de repartir de zéro à chaque fois. Uniquement ce que tu as écrit : jamais tes chiffres, jamais ce que tu n\'as pas dit.';
+
+  @override
+  String get memoriesEmpty =>
+      'Rien pour l\'instant. Ember commence à retenir dès que tu lui parles de ta vie.';
+
+  @override
+  String get memoriesFailed => 'Impossible de charger pour le moment.';
+
+  @override
+  String get memoriesForget => 'Oublier ça';
+
+  @override
+  String get memoriesForgotten => 'Oublié. Ember n\'en reparlera pas.';
+
+  @override
+  String get memoriesForgetFailed =>
+      'Ça n\'a pas été appliqué — c\'est toujours en mémoire.';
+
+  @override
+  String get memoriesKindPerson => 'Quelqu\'un de ta vie';
+
+  @override
+  String get memoriesKindTrigger => 'Un déclencheur';
+
+  @override
+  String get memoriesKindMotivation => 'Pourquoi tu fais ça';
+
+  @override
+  String get memoriesKindMilestone => 'Ce que tu vises';
+
+  @override
+  String get memoriesKindPreference => 'Comment te parler';
+
+  @override
+  String get memoriesKindContext => 'À propos de toi';
+
+  @override
+  String get settingsMemories => 'Ce qu\'Ember retient';
+
+  @override
   String get moderationTitle => 'File de modération';
 
   @override

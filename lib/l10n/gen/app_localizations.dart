@@ -3716,6 +3716,90 @@ abstract class AppLocalizations {
   /// **'anonymous — this is all anyone sees'**
   String get profileAliasHint;
 
+  /// No description provided for @memoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What Ember remembers'**
+  String get memoriesTitle;
+
+  /// No description provided for @memoriesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Things you\'ve told Ember, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn\'t say.'**
+  String get memoriesIntro;
+
+  /// No description provided for @memoriesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet. Ember starts remembering once you tell it something about your life.'**
+  String get memoriesEmpty;
+
+  /// No description provided for @memoriesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load these right now.'**
+  String get memoriesFailed;
+
+  /// No description provided for @memoriesForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget this'**
+  String get memoriesForget;
+
+  /// No description provided for @memoriesForgotten.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgotten. Ember won\'t bring it up again.'**
+  String get memoriesForgotten;
+
+  /// No description provided for @memoriesForgetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t go through — it\'s still remembered.'**
+  String get memoriesForgetFailed;
+
+  /// No description provided for @memoriesKindPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone in your life'**
+  String get memoriesKindPerson;
+
+  /// No description provided for @memoriesKindTrigger.
+  ///
+  /// In en, this message translates to:
+  /// **'A trigger'**
+  String get memoriesKindTrigger;
+
+  /// No description provided for @memoriesKindMotivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Why you\'re doing this'**
+  String get memoriesKindMotivation;
+
+  /// No description provided for @memoriesKindMilestone.
+  ///
+  /// In en, this message translates to:
+  /// **'Something you\'re working toward'**
+  String get memoriesKindMilestone;
+
+  /// No description provided for @memoriesKindPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'How you like to be talked to'**
+  String get memoriesKindPreference;
+
+  /// No description provided for @memoriesKindContext.
+  ///
+  /// In en, this message translates to:
+  /// **'About you'**
+  String get memoriesKindContext;
+
+  /// No description provided for @settingsMemories.
+  ///
+  /// In en, this message translates to:
+  /// **'What Ember remembers'**
+  String get settingsMemories;
+
   /// No description provided for @moderationTitle.
   ///
   /// In en, this message translates to:

@@ -65,6 +65,48 @@ describe('decodeJourney', () => {
     expect(j.lastPuffAt).toBe('2026-08-05T22:14:00.000');
   });
 
+  it('keeps the rest of the 19-step quiz', () => {
+    // These were in the fixture — the app has always sent them — but the
+    // decoder dropped them on the floor, so the coach could not tell a
+    // first-time quitter from someone on their sixth attempt.
+    const j = decodeJourney(fixture());
+    expect(j.profile.gender).toBe('woman');
+    expect(j.profile.attempts).toBe('twoToFive');
+    expect(j.profile.frequency).toBe('always');
+    expect(j.profile.firstPuff).toBe('withinFive');
+  });
+
+  it("keeps the user's own words and what they blamed a slip on", () => {
+    const raw = fixture();
+    raw['days']['2026-08-05'].slipTrigger = 'stress';
+    const j = decodeJourney(raw);
+    expect(j.days['2026-08-05']?.moodNote).toBe('better');
+    expect(j.days['2026-08-05']?.slipTrigger).toBe('stress');
+    expect(j.days['2026-08-04']?.moodNote).toBeNull();
+  });
+
+  it('caps a mood note — it goes into a prompt', () => {
+    const raw = fixture();
+    raw['days']['2026-08-05'].moodNote = 'x'.repeat(500);
+    expect(decodeJourney(raw).days['2026-08-05']?.moodNote).toHaveLength(280);
+  });
+
+  it('keeps the savings goals, which are what the money is FOR', () => {
+    const j = decodeJourney(fixture());
+    expect(j.goals).toHaveLength(1);
+    expect(j.goals[0]?.name).toBe('AirPods');
+    expect(j.goals[0]?.price).toBe(129);
+    expect(j.earnedBadges).toEqual(['first_day']);
+  });
+
+  it('drops a malformed goal rather than failing the read', () => {
+    const raw = fixture();
+    raw['goals'] = [{id: 'g1'}, 'nope', {id: 'g2', name: 'Trip', price: 900}];
+    const goals = decodeJourney(raw).goals;
+    expect(goals).toHaveLength(1);
+    expect(goals[0]?.name).toBe('Trip');
+  });
+
   it('re-derives each day log date from its map key', () => {
     expect(decodeJourney(fixture()).days['2026-08-05']?.date).toBe('2026-08-05');
   });

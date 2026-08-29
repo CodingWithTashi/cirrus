@@ -33,4 +33,31 @@ class FirebaseCoachRepository implements CoachRepository {
     });
     return CoachReplyCodec.decode(json);
   }
+
+  @override
+  Future<List<CoachMemory>> memories() async {
+    final json = await _functions.call('coachMemories');
+    final items = json['memories'];
+    if (items is! List) return const [];
+    return [
+      for (final raw in items)
+        if (raw is Map) _decodeMemory(Map<String, dynamic>.from(raw)),
+    ];
+  }
+
+  @override
+  Future<void> forgetMemory(String id) async {
+    await _functions.call('forgetCoachMemory', {'memoryId': id});
+  }
+
+  static CoachMemory _decodeMemory(Map<String, dynamic> json) => CoachMemory(
+    id: json['id'] as String? ?? '',
+    text: json['text'] as String? ?? '',
+    // An unknown kind is a labelling problem, not a reason to hide the
+    // sentence — the user still has a right to see and delete it.
+    kind: MemoryKind.values.firstWhere(
+      (k) => k.name == json['kind'],
+      orElse: () => MemoryKind.context,
+    ),
+  );
 }

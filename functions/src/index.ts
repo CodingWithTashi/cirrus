@@ -31,3 +31,4 @@ export {createReply} from './handlers/createReply';
 export {moderateReply} from './handlers/moderateReply';
 export {onReaction} from './handlers/onReaction';
 export {moderationQueue, resolveModeration} from './handlers/moderationQueue';
+export {coachMemories, forgetCoachMemory} from './handlers/coachMemories';
