@@ -256,7 +256,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S3-8` `moderatePost` fail-closed on model outage — hold as `pending`, not `live`
 - [x] `S3-9` **Moderation queue readable end to end.** Callables built Aug 29; the **client** (contract, repository, store, screen, Settings entry gated on the `admin` claim) landed the same day. The store is deliberately non-optimistic — a refused decision keeps its row, and a failed load never renders as an empty queue. `test/widgets/moderation_queue_test.dart`. **Still founder-side: granting your account the claim.**
 - [ ] `S3-10` Real report / block / delete-own-content paths
-- [ ] `S3-11` SOS: 60-min pin, buddy + last-5 notify, "23 people had your back" (Doc 3 §9)
+- [ ] `S3-11` SOS: the 60-min pin is **done** and the panic flow now routes into it (composer pre-tagged `sos`). Still open: notifying the last-5 responders and the "23 people had your back" count (Doc 3 §9). The buddy half of this line is dropped with the buddy system
 - [ ] `S3-12` Seed the feed — founder posts + beta testers, via `seedTextId` ids so l10n still resolves
 
 **Exit criteria:** two real devices see each other's posts and replies · a blocked post never reaches a reader · the founder can review the flag queue.
@@ -361,7 +361,7 @@ Resolutions already in code (from `CLAUDE.md`) plus contradictions found across 
 | 10 | PRD §3 stray "$4.99/wk" | Leftover from before the $2.99 lock. **Ignore** |
 | 11 | Name — PRD §15 "OPEN" vs other doc headers vs Firebase "Cirrus" | **RESOLVED Aug 29: Cirrus.** Rename shipped; `docs/01 §15` item 1 is stale |
 | 12 | Firestore model — Doc 5 §6 per-day subcollections vs implemented single `journeys/{uid}` doc | **Single doc stands for MVP** (deliberate, documented in `firebase_common.dart`). Revisit if the 1MB ceiling or multi-device merge becomes real |
-| 13 | Buddy system — Doc 3 §7/§9 assume it; `functions/README.md` says descoped Aug 2026 | **Descoped.** Buddy UI exists (`lib/features/buddy/`) but has no backend. Decide in S3 whether to hide it |
+| 13 | Buddy system — Doc 3 §7/§9 assume it; `functions/README.md` says descoped Aug 2026 | **Descoped, and the UI is now removed** (Aug 29). It rendered an invented friend and its ping pinged nobody. The hook stage it held is the community SOS instead: the panic flow opens the composer pre-tagged `sos`, and live SOS posts pin to the feed for an hour. docs/08 §6's referral loop is the planned S8 return of the idea, with a real backend |
 
 ---
 
@@ -560,7 +560,45 @@ from taste.
 
 ---
 
-## 13. WHAT THE E2E PASS FOUND
+## 13. THE HONESTY PASS (Aug 29)
+
+Founder instruction: *"make sure everything is real, no placeholder or dummy
+data anywhere; remove unnecessary UI"* — and then, importantly: *"if the
+feature is needed for the hook model, implement the logic rather than removing
+it."* That second half changed one of the answers below.
+
+"No invented numbers" is the brand rule (docs/07). It was being broken in the
+one place that matters most: data wearing the user's own name.
+
+| Found | Why it mattered | Now |
+|---|---|---|
+| **`InitialJourney` minted a savings goal ("Tokyo flight, $1300") and a buddy ("Sam, 19-day streak") for every real account** | The Money screen showed progress toward a stranger's holiday. Worse, once the coach's user card learned to read goals it began quoting that holiday back — a fabricated fact laundered into a personal one | Removed. Users set their own goal through the Money screen's existing sheet, which is *stronger* hook investment because it is theirs |
+| **The Insight screen invented statistics about the reader** — "You vape 3× more after 10 p.m. on weekends", "Friday and Saturday account for 41% of your weekly puffs", identical for everybody, over hardcoded bars | The single most direct violation in the app, on a screen whose entire value is that the numbers are yours | Honest empty state naming what it is waiting for. The charts went too — a bar with no data behind it is a made-up number in costume |
+| **Six controls did nothing but show a success snack** — Export data, Restore Purchases (×2), Support, buddy ping | "Restored" claimed to restore purchases that cannot exist: there is no billing SDK (B4) | Removed. Restore is a store requirement the day subscriptions ship and returns with them (S1-7) |
+| **Quit Buddies shipped a full screen of a fabricated friend** | Descoped Aug 2026, no server side, and conflict #13 had been waiting on this decision since S3 | Removed — **but the hook stage was rebuilt, not deleted.** See below |
+| 41 dead ARB strings (671 → 632 keys ×5), an unused `LpLinks`, a stale `onboarding-goal` name mapping, and a community alias fallback that would have signed a post `@quietfox` — the seeded demo identity | Dead weight, and one latent identity bug | Gone |
+
+### The one that was nearly a mistake
+
+Deleting the buddy feature also deleted a **stage of the hook loop** — docs/03
+§7's "someone else pulls you out". Removing fabricated data is right; removing
+the loop stage with it is not, and the founder caught that.
+
+So the panic flow's third loop-breaker came back, implemented: it opens the
+composer **pre-tagged `sos`**, live SOS posts already pin to the top of the
+feed for an hour, and real quitters answer them. Same stage of the loop, using
+only paths already proven end to end (`createPost`, the SOS pin, reactions,
+replies). The composer takes its tag via `?tag=sos`, so it is one tap
+mid-craving and deep-linkable from a push later. Covered on device by
+`d_social_test.dart`.
+
+**The general rule this leaves behind:** when placeholder data is propping up
+a real hook stage, replace the stage with something true. Deleting it is the
+easy fix and it costs a retention mechanism.
+
+---
+
+## 14. WHAT THE E2E PASS FOUND
 
 Three real bugs, none of which any unit or widget test could have caught,
 because all three need a real tree to be built, disposed, or navigated.
@@ -588,7 +626,7 @@ Two harness lessons worth keeping:
 
 ---
 
-## 14. STATE AS OF AUG 29, 2026 (end of first build session)
+## 15. STATE AS OF AUG 29, 2026 (end of first build session)
 
 **Closed:** B1 B2 B3 B5 B7 B8 B9 B10 B11 B12 B15 B17 · plus two live security holes and one concurrency bug found by tests rather than by reading.
 
