@@ -19,6 +19,7 @@ import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
 import '../repositories/firebase_journey_repository.dart';
+import '../repositories/firebase_user_context_repository.dart';
 import 'coach_store.dart';
 import 'community_store.dart';
 import 'journey_store.dart';
@@ -75,6 +76,15 @@ final journeyRepositoryProvider = Provider<JourneyRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => ApiJourneyRepository(ref.watch(journeyApiProvider)),
     BackendMode.firebase => FirebaseJourneyRepository(),
+  },
+);
+
+/// Device facts for the server-owned user document. Switched like auth and
+/// journey — the fake backend has nothing to sync to.
+final userContextRepositoryProvider = Provider<UserContextRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => const NoopUserContextRepository(),
+    BackendMode.firebase => FirebaseUserContextRepository(),
   },
 );
 

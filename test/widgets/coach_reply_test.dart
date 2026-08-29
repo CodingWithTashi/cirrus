@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:last_puff/data/stores/coach_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
-import 'package:last_puff/domain/models/enums.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/features/coach/coach_screen.dart';

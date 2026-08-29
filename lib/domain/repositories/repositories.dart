@@ -101,3 +101,15 @@ final class SignInCancelledException extends AuthException {
 final class NoConnectionException implements Exception {
   const NoConnectionException();
 }
+
+/// Pushes the device facts the server cannot infer into the server-owned
+/// `users/{uid}` document: timezone, locale, and the push token.
+///
+/// This is the reason the nightly crons have anything to page over — they
+/// query `users` by the UTC hour matching the user's local 01:00, and that
+/// row only exists once this has run at least once.
+abstract interface class UserContextRepository {
+  /// Fire-and-forget by design: a failed sync costs a cron cycle, never a
+  /// session. Callers ignore the future.
+  Future<void> sync({String? fcmToken});
+}

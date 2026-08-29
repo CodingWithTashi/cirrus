@@ -26,6 +26,16 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   JourneyRepository get _journeys => ref.read(journeyRepositoryProvider);
 
+  /// Pushes timezone, locale and (later) the push token into the server-owned
+  /// user document. Fire-and-forget on purpose: it must never delay a sign-in,
+  /// and a miss costs at most one cron cycle.
+  ///
+  /// It runs after every path that establishes a session because
+  /// `users/{uid}` is created here and nowhere else — without it both nightly
+  /// crons page over an empty collection and do nothing at all.
+  void _syncUserContext() =>
+      ref.read(userContextRepositoryProvider).sync().ignore();
+
   DateTime get _now => DateTime.now();
 
   DateTime get _todayKey => JourneyState.dateKey(_now);
@@ -49,6 +59,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     try {
       final restored = await _auth.restoreSession();
       if (restored != null && state == null) state = restored;
+      if (restored != null) _syncUserContext();
     } on Exception {
       // Offline or backend hiccup at launch — proceed signed out.
     }
@@ -63,6 +74,7 @@ class JourneyStore extends Notifier<JourneyState?> {
       password: password,
     );
     if (restored != null) state = restored;
+    _syncUserContext();
     return restored != null;
   }
 
@@ -71,6 +83,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<bool> signInWithApple() async {
     final restored = await _auth.signInWithApple();
     if (restored != null) state = restored;
+    _syncUserContext();
     return restored != null;
   }
 
@@ -79,6 +92,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<bool> signInWithGoogle() async {
     final restored = await _auth.signInWithGoogle();
     if (restored != null) state = restored;
+    _syncUserContext();
     return restored != null;
   }
 
@@ -95,6 +109,9 @@ class JourneyStore extends Notifier<JourneyState?> {
     required QuitPlan plan,
   }) async {
     state = await _journeys.create(profile: profile, plan: plan);
+    // Guest onboarding mints an anonymous account here, so this is the first
+    // moment that uid exists to sync for.
+    _syncUserContext();
   }
 
   /// Optimistic: signed out locally at once, the API ack is write-behind.
