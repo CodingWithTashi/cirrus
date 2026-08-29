@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// LastPuff security rules.
+//
+// The load-bearing idea is a split of ownership (see functions/src/lib/firestore.ts):
+//
+//   journeys/{uid}   CLIENT-owned. The app writes the whole document on every
+//                    optimistic mutation, so no server field may live here.
+//   users/{uid}      SERVER-owned. Entitlement, AI usage and taper advice.
+//                    Readable by its owner, writable ONLY by Cloud Functions
+//                    (the Admin SDK bypasses these rules by design).
+//
+// If a client could write users/{uid}.entitlement it would grant itself
+// Premium and unmetered model calls. That single line is why the split exists.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    /** Keys changed by this update, whatever their values. */
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // --- The quit journey: private, client-owned -------------------------
+    match /journeys/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // --- Server-owned private state --------------------------------------
+    // Writes go through callables (syncUserContext, panicSession) or the
+    // RevenueCat webhook. Never directly.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+
+      match /{document=**} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    // --- Community feed ---------------------------------------------------
+    match /posts/{postId} {
+      // 'pending' and 'blocked' posts are genuinely invisible, not merely
+      // unrendered — nothing reaches a reader before moderatePost clears it.
+      allow read: if signedIn() && resource.data.status == 'live';
+
+      // Creation goes through the createPost callable so the author uid is
+      // stamped into postAuthors instead of onto the post (docs/05 §6).
+      allow create: if false;
+      allow delete: if false;
+
+      // Reactions and reports are the only client-writable fields. Anything
+      // else — text, alias, status, dayN — is immutable from the app, so a
+      // repackaged client cannot un-block its own post.
+      allow update: if signedIn()
+                    && changed().hasOnly(['reactions', 'reportCount'])
+                    && request.resource.data.status == resource.data.status;
+
+      match /replies/{replyId} {
+        allow read: if signedIn();
+        allow create: if false;   // createReply callable (same reason as posts)
+        allow update, delete: if false;
+      }
+    }
+
+    // --- Server-only collections -----------------------------------------
+    // postAuthors is the uid ↔ post mapping that lets account deletion find a
+    // user's posts. Exposing it would defeat the anonymity of the whole feed.
+    match /postAuthors/{postId} {
+      allow read, write: if false;
+    }
+
+    // The founder's moderation review queue.
+    match /moderation/{postId} {
+      allow read, write: if false;
+    }
+
+    // Default deny. Any collection added later is closed until it is
+    // deliberately opened here.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "indexes": [
+    {
+      "_comment": "Community feed: live posts, newest first (docs/03 §9 reverse-chron).",
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "_comment": "createPost daily cap + deleteUserData lookup.",
+      "collectionGroup": "postAuthors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "uid", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "_comment": "Founder review queue: unreviewed flags, oldest first.",
+      "collectionGroup": "moderation",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "reviewed", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "ASCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
