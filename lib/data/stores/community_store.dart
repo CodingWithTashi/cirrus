@@ -71,7 +71,13 @@ class CommunityState {
 /// View model of the community feed: fetched async from the backend, mutated
 /// optimistically with write-behind sync (the feed never blocks on the wire).
 class CommunityStore extends Notifier<CommunityState> {
-  int _reportCounts = 0;
+  /// Reports this session, **per post**.
+  ///
+  /// Was a single counter across the whole feed, which meant reporting three
+  /// DIFFERENT posts hid the third one: each had a single report, and the
+  /// threshold is supposed to be three reports on the same post. Found by the
+  /// on-device suite.
+  final Map<String, int> _reportsByPost = {};
 
   bool Function() _alive = () => false;
 
@@ -205,10 +211,13 @@ class CommunityStore extends Notifier<CommunityState> {
     }
   }
 
+  /// 3 reports on the SAME post auto-hide it pending review (the App Store
+  /// UGC requirement). The count is local to this session and to this reader;
+  /// the authoritative tally is `posts/{id}.reportCount` server-side.
   void reportPost(String postId) {
-    // 3 reports auto-hide pending review (App Store UGC requirement).
-    _reportCounts++;
-    if (_reportCounts % 3 == 0) {
+    final count = (_reportsByPost[postId] ?? 0) + 1;
+    _reportsByPost[postId] = count;
+    if (count >= autoHideReports) {
       state = state.copyWith(
         posts: [
           for (final p in state.posts)
@@ -218,6 +227,9 @@ class CommunityStore extends Notifier<CommunityState> {
     }
     _repo.reportPost(postId).ignore();
   }
+
+  /// Reports on one post before it hides for the reporter.
+  static const int autoHideReports = 3;
 
   void blockAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);

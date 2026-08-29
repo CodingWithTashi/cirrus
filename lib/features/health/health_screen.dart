@@ -121,8 +121,8 @@ class _TimelineNode extends StatelessWidget {
     final current = state == _NodeState.current;
 
     final node = Container(
-      width: 28,
-      height: 28,
+      width: _nodeSize,
+      height: _nodeSize,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -178,44 +178,64 @@ class _TimelineNode extends StatelessWidget {
           )
         : _text(context);
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Column(
-            children: [
-              node,
-              if (!isLast)
-                Expanded(
-                  // Frame 39: the Volt line grows down to "you are here".
-                  child: done
-                      ? TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: 1),
-                          duration: LpMotion.reveal,
-                          curve: LpMotion.ease,
-                          builder: (context, t, _) => Align(
-                            alignment: Alignment.topCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: t,
-                              child: Container(width: 2, color: lp.voltStrong),
-                            ),
-                          ),
-                        )
-                      : Container(width: 2, color: lp.border),
-                ),
-            ],
+    // Stack, not IntrinsicHeight.
+    //
+    // The obvious layout — IntrinsicHeight > Row(stretch) > Column with an
+    // Expanded connector — crashed the whole screen. IntrinsicHeight asks its
+    // child for a max intrinsic height, that walk reaches the connector's
+    // `FractionallySizedBox`, and its intrinsic height is
+    // `child intrinsic / heightFactor`. The reveal tween starts at 0, so on
+    // the FIRST frame that divides by zero and the row is laid out with an
+    // infinite height. Every non-last completed milestone did it, so opening
+    // Health threw before it ever painted.
+    //
+    // Positioned children are excluded from a Stack's intrinsic sizing and
+    // get bounded constraints from top+bottom, so the same growing line is
+    // safe here — and nothing has to be measured twice.
+    return Stack(
+      children: [
+        if (!isLast)
+          Positioned(
+            top: _nodeSize,
+            bottom: 0,
+            left: _nodeSize / 2 - 1,
+            width: 2,
+            // Frame 39: the Volt line grows down to "you are here".
+            child: done
+                ? TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: LpMotion.reveal,
+                    curve: LpMotion.ease,
+                    builder: (context, t, _) => Align(
+                      alignment: Alignment.topCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: t,
+                        child: Container(color: lp.voltStrong),
+                      ),
+                    ),
+                  )
+                : Container(color: lp.border),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 18),
-              child: content,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: _nodeSize, child: node),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 18),
+                child: content,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
+
+  /// The node circle is a fixed square, which is what lets the connector be
+  /// positioned rather than stretched.
+  static const double _nodeSize = 28;
 
   Widget _text(BuildContext context) {
     final lp = context.lp;
