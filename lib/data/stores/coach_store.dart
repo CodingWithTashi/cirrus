@@ -129,6 +129,9 @@ class CoachStore extends Notifier<CoachState> {
           template: reply.template,
           args: reply.args,
           showWeekCard: reply.showWeekCard,
+          // Ember's own words when the model answered; null keeps the
+          // template path for the deterministic replies.
+          text: reply.text,
         ),
       ],
     );

@@ -61,6 +61,13 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       };
 
   String _resolve(BuildContext context, CoachMessage m) {
+    // A model-authored reply is already prose in the user's language (the
+    // server pins it from the caller's locale), so it renders verbatim. The
+    // template is the fallback for deterministic replies and for anything the
+    // backend could not answer.
+    final spoken = m.text;
+    if (spoken != null && spoken.isNotEmpty) return spoken;
+
     final l10n = context.l10n;
     final locale = context.localeTag;
     num n(String k) => (m.args[k] as num?) ?? 0;

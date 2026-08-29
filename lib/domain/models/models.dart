@@ -333,14 +333,15 @@ class CoachMessage {
     required CoachTemplate this.template,
     this.args = const {},
     this.showWeekCard = false,
+    this.text,
   }) : role = CoachRole.ember,
-       text = null,
        chipEcho = null;
 
   final String id;
   final CoachRole role;
 
-  /// Raw text (user messages only).
+  /// Raw text: what the user typed, or — for an Ember message — the model's
+  /// own words. When set on an Ember message it replaces the template.
   final String? text;
 
   /// Index of the tapped quick chip (localized in the view).
@@ -365,6 +366,7 @@ class CoachReply {
     required this.template,
     this.args = const {},
     this.showWeekCard = false,
+    this.text,
   });
 
   final CoachTemplate template;
@@ -373,6 +375,13 @@ class CoachReply {
   final Map<String, Object> args;
 
   final bool showWeekCard;
+
+  /// Ember's actual words, when the reply came from the model rather than a
+  /// deterministic template. Null for `capReached`/`connectionLost`, which the
+  /// server owns and the views localize. When present this WINS over
+  /// [template] — the template is only a fallback for clients built before
+  /// this field existed.
+  final String? text;
 }
 
 /// A milestone badge definition + earned state.

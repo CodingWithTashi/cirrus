@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_fixtures.dart';
+import 'package:last_puff/data/dto/coach_codec.dart';
 import 'package:last_puff/data/dto/community_codec.dart';
 import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
@@ -88,6 +89,55 @@ void main() {
       expect(jsonEncode(PostCodec.encode(decoded)), wire);
       expect(decoded.replies.single.text, 'hold the line');
       expect(decoded.myReactions, {'💪'});
+    });
+  });
+
+  group('CoachReplyCodec', () {
+    // Ember's actual words travel in `text`. The server always sends a
+    // sensible `template` alongside so a client built before the field
+    // existed still renders something — but a client that DROPS text shows
+    // the canned template instead of what the model actually said, which is
+    // worse than either alone.
+    test('carries the model reply text across the wire', () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        args: {'day': 12},
+        showWeekCard: true,
+        text: 'That 10pm wave is brutal. Fifteen minutes and it breaks.',
+      );
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(CoachReplyCodec.encode(reply)))
+            as Map<String, dynamic>,
+      );
+
+      expect(decoded.text, reply.text);
+      expect(decoded.template, CoachTemplate.generic1);
+      expect(decoded.args['day'], 12);
+      expect(decoded.showWeekCard, isTrue);
+    });
+
+    // The deterministic templates (capReached, connectionLost) carry no text.
+    test('a template-only reply decodes with a null text', () {
+      final decoded = CoachReplyCodec.decode({
+        'template': 'capReached',
+        'args': {'limit': 5},
+        'showWeekCard': false,
+      });
+
+      expect(decoded.text, isNull);
+      expect(decoded.template, CoachTemplate.capReached);
+    });
+
+    test('an empty text is treated as absent, not as an empty bubble', () {
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': <String, Object>{},
+        'showWeekCard': false,
+        'text': '   ',
+      });
+
+      expect(decoded.text, isNull);
     });
   });
 }
