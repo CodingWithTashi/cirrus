@@ -18,6 +18,8 @@ import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
+import '../repositories/firebase_coach_repository.dart';
+import '../repositories/firebase_community_repository.dart';
 import '../repositories/firebase_journey_repository.dart';
 import '../repositories/firebase_user_context_repository.dart';
 import 'coach_store.dart';
@@ -89,11 +91,17 @@ final userContextRepositoryProvider = Provider<UserContextRepository>(
 );
 
 final communityRepositoryProvider = Provider<CommunityRepository>(
-  (ref) => ApiCommunityRepository(ref.watch(communityApiProvider)),
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => ApiCommunityRepository(ref.watch(communityApiProvider)),
+    BackendMode.firebase => FirebaseCommunityRepository(),
+  },
 );
 
 final coachRepositoryProvider = Provider<CoachRepository>(
-  (ref) => ApiCoachRepository(ref.watch(coachApiProvider)),
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => ApiCoachRepository(ref.watch(coachApiProvider)),
+    BackendMode.firebase => FirebaseCoachRepository(),
+  },
 );
 
 // ---- view-model layer -------------------------------------------------------

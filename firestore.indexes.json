@@ -1,12 +1,18 @@
 {
   "indexes": [
     {
-      "_comment": "Community feed: live posts, newest first (docs/03 §9 reverse-chron).",
+      "_comment": "Community feed: live posts, newest first (docs/03 \u00a79 reverse-chron).",
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "status", "order": "ASCENDING"},
-        {"fieldPath": "createdAt", "order": "DESCENDING"}
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
@@ -14,8 +20,14 @@
       "collectionGroup": "postAuthors",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "uid", "order": "ASCENDING"},
-        {"fieldPath": "createdAt", "order": "ASCENDING"}
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
@@ -23,10 +35,32 @@
       "collectionGroup": "moderation",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "reviewed", "order": "ASCENDING"},
-        {"fieldPath": "createdAt", "order": "ASCENDING"}
+        {
+          "fieldPath": "reviewed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "_comment": "Feed replies arrive in one collection-group query instead of one per post. A single-field index needs COLLECTION_GROUP scope declared explicitly; the automatic ones are collection-scoped only.",
+      "collectionGroup": "replies",
+      "fieldPath": "status",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    }
+  ]
 }
