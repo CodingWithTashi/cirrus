@@ -101,6 +101,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **Error/offline handling** — banner, dialogs, crash screen, retry | `lib/core/widgets/lp_error.dart`, `test/widgets/error_handling_test.dart` |
 | **Firestore** — `(default)` database live, NATIVE mode; hosting site `alastpuff` provisioned | `firebase firestore:databases:list` |
 | **Android release signing** | `android/key.properties` present |
+| **Every deployed function has a caller** — the integration gap closed Aug 29 (§11) | `test/data/plan_advice_test.dart`, `test/widgets/{panic_session,weekly_insight,moderation_queue}_test.dart` |
 
 ### ⛔ Verified blockers
 
@@ -232,7 +233,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S2-4` FCM token registration through `syncUserContext.fcmTokens`
 - [ ] `S2-5` **Fix streak parity (B12)** — port the repair-token exception into `streakEngine.ts`; add a parity test mirroring `streak_and_money_test.dart`
 - [ ] `S2-6` Token-usage logging on the **streaming** path (today only the non-streaming branch logs) + a cumulative per-user cost ledger
-- [ ] `S2-7` Panic flow calls `panicSession`; free tier keeps the breathing screen with no AI — **never hard-block mid-crisis** (Doc 4 §7)
+- [x] `S2-7` Done Aug 29. Panic flow calls `panicSession` on open and on "it passed"; the answer only ever narrows the **AI option**, which becomes the paywall route rather than vanishing. Never awaited by the UI — a craving does not wait on a round-trip. `test/widgets/panic_session_test.dart`
 - [ ] `S2-8` **Run Doc 4 §9 eval suite — 15/15 required on both models.** Includes prompt-extraction, under-18 redirect, self-harm → 988, and no-dosing-advice cases. Non-negotiable before beta.
 - [ ] `S2-9` Verify `MODEL_FREE`/`MODEL_PREMIUM` IDs against Google's live catalog (defaults target the 3.1 line because 2.5 Flash-Lite retires 2026-10-16)
 - [ ] `S2-10` TestFlight + Play closed testing: 30–50 testers from r/QuitVaping per Doc 6 §3 ("50 free lifetime spots")
@@ -253,7 +254,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S3-6` Validate `alias`/`avatarEmoji`/`dayN` server-side against the real journey; make the 3-post cap **transactional**
 - [x] `S3-7` Done Aug 29. `reportCount` increment-only, replies gated on status, and reaction counts moved server-side: clients write only `posts/{id}/reactors/{uid}` and `onReaction` derives the aggregate. **Not** `reactions{uid: emoji}` as docs/05 suggests — that would have made every reactor's uid public on a world-readable post
 - [ ] `S3-8` `moderatePost` fail-closed on model outage — hold as `pending`, not `live`
-- [x] `S3-9` **Moderation queue reader built** (`moderationQueue`/`resolveModeration`, admin custom claim) — nothing on disk can surface `moderation/*`. Required for the Guideline 1.2 24h commitment.
+- [x] `S3-9` **Moderation queue readable end to end.** Callables built Aug 29; the **client** (contract, repository, store, screen, Settings entry gated on the `admin` claim) landed the same day. The store is deliberately non-optimistic — a refused decision keeps its row, and a failed load never renders as an empty queue. `test/widgets/moderation_queue_test.dart`. **Still founder-side: granting your account the claim.**
 - [ ] `S3-10` Real report / block / delete-own-content paths
 - [ ] `S3-11` SOS: 60-min pin, buddy + last-5 notify, "23 people had your back" (Doc 3 §9)
 - [ ] `S3-12` Seed the feed — founder posts + beta testers, via `seedTextId` ids so l10n still resolves
@@ -270,7 +271,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S4-2` `flutter_local_notifications` scheduling danger hours on-device — deliberately *not* a server cron (see `functions/src/index.ts` header)
 - [ ] `S4-3` Enforce Doc 3 §8 caps: max 3 pushes/day, quiet hours 23:00–08:00
 - [ ] `S4-4` `shared_preferences` so theme/locale/notifications/danger hours **survive restart** (B8)
-- [ ] `S4-5` Mixpanel + Firebase Analytics on Doc 2 §7's full event list (`onboarding_start` → `winback_converted`)
+- [x] `S4-5` 🔨 **Firebase Analytics complete** — all 16 docs/02 §7 events fire, including `puff_logged`, which the north star (Weekly Active Quitters) cannot be computed without. Per-step events come from the onboarding VM's central choke point; habit events from the store, not the four views that call it. **Mixpanel still needs a project token.**
 - [ ] `S4-6` Crashlytics — `lib/app/app_errors.dart:26` has been holding the slot
 - [ ] `S4-7` `onTrialWillEnd` → honest trial-ending push; win-back card 24h after decline ($3.99 founding month)
 - [ ] `S4-8` Implement Doc 3 §2's **2-second write coalescing**; every tap currently rewrites the whole journey doc
@@ -289,7 +290,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S5-2` Privacy labels: "Data not collected for tracking". We ship no ad SDKs — market it (PRD §6)
 - [ ] `S5-3` Age rating 17+/18+; medical disclaimer; "support tool, not medical treatment"
 - [ ] `S5-4` Privacy policy + terms **live at real URLs**; auto-renew disclosures on the paywall
-- [ ] `S5-5` Account deletion via `deleteUserData` — replace `FirebaseAuthRepository.deleteAccount()`'s partial wipe, which leaves `users/{uid}` and community posts behind
+- [x] `S5-5` Done Aug 29. `deleteAccount()` calls `deleteUserData`; it is the **one lifecycle command that is not optimistic** — the dialog awaits it and reports failure, because a deletion that silently failed while the UI said it succeeded is a broken promise, not a sync delay. `test/data/account_deletion_test.dart`
 - [ ] `S5-6` UGC compliance pack: moderation + report + block + 24h response commitment
 - [ ] `S5-7` **Doc 3 §12 acceptance checklist**, all gates — incl. 400 puffs/day × 3 days offline with zero loss, and Comeback ×2 verified at 47h59m / expired at 48h01m
 - [ ] `S5-8` **Crash-free ≥ 99.5%** on the beta cohort
@@ -435,11 +436,53 @@ Real runs on a real device against the real backend. Nothing here is inferred.
 
 **Test data left in production:** one Auth account (`e2e012809@cirrus.app`). Harmless, but delete it before launch — or sooner if you'd rather keep Auth clean.
 
-**Not yet exercised end-to-end, because the client cannot reach the backend (B3):** the coach, the community, moderation, and both crons. That gap is the next piece of work, not an oversight.
+**Not yet exercised end-to-end on a device:** the coach, the community, moderation, and both crons. B3 is resolved and every one of these now has a client path (§11), so what remains is a device pass against the deployed backend — not missing code. The `taperRecalc` fix in §11 also needs a deploy before the advice a device reads is the corrected one.
 
 ---
 
-## 11. STATE AS OF AUG 29, 2026 (end of first build session)
+## 11. THE INTEGRATION GAP — closed Aug 29 (second build session)
+
+The first session ended with a specific, unglamorous finding: **several
+functions were deployed, tested and working, and the app never called them.**
+Nothing was broken. Nothing failed. The work simply had no client half, which
+is the failure mode that survives a demo, a code review and a test suite.
+
+| Was | Now | Pinned by |
+|---|---|---|
+| `deleteUserData` deployed; the app ran a **client-only** wipe that dropped the journey and the auth record and left `users/{uid}`, the coach transcript, cravings, insights and every community post standing, uid↔post mapping intact | Calls the callable. **The one lifecycle command that is not optimistic** — the dialog awaits it and reports failure. A deletion that silently failed while the UI said it succeeded is a broken promise, not a sync delay | `test/data/account_deletion_test.dart` |
+| **2 of 16** docs/02 §7 events wired (`screen_completed`, `age_gate_blocked`) | All 16, incl. `puff_logged` — the north star (Weekly Active Quitters) is uncountable without it | funnel visible in Firebase; Mixpanel still needs a token |
+| `panicSession` deployed and never called: sessions uncounted, free-tier AI allowance unenforceable | Called on open and on "it passed". Narrows the **AI option only**, to the paywall rather than to nothing (docs/04 §7 forbids hard-blocking mid-crisis); never awaited by the UI | `test/widgets/panic_session_test.dart` |
+| `taperRecalc` wrote `planAdvice` nightly; **0 references in `lib/`** — the taper was the static curve | Read on session start and app resume, folded into the journey, and *shown*: what changed and why. Two guards carry it — advice applies only on the day it is for, and its stretch applies exactly once | `test/data/plan_advice_test.dart` (9 cases) |
+| `weeklyInsight` generated a report every Sunday; **0 references** — the screen rendered authored copy over hardcoded bars | Rendered verbatim over charts built from that user's own logs. Authored cards stay the fallback for free tier, short weeks, skipped outages and the demo backend | `test/widgets/weekly_insight_test.dart` |
+| `moderationQueue`/`resolveModeration` deployed, `moderation/*` server-only, **nothing could open it** | Contract → repository → store → screen, entry gated on the `admin` claim. Non-optimistic on purpose: a refused decision keeps its row, a failed load never renders as an empty queue | `test/widgets/moderation_queue_test.dart` |
+
+### One real bug found while wiring
+
+`taperRecalc.recalcOne` passed `day` to `adviseTomorrow`, which advises for
+`day + 1`, while stamping the result `forDay: todayKey`. Because the cron
+overwrites the document nightly, that advice was **replaced before the day it
+applied to ever arrived** — the client would have read a limit computed from a
+trailing window it never matched. `trailingDays` excludes today, so the run at
+local 01:00 has exactly the three completed days needed to advise for the day
+that just started. Fixed to `day - 1`, with day 1 skipped (nothing completed to
+read). Pinned by `functions/test/integration/taperRecalc.test.ts`.
+
+**Test coverage:** Flutter **106** (was 81) · functions 47 · rules 35 ·
+integration 72 — **260 tests**.
+
+**Still open, and still not code:**
+
+| Item | Blocked on |
+|---|---|
+| Grant the `admin` claim | GCP/Admin SDK — founder only. The queue screen exists and is hidden until this lands |
+| Deploy the `taperRecalc` fix | `firebase deploy --only functions` — the fix is committed, not shipped |
+| Mixpanel | Project token |
+| RevenueCat + `users/{uid}.entitlement` as the gate | Deliberately last, per founder (`B4`, `S1-8`). The client still reads `profile.tier` from its own journey doc; not exploitable today because `tierFor` reads the server mirror, but it must switch the day billing lands |
+| `B13` rotate the service-account key · Play Console + banking · a Mac | Founder |
+
+---
+
+## 12. STATE AS OF AUG 29, 2026 (end of first build session)
 
 **Closed:** B1 B2 B3 B5 B7 B8 B9 B10 B11 B12 B15 B17 · plus two live security holes and one concurrency bug found by tests rather than by reading.
 

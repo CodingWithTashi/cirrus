@@ -121,7 +121,10 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> deleteAccount() async {
     if (_auth.currentUser == null) return;
-    await guardAuth(() => _functions.call('deleteUserData'));
+    // No `guardAuth` here: LpFunctions is the mapper for callable failures,
+    // the way guardAuth is the mapper for the auth plugin's. Wrapping this in
+    // both would give one error two translators.
+    await _functions.call('deleteUserData');
     // The account is gone server-side; this only drops the local session so
     // the SDK stops trying to refresh a token for a user that no longer
     // exists. It is deliberately after the callable — a failed erasure must
