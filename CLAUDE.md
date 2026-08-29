@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-LastPuff — a quit-vaping Flutter app. The data layer is **API-shaped with two backends behind one seam**: session lifecycle and all persistence go through async repositories over the domain contracts. `backendModeProvider` picks who answers — **mobile (Android/iOS) runs real Firebase** for auth + journey (`Firebase*Repository`), while desktop/web/tests stay on the in-memory `FakeServer` demo backend with simulated latency (everything resets on restart there). `--dart-define=LP_BACKEND=fake|firebase` overrides the platform default. Community/Coach are still fake everywhere; their real implementations slot into the same providers later without touching stores or views.
+LastPuff — a quit-vaping Flutter app (store name "Cirrus"; the name is still an open founder decision, see `docs/08`). The data layer is **API-shaped with two backends behind one seam**: session lifecycle and all persistence go through async repositories over the domain contracts. `backendModeProvider` picks who answers — **mobile (Android/iOS) runs real Firebase** for auth + journey (`Firebase*Repository`), while desktop/web/tests stay on the in-memory `FakeServer` demo backend with simulated latency (everything resets on restart there). `--dart-define=LP_BACKEND=fake|firebase` overrides the platform default. Community/Coach are still fake **everywhere, including production mobile** — their providers have no `switch` on `backendModeProvider` at all, so a real phone answers them from process-lifetime memory.
+
+There is also a **written-but-unwired TypeScript Cloud Functions backend in `functions/`** (AI coach, moderation, RevenueCat webhook, crons). It is not a future plan — the code exists — but it has never compiled, never deployed, and the app has no way to call it. See "Server (`functions/`)" below before assuming any server behavior is live.
+
+**`docs/08_Sprint_Tracker.md` is the live build board** — what is actually done, what is blocked, and the current targets ($44K/mo net by M6; launch Oct 15 2026 on both platforms). Read it before planning work; it supersedes the revenue and phasing numbers in `docs/01`.
 
 ## Commands
 
@@ -16,6 +20,17 @@ flutter test test/domain/taper_engine_test.dart   # single test file
 flutter test --plain-name "streak"           # tests matching a name
 flutter analyze                              # lint (flutter_lints defaults)
 flutter gen-l10n                             # regenerate l10n after editing .arb files
+```
+
+Server (`functions/`, npm — run from that directory):
+
+```
+npm install                                  # no node_modules in the checkout yet
+npm run verify                               # typecheck + lint + vitest — THE deploy gate
+npm test                                     # vitest only
+npm run serve                                # build + emulators (functions, firestore, auth)
+firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only functions             # predeploy runs `verify`, so a red gate blocks it
 ```
 
 ## Architecture
@@ -30,8 +45,23 @@ Strict MVVM with Riverpod 2.x `Notifier`s as view models, layered as a one-way d
   - `stores/` — Riverpod view models. `JourneyStore`: awaited async lifecycle (`logIn`/`register`/`signInWithApple`/`restoreSession`/`startJourney`; optimistic sync `signOut`/`deleteAccount`/`seedDemoJourney`), and **every other mutation is synchronous + optimistic through `_commit(next)`** = set state + `unawaited(save)` write-behind — views may read fresh state right after a command; keep new mutations on that pattern. `providers.dart` is the composition root and documents the backend swap point: REST replaces `api/fake/`, Firebase replaces either the Api or Api*Repository bodies; stores and views never change.
   - `seed/seed_data.dart` — the demo day-12 journey (single source; the fake backend serializes it through the codecs, so the JSON round-trip runs in production code).
 - `lib/features/<name>/` — one folder per screen/flow. Views read state via providers and issue commands through `.notifier`. Async lifecycle CTAs pass `busy:` to `LpButton` and guard navigation with `mounted` after awaits.
-- `lib/app/` — `app_router.dart` (go_router with a `StatefulShellRoute` 4-tab shell: Home/Stats/Community/Coach; all route paths live in the `Routes` class) and the theme. The router redirects journey-requiring paths to `/auth` while `journey == null`, but **deliberately allows authed visits to `/auth` and `/onboarding`** so the Frame Map can preview every screen — don't "fix" that. Lifecycle callers must set journey state **before** navigating into gated paths (awaiting the store call does this).
+- `lib/app/` — `router/app_router.dart` (go_router with a `StatefulShellRoute` 4-tab shell: Home/Stats/Community/Coach; all route paths live in the `Routes` class) and the theme. The router redirects journey-requiring paths to `/auth` while `journey == null`, but **deliberately allows authed visits to `/auth` and `/onboarding`** so the Frame Map can preview every screen — don't "fix" that. Lifecycle callers must set journey state **before** navigating into gated paths (awaiting the store call does this).
 - `lib/core/` — shared widgets (`LpCard`, `LpChip`, charts, `RollingNumber`, `ProgressRing`, `NewIdConfetti`, `PushPreviewCard`, …) and utils. **All price strings and the invite URL live only in `core/utils/lp_pricing.dart` (`LpPricing`/`LpLinks`)** — reuse, don't duplicate.
+
+### Server (`functions/`) — written, not running
+
+TypeScript Cloud Functions 2nd gen. `index.ts` is a thin barrel exporting 9 functions: `aiCoachChat`, `panicSession`, `syncUserContext`, `deleteUserData`, `createPost`, `moderatePost`, `taperRecalc`, `weeklyInsight`, `rcWebhook`. (`dangerHourPush` from docs/05 §7 is deliberately absent — danger-hour reminders are deterministic, so they're scheduled on-device.) Layout: `ai/` (the `TextModel` seam — only `ai/gemini.ts` imports a vendor SDK, so swapping providers is one new implementation; all prompts live in `ai/prompts.ts`), `domain/` (a TS port of the Dart engines), `handlers/`, `config.ts` (all secrets/params via `defineSecret`/`defineString`).
+
+**Four facts to check before you touch or trust it:**
+
+1. **`functions/src/lib/` does not exist** — 23 imports across all 9 handlers reference `../lib/{firestore,guards,logger,usage}`. `tsc` fails, so `verify` fails, so `predeploy` blocks deploy. Nothing here has ever run.
+2. **Cloud Functions have never been deployed** and the API has never been enabled on project `alastpuff`. No `functions/lib/`, no `functions/node_modules/`, no `.firebase/`.
+3. **The app cannot call any of it** — no `cloud_functions` and no `firebase_app_check` in `pubspec.yaml`, and every callable sets `enforceAppCheck: true`, so they would reject the client even once wired.
+4. **The crons are inert by construction** — both query `users where recalcHourUtc == n`, but `users/{uid}` docs are created only by `syncUserContext`, which nothing calls.
+
+**The one architectural rule** (`firestore.rules`, `functions/README.md`): ownership is split. `journeys/{uid}` is **client-owned** — `FirebaseJourneyRepository.save()` does a whole-document `set()` on every optimistic mutation, so **any server-written field here is destroyed by the next puff tap**. `users/{uid}` is **server-owned** (entitlement, `aiUsage`, `planAdvice`), readable by its owner and writable only by the Admin SDK. Entitlement lives there for a reason: if a client could write it, it would grant itself Premium. Today the app still writes `profile.tier` into its own journey doc — that is the self-granted-entitlement hole, not the intended design.
+
+Community collections: `posts` (created only via the `createPost` callable so no uid lands on the post), `postAuthors` (the server-only uid↔post map that makes account deletion possible without breaking anonymity), `moderation` (founder review queue). **`createReply` is referenced by `firestore.rules` but was never written**, so replies cannot be created by anyone.
 
 ### Error handling
 
@@ -56,15 +86,27 @@ Zero hardcoded UI strings. ARB files in `lib/l10n/app_{en,es,fr,de,pt}.arb`, gen
 
 ## Specs and design source
 
-- `docs/01–07` are the product specs; `docs/07` is the brand/design brief.
+- `docs/01–07` are the frozen product specs; `docs/07` is the brand/design brief.
+- **`docs/08_Sprint_Tracker.md` is the only living doc** — build status, blockers (`B1`–`B16`, each with an evidence path), sprint plan, and the current revenue model. Update it as work lands; when it disagrees with `docs/01–07`, it wins.
 - The visual source of truth is a Claude Design project exported into the four `docs/design/*handoff*` bundles (byte-identical `project/` folders; 52 frames across Runs 1/2/2-Light/3). Per-frame implementation status, deliberate deviations, and past fix rounds are tracked in `docs/design/HANDOFF_COMPLETION.md`.
 
-### Spec conflicts already resolved in code — do not regress to the spec text
+### Spec conflicts — these resolutions win over the spec text
+
+**Already resolved in code — do not regress:**
 
 - `TaperEngine` implements pure `round(B×(1−d/P)^1.5)` with tail clamps `≤3, ≤1, 0` (matches docs/03's worked B=200/P=30 table; the prose formula contradicts it). Pinned by `test/domain/taper_engine_test.dart`.
 - Health timeline anchors to rolling `lastPuffAt`, not Freedom Day (docs/03 §6 self-contradicts).
 - Dependence badge thresholds follow docs/02 B2 (151–300 = Heavy/orange, 301+ = Severe/red); the Run 1 mock labeling 200 as "Severe" is wrong.
 - Home/Money figures are engine-computed, not the mock's "$47"/"$312" (not reproducible under docs/03 §4 math).
+
+**Doc-vs-doc contradictions — the winner is named, nothing to regress yet:**
+
+- **docs/01 §13's blended ARPU of "$9.60/mo net" is wrong** — it never applies the 15% store commission docs/01 §11 cites. True net is **$7.93/mo** at the locked prices and the 50/25/25 mix. Never quote §13's figure or its $10K target; `docs/08` carries the corrected model.
+- Onboarding is **19 steps** (docs/02), not docs/01 §12's "≈14". Code implements 19.
+- Premium coach cap is **100 msgs/day** (docs/04 §7), not docs/01 §10's "unlimited". Marketing may say unlimited; the server enforces 100.
+- `taperRecalc` uses **trailing 3 days** (docs/03 §3.3), not docs/05 §7's "7-day" — docs/03's math is the one `taperEngine.ts` implements.
+- Apple Watch is **V2** (docs/05 §3), not docs/01 §8's V1.1 — it's a separate native mini-app.
+- **Quit Buddies is descoped** (founder decision Aug 2026, `functions/README.md`), so docs/03 §7's buddy-ping and §9's SOS buddy-notify have no server side. `lib/features/buddy/` still ships the UI — don't build backend for it without checking whether the screen should be hidden instead.
 
 ## Gotchas (each was a real bug — don't reintroduce)
 
@@ -77,3 +119,7 @@ Zero hardcoded UI strings. ARB files in `lib/l10n/app_{en,es,fr,de,pt}.arb`, gen
 - Auth form screens (Register/Login/Forgot) wrap their Column in `_AuthScrollView` (scroll under min-height + `IntrinsicHeight`, same idiom as the community composer) — a bare Column overflows when the keyboard opens.
 - The FakeServer's connectivity gate reads the connectivity store **synchronously** (never await a probe inside `respond`) — an async gap there breaks the sync-apply invariant.
 - App-pumping tests without `fastBackendOverrides()` do real DNS lookups and leak the 5s poll timer.
+- **Never write a server-owned field onto `journeys/{uid}`.** The client `set()`s the whole document on every optimistic mutation, so the next puff tap silently destroys it. Server state goes in `users/{uid}`.
+- **Two implementations of the same math drift, and already have** — `streakEngine.ts` omits the repair-token exception that `streak_engine.dart:29-30` applies, so the server counts a token-saved day as a break. Any change to a shared engine must land in both `test/domain/*_test.dart` and `functions/test/*.test.ts`, or the coach starts quoting numbers the Home screen contradicts.
+- `CoachReplyCodec.decode` reads only `template`/`args`/`showWeekCard` — it **drops the `text` field** `aiCoachChat` returns, so a real model reply would render as the canned `generic1` template. Fix the codec before wiring the coach.
+- `functions/alastpuff-*-adminsdk-*.json` is a live service-account private key. It must stay gitignored and must never be committed; deployed functions use Application Default Credentials and don't need it.
