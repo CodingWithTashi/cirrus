@@ -33,6 +33,17 @@ export interface GenerateResult {
 export interface TextModel {
   generate(request: GenerateRequest): Promise<GenerateResult>;
   generateStream(request: GenerateRequest): AsyncIterable<string>;
+
+  /**
+   * Model ids this key can actually call.
+   *
+   * Exists so a wrong model id diagnoses itself. `MODEL_PREMIUM` was set to a
+   * model that does not exist for a month; the provider answered 404 on every
+   * request, the coach returned its warm fallback to every user, and nothing
+   * anywhere said which ids WOULD have worked. Called only from a failure
+   * path, never on the hot path.
+   */
+  listModels(): Promise<readonly string[]>;
 }
 
 /** Raised when the provider fails or times out; handlers map it to warm copy. */

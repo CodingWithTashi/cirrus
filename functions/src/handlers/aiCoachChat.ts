@@ -140,15 +140,31 @@ export const aiCoachChat = onCall(
         // looked identical in the logs to a coach nobody had used. The
         // end-to-end run found exactly that: every reply came back
         // `connectionLost` and the logs said nothing at all.
+        // The SDK's error is usually an Error; anything else is coerced
+        // rather than stringified into "[object Object]".
+        const cause = error.cause instanceof Error
+          ? `${error.cause.name}: ${error.cause.message}`
+          : JSON.stringify(error.cause ?? null);
         log.warn('coach.model_unavailable', {
           uid: caller.uid,
           model: modelName,
-          // The SDK's error is usually an Error; anything else is coerced
-          // rather than stringified into "[object Object]".
-          cause: error.cause instanceof Error
-            ? `${error.cause.name}: ${error.cause.message}`
-            : JSON.stringify(error.cause ?? null),
+          cause,
         });
+        // A 404 means the configured id does not exist, which is a config
+        // mistake rather than an outage — and the one failure where the fix
+        // is knowable. Log what this key CAN call so the answer is in the
+        // logs instead of requiring a separate investigation. Failure-path
+        // only, so it costs nothing while the coach is healthy.
+        if (/not found|NOT_FOUND|404/.test(cause)) {
+          try {
+            log.warn('coach.models_available', {
+              configured: modelName,
+              available: (await model.listModels()).join(', '),
+            });
+          } catch (listError) {
+            log.warn('coach.models_list_failed', {error: String(listError)});
+          }
+        }
         // docs/03: the coach fails IN-THREAD, never as a dialog. The client
         // already knows this template. The message was not delivered, so give
         // the quota unit back — nobody pays for our outage.

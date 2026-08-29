@@ -26,6 +26,15 @@ export function geminiModel(apiKey: string): TextModel {
     }));
 
   return {
+    async listModels(): Promise<readonly string[]> {
+      const names: string[] = [];
+      for await (const model of await ai.models.list()) {
+        // The API returns `models/gemini-2.5-flash`; config uses the bare id.
+        if (model.name) names.push(model.name.replace(/^models\//, ''));
+      }
+      return names;
+    },
+
     async generate(request: GenerateRequest): Promise<GenerateResult> {
       try {
         const response = await withTimeout(

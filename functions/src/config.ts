@@ -44,18 +44,23 @@ export const PREMIUM_DAILY_COACH_MESSAGES = defineInt(
 
 /**
  * Model routing (docs/05 §8). Flash-Lite class for free + moderation, a
- * stronger Flash for premium. Names are params so an EOL model can be
- * swapped without a deploy of new code — note Gemini 2.5 Flash-Lite retires
- * 2026-10-16.
+ * stronger Flash for premium. Names are params so an EOL model can be swapped
+ * without a deploy of new code.
+ *
+ * These defaults are the fallback when no `.env.<project>` supplies a value —
+ * see `.env.alastpuff` for the rules on choosing one. They must stay ids that
+ * actually exist AND support `generateContent`: the previous default was
+ * `gemini-3.1-flash`, which does neither, and the coach answered every user
+ * with its warm fallback for as long as it was deployed.
  */
 export const MODEL_FREE = defineString('MODEL_FREE', {
-  default: 'gemini-2.5-flash-lite',
+  default: 'gemini-3.5-flash-lite',
 });
 export const MODEL_PREMIUM = defineString('MODEL_PREMIUM', {
-  default: 'gemini-2.5-flash',
+  default: 'gemini-3.7-flash',
 });
 export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
-  default: 'gemini-2.5-flash-lite',
+  default: 'gemini-3.5-flash-lite',
 });
 
 /**
