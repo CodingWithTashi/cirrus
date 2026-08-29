@@ -230,6 +230,11 @@ describe('server-only collections', () => {
     await assertFails(setDoc(doc(alice(), 'postAuthors', 'x'), {uid: ALICE}));
   });
 
+  it('never exposes replyAuthors either', async () => {
+    await assertFails(getDoc(doc(alice(), 'replyAuthors', 'someReply')));
+    await assertFails(setDoc(doc(alice(), 'replyAuthors', 'x'), {uid: ALICE}));
+  });
+
   it('never exposes the moderation queue', async () => {
     await assertFails(getDoc(doc(alice(), 'moderation', 'blockedPost')));
   });

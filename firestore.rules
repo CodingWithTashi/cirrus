@@ -94,6 +94,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Same reasoning for replies: the mapping is what makes account deletion
+    // able to find someone's replies without a uid ever touching the reply.
+    match /replyAuthors/{replyId} {
+      allow read, write: if false;
+    }
+
     // The founder's moderation review queue.
     match /moderation/{postId} {
       allow read, write: if false;

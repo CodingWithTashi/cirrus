@@ -32,6 +32,7 @@ export const deleteUserData = onCall(
     // drop the trees, then the auth record last — if anything above throws,
     // the user still has an account to retry with.
     await anonymizePosts(uid);
+    await anonymizeReplies(uid);
     await db.recursiveDelete(userDoc(uid));
     await journeyDoc(uid).delete();
     await getAuth().deleteUser(uid);
@@ -57,6 +58,32 @@ async function anonymizePosts(uid: string): Promise<void> {
         alias: DEPARTED_ALIAS,
         avatarEmoji: '\u{1F464}',
       });
+      batch.delete(author.ref);
+    }
+    await batch.commit();
+  }
+}
+
+/**
+ * Replies get the same treatment as posts: the words stay so threads other
+ * quitters are reading do not develop holes, the authorship goes.
+ *
+ * Reply documents are nested under their post, so the mapping carries postId —
+ * without it there is no way to address the reply for update.
+ */
+async function anonymizeReplies(uid: string): Promise<void> {
+  const snap = await db.collection('replyAuthors').where('uid', '==', uid).get();
+  if (snap.empty) return;
+  for (let i = 0; i < snap.docs.length; i += 200) {
+    const batch = db.batch();
+    for (const author of snap.docs.slice(i, i + 200)) {
+      const postId = author.get('postId') as unknown;
+      if (typeof postId === 'string') {
+        batch.update(postsCol().doc(postId).collection('replies').doc(author.id), {
+          alias: DEPARTED_ALIAS,
+          avatarEmoji: '\u{1F464}',
+        });
+      }
       batch.delete(author.ref);
     }
     await batch.commit();

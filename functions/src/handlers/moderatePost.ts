@@ -11,19 +11,10 @@
  * one is an app removal.
  */
 import {onDocumentCreated} from 'firebase-functions/v2/firestore';
-import {GEMINI_API_KEY, MODEL_MODERATION, REGION} from '../config';
-import {geminiModel} from '../ai/gemini';
-import {MODERATION_PROMPT} from '../ai/prompts';
-import {ModelUnavailableError} from '../ai/model';
+import {GEMINI_API_KEY, REGION} from '../config';
+import {classify} from '../ai/moderation';
 import {FieldValue, moderationDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
-
-type Action = 'allow' | 'flag' | 'block';
-
-interface Verdict {
-  action: Action;
-  reason: string;
-}
 
 /**
  * Posts are created with `status: 'pending'` by the client and flipped here.
@@ -72,41 +63,6 @@ export const moderatePost = onDocumentCreated(
   },
 );
 
-async function classify(text: string): Promise<Verdict> {
-  const model = geminiModel(GEMINI_API_KEY.value());
-  try {
-    const result = await model.generate({
-      model: MODEL_MODERATION.value(),
-      systemInstruction: MODERATION_PROMPT,
-      turns: [{role: 'user', text}],
-      maxOutputTokens: 200,
-      temperature: 0, // classification, not creativity
-      json: true,
-    });
-    return parseVerdict(result.text);
-  } catch (error) {
-    if (error instanceof ModelUnavailableError) {
-      log.error('moderation.unavailable', {reason: 'model'});
-      return {action: 'flag', reason: 'moderation unavailable — needs human review'};
-    }
-    throw error;
-  }
-}
-
-/** Models fence JSON even when told not to; strip before parsing (docs/04 §5). */
-export function parseVerdict(raw: string): Verdict {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  try {
-    const parsed: unknown = JSON.parse(cleaned);
-    if (parsed === null || typeof parsed !== 'object') throw new Error('not an object');
-    const action = (parsed as Record<string, unknown>)['action'];
-    const reason = (parsed as Record<string, unknown>)['reason'];
-    if (action !== 'allow' && action !== 'flag' && action !== 'block') {
-      throw new Error('unknown action');
-    }
-    return {action, reason: typeof reason === 'string' ? reason : ''};
-  } catch {
-    // Unparseable verdict is not consent. Flag for a human.
-    return {action: 'flag', reason: 'unparseable moderation response'};
-  }
-}
+// Re-exported so `test/parsers.test.ts` keeps its import path while the
+// implementation lives in ai/moderation.ts alongside the reply classifier.
+export {parseVerdict} from '../ai/moderation';

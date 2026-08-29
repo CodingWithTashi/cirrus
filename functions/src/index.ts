@@ -27,3 +27,5 @@ export {taperRecalc} from './handlers/taperRecalc';
 export {weeklyInsight} from './handlers/weeklyInsight';
 export {rcWebhook} from './handlers/rcWebhook';
 export {createPost} from './handlers/createPost';
+export {createReply} from './handlers/createReply';
+export {moderateReply} from './handlers/moderateReply';
