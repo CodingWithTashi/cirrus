@@ -433,8 +433,18 @@ Real runs on a real device against the real backend. Nothing here is inferred.
 | Aug 29, 2026 | Email registration → **production Firebase Auth** | Account `e2e012809@…` created, uid `ySMGMESFRoSPOt34…`; verified via `firebase auth:export` |
 | Aug 29, 2026 | Post-register routing | Lands on onboarding A1, as the router intends |
 | Aug 29, 2026 | Cloud Functions deploy | 9/9 live; `moderatePost` + `aiCoachChat` needed one retry past first-deploy propagation |
+| Aug 29, 2026 | **Automated E2E on emulator-5554** — 5 suites, 30 cases, driving the real app (`integration_test/`) | Fake backend: **30/30 green**. Auth, the full 19-step onboarding with real keypad taps and a real 3s hold, logging/undo/repair-tokens/slip, panic, community, coach, settings, all 20 routes, both themes |
+| Aug 29, 2026 | E2E against **production Firebase** (`f_firebase_backend_test.dart`) | Auth + `journeys/{uid}` **verified working** end to end. Every **callable blocked** by App Check — see below |
 
-**Test data left in production:** one Auth account (`e2e012809@cirrus.app`). Harmless, but delete it before launch — or sooner if you'd rather keep Auth clean.
+**Test data left in production:** `e2e012809@cirrus.app` from the first session, plus two or three `e2e-*@cirrus-test.app` accounts from the E2E runs — including uid `SyM5xUe3s9ZYFl2tyKQyQbwO0v03`, created before the suite had a teardown. The suite now creates its account in `setUpAll` and deletes it in `tearDownAll`, so a red run no longer strands data. Delete the strays before launch.
+
+**App Check is the one wall.** Callables fail with `403 App attestation failed`: the emulator's debug token is not registered, and it **rotates on every reinstall**, so the token docs/08 recorded is stale. Current token — printed to logcat on each launch — is `1c9e0c28-dcd8-4f38-9cf6-cc8f50da8160`. Register with:
+
+```
+firebase appcheck:debugtokens:create <token> --project alastpuff   --app 1:826701239342:android:6f8f39f49c52ee24e4bbbf --force
+```
+
+One gotcha found the hard way: the client backs off after repeated rejections (`Too many attempts`), so **register the token before the first run**, not after. Revoke it when testing ends.
 
 **Not yet exercised end-to-end on a device:** the coach, the community, moderation, and both crons. B3 is resolved and every one of these now has a client path (§11), so what remains is a device pass against the deployed backend — not missing code. The `taperRecalc` fix in §11 also needs a deploy before the advice a device reads is the corrected one.
 
@@ -482,7 +492,27 @@ integration 72 — **260 tests**.
 
 ---
 
-## 12. STATE AS OF AUG 29, 2026 (end of first build session)
+## 12. WHAT THE E2E PASS FOUND
+
+Three real bugs, none of which any unit or widget test could have caught,
+because all three need a real tree to be built, disposed, or navigated.
+
+| Bug | Impact | Fix |
+|---|---|---|
+| **`HealthScreen` never painted.** `IntrinsicHeight` asked for a max intrinsic height; the walk reached the connector's `FractionallySizedBox`, whose reveal tween starts at 0. Dividing by zero produced an infinite constraint and layout failed. | Every non-last completed milestone triggered it, so the screen was broken for **every user past day 1, on every device, from the first frame**. It is one tap from Home. | Rebuilt as a `Stack` — positioned children are excluded from intrinsic sizing and get bounded constraints |
+| **The panic takeover threw on every close.** `dispose()` read `ref`, which Riverpod forbids once the element is gone. Introduced this session by the `abandon()` wiring. | An uncaught error per craving, routed to `LpErrors` in release. Hid a second bug: `survive()` invalidates the provider, so the `ref.read` would have returned a fresh, unresolved session and counted every survived craving as abandoned too. | Notifier captured in `initState` |
+| **`reportPost` counted reports globally, not per post.** One `int` across the whole feed. | Reporting three *different* posts hid the third on its **first** report — innocent content disappearing for the reporter. | Keyed by post id |
+
+Two harness lessons worth keeping:
+
+- **`flutter test` substitutes a fixed-width fallback font**, so text overflows spuriously. `screen_layout_test.dart` therefore excludes overflow and asserts only on the font-independent class. A sweep that failed on overflow would have reported twenty screens broken that the device lays out cleanly.
+- **A regression test that passes with and without the fix is worse than none.** Every fix above is pinned by a test verified to fail against the pre-fix code. The one bug I could not reproduce in a widget test (`showLpSnack`'s backstop asserting on a disposed messenger) is guarded in code and documented here rather than given a test that proves nothing.
+
+**Coverage now:** Flutter **229** (from 81 at session start) · E2E **30** on device · functions 47 · rules 35 · integration 72.
+
+---
+
+## 13. STATE AS OF AUG 29, 2026 (end of first build session)
 
 **Closed:** B1 B2 B3 B5 B7 B8 B9 B10 B11 B12 B15 B17 · plus two live security holes and one concurrency bug found by tests rather than by reading.
 
