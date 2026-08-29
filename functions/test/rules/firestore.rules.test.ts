@@ -71,6 +71,10 @@ beforeEach(async () => {
     await setDoc(doc(db, 'posts', 'livePost', 'replies', 'pendingReply'), {
       alias: 'y', text: 'unmoderated reply', status: 'pending',
     });
+    await setDoc(doc(db, 'posts', 'livePost', 'reactors', ALICE), {
+      emoji: 'fire',
+      uid: ALICE,
+    });
     await setDoc(doc(db, 'postAuthors', 'livePost'), {uid: ALICE});
     await setDoc(doc(db, 'moderation', 'blockedPost'), {action: 'block', reviewed: false});
   });
@@ -151,8 +155,11 @@ describe('posts — the community feed', () => {
     await assertFails(deleteDoc(doc(bob(), 'posts', 'livePost')));
   });
 
-  it('lets a reader react', async () => {
-    await assertSucceeds(
+  // Reaction COUNTS are server-owned now: they are derived from the reactor
+  // subcollection by a trigger. A client writing them directly could inflate
+  // any post's popularity to any number.
+  it('does NOT let a client write the reaction counts directly', async () => {
+    await assertFails(
       updateDoc(doc(bob(), 'posts', 'livePost'), {reactions: {fire: 4}}),
     );
   });
@@ -184,6 +191,64 @@ describe('posts — the community feed', () => {
 
   it('does NOT let a client fake a report pile-on to auto-hide someone', async () => {
     await assertFails(updateDoc(doc(bob(), 'posts', 'livePost'), {reportCount: 9999}));
+  });
+});
+
+describe('posts/{id}/reactors — one document per person', () => {
+  // Storing the reactor list as {uid: emoji} ON the post would have been
+  // simpler and would also have de-anonymized the entire feed: the post is
+  // world-readable to signed-in users, so every uid that reacted would be
+  // public. A subcollection keyed by uid, readable only by that uid, keeps
+  // the counts public and the identities private.
+  it('lets someone write their own reaction', async () => {
+    await assertSucceeds(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
+        emoji: 'fire',
+        uid: BOB,
+      }),
+    );
+  });
+
+  // The duplicated uid is what makes the collection-group read provable, so a
+  // document whose field disagrees with its id would quietly break that.
+  it('refuses a reaction whose uid field disagrees with its document id', async () => {
+    await assertFails(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
+        emoji: 'fire',
+        uid: ALICE,
+      }),
+    );
+  });
+
+  it('lets someone read and undo their own reaction', async () => {
+    await assertSucceeds(
+      getDoc(doc(alice(), 'posts', 'livePost', 'reactors', ALICE)),
+    );
+    await assertSucceeds(
+      deleteDoc(doc(alice(), 'posts', 'livePost', 'reactors', ALICE)),
+    );
+  });
+
+  // The whole point: nobody can learn who reacted.
+  it('never lets anyone read someone else reaction', async () => {
+    await assertFails(
+      getDoc(doc(bob(), 'posts', 'livePost', 'reactors', ALICE)),
+    );
+  });
+
+  it('never lets anyone react on behalf of someone else', async () => {
+    await assertFails(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reactors', ALICE), {
+        emoji: 'fire',
+        uid: ALICE,
+      }),
+    );
+  });
+
+  it('hides reactions from an anonymous reader entirely', async () => {
+    await assertFails(
+      getDoc(doc(anon(), 'posts', 'livePost', 'reactors', ALICE)),
+    );
   });
 });
 

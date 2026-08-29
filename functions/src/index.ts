@@ -29,3 +29,4 @@ export {rcWebhook} from './handlers/rcWebhook';
 export {createPost} from './handlers/createPost';
 export {createReply} from './handlers/createReply';
 export {moderateReply} from './handlers/moderateReply';
+export {onReaction} from './handlers/onReaction';

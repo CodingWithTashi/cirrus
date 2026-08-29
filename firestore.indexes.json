@@ -61,6 +61,21 @@
           "queryScope": "COLLECTION_GROUP"
         }
       ]
+    },
+    {
+      "_comment": "One collection-group query for a viewer's own reactions, instead of a read per post.",
+      "collectionGroup": "reactors",
+      "fieldPath": "uid",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
     }
   ]
 }

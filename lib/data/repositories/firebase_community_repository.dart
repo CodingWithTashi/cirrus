@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
@@ -12,22 +13,26 @@ import '../api/firebase/functions_client.dart';
 /// a post must be born without an author uid on it and only the server can
 /// stamp the authorship mapping (docs/05 §6).
 ///
-/// KNOWN LIMITATION — `isMine` and `myReactions` are tracked in this instance
-/// for the session only. Posts deliberately carry no uid, and `reactions` is
-/// a `{emoji: count}` map with no per-user keying, so neither can be derived
-/// from the documents. The real fix is the `reactions{uid: emoji}` data-model
-/// change tracked as S3-7; until then a restart forgets which posts were
-/// yours. That is a cosmetic loss, not a correctness one — the server's view
-/// of authorship (postAuthors) is unaffected and remains authoritative for
-/// deletion.
+/// `myReactions` is read from the `reactors` subcollection, so it survives a
+/// restart and a device change — the reaction is stored, not remembered.
+///
+/// KNOWN LIMITATION — `isMine` is still session-scoped. Posts deliberately
+/// carry no uid, so "did I write this?" is not derivable from the feed, and
+/// the only alternative would be exposing `postAuthors` to readers, which is
+/// exactly the thing that keeps the feed anonymous. A restart forgets which
+/// posts were yours. That is cosmetic; `postAuthors` remains authoritative
+/// server-side for deletion.
 class FirebaseCommunityRepository implements CommunityRepository {
   FirebaseCommunityRepository({
     FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
     LpFunctions? functions,
   }) : _db = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
        _functions = functions ?? LpFunctions();
 
   final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
   final LpFunctions _functions;
 
   /// Feed page size. The community is a supporting surface, not an infinite
@@ -62,11 +67,34 @@ class FirebaseCommunityRepository implements CommunityRepository {
       (repliesByPost[postId] ??= []).add(_toReply(doc.data()));
     }
 
+    await _loadMyReactions();
+
     return [
       for (final doc in snap.docs)
         if (!_blockedAliases.contains(doc.data()['alias']))
           _toPost(doc, repliesByPost[doc.id] ?? const []),
     ];
+  }
+
+  /// One collection-group query for every reaction this viewer has left,
+  /// rather than a read per post. The rules permit it because the query
+  /// filters on the `uid` field.
+  Future<void> _loadMyReactions() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final mine = await _db
+        .collectionGroup('reactors')
+        .where('uid', isEqualTo: uid)
+        .get();
+
+    _myReactions.clear();
+    for (final doc in mine.docs) {
+      final postId = doc.reference.parent.parent?.id;
+      final emoji = doc.data()['emoji'];
+      if (postId == null || emoji is! String) continue;
+      (_myReactions[postId] ??= <String>{}).add(emoji);
+    }
   }
 
   @override
@@ -98,12 +126,21 @@ class FirebaseCommunityRepository implements CommunityRepository {
     String emoji, {
     required bool on,
   }) async {
-    // Reactions are one of only two client-writable fields (firestore.rules).
-    // The count is adjusted with an atomic increment so two people reacting at
-    // once cannot clobber each other.
-    await _posts.doc(postId).update({
-      'reactions.$emoji': FieldValue.increment(on ? 1 : -1),
-    });
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    // The client writes only its OWN reaction; the aggregate count is derived
+    // by the onReaction trigger. A client that could write the count directly
+    // could give any post any popularity it liked.
+    final ref = _posts.doc(postId).collection('reactors').doc(uid);
+    if (on) {
+      // uid is duplicated into the body so the collection-group read in
+      // fetchPosts is provable to the rules — see firestore.rules.
+      await ref.set({'emoji': emoji, 'uid': uid});
+    } else {
+      await ref.delete();
+    }
+
     final mine = _myReactions[postId] ??= <String>{};
     on ? mine.add(emoji) : mine.remove(emoji);
   }

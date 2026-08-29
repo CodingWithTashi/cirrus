@@ -64,18 +64,42 @@ service cloud.firestore {
       allow create: if false;
       allow delete: if false;
 
-      // Reactions and reports are the only client-writable fields. Anything
-      // else — text, alias, status, dayN — is immutable from the app, so a
-      // repackaged client cannot un-block its own post.
+      // reportCount is now the ONLY client-writable field. Reaction counts
+      // moved to being derived server-side from the reactors subcollection
+      // below, because a client that can write the count can invent any
+      // popularity it likes.
       //
       // hasOnly() constrains WHICH keys move, not how far. Without the
       // increment rule below, a client could write reportCount: 0 to erase
       // accumulated reports, or reportCount: 9999 to fake a pile-on and
       // auto-hide someone else's post. Reporting is a +1, never an assignment.
       allow update: if signedIn()
-                    && changed().hasOnly(['reactions', 'reportCount'])
+                    && changed().hasOnly(['reportCount'])
                     && request.resource.data.status == resource.data.status
                     && reportCountOnlyIncrements();
+
+      // One document per person, keyed by their uid, readable and writable
+      // ONLY by them.
+      //
+      // The obvious alternative — a {uid: emoji} map on the post itself —
+      // would have de-anonymized the whole feed: the post is readable by
+      // every signed-in user, so every uid that reacted would be public.
+      // Splitting it this way keeps the aggregate counts public and the
+      // identities private, and it is also what makes "did I react?"
+      // answerable without trusting the client to remember.
+      // `uid` is duplicated into the document body on purpose. A collection
+      // group query is only allowed when the rules can PROVE from the query
+      // itself that it returns nothing forbidden, and a path wildcard is not
+      // provable that way — so "which posts did I react to?" has to filter on
+      // a field. The write rule keeps the field and the document id in step.
+      match /reactors/{uid} {
+        allow read: if signedIn() && resource.data.uid == request.auth.uid;
+        // Split from create/update because `request.resource` is null on a
+        // delete, so the field check below would error rather than pass.
+        allow delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+                              && request.resource.data.uid == uid;
+      }
 
       // A reply is UGC too, so it gets the same moderation gate as a post:
       // Guideline 1.2 does not care that this one is nested. Replies are
