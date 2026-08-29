@@ -49,13 +49,13 @@ export const PREMIUM_DAILY_COACH_MESSAGES = defineInt(
  * 2026-10-16.
  */
 export const MODEL_FREE = defineString('MODEL_FREE', {
-  default: 'gemini-3.1-flash-lite',
+  default: 'gemini-2.5-flash-lite',
 });
 export const MODEL_PREMIUM = defineString('MODEL_PREMIUM', {
-  default: 'gemini-3.1-flash',
+  default: 'gemini-2.5-flash',
 });
 export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
-  default: 'gemini-3.1-flash-lite',
+  default: 'gemini-2.5-flash-lite',
 });
 
 /**

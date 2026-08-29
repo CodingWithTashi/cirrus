@@ -111,6 +111,31 @@ service cloud.firestore {
       }
     }
 
+    // --- Collection-group reads ------------------------------------------
+    //
+    // A nested `match` under /posts/{postId} does NOT apply to a
+    // `collectionGroup()` query. Firestore evaluates those against a
+    // recursive-wildcard path, and without one every group query is denied —
+    // which is exactly what happened: `FirebaseCommunityRepository.fetchPosts`
+    // issues group queries for replies and for the viewer's own reactions, so
+    // the community feed failed to load for every user on the real backend,
+    // while the rules suite (which only ever tested direct document paths)
+    // stayed green. Found by the end-to-end run.
+    //
+    // Both are read-only and carry the same predicate as their nested twin, so
+    // this widens the PATH the rule is reachable from, never the data it
+    // exposes. Writes stay with the nested rules; the default deny below
+    // covers them here.
+    match /{path=**}/replies/{replyId} {
+      allow read: if signedIn() && resource.data.status == 'live';
+    }
+
+    // "Which posts did I react to?" — provable only because the query filters
+    // on the duplicated `uid` field, which is why that field exists.
+    match /{path=**}/reactors/{reactorId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // --- Server-only collections -----------------------------------------
     // postAuthors is the uid ↔ post mapping that lets account deletion find a
     // user's posts. Exposing it would defeat the anonymity of the whole feed.

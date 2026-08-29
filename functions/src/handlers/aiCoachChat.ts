@@ -133,6 +133,22 @@ export const aiCoachChat = onCall(
       }
     } catch (error) {
       if (error instanceof ModelUnavailableError) {
+        // Log the CAUSE, not just the fact.
+        //
+        // This branch used to return silently, which meant a coach that was
+        // down for everyone — a wrong model id, an expired key, a quota wall —
+        // looked identical in the logs to a coach nobody had used. The
+        // end-to-end run found exactly that: every reply came back
+        // `connectionLost` and the logs said nothing at all.
+        log.warn('coach.model_unavailable', {
+          uid: caller.uid,
+          model: modelName,
+          // The SDK's error is usually an Error; anything else is coerced
+          // rather than stringified into "[object Object]".
+          cause: error.cause instanceof Error
+            ? `${error.cause.name}: ${error.cause.message}`
+            : JSON.stringify(error.cause ?? null),
+        });
         // docs/03: the coach fails IN-THREAD, never as a dialog. The client
         // already knows this template. The message was not delivered, so give
         // the quota unit back — nobody pays for our outage.

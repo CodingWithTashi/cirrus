@@ -16,7 +16,17 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import {deleteDoc, doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
+import {
+  collectionGroup,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import {afterAll, beforeAll, beforeEach, describe, it} from 'vitest';
 
 let env: RulesTestEnvironment;
@@ -307,5 +317,67 @@ describe('server-only collections', () => {
   it('denies a collection nobody has opened yet', async () => {
     await assertFails(getDoc(doc(alice(), 'leaderboards', 'january')));
     await assertFails(setDoc(doc(alice(), 'leaderboards', 'january'), {score: 1}));
+  });
+});
+
+describe('collection-group queries — what the feed actually issues', () => {
+  // The gap that let a dead feed ship: every test above reads a DIRECT
+  // document path, and a nested `match /posts/{postId}/replies/{id}` covers
+  // exactly that. It does NOT cover `collectionGroup('replies')`, which
+  // Firestore evaluates against a recursive-wildcard path instead — so
+  // `FirebaseCommunityRepository.fetchPosts` was denied on the real backend
+  // while this suite stayed green.
+
+  it('lets a signed-in reader group-query live replies', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(collectionGroup(alice(), 'replies'), where('status', '==', 'live')),
+      ),
+    );
+  });
+
+  it('denies a group query that would return unmoderated replies', async () => {
+    await assertFails(getDocs(collectionGroup(alice(), 'replies')));
+  });
+
+  it('denies a group query for pending replies outright', async () => {
+    await assertFails(
+      getDocs(
+        query(
+          collectionGroup(alice(), 'replies'),
+          where('status', '==', 'pending'),
+        ),
+      ),
+    );
+  });
+
+  it('lets a viewer group-query their OWN reactions', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(collectionGroup(alice(), 'reactors'), where('uid', '==', ALICE)),
+      ),
+    );
+  });
+
+  it("denies a group query for someone else's reactions", async () => {
+    // The whole point of keeping reactor identities private: a readable
+    // reactor list would de-anonymize a world-readable feed.
+    await assertFails(
+      getDocs(
+        query(collectionGroup(bob(), 'reactors'), where('uid', '==', ALICE)),
+      ),
+    );
+  });
+
+  it('denies an unfiltered reactions group query', async () => {
+    await assertFails(getDocs(collectionGroup(alice(), 'reactors')));
+  });
+
+  it('denies group queries to signed-out readers', async () => {
+    await assertFails(
+      getDocs(
+        query(collectionGroup(anon(), 'replies'), where('status', '==', 'live')),
+      ),
+    );
   });
 });
