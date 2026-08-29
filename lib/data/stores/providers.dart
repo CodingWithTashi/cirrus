@@ -24,12 +24,14 @@ import 'reminder_coordinator.dart';
 import '../repositories/firebase_coach_repository.dart';
 import '../repositories/firebase_community_repository.dart';
 import '../repositories/firebase_journey_repository.dart';
+import '../repositories/firebase_moderation_repository.dart';
 import '../repositories/firebase_panic_repository.dart';
 import '../repositories/firebase_server_state_repository.dart';
 import '../repositories/firebase_user_context_repository.dart';
 import 'coach_store.dart';
 import 'community_store.dart';
 import 'journey_store.dart';
+import 'moderation_store.dart';
 import 'settings_store.dart';
 
 // ---- backend seam -----------------------------------------------------------
@@ -111,6 +113,22 @@ final panicRepositoryProvider = Provider<PanicRepository>(
   },
 );
 
+/// The founder's review queue. Hidden entirely on the fake backend, which
+/// has no moderation collection and no auth claims to check.
+final moderationRepositoryProvider = Provider<ModerationRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => const NoopModerationRepository(),
+    BackendMode.firebase => FirebaseModerationRepository(),
+  },
+);
+
+/// Whether to show the moderation entry point at all. A UI gate only — the
+/// callables check the same claim themselves and answer `not-found` to
+/// everyone else.
+final isModeratorProvider = FutureProvider<bool>(
+  (ref) => ref.watch(moderationRepositoryProvider).isModerator(),
+);
+
 /// Read side of the server-owned user document: nightly taper advice and the
 /// weekly AI report today, the entitlement mirror next.
 final serverStateRepositoryProvider = Provider<ServerStateRepository>(
@@ -169,6 +187,11 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
 final weeklyInsightProvider = FutureProvider.autoDispose<WeeklyInsight?>(
   (ref) => ref.watch(serverStateRepositoryProvider).latestInsight(),
 );
+
+final moderationStoreProvider =
+    NotifierProvider.autoDispose<ModerationStore, ModerationState>(
+      ModerationStore.new,
+    );
 
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(
   SettingsStore.new,

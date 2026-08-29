@@ -2150,6 +2150,48 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileAliasHint => 'anonym — mehr sieht niemand';
 
   @override
+  String get moderationTitle => 'Prüfliste';
+
+  @override
+  String get moderationEmpty => 'Nichts offen. Alle Meldungen sind geprüft.';
+
+  @override
+  String get moderationFailed => 'Die Liste ließ sich nicht öffnen.';
+
+  @override
+  String get moderationRetry => 'Erneut versuchen';
+
+  @override
+  String get moderationShowReviewed => 'Geprüfte anzeigen';
+
+  @override
+  String moderationPendingCount(int count) {
+    return '$count offen';
+  }
+
+  @override
+  String get moderationSubjectGone =>
+      'Der Beitrag ist weg; nur die Meldung ist geblieben.';
+
+  @override
+  String get moderationAllow => 'Freigeben';
+
+  @override
+  String get moderationBlock => 'Sperren';
+
+  @override
+  String get moderationDismiss => 'Alles in Ordnung';
+
+  @override
+  String get moderationResolveFailed =>
+      'Das ging nicht durch. Der Beitrag ist unverändert.';
+
+  @override
+  String moderationFlaggedAs(String action, String reason) {
+    return '$action · $reason';
+  }
+
+  @override
   String get settingsTitle => 'Einstellungen';
 
   @override

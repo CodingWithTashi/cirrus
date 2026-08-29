@@ -2144,6 +2144,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileAliasHint => 'anonyme — c\'est tout ce qu\'on voit de toi';
 
   @override
+  String get moderationTitle => 'File de modération';
+
+  @override
+  String get moderationEmpty =>
+      'Rien en attente. Tous les signalements sont traités.';
+
+  @override
+  String get moderationFailed => 'Impossible d\'ouvrir la file.';
+
+  @override
+  String get moderationRetry => 'Réessayer';
+
+  @override
+  String get moderationShowReviewed => 'Voir les traités';
+
+  @override
+  String moderationPendingCount(int count) {
+    return '$count en attente';
+  }
+
+  @override
+  String get moderationSubjectGone =>
+      'Le post n\'existe plus ; il ne reste que le signalement.';
+
+  @override
+  String get moderationAllow => 'Autoriser';
+
+  @override
+  String get moderationBlock => 'Bloquer';
+
+  @override
+  String get moderationDismiss => 'Rien à signaler';
+
+  @override
+  String get moderationResolveFailed =>
+      'Ça n\'a pas été appliqué. Le post est inchangé.';
+
+  @override
+  String moderationFlaggedAs(String action, String reason) {
+    return '$action · $reason';
+  }
+
+  @override
   String get settingsTitle => 'Réglages';
 
   @override

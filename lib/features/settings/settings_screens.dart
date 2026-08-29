@@ -259,6 +259,16 @@ class SettingsScreen extends ConsumerWidget {
               value: '',
               onTap: () => context.push(Routes.frames),
             ),
+            // Founder-only. `isModeratorProvider` reads the signed token's
+            // `admin` claim, so a non-admin never sees this row and a client
+            // that forced the route would still be refused by the callables.
+            if (ref.watch(isModeratorProvider).valueOrNull ?? false)
+              row(
+                emoji: '🛡️',
+                label: l10n.moderationTitle,
+                value: '',
+                onTap: () => context.push(Routes.moderation),
+              ),
             row(
               emoji: '💬',
               label: l10n.settingsSupport,

@@ -494,3 +494,43 @@ class WeeklyInsight {
   /// The single concrete thing to do next week.
   final String move;
 }
+
+/// What a moderator can decide about a flagged item (`resolveModeration`).
+/// Resolving with no action means "I looked, it stands" — the common case.
+enum ModerationResolution { allow, block }
+
+/// One row of the founder's review queue (docs/03 §9, Guideline 1.2).
+///
+/// The flag outlives its subject: a post can be deleted while its flag
+/// remains, which is why [text], [status] and [alias] are all nullable. A
+/// queue that silently dropped those rows would leave reports looking handled
+/// when nobody ever saw them.
+class ModerationItem {
+  const ModerationItem({
+    required this.postId,
+    required this.action,
+    required this.reason,
+    required this.kind,
+    this.text,
+    this.status,
+    this.alias,
+  });
+
+  final String postId;
+
+  /// What the classifier did — `flag` or `block`.
+  final String action;
+
+  /// The classifier's stated reason, verbatim. Not localized: it is evidence
+  /// of a decision, and translating it would change what was decided.
+  final String reason;
+
+  /// `post` or `reply`.
+  final String kind;
+  final String? text;
+  final String? status;
+  final String? alias;
+
+  /// True when the subject is gone and only the flag is left.
+  bool get subjectMissing => text == null && status == null;
+}

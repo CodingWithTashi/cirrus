@@ -2143,6 +2143,49 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileAliasHint => 'anónimo — esto es todo lo que ven';
 
   @override
+  String get moderationTitle => 'Cola de revisión';
+
+  @override
+  String get moderationEmpty =>
+      'Nada pendiente. Todos los avisos están revisados.';
+
+  @override
+  String get moderationFailed => 'No se pudo abrir la cola.';
+
+  @override
+  String get moderationRetry => 'Reintentar';
+
+  @override
+  String get moderationShowReviewed => 'Ver revisados';
+
+  @override
+  String moderationPendingCount(int count) {
+    return '$count pendientes';
+  }
+
+  @override
+  String get moderationSubjectGone =>
+      'La publicación ya no existe; solo queda el aviso.';
+
+  @override
+  String get moderationAllow => 'Permitir';
+
+  @override
+  String get moderationBlock => 'Bloquear';
+
+  @override
+  String get moderationDismiss => 'Está bien';
+
+  @override
+  String get moderationResolveFailed =>
+      'No se pudo aplicar. La publicación sigue igual.';
+
+  @override
+  String moderationFlaggedAs(String action, String reason) {
+    return '$action · $reason';
+  }
+
+  @override
   String get settingsTitle => 'Ajustes';
 
   @override

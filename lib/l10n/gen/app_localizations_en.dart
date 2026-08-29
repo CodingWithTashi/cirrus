@@ -2132,6 +2132,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAliasHint => 'anonymous — this is all anyone sees';
 
   @override
+  String get moderationTitle => 'Review queue';
+
+  @override
+  String get moderationEmpty => 'Nothing waiting. Every flag is reviewed.';
+
+  @override
+  String get moderationFailed => 'Couldn\'t open the queue.';
+
+  @override
+  String get moderationRetry => 'Try again';
+
+  @override
+  String get moderationShowReviewed => 'Show reviewed';
+
+  @override
+  String moderationPendingCount(int count) {
+    return '$count waiting';
+  }
+
+  @override
+  String get moderationSubjectGone =>
+      'The post is gone; only the flag is left.';
+
+  @override
+  String get moderationAllow => 'Allow';
+
+  @override
+  String get moderationBlock => 'Block';
+
+  @override
+  String get moderationDismiss => 'Looks fine';
+
+  @override
+  String get moderationResolveFailed =>
+      'That didn\'t go through. The post is unchanged.';
+
+  @override
+  String moderationFlaggedAs(String action, String reason) {
+    return '$action · $reason';
+  }
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override

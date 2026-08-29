@@ -1363,6 +1363,35 @@
   "profileEditAlias": "Pick your alias",
   "profileEditAvatar": "Pick your avatar",
   "profileAliasHint": "anonymous — this is all anyone sees",
+  "moderationTitle": "Review queue",
+  "moderationEmpty": "Nothing waiting. Every flag is reviewed.",
+  "moderationFailed": "Couldn't open the queue.",
+  "moderationRetry": "Try again",
+  "moderationShowReviewed": "Show reviewed",
+  "moderationPendingCount": "{count} waiting",
+  "@moderationPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "moderationSubjectGone": "The post is gone; only the flag is left.",
+  "moderationAllow": "Allow",
+  "moderationBlock": "Block",
+  "moderationDismiss": "Looks fine",
+  "moderationResolveFailed": "That didn't go through. The post is unchanged.",
+  "moderationFlaggedAs": "{action} · {reason}",
+  "@moderationFlaggedAs": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "settingsTitle": "Settings",
   "settingsAccount": "Account",
   "settingsSubscription": "Manage subscription",

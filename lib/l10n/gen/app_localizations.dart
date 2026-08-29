@@ -3716,6 +3716,78 @@ abstract class AppLocalizations {
   /// **'anonymous — this is all anyone sees'**
   String get profileAliasHint;
 
+  /// No description provided for @moderationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review queue'**
+  String get moderationTitle;
+
+  /// No description provided for @moderationEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing waiting. Every flag is reviewed.'**
+  String get moderationEmpty;
+
+  /// No description provided for @moderationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the queue.'**
+  String get moderationFailed;
+
+  /// No description provided for @moderationRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get moderationRetry;
+
+  /// No description provided for @moderationShowReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Show reviewed'**
+  String get moderationShowReviewed;
+
+  /// No description provided for @moderationPendingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} waiting'**
+  String moderationPendingCount(int count);
+
+  /// No description provided for @moderationSubjectGone.
+  ///
+  /// In en, this message translates to:
+  /// **'The post is gone; only the flag is left.'**
+  String get moderationSubjectGone;
+
+  /// No description provided for @moderationAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get moderationAllow;
+
+  /// No description provided for @moderationBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get moderationBlock;
+
+  /// No description provided for @moderationDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks fine'**
+  String get moderationDismiss;
+
+  /// No description provided for @moderationResolveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t go through. The post is unchanged.'**
+  String get moderationResolveFailed;
+
+  /// No description provided for @moderationFlaggedAs.
+  ///
+  /// In en, this message translates to:
+  /// **'{action} · {reason}'**
+  String moderationFlaggedAs(String action, String reason);
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:

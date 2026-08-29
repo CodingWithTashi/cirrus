@@ -18,6 +18,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/insight/insight_screen.dart';
 import '../../features/milestones/milestones_screen.dart';
 import '../../features/money/money_screen.dart';
+import '../../features/moderation/moderation_screen.dart';
 import '../../features/onboarding/onboarding_flow.dart';
 import '../../features/panic/panic_screens.dart';
 import '../../features/paywall/paywall_screens.dart';
@@ -56,6 +57,11 @@ abstract final class Routes {
   static const buddy = '/buddy';
   static const profile = '/profile';
   static const settings = '/settings';
+
+  /// Founder-only review queue. Gated by an `admin` custom claim on the auth
+  /// token, checked by the callables themselves — the route is simply hidden
+  /// from everyone else's Settings.
+  static const moderation = '/moderation';
   static const slip = '/slip';
   static const frames = '/frames';
   static const framesEdge = '/frames/edge';
@@ -116,6 +122,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.buddy) ||
           path.startsWith(Routes.profile) ||
           path.startsWith(Routes.settings) ||
+          path.startsWith(Routes.moderation) ||
           path.startsWith(Routes.slip) ||
           path.startsWith(Routes.day1);
       if (!authed && needsJourney) return Routes.auth;
@@ -218,6 +225,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.buddy, builder: (_, _) => const BuddyScreen()),
       GoRoute(path: Routes.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: Routes.moderation,
+        builder: (_, _) => const ModerationScreen(),
+      ),
       GoRoute(path: Routes.slip, builder: (_, _) => const SlipFlow()),
       GoRoute(path: Routes.frames, builder: (_, _) => const FrameMapScreen()),
       GoRoute(

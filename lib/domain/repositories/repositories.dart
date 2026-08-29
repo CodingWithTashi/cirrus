@@ -94,6 +94,26 @@ abstract interface class CoachRepository {
   });
 }
 
+/// The founder's moderation queue (docs/03 §9, App Store Guideline 1.2).
+///
+/// Guideline 1.2 requires a means of acting on reported content, and docs/03
+/// promises review inside 24 hours. Both were unmeetable: `moderation/*` is
+/// server-only by rule, and until now nothing on any client could open it.
+///
+/// Access is a custom claim on the signed auth token. [isModerator] reads
+/// that claim so the entry point can stay hidden for everyone else — it is a
+/// UI convenience, NOT the access check. The callables re-verify the claim
+/// themselves, and answer non-admins with `not-found` rather than confirming
+/// the queue exists at all.
+abstract interface class ModerationRepository {
+  Future<bool> isModerator();
+
+  Future<List<ModerationItem>> queue({bool includeReviewed = false});
+
+  /// Marks the flag reviewed. A null [action] records "looked, it stands".
+  Future<void> resolve(String postId, {ModerationResolution? action});
+}
+
 /// The read side of the server-owned `users/{uid}` document.
 ///
 /// Everything here is computed where the client cannot be trusted or cannot
