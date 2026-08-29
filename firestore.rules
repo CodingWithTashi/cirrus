@@ -29,6 +29,12 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
+    /** A report is a +1 or nothing — never an arbitrary assignment. */
+    function reportCountOnlyIncrements() {
+      return !changed().hasAny(['reportCount'])
+             || request.resource.data.reportCount == resource.data.reportCount + 1;
+    }
+
     // --- The quit journey: private, client-owned -------------------------
     match /journeys/{uid} {
       allow read, write: if isOwner(uid);
@@ -61,12 +67,21 @@ service cloud.firestore {
       // Reactions and reports are the only client-writable fields. Anything
       // else — text, alias, status, dayN — is immutable from the app, so a
       // repackaged client cannot un-block its own post.
+      //
+      // hasOnly() constrains WHICH keys move, not how far. Without the
+      // increment rule below, a client could write reportCount: 0 to erase
+      // accumulated reports, or reportCount: 9999 to fake a pile-on and
+      // auto-hide someone else's post. Reporting is a +1, never an assignment.
       allow update: if signedIn()
                     && changed().hasOnly(['reactions', 'reportCount'])
-                    && request.resource.data.status == resource.data.status;
+                    && request.resource.data.status == resource.data.status
+                    && reportCountOnlyIncrements();
 
+      // A reply is UGC too, so it gets the same moderation gate as a post:
+      // Guideline 1.2 does not care that this one is nested. Replies are
+      // written 'pending' and flipped live by moderatePost.
       match /replies/{replyId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && resource.data.status == 'live';
         allow create: if false;   // createReply callable (same reason as posts)
         allow update, delete: if false;
       }

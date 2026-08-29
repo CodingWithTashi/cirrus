@@ -1,7 +1,7 @@
 {
   "name": "lastpuff-functions",
   "version": "1.0.0",
-  "description": "LastPuff Cloud Functions \u2014 AI coach, moderation, entitlements, crons.",
+  "description": "LastPuff Cloud Functions — AI coach, moderation, entitlements, crons.",
   "private": true,
   "type": "commonjs",
   "main": "lib/src/index.js",
@@ -20,7 +20,9 @@
     "shell": "npm run build && firebase functions:shell",
     "deploy": "npm run verify && firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "verify": "npm run typecheck && npm run lint && npm run test"
+    "verify": "npm run typecheck && npm run lint && npm run test",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-cirrus \"vitest run --config vitest.rules.config.ts\"",
+    "test:all": "npm run test && npm run test:rules"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.19.0",
     "eslint": "^10.9.1",
     "typescript": "^5.9.3",
