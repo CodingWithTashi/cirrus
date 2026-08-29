@@ -110,10 +110,10 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ~~**B2**~~ | [RESOLVED Aug 29] **All 9 functions live** in us-central1 (Node 22, gen-2). Needed 3 service-agent IAM bindings, one retry past first-deploy Eventarc/bucket races, and an Artifact Registry cleanup policy (1 day) so old images stop billing. | `firebase functions:list` -> 9 of 9 | S0 done |
 | ~~**B3**~~ | [RESOLVED Aug 29] **The client reaches the backend.** `cloud_functions` + `firebase_app_check` added, App Check debug token registered for emulator-5554, `LpFunctions` is the single door (injects IANA timezone + locale, maps wire errors to the domain taxonomy). Proven on device: signing in wrote a real `users/{uid}` doc via the deployed `syncUserContext`. | `tz=America/New_York`, `locale=en-US`, `recalcHourUtc=5` in production Firestore | S1 done |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
-| **B5** | **Community + Coach fake in production.** Their providers have no `switch` on `backendModeProvider` → `FakeCommunityApi`/`FakeCoachApi` on a real phone, over memory that resets on restart. The "AI coach" is `if (text.contains('crav'))` over 18 canned templates. | `lib/data/stores/providers.dart:59-87` | S2, S3 |
+| ~~**B5**~~ | [RESOLVED Aug 29] Coach and community switch on `backendModeProvider`. `FirebaseCoachRepository` calls `aiCoachChat`; `FirebaseCommunityRepository` reads Firestore (rules expose only live) and writes via `createPost`/`createReply`, with `FieldValue.increment` for reactions and reports. **Open sub-item:** `isMine`/`myReactions` are session-scoped until the `reactions{uid: emoji}` change (S3-7). | `lib/data/stores/providers.dart` | S2-S3 done |
 | **B6** | **iOS cannot build against Firebase.** No `GoogleService-Info.plist`, no `.entitlements`, no URL schemes. **Deferred to the iOS fast-follow** with B17. Note the plist is not actually hard to get - `firebase apps:sdkconfig IOS <appId>` returns it - the blocker is having no machine to build on. | `ios/Runner/` | iOS fast-follow |
-| **B7** | **Zero analytics, crash reporting, push.** `firebase_messaging` declared but never imported. Danger-hour settings schedule nothing. | `pubspec.yaml`, import grep | S4 |
-| **B8** | **No local persistence.** No `shared_preferences`/`hive`. Theme, locale, notifications, danger hours all wipe on restart. | `lib/data/stores/settings_store.dart` | S4 |
+| ~~**B7**~~ | [RESOLVED Aug 29] Crashlytics on both error paths (async errors recorded non-fatal, so the crash-free gate is not understated); `PushService` registers the FCM token through `syncUserContext` and asks permission only from the D4 CTA; `LpAnalytics` emits the docs/02 §7 funnel with `screen_completed` fired centrally. **Still blocked: Mixpanel needs a project token.** | verified on emulator-5554 | S4 done |
+| ~~**B8**~~ | [RESOLVED Aug 29] `SettingsPersistence` stores the whole state object, so a field cannot be saved on write and forgotten on read. Restore is not awaited in `build()`; tests pin it off for determinism. | `test/data/settings_persistence_test.dart`, 5 cases | S4 done |
 | ~~**B9**~~ | [RESOLVED Aug 29] **The crons have rows to page over.** `syncUserContext` now runs on every path that establishes a session (restore, email, Apple, Google, and journey creation, which is where guest onboarding mints its anonymous uid). `users` went from 0 documents to 1 the moment a real sign-in happened. | production Firestore `users/{uid}` | S2 done |
 | ~~**B10**~~ | [RESOLVED Aug 29] `createReply` written and deployed, plus `moderateReply` (moderatePost only triggered on posts, so replies would never have been classified), `replyAuthors` rules, and reply anonymization in `deleteUserData`. | `functions/test/integration/createReply.test.ts` | S3 done |
 | ~~**B11**~~ | [RESOLVED Aug 29] `CoachReply.text` threaded through codec, store and view; the model's words render verbatim and templates stay the fallback. Blank text decodes as null so it can never render an empty bubble. | `test/widgets/coach_reply_test.dart`, `dto_roundtrip_test` | S2 done |
@@ -436,3 +436,27 @@ Real runs on a real device against the real backend. Nothing here is inferred.
 **Test data left in production:** one Auth account (`e2e012809@cirrus.app`). Harmless, but delete it before launch — or sooner if you'd rather keep Auth clean.
 
 **Not yet exercised end-to-end, because the client cannot reach the backend (B3):** the coach, the community, moderation, and both crons. That gap is the next piece of work, not an oversight.
+
+---
+
+## 11. STATE AS OF AUG 29, 2026 (end of first build session)
+
+**Closed:** B1 B2 B3 B5 B7 B8 B9 B10 B11 B12 B15 B17 · plus two live security holes and one concurrency bug found by tests rather than by reading.
+
+**Still open, and why:**
+
+| Item | Blocked on |
+|---|---|
+| `B13` rotate the service-account key | GCP console — founder only |
+| `B14` lock-screen widget | Deferred to V1.1 by the S0 scope decision |
+| `B16` CI, fastlane, store assets | Nothing — just not done yet |
+| `S3-7` `reactions{uid: emoji}` per-user keying | Data-model change; `isMine`/`myReactions` are session-scoped until then |
+| `S3-9` moderation queue reader | Nothing — next up |
+| Reminder wiring | Planner + scheduler exist and are tested; nothing calls `apply()` on journey/settings change yet |
+| Mixpanel | Needs a project token |
+| RevenueCat / `ENTITLEMENT_MODE=mirror` | Deliberately last, per founder |
+| Play Console, banking | Founder |
+
+**Test coverage:** Flutter 75 · functions 42 · rules 29 · integration 56 — **202 tests**, from 0 runnable at session start.
+
+**Deployed:** 11 Cloud Functions, Firestore rules (twice — the second closed two live holes), indexes.
