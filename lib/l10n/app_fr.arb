@@ -1,10 +1,8 @@
 {
   "@@locale": "fr",
-
   "appName": "Cirrus",
   "appTagline": "Ta dernière taffe est plus proche\nque tu ne le crois.",
   "appVersionFooter": "Cirrus {version} · fait par des gens qui ont arrêté",
-
   "commonContinue": "Continuer",
   "commonCancel": "Annuler",
   "commonDone": "Terminé",
@@ -32,7 +30,6 @@
   "commonDayN": "jour {day}",
   "commonStreakDays": "{count, plural, one{{count} jour} other{{count} jours}}",
   "commonPuffsUnit": "{count, plural, one{{count} taffe} other{{count} taffes}}",
-
   "authSplashAutoAdvance": "Chargement de ton plan…",
   "authSignInTitle": "On met ton plan\nen sécurité.",
   "authSignInSubtitle": "Anonyme par défaut — tu choisiras un alias pour la communauté.",
@@ -69,7 +66,6 @@
   "authBackToLogin": "Retour à la connexion",
   "authInvalidEmail": "ça ne ressemble pas à un e-mail",
   "authEmailInUse": "cet e-mail a déjà un parcours — connecte-toi",
-
   "obProgressOf": "{step}/{total}",
   "obWelcomeCounterHint": "taffes par jour — tu vas le découvrir",
   "obWelcomeTitle": "T'es dépendant à quel point, vraiment ?",
@@ -217,7 +213,6 @@
   "obNotifBullet2": "Célébrations de séries + étapes",
   "obNotifBullet3": "Pings SOS de ton binôme — rien d'autre",
   "obNotifCta": "Activer le renfort",
-
   "paywallTitle": "Ton plan est prêt.",
   "paywallSubtitle": "Essaie tout gratuitement pendant 3 jours.",
   "paywallFeatCoach": "Coach IA illimité",
@@ -253,7 +248,6 @@
   "winbackNote": "Puis {price}/mois. Annulable à tout moment. Affiché une fois, plus jamais.",
   "winbackCta": "Prendre le mois fondateur",
   "winbackDecline": "Non merci, le Gratuit me va",
-
   "day1Title": "Jour 1. C'est parti.",
   "day1Subtitle": "Trois réglages. Deux minutes. Ensuite l'appli fait son boulot.",
   "day1Task1": "Enregistre ta première taffe",
@@ -266,7 +260,6 @@
   "day1FreedomNote": "Jour de liberté : {date} · dans {days} jours · plan armé",
   "day1CtaCoach": "Rencontrer mon coach",
   "day1CtaHome": "Aller à Aujourd'hui",
-
   "homeGreetingDate": "{date} · Jour {day} sur {total}",
   "homeTitle": "Aujourd'hui",
   "homeStreakChip": "{count, plural, one{🔥 {count} jour} other{🔥 {count} jours}}",
@@ -294,12 +287,10 @@
   "homeOverLimitCoach": "Parler au coach",
   "homeOverLimitFooter": "Continue d'enregistrer honnêtement — les données, c'est tout le jeu.",
   "homeTokenUsedNote": "Jeton de réparation utilisé — ta série survit. La flamme faiblit aujourd'hui, elle ne meurt pas.",
-
   "navHome": "Accueil",
   "navStats": "Stats",
   "navCommunity": "Commu",
   "navCoach": "Coach",
-
   "panicStepLabel": "MODE PANIQUE · {step} SUR 3",
   "panicBreatheNote": "cette sensation monte puis passe — la plupart des cravings meurent en 15 min",
   "panicBreatheIn": "Inspire…",
@@ -344,7 +335,6 @@
   "survivedShare": "Partager la win ↗",
   "survivedBack": "Retour à aujourd'hui",
   "survivedShareCopied": "Carte copiée — colle-la où tu veux.",
-
   "coachName": "Ember",
   "coachStatus": "● connaît ton plan · jour {day}",
   "coachChipCraving": "J'ai un craving",
@@ -356,7 +346,6 @@
   "coachFreeCounter": "{count, plural, one{{count} message gratuit aujourd'hui} other{{count} messages gratuits aujourd'hui}}",
   "coachCapReached": "C'étaient mes 5 messages gratuits du jour — je reviens à minuit. Tu me veux 24h/24 ? C'est ça, Premium.",
   "coachConnectionLost": "La connexion a lâché en pleine phrase 😅 Je suis toujours là — redis-moi ça quand tu repasses en ligne ?",
-
   "errorOfflineBanner": "hors ligne — tes logs comptent, on synchronise après",
   "errorOfflineTitle": "Pas de wifi, pas de panique",
   "errorOfflineBody": "Tu es hors ligne. Rien n'est perdu — reconnecte-toi et on reprend exactement où tu en étais.",
@@ -388,7 +377,6 @@
   "coachReplyGeneric4": "OK. Ça se gagne par petits mouvements. Tu peux faire quoi dans les 10 prochaines minutes qui n'est pas vapoter ?",
   "coachReplyParty": "Plan soirée : un verre froid en main toute la nuit, tu m'écris ou tu textes ton binôme dès que la première puff sort, et prépare ta phrase de sortie. Tu as survécu à {count} cravings — une soirée, c'est juste plusieurs d'affilée.",
   "coachSafetyNote": "Ember est un outil de soutien, pas un médecin. En crise ? Appelle ou texte le 988 (É.-U. & Canada), à toute heure.",
-
   "planTitle": "Ton plan",
   "planHeaderMeta": "{method} · {days} jours",
   "planMethodTaper": "Réduction",
@@ -407,7 +395,6 @@
   "planAdjustSheetNote": "La courbe se régénère depuis aujourd'hui avec tes vrais chiffres. L'historique reste. Le Jour de liberté bouge honnêtement.",
   "planAdjustApply": "Appliquer — recalculer ma courbe",
   "planAdjusted": "Plan recalculé. Nouveau Jour de liberté : {date}",
-
   "statsTitle": "Stats",
   "statsRangeDay": "Jour",
   "statsRangeWeek": "Semaine",
@@ -430,7 +417,6 @@
   "statsEditDayTitle": "Modifier {date}",
   "statsEditDayNote": "L'historique est à toi. Série et argent se recalculent à partir d'ici.",
   "statsEditHint": "appui long sur une barre pour corriger un jour",
-
   "communityTitle": "Communauté",
   "communityYouAre": "tu es {alias}",
   "communityFilterAll": "Tout",
@@ -463,7 +449,6 @@
   "communityEmptyTitle": "Pas encore de posts — dis bonjour.",
   "communityEmptyBody": "Ton post du Jour 1, c'est celui que quelqu'un au Jour 0 a besoin de lire.",
   "communityPosted": "Publié. Quelqu'un avait besoin de lire ça.",
-
   "buddyTitle": "Ton binôme",
   "buddyCombinedStreak": "série combinée",
   "buddyNeitherCaves": "personne ne craque seul",
@@ -476,7 +461,6 @@
   "buddyLinkCopied": "Lien copié — arrêter avec du renfort, ça change tout.",
   "buddyNudged": "Encouragement envoyé. {name} va le sentir.",
   "buddyNudgeCap": "Deux coups de coude par jour, ça reste amical. La suite demain.",
-
   "moneyTitle": "Argent récupéré",
   "moneySavedSince": "économisés depuis le {date} · {perDay} qui rentrent chaque jour",
   "moneyBuysLabel": "CE QUE ÇA PAIE DÉJÀ",
@@ -493,7 +477,6 @@
   "moneyGoalDone": "Objectif financé. Confettis mérités. 🎉",
   "seedGoalKicks": "Nouvelles baskets",
   "seedGoalTokyo": "Vol pour Tokyo",
-
   "healthTitle": "Ton corps guérit",
   "healthAnchor": "Basé sur ta dernière taffe enregistrée · il y a {ago}",
   "healthYouAreHere": "{milestone} — tu es ici",
@@ -523,7 +506,6 @@
   "healthM1yBody": "Ton profil de risque ressemble à quelqu'un qui n'a jamais vapoté au quotidien.",
   "healthUnlockNote": "Chaque déblocage déclenche une petite célébration + une carte à partager.",
   "healthSourceNote": "Basé sur la recherche sur l'arrêt du tabac — les preuves sur la vape émergent encore.",
-
   "milestonesTitle": "Étapes",
   "milestonesEarned": "{earned} sur {total} gagnées",
   "milestonesNext": "Prochaine : {name}",
@@ -547,7 +529,6 @@
   "mFiveHundredSaved": "500 $ économisés",
   "mBuddyBond": "Lien de binômes",
   "mComeback": "Comeback",
-
   "moodTitle": "C'est comment, aujourd'hui ?",
   "moodSubtitle": "10 secondes. Ça compte plus que tu ne crois.",
   "moodRough": "rude",
@@ -561,7 +542,6 @@
   "moodUnlockNote": "Encore {count} et ton rapport montrera comment ton humeur pilote tes cravings.",
   "moodCta": "Check-in",
   "moodSaved": "Noté. Les données battent les impressions. 🙌",
-
   "insightLinkTitle": "Rapport hebdo",
   "insightTitle": "Rapport semaine {week} · {range}",
   "insightCounter": "INSIGHT {index} SUR {total}",
@@ -581,7 +561,6 @@
   "insight4Body": "Ta ligne passe à 100/jour mardi. La courbe se raidit ici — c'est la semaine où le Bouton panique gagne sa paie.",
   "insight4ChartLabel": "LA SEMAINE À VENIR",
   "insight4Action": "Suggestion du coach : réserve un truc que tu adores samedi. Récompense le virage, ne serre pas juste les dents.",
-
   "slipTitle": "Un écart, c'est de la donnée, pas une défaite.",
   "slipSubtitle": "Tu as loggé des taffes après {days} jours clean. C'est de l'info — ça nous dit exactement où blinder le plan.",
   "slipWhatHappened": "IL SE PASSAIT QUOI ?",
@@ -602,7 +581,6 @@
   "slipFlameDims": "La flamme faiblit, elle ne meurt pas. Un jour clean la ramène à pleine puissance.",
   "slipBackOnCurve": "Retour sur la courbe",
   "slipTalkFirst": "En parler d'abord au coach",
-
   "profileQuittingSince": "en sevrage depuis le {date} · {method} · jour {day}",
   "profileCountdownLabel": "🏆 COMPTE À REBOURS DU JOUR DE LIBERTÉ",
   "profileDaysTo": "jours avant le {date}",
@@ -613,7 +591,6 @@
   "profileEditAlias": "Choisis ton alias",
   "profileEditAvatar": "Choisis ton avatar",
   "profileAliasHint": "anonyme — c'est tout ce qu'on voit de toi",
-
   "settingsTitle": "Réglages",
   "settingsAccount": "Compte",
   "settingsSubscription": "Gérer l'abonnement",
@@ -645,7 +622,6 @@
   "settingsDangerHoursTitle": "Heures à risque",
   "settingsDangerHoursNote": "On te prévient 10 minutes avant l'ouverture de ta fenêtre. Max 3 notifs par jour, heures calmes respectées.",
   "settingsQuietHours": "Heures calmes : {range}",
-
   "trialEndingPushTime": "maintenant",
   "trialEndingPush": "ton essai se termine demain — comme promis, voilà le rappel. Aucun prélèvement surprise.",
   "trialEndingTitle": "L'essai se termine demain.",
@@ -656,12 +632,10 @@
   "trialEndingSaved": "économisés",
   "trialEndingKeep": "Garder Premium — {price}/an",
   "trialEndingSwitchFree": "Passer en Gratuit (tes données restent)",
-
   "frameMapTitle": "Les 52 écrans du design",
   "frameMapOpen": "Parcourir les 52 écrans →",
   "frameMapNote": "Chaque écran des quatre handoffs, à un tap. Les lignes chargent le parcours démo ou les réponses du quiz si besoin.",
   "frameMapEdgeNote": "Ces états s'activeront avec le backend — une app en mémoire n'a ni hors-ligne ni erreurs serveur à montrer honnêtement.",
-
   "seedPostWin30": "JOUR DE LIBERTÉ. 30 jours, zéro taffe la dernière semaine. Le bouton panique m'a porté tous les week-ends. Si tu es au jour 2 et que tu meurs — ça devient vraiment plus facile vers le jour 8.",
   "seedPostSos": "devant la station-service. portefeuille en main. que quelqu'un me raisonne",
   "seedPostDay1": "j'ai jeté la mienne dans le lac. sûrement pas top pour le lac. le jour 1 commence maintenant",
@@ -671,5 +645,7 @@
   "seedReplyWalk": "marche. juste un pâté de maisons. le portefeuille reste plein, toi tu restes libre. j'ai fait exactement ça mardi",
   "seedReplyScience": "le jour 4 est le pire, c'est de la science. tu es au pic LÀ MAINTENANT. 15 minutes et ça meurt",
   "seedReplyGatorade": "achète un soda à la place. achat cérémoniel. ça marche bizarrement bien",
-  "seedReplyUpdate": "update : soda acheté. je rentre à pied. merci, sincèrement 💙"
+  "seedReplyUpdate": "update : soda acheté. je rentre à pied. merci, sincèrement 💙",
+  "dangerReminderTitle": "Ton heure à risque approche",
+  "dangerReminderBody": "C'est souvent maintenant que ça frappe. Tu as un plan, et 15 minutes suffisent."
 }

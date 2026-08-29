@@ -3979,6 +3979,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'update: bought the gatorade. walking home. thank you, i mean it 💙'**
   String get seedReplyUpdate;
+
+  /// Local notification fired 10 min before a predicted danger hour (docs/03 §8).
+  ///
+  /// In en, this message translates to:
+  /// **'Your danger hour is coming up'**
+  String get dangerReminderTitle;
+
+  /// Body of the danger-hour reminder. Cites the 15-20 minute craving fact from docs/02 §8 — an approved stat.
+  ///
+  /// In en, this message translates to:
+  /// **'This is usually when it hits. You\'ve got a plan — and 15 minutes beats it.'**
+  String get dangerReminderBody;
 }
 
 class _AppLocalizationsDelegate

@@ -1,10 +1,8 @@
 {
   "@@locale": "es",
-
   "appName": "Cirrus",
   "appTagline": "Tu última calada está más cerca\nde lo que crees.",
   "appVersionFooter": "Cirrus {version} · hecho por gente que lo dejó",
-
   "commonContinue": "Continuar",
   "commonCancel": "Cancelar",
   "commonDone": "Listo",
@@ -32,7 +30,6 @@
   "commonDayN": "día {day}",
   "commonStreakDays": "{count, plural, one{{count} día} other{{count} días}}",
   "commonPuffsUnit": "{count, plural, one{{count} calada} other{{count} caladas}}",
-
   "authSplashAutoAdvance": "Cargando tu plan…",
   "authSignInTitle": "Vamos a proteger\ntu plan.",
   "authSignInSubtitle": "Anónimo por defecto — elegirás un alias para la comunidad.",
@@ -69,7 +66,6 @@
   "authBackToLogin": "Volver a entrar",
   "authInvalidEmail": "eso no parece un email",
   "authEmailInUse": "ese email ya tiene un plan — inicia sesión",
-
   "obProgressOf": "{step}/{total}",
   "obWelcomeCounterHint": "caladas al día — estás a punto de saberlo",
   "obWelcomeTitle": "¿Cuánto dependes de verdad?",
@@ -217,7 +213,6 @@
   "obNotifBullet2": "Celebraciones de rachas e hitos",
   "obNotifBullet3": "Avisos SOS de tu aliado — nada más",
   "obNotifCta": "Activar refuerzos",
-
   "paywallTitle": "Tu plan está listo.",
   "paywallSubtitle": "Prueba todo gratis durante 3 días.",
   "paywallFeatCoach": "Coach IA, sin límite",
@@ -253,7 +248,6 @@
   "winbackNote": "Luego {price}/mes. Cancela cuando quieras. Se muestra una vez, nunca más.",
   "winbackCta": "Reclamar mes fundador",
   "winbackDecline": "No gracias, Gratis me vale",
-
   "day1Title": "Día 1. Vamos.",
   "day1Subtitle": "Tres pasos de arranque. Dos minutos. Luego la app hace su trabajo.",
   "day1Task1": "Registra tu primera calada",
@@ -266,7 +260,6 @@
   "day1FreedomNote": "Día de libertad: {date} · a {days} días · plan armado",
   "day1CtaCoach": "Conocer a mi coach",
   "day1CtaHome": "Ir a Hoy",
-
   "homeGreetingDate": "{date} · Día {day} de {total}",
   "homeTitle": "Hoy",
   "homeStreakChip": "{count, plural, one{🔥 {count} día} other{🔥 {count} días}}",
@@ -294,12 +287,10 @@
   "homeOverLimitCoach": "Hablar con el coach",
   "homeOverLimitFooter": "Sigue registrando con honestidad — los datos son todo el juego.",
   "homeTokenUsedNote": "Ficha de reparación usada — tu racha sobrevive. La llama se atenúa hoy, no se apaga.",
-
   "navHome": "Inicio",
   "navStats": "Datos",
   "navCommunity": "Comunidad",
   "navCoach": "Coach",
-
   "panicStepLabel": "MODO PÁNICO · {step} DE 3",
   "panicBreatheNote": "esta sensación llega a un pico y pasa — la mayoría de antojos muere en 15 min",
   "panicBreatheIn": "Inhala…",
@@ -344,7 +335,6 @@
   "survivedShare": "Compartir la victoria ↗",
   "survivedBack": "Volver a hoy",
   "survivedShareCopied": "Tarjeta copiada — pégala donde quieras.",
-
   "coachName": "Ember",
   "coachStatus": "● conoce tu plan · día {day}",
   "coachChipCraving": "Tengo un antojo",
@@ -356,7 +346,6 @@
   "coachFreeCounter": "{count, plural, one{{count} mensaje gratis hoy} other{{count} mensajes gratis hoy}}",
   "coachCapReached": "Esos son mis 5 mensajes gratis de hoy — vuelvo a medianoche. ¿Me quieres 24/7? Eso es Premium.",
   "coachConnectionLost": "Se cortó la señal a mitad de idea 😅 Sigo aquí — ¿me lo repites cuando vuelvas a estar en línea?",
-
   "errorOfflineBanner": "sin conexión — todo cuenta, sincronizamos luego",
   "errorOfflineTitle": "Sin wifi, sin drama",
   "errorOfflineBody": "Ahora mismo estás sin conexión. No se pierde nada — reconecta y seguimos justo donde lo dejaste.",
@@ -388,7 +377,6 @@
   "coachReplyGeneric4": "Vale. Esto se gana con movimientos pequeños. ¿Qué puedes hacer en los próximos 10 minutos que no sea vapear?",
   "coachReplyParty": "Manual de fiesta: bebida fría en la mano toda la noche, escríbenos a mí o a tu aliado cuando salga el primer vaper, y prepara tu frase de salida. Has superado {count} antojos — una fiesta son varios seguidos.",
   "coachSafetyNote": "Ember es una herramienta de apoyo, no un médico. ¿Crisis? Llama o escribe al 988 (EE. UU. y Canadá), a cualquier hora.",
-
   "planTitle": "Tu plan",
   "planHeaderMeta": "{method} · {days} días",
   "planMethodTaper": "Reducción",
@@ -407,7 +395,6 @@
   "planAdjustSheetNote": "La curva se regenera desde hoy con tus números reales. El historial se queda. El Día de libertad se mueve con honestidad.",
   "planAdjustApply": "Aplicar — recalcular mi curva",
   "planAdjusted": "Plan recalculado. Nuevo Día de libertad: {date}",
-
   "statsTitle": "Datos",
   "statsRangeDay": "Día",
   "statsRangeWeek": "Semana",
@@ -430,7 +417,6 @@
   "statsEditDayTitle": "Editar {date}",
   "statsEditDayNote": "El historial es tuyo. Racha y dinero se recalculan de aquí en adelante.",
   "statsEditHint": "mantén pulsada una barra para corregir un día",
-
   "communityTitle": "Comunidad",
   "communityYouAre": "eres {alias}",
   "communityFilterAll": "Todo",
@@ -463,7 +449,6 @@
   "communityEmptyTitle": "Aún no hay posts — saluda.",
   "communityEmptyBody": "Tu post del Día 1 es el que alguien en el Día 0 necesita leer.",
   "communityPosted": "Publicado. Alguien necesitaba leer eso.",
-
   "buddyTitle": "Tu aliado",
   "buddyCombinedStreak": "racha combinada",
   "buddyNeitherCaves": "ninguno cae solo",
@@ -476,7 +461,6 @@
   "buddyLinkCopied": "Enlace copiado — dejarlo con refuerzos pega distinto.",
   "buddyNudged": "Ánimo enviado. {name} lo va a sentir.",
   "buddyNudgeCap": "Dos ánimos al día lo mantienen sano. Más mañana.",
-
   "moneyTitle": "Dinero de vuelta",
   "moneySavedSince": "ahorrado desde {date} · {perDay} entrando cada día",
   "moneyBuysLabel": "LO QUE YA COMPRA",
@@ -493,7 +477,6 @@
   "moneyGoalDone": "Meta cumplida. Confeti ganado. 🎉",
   "seedGoalKicks": "Zapas nuevas",
   "seedGoalTokyo": "Vuelo a Tokio",
-
   "healthTitle": "Tu cuerpo, sanando",
   "healthAnchor": "Según tu última calada registrada · hace {ago}",
   "healthYouAreHere": "{milestone} — estás aquí",
@@ -523,7 +506,6 @@
   "healthM1yBody": "Tu perfil de riesgo parece el de alguien que nunca vapeó a diario.",
   "healthUnlockNote": "Cada desbloqueo trae una pequeña celebración + tarjeta para compartir.",
   "healthSourceNote": "Basado en investigación sobre dejar de fumar — la evidencia sobre vapeo aún está emergiendo.",
-
   "milestonesTitle": "Hitos",
   "milestonesEarned": "{earned} de {total} ganados",
   "milestonesNext": "Siguiente: {name}",
@@ -547,7 +529,6 @@
   "mFiveHundredSaved": "500 $ ahorrados",
   "mBuddyBond": "Vínculo de aliados",
   "mComeback": "Regreso",
-
   "moodTitle": "¿Cómo se siente hoy?",
   "moodSubtitle": "10 segundos. Importa más de lo que crees.",
   "moodRough": "duro",
@@ -561,7 +542,6 @@
   "moodUnlockNote": "{count} más y tu informe mostrará cómo tu ánimo dispara tus antojos.",
   "moodCta": "Registrar",
   "moodSaved": "Anotado. Los datos ganan a las sensaciones. 🙌",
-
   "insightLinkTitle": "Informe semanal",
   "insightTitle": "Informe semana {week} · {range}",
   "insightCounter": "INSIGHT {index} DE {total}",
@@ -581,7 +561,6 @@
   "insight4Body": "Tu línea baja a 100/día el martes. Aquí la curva se empina — esta es la semana en que el Botón de pánico se gana el sueldo.",
   "insight4ChartLabel": "LA SEMANA QUE VIENE",
   "insight4Action": "Sugerencia del coach: reserva algo que te encante para el sábado. Premia la curva, no la aprietes con los dientes.",
-
   "slipTitle": "Una recaída es información, no derrota.",
   "slipSubtitle": "Registraste caladas tras {days} días limpios. Eso es información — nos dice exactamente dónde blindar el plan.",
   "slipWhatHappened": "¿QUÉ ESTABA PASANDO?",
@@ -602,7 +581,6 @@
   "slipFlameDims": "La llama se atenúa, no muere. Un día limpio la devuelve a plena llama.",
   "slipBackOnCurve": "De vuelta a la curva",
   "slipTalkFirst": "Hablarlo antes con el coach",
-
   "profileQuittingSince": "dejándolo desde {date} · {method} · día {day}",
   "profileCountdownLabel": "🏆 CUENTA ATRÁS AL DÍA DE LIBERTAD",
   "profileDaysTo": "días hasta el {date}",
@@ -613,7 +591,6 @@
   "profileEditAlias": "Elige tu alias",
   "profileEditAvatar": "Elige tu avatar",
   "profileAliasHint": "anónimo — esto es todo lo que ven",
-
   "settingsTitle": "Ajustes",
   "settingsAccount": "Cuenta",
   "settingsSubscription": "Gestionar suscripción",
@@ -645,7 +622,6 @@
   "settingsDangerHoursTitle": "Horas de peligro",
   "settingsDangerHoursNote": "Te avisamos 10 minutos antes de que abra tu ventana. Máximo 3 avisos al día, horas de silencio respetadas.",
   "settingsQuietHours": "Horas de silencio: {range}",
-
   "trialEndingPushTime": "ahora",
   "trialEndingPush": "tu prueba termina mañana — como prometimos, aquí está el aviso. Sin cargos sorpresa.",
   "trialEndingTitle": "La prueba termina mañana.",
@@ -656,12 +632,10 @@
   "trialEndingSaved": "ahorrado",
   "trialEndingKeep": "Seguir con Premium — {price}/año",
   "trialEndingSwitchFree": "Pasar a Gratis (conserva tus datos)",
-
   "frameMapTitle": "Los 52 frames del diseño",
   "frameMapOpen": "Ver las 52 pantallas →",
   "frameMapNote": "Cada frame de los cuatro handoffs, a un toque. Las filas cargan el viaje demo o las respuestas del quiz según haga falta.",
   "frameMapEdgeNote": "Estos estados se activan con el backend — una app en memoria no tiene errores de red que mostrar con honestidad.",
-
   "seedPostWin30": "DÍA DE LIBERTAD. 30 días, cero caladas la última semana. El botón de pánico me sacó de los findes. Si vas por el día 2 y te mueres — de verdad se pone más fácil hacia el día 8.",
   "seedPostSos": "en la puerta de la gasolinera. cartera en mano. que alguien me convenza de no hacerlo",
   "seedPostDay1": "tiré el mío al lago. probablemente malo para el lago. el día 1 empieza ahora",
@@ -671,5 +645,7 @@
   "seedReplyWalk": "camina. solo una manzana. la cartera sigue llena, tú sigues libre. hice exactamente esto el martes",
   "seedReplyScience": "el día 4 es el peor, es ciencia. estás en el pico AHORA MISMO. 15 minutos y esto muere",
   "seedReplyGatorade": "cómprate un gatorade en su lugar. compra ceremonial. funciona sorprendentemente bien",
-  "seedReplyUpdate": "actualización: compré el gatorade. caminando a casa. gracias, en serio 💙"
+  "seedReplyUpdate": "actualización: compré el gatorade. caminando a casa. gracias, en serio 💙",
+  "dangerReminderTitle": "Se acerca tu hora crítica",
+  "dangerReminderBody": "Suele ser ahora cuando aprieta. Tienes un plan, y 15 minutos lo superan."
 }

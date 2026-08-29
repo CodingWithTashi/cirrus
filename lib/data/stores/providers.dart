@@ -18,6 +18,8 @@ import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
+import '../api/firebase/reminder_scheduler.dart';
+import 'reminder_coordinator.dart';
 import '../repositories/firebase_coach_repository.dart';
 import '../repositories/firebase_community_repository.dart';
 import '../repositories/firebase_journey_repository.dart';
@@ -124,6 +126,16 @@ final communityStoreProvider = NotifierProvider<CommunityStore, CommunityState>(
 
 final coachStoreProvider = NotifierProvider<CoachStore, CoachState>(
   CoachStore.new,
+);
+
+/// Keeps the device notification schedule in step with the journey. Only the
+/// real backend schedules anything — the fake one has no device to talk to
+/// and tests must not touch the platform channel.
+final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => null,
+    BackendMode.firebase => ReminderCoordinator(ReminderScheduler()),
+  },
 );
 
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(

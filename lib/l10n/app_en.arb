@@ -1,11 +1,15 @@
 {
   "@@locale": "en",
-
   "appName": "Cirrus",
   "appTagline": "Your last puff is closer\nthan you think.",
   "appVersionFooter": "Cirrus {version} · made by people who quit",
-  "@appVersionFooter": { "placeholders": { "version": { "type": "String" } } },
-
+  "@appVersionFooter": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "commonContinue": "Continue",
   "commonCancel": "Cancel",
   "commonDone": "Done",
@@ -30,14 +34,40 @@
   "commonErrorTitle": "Something hiccuped.",
   "commonErrorBody": "Your data is fine. Tap to retry.",
   "commonDayOfDay": "Day {day} of {total}",
-  "@commonDayOfDay": { "placeholders": { "day": { "type": "int" }, "total": { "type": "int" } } },
+  "@commonDayOfDay": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "commonDayN": "day {day}",
-  "@commonDayN": { "placeholders": { "day": { "type": "int" } } },
+  "@commonDayN": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "commonStreakDays": "{count, plural, one{{count} day} other{{count} days}}",
-  "@commonStreakDays": { "placeholders": { "count": { "type": "num" } } },
+  "@commonStreakDays": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "commonPuffsUnit": "{count, plural, one{{count} puff} other{{count} puffs}}",
-  "@commonPuffsUnit": { "placeholders": { "count": { "type": "num" } } },
-
+  "@commonPuffsUnit": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "authSplashAutoAdvance": "Loading your plan…",
   "authSignInTitle": "Let's keep your\nplan safe.",
   "authSignInSubtitle": "Anonymous by default — you'll pick an alias for community.",
@@ -71,13 +101,27 @@
   "authLinkSent": "Link sent. Check spam if it hides.",
   "authResendLink": "Resend link",
   "authResendCountdown": "Resend in {seconds}s",
-  "@authResendCountdown": { "placeholders": { "seconds": { "type": "int" } } },
+  "@authResendCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "authBackToLogin": "Back to log in",
   "authInvalidEmail": "that doesn't look like an email",
   "authEmailInUse": "that email already has a journey — log in instead",
-
   "obProgressOf": "{step}/{total}",
-  "@obProgressOf": { "placeholders": { "step": { "type": "int" }, "total": { "type": "int" } } },
+  "@obProgressOf": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "obWelcomeCounterHint": "puffs a day — you're about to find out",
   "obWelcomeTitle": "How dependent are you, really?",
   "obWelcomeSubtitle": "2-minute check-up. Brutally honest results. A plan built for you.",
@@ -125,14 +169,32 @@
   "obPuffsBadgeHeavy": "Heavy dependence",
   "obPuffsBadgeSevere": "Severe dependence",
   "obPuffsCigEquiv": "≈ {count} cigarettes' worth of puffs",
-  "@obPuffsCigEquiv": { "placeholders": { "count": { "type": "int" } } },
+  "@obPuffsCigEquiv": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "obPuffsNotSure": "Not sure? Estimate from device life →",
   "obPuffsHelperTitle": "Quick estimate",
   "obPuffsHelperBody": "A typical disposable is ~600 puffs. How many do you finish a week?",
   "obPuffsHelperResult": "That's about {count} puffs a day. We'll self-correct in your first week.",
-  "@obPuffsHelperResult": { "placeholders": { "count": { "type": "int" } } },
+  "@obPuffsHelperResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "obPuffsHelperDevicesPerWeek": "{count, plural, one{{count} device / week} other{{count} devices / week}}",
-  "@obPuffsHelperDevicesPerWeek": { "placeholders": { "count": { "type": "num" } } },
+  "@obPuffsHelperDevicesPerWeek": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "obStrengthTitle": "How strong is your usual?",
   "obStrength20Sub": "2% · lighter",
   "obStrength35Sub": "3.5% · mid",
@@ -144,14 +206,32 @@
   "obSpendPerWeek": "per week",
   "obSpendThats": "that's",
   "obSpendPerYear": "{amount} a year",
-  "@obSpendPerYear": { "placeholders": { "amount": { "type": "String" } } },
+  "@obSpendPerYear": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "obSpendKickerSmall": "That's a new phone. Every year.",
   "obSpendKickerMid": "That's a flight to Tokyo. Every year.",
   "obSpendKickerBig": "That's rent money. Every single year.",
   "obSpendPerMonthChip": "{amount} / month",
-  "@obSpendPerMonthChip": { "placeholders": { "amount": { "type": "String" } } },
+  "@obSpendPerMonthChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "obSpendPerDayChip": "{amount} / day",
-  "@obSpendPerDayChip": { "placeholders": { "amount": { "type": "String" } } },
+  "@obSpendPerDayChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "obSpendYourMath": "your math, not ours",
   "obFirstPuffTitle": "First puff after waking up?",
   "obFirstPuffWithin5": "Within 5 minutes",
@@ -189,28 +269,70 @@
   "obMethodColdReco": "Doable at your level — your call",
   "obPaceTitle": "Pick your pace.",
   "obPaceMostChosen": "{days} days — most chosen",
-  "@obPaceMostChosen": { "placeholders": { "days": { "type": "int" } } },
+  "@obPaceMostChosen": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "obPaceCurveStart": "{count} puffs",
-  "@obPaceCurveStart": { "placeholders": { "count": { "type": "int" } } },
+  "@obPaceCurveStart": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "obPaceCurveLabel": "your curve",
   "obPaceCurveEnd": "0 puffs",
   "obPaceFreedomDay": "{date} · Freedom Day",
-  "@obPaceFreedomDay": { "placeholders": { "date": { "type": "String" } } },
+  "@obPaceFreedomDay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "obPaceNote": "Curve redraws live as you tap a pace. Real dates, not \"day n\".",
   "obPaceCta": "Lock my pace",
   "obBuildingTitle": "Building your plan…",
   "obBuildingStep1": "Analyzing {count} puffs/day",
-  "@obBuildingStep1": { "placeholders": { "count": { "type": "int" } } },
+  "@obBuildingStep1": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "obBuildingStep2": "Mapping your triggers",
   "obBuildingStep3": "Calibrating your {days}-day curve…",
-  "@obBuildingStep3": { "placeholders": { "days": { "type": "int" } } },
+  "@obBuildingStep3": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "obBuildingStep4": "Reserving your coach…",
   "obRevealTitle": "Your {days}-day breakup plan.",
-  "@obRevealTitle": { "placeholders": { "days": { "type": "int" } } },
+  "@obRevealTitle": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "obRevealMilestone3": "craving peak — we'll be loudest here",
   "obRevealMilestone7": "taste and smell come back",
   "obRevealMilestoneFreedom": "🏆 Freedom Day — {date}",
-  "@obRevealMilestoneFreedom": { "placeholders": { "date": { "type": "String" } } },
+  "@obRevealMilestoneFreedom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "obRevealSavedLabel": "saved by Freedom Day",
   "obRevealPuffsLabel": "puffs you won't take",
   "obRevealProofLabel": "HONEST PROOF",
@@ -221,7 +343,13 @@
   "obCommitHold": "Hold to\ncommit",
   "obCommitFreedomLabel": "🏆 FREEDOM DAY",
   "obCommitDaysOut": "{days} days from today. It's on the calendar.",
-  "@obCommitDaysOut": { "placeholders": { "days": { "type": "int" } } },
+  "@obCommitDaysOut": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "obCommitPrivacy": "🔒 We never sell your data. No ad trackers. Ever.",
   "obRatingTitle": "One quitter's review helps the next one find us.",
   "obRatingSubtitle": "30 seconds. Skippable. No hard feelings.",
@@ -238,7 +366,6 @@
   "obNotifBullet2": "Streak + milestone celebrations",
   "obNotifBullet3": "Buddy SOS pings — nothing else",
   "obNotifCta": "Turn on backup",
-
   "paywallTitle": "Your plan is ready.",
   "paywallSubtitle": "Try everything free for 3 days.",
   "paywallFeatCoach": "AI coach, unlimited",
@@ -272,10 +399,15 @@
   "winbackSubtitle": "You built the plan. Try the full toolkit for a month before deciding.",
   "winbackFirstMonth": "first month",
   "winbackNote": "Then {price}/mo. Cancel anytime. Shown once, never again.",
-  "@winbackNote": { "placeholders": { "price": { "type": "String" } } },
+  "@winbackNote": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "winbackCta": "Claim founding month",
   "winbackDecline": "No thanks, Free is fine",
-
   "day1Title": "Day 1. Let's go.",
   "day1Subtitle": "Three setup moves. Two minutes. Then the app does its job.",
   "day1Task1": "Log your first puff",
@@ -286,31 +418,93 @@
   "day1Task3": "Set your danger hours",
   "day1Task3Sub": "when do you cave? we'll show up early",
   "day1FreedomNote": "Freedom Day: {date} · {days} days out · plan armed",
-  "@day1FreedomNote": { "placeholders": { "date": { "type": "String" }, "days": { "type": "int" } } },
+  "@day1FreedomNote": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "day1CtaCoach": "Meet your coach",
   "day1CtaHome": "Go to Today",
-
   "homeGreetingDate": "{date} · Day {day} of {total}",
-  "@homeGreetingDate": { "placeholders": { "date": { "type": "String" }, "day": { "type": "int" }, "total": { "type": "int" } } },
+  "@homeGreetingDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "day": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "homeTitle": "Today",
   "homeStreakChip": "{count, plural, one{🔥 {count} day} other{🔥 {count} days}}",
-  "@homeStreakChip": { "placeholders": { "count": { "type": "num" } } },
+  "@homeStreakChip": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "homePuffsToday": "puffs today",
   "homeOfLimit": "of {limit}",
-  "@homeOfLimit": { "placeholders": { "limit": { "type": "int" } } },
+  "@homeOfLimit": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "homeLeftAhead": "{count} left on today's line. You're ahead of your curve.",
-  "@homeLeftAhead": { "placeholders": { "count": { "type": "int" } } },
+  "@homeLeftAhead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeLeftTight": "{count} left on today's line. Tight — you've got this.",
-  "@homeLeftTight": { "placeholders": { "count": { "type": "int" } } },
+  "@homeLeftTight": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeOverLine": "Over today's line. Breathe — tomorrow adjusts.",
   "homeVsDay1": "{percent} vs day 1",
-  "@homeVsDay1": { "placeholders": { "percent": { "type": "String" } } },
+  "@homeVsDay1": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "homeSavedSoFar": "saved so far",
   "homeCravingsBeaten": "cravings beaten",
   "homeCoachNudgeTitle": "Rough {weekday}? I noticed.",
-  "@homeCoachNudgeTitle": { "placeholders": { "weekday": { "type": "String" } } },
+  "@homeCoachNudgeTitle": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
   "homeCoachNudgeBody": "Your {hour} spike is due — want a plan?",
-  "@homeCoachNudgeBody": { "placeholders": { "hour": { "type": "String" } } },
+  "@homeCoachNudgeBody": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
   "homeLogPuff": "LOG PUFF",
   "homeSos": "SOS",
   "homeVapeFreeTitle": "No puffs today?",
@@ -319,35 +513,66 @@
   "homeLoggedSnack": "Logged 1 puff",
   "homeLogPlusOne": "+1 logged",
   "homeLogRingNote": "ring ticks with a bounce · {count} left today",
-  "@homeLogRingNote": { "placeholders": { "count": { "type": "int" } } },
+  "@homeLogRingNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeOverLimitTitle": "Over today's line",
   "homeOverLimitBody": "Breathe — tomorrow's line adjusts. No shame.",
   "homeOverLimitBreathe": "Breathe 60s",
   "homeOverLimitCoach": "Talk to coach",
   "homeOverLimitFooter": "Keep logging honestly — the data is the whole game.",
   "homeTokenUsedNote": "Repair token used — your streak survives. Flame dims today, not out.",
-
   "navHome": "Home",
   "navStats": "Stats",
   "navCommunity": "Community",
   "navCoach": "Coach",
-
   "panicStepLabel": "PANIC MODE · {step} OF 3",
-  "@panicStepLabel": { "placeholders": { "step": { "type": "int" } } },
+  "@panicStepLabel": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
   "panicBreatheNote": "this feeling peaks and passes — most cravings die in 15 min",
   "panicBreatheIn": "In…",
   "panicBreatheHold": "Hold…",
   "panicBreatheOut": "Out…",
   "panicBreathePattern": "In 4 · Hold 7 · Out 8",
   "panicCravingTimer": "craving timer · {time} · peaks ~15 min",
-  "@panicCravingTimer": { "placeholders": { "time": { "type": "String" } } },
+  "@panicCravingTimer": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "panicCravingTimerLate": "craving timer · {time} · you're past the worst spike",
-  "@panicCravingTimerLate": { "placeholders": { "time": { "type": "String" } } },
+  "@panicCravingTimerLate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "panicSkipToWhy": "Skip to my why →",
   "panicWhyTitle": "Remember why you started.",
   "panicYouSaid": "YOU SAID",
   "panicWhyLine": "You're doing this for your {why} and the {amount}/year you're taking back.",
-  "@panicWhyLine": { "placeholders": { "why": { "type": "String" }, "amount": { "type": "String" } } },
+  "@panicWhyLine": {
+    "placeholders": {
+      "why": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "panicIntensityQuestion": "How bad is it right now?",
   "panicIntensityLow": "meh",
   "panicIntensityHigh": "screaming",
@@ -359,17 +584,41 @@
   "panicLoopGameSub": "occupies the exact itch — thumbs busy, brain busy",
   "panicLoopBuddy": "Text my buddy",
   "panicLoopBuddySub": "{name} gets a ping: \"craving — talk me down\"",
-  "@panicLoopBuddySub": { "placeholders": { "name": { "type": "String" } } },
+  "@panicLoopBuddySub": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "panicLoopCoach": "Talk to coach",
   "panicLoopCoachSub": "it knows this is your {hour} stress pattern",
-  "@panicLoopCoachSub": { "placeholders": { "hour": { "type": "String" } } },
+  "@panicLoopCoachSub": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
   "panicBuddyPinged": "Ping sent. {name} has your back.",
-  "@panicBuddyPinged": { "placeholders": { "name": { "type": "String" } } },
+  "@panicBuddyPinged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "gameTitle": "Tap every spark",
   "gameSubtitle": "60 seconds. Thumbs busy, brain busy.",
   "gameScore": "sparks",
   "gameTimeLeft": "{seconds}s",
-  "@gameTimeLeft": { "placeholders": { "seconds": { "type": "int" } } },
+  "@gameTimeLeft": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "gameDone": "Time. Look at that — the wave broke.",
   "survivedPlusOne": "+1 craving beaten",
   "survivedLine1": "That one had nothing on you.",
@@ -384,10 +633,15 @@
   "survivedShare": "Share the W ↗",
   "survivedBack": "Back to today",
   "survivedShareCopied": "Stat card copied — paste it anywhere.",
-
   "coachName": "Ember",
   "coachStatus": "● knows your plan · day {day}",
-  "@coachStatus": { "placeholders": { "day": { "type": "int" } } },
+  "@coachStatus": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "coachChipCraving": "I'm craving",
   "coachChipRoughDay": "Rough day",
   "coachChipSlipped": "I slipped",
@@ -395,10 +649,15 @@
   "coachInputHint": "Message your coach…",
   "coachTyping": "Ember is typing…",
   "coachFreeCounter": "{count, plural, one{{count} free message left today} other{{count} free messages left today}}",
-  "@coachFreeCounter": { "placeholders": { "count": { "type": "num" } } },
+  "@coachFreeCounter": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "coachCapReached": "That's my 5 free messages for today — I'll be back at midnight. Want me around 24/7? That's what Premium is.",
   "coachConnectionLost": "Signal dropped mid-thought 😅 I'm still right here — say that again once you're back online?",
-
   "errorOfflineBanner": "offline — logs still count, we'll sync later",
   "errorOfflineTitle": "No wifi, no worries",
   "errorOfflineBody": "You're offline right now. Nothing's lost — reconnect and we'll pick up right where you left off.",
@@ -414,60 +673,184 @@
   "errorBackstage": "something glitched backstage — you're all good to keep going",
   "coachWeekCardLabel": "YOUR WEEK",
   "coachWeekCardCaption": "trending down — {day} was the hard one",
-  "@coachWeekCardCaption": { "placeholders": { "day": { "type": "String" } } },
+  "@coachWeekCardCaption": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "coachGreeting": "Hey. I'm Ember — I quit two years ago and I remember exactly how it felt. I've read your plan: {puffs} a day, {method}, Freedom Day {date}. No lectures from me, ever. What's going on right now?",
-  "@coachGreeting": { "placeholders": { "puffs": { "type": "int" }, "method": { "type": "String" }, "date": { "type": "String" } } },
+  "@coachGreeting": {
+    "placeholders": {
+      "puffs": {
+        "type": "int"
+      },
+      "method": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "coachReplyCraving1": "That wave is brutal, I know. 15 minutes and it breaks — that's not a pep talk, it's biology. Cold water on your wrists, and stay with me. What set it off?",
   "coachReplyCraving2": "Okay. Breathe with me for one round — in 4, hold 7, out 8. Cravings usually die in 15–20 minutes. You've already beaten {count} of them. This one's no different.",
-  "@coachReplyCraving2": { "placeholders": { "count": { "type": "int" } } },
+  "@coachReplyCraving2": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplyCraving3": "Heard. Don't argue with the craving, just outlast it. Walk one block or hit the 60-second game. It peaks and dies — 15 minutes, tops.",
   "coachReplyRough1": "Fair. Rough days are when the old habit shouts loudest. Deal: 10-min walk before the next one. If you still want it after, log it honestly — you're still {percent}% under your old baseline.",
-  "@coachReplyRough1": { "placeholders": { "percent": { "type": "int" } } },
+  "@coachReplyRough1": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplyRough2": "That sounds heavy. You don't have to fix today, just get through it — and you're allowed to do that without nicotine. I'm here either way.",
   "coachReplySlip1": "A slip is data, not defeat. What set it off — stress, people, boredom? The plan already bent to catch you. Your {count} days still count.",
-  "@coachReplySlip1": { "placeholders": { "count": { "type": "int" } } },
+  "@coachReplySlip1": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplySlip2": "Zero shame here. Most people who quit for good slipped on the way. Log it honestly, find the trigger, move on. Your record is still yours: {amount} saved, longest streak intact.",
-  "@coachReplySlip2": { "placeholders": { "amount": { "type": "String" } } },
+  "@coachReplySlip2": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "coachReplyProgress1": "Look at the actual numbers: day {day}, {saved} back in your pocket, {cravings} cravings beaten. Day 1 you couldn't have done today. That's real.",
-  "@coachReplyProgress1": { "placeholders": { "day": { "type": "int" }, "saved": { "type": "String" }, "cravings": { "type": "int" } } },
+  "@coachReplyProgress1": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "saved": {
+        "type": "String"
+      },
+      "cravings": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplyProgress2": "{today} puffs today against a line of {limit}. Two weeks ago that number would've been double. You're actually doing this.",
-  "@coachReplyProgress2": { "placeholders": { "today": { "type": "int" }, "limit": { "type": "int" } } },
+  "@coachReplyProgress2": {
+    "placeholders": {
+      "today": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplyGeneric1": "I hear you. Say more — what's underneath that?",
   "coachReplyGeneric2": "Makes sense. For what it's worth, you're on day {day} and still here. That counts for a lot.",
-  "@coachReplyGeneric2": { "placeholders": { "day": { "type": "int" } } },
+  "@coachReplyGeneric2": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "coachReplyGeneric3": "Got it. One honest question: is this a nicotine thing right now, or a life thing wearing nicotine's jacket?",
   "coachReplyGeneric4": "Okay. Small moves win this. What's one thing you can do in the next 10 minutes that isn't vaping?",
   "coachReplyParty": "Party playbook: hold a cold drink all night, text me or your buddy when the first vape comes out, and pre-load your exit line. You've survived {count} cravings — a party is just several in a row.",
-  "@coachReplyParty": { "placeholders": { "count": { "type": "int" } } },
+  "@coachReplyParty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "coachSafetyNote": "Ember is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.",
-
   "planTitle": "Your plan",
   "planHeaderMeta": "{method} · {days} days",
-  "@planHeaderMeta": { "placeholders": { "method": { "type": "String" }, "days": { "type": "int" } } },
+  "@planHeaderMeta": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "planMethodTaper": "Taper",
   "planMethodCold": "Cold turkey",
   "planTodayMarker": "today · {limit}/day",
-  "@planTodayMarker": { "placeholders": { "limit": { "type": "int" } } },
+  "@planTodayMarker": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "planFreedomMarker": "{date} · 0",
-  "@planFreedomMarker": { "placeholders": { "date": { "type": "String" } } },
+  "@planFreedomMarker": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "planComingUp": "COMING UP",
   "planHalfwayTitle": "Day {day} — halfway",
-  "@planHalfwayTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@planHalfwayTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "planHalfwaySub": "line drops to {limit}/day",
-  "@planHalfwaySub": { "placeholders": { "limit": { "type": "int" } } },
+  "@planHalfwaySub": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "planCravingsFadeTitle": "Day {day} — cravings fade",
-  "@planCravingsFadeTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@planCravingsFadeTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "planCravingsFadeSub": "most report easier mornings",
   "planFreedomTitle": "Day {day} — Freedom Day",
-  "@planFreedomTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@planFreedomTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "planAdjustCta": "Adjust my plan",
   "planAdjustNote": "pace + method editable · no reset, no lost history",
   "planAdjustSheetTitle": "Adjust your plan",
   "planAdjustSheetNote": "Curve regenerates from today with your real numbers. History stays. Freedom Day moves honestly.",
   "planAdjustApply": "Apply — reflow my curve",
   "planAdjusted": "Plan reflowed. New Freedom Day: {date}",
-  "@planAdjusted": { "placeholders": { "date": { "type": "String" } } },
-
+  "@planAdjusted": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "statsTitle": "Stats",
   "statsRangeDay": "Day",
   "statsRangeWeek": "Week",
@@ -476,30 +859,74 @@
   "statsPuffsToday": "PUFFS TODAY · BY HOUR",
   "statsPuffsThisMonth": "PUFFS · LAST 30 DAYS",
   "statsVsLast": "{percent} vs last",
-  "@statsVsLast": { "placeholders": { "percent": { "type": "String" } } },
+  "@statsVsLast": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "statsHardDayCaption": "{day} was the difficult day — {reason}. You recovered next morning.",
-  "@statsHardDayCaption": { "placeholders": { "day": { "type": "String" }, "reason": { "type": "String" } } },
+  "@statsHardDayCaption": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "statsHardDayCaptionPlain": "{day} was the difficult day. You recovered next morning.",
-  "@statsHardDayCaptionPlain": { "placeholders": { "day": { "type": "String" } } },
+  "@statsHardDayCaptionPlain": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "statsTriggerHours": "TRIGGER HOURS",
   "statsDangerWindow": "{range} is your danger window · nudges armed there",
-  "@statsDangerWindow": { "placeholders": { "range": { "type": "String" } } },
+  "@statsDangerWindow": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "statsNicotinePerDay": "NICOTINE / DAY",
   "statsNicotineValue": "{mg}mg ↓",
-  "@statsNicotineValue": { "placeholders": { "mg": { "type": "int" } } },
+  "@statsNicotineValue": {
+    "placeholders": {
+      "mg": {
+        "type": "int"
+      }
+    }
+  },
   "statsLongestGap": "longest gap",
   "statsBestDay": "best day (puffs)",
   "statsCravingsBeaten": "cravings beaten",
   "statsEmptyTitle": "Charts show up tomorrow.",
   "statsEmptyBody": "One day of logs = one dot. Keep logging — the picture draws itself.",
   "statsEditDayTitle": "Edit {date}",
-  "@statsEditDayTitle": { "placeholders": { "date": { "type": "String" } } },
+  "@statsEditDayTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "statsEditDayNote": "History is yours. Streak and money recompute from here forward.",
   "statsEditHint": "long-press any bar to fix a day",
-
   "communityTitle": "Community",
   "communityYouAre": "you're {alias}",
-  "@communityYouAre": { "placeholders": { "alias": { "type": "String" } } },
+  "@communityYouAre": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
   "communityFilterAll": "All",
   "communityTagWin": "🏆 Win",
   "communityTagSos": "🆘 SOS",
@@ -508,7 +935,13 @@
   "communityTagVent": "Vent",
   "communityIGotYou": "I got you 💬",
   "communityReplyingNow": "{count} replying now…",
-  "@communityReplyingNow": { "placeholders": { "count": { "type": "int" } } },
+  "@communityReplyingNow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "communityReport": "Report",
   "communityMute": "Mute",
   "communityBlock": "Block user",
@@ -519,50 +952,129 @@
   "communityComposerTitle": "New post",
   "communityComposerPost": "Post",
   "communityPostingAs": "posting as {alias} · day {day} · always anonymous",
-  "@communityPostingAs": { "placeholders": { "alias": { "type": "String" }, "day": { "type": "int" } } },
+  "@communityPostingAs": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "communityComposerHint": "What's happening in your quit?",
   "communityTagIt": "TAG IT",
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
   "communityTagRequired": "Pick a tag — it routes your post to the right people.",
   "communitySosBanner": "🛡️ {count} people have your back right now",
-  "@communitySosBanner": { "placeholders": { "count": { "type": "int" } } },
+  "@communitySosBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "communityAddVoice": "Add your voice…",
   "communityPostAge": "{minutes}m",
-  "@communityPostAge": { "placeholders": { "minutes": { "type": "int" } } },
+  "@communityPostAge": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "communityPostAgeHours": "{hours}h",
-  "@communityPostAgeHours": { "placeholders": { "hours": { "type": "int" } } },
+  "@communityPostAgeHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "communityDayTag": "day {day}",
-  "@communityDayTag": { "placeholders": { "day": { "type": "int" } } },
+  "@communityDayTag": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "communityEmptyTitle": "No posts yet — say hi.",
   "communityEmptyBody": "Your Day 1 post is the one someone on Day 0 needs to read.",
   "communityPosted": "Posted. Someone needed to read that.",
-
   "buddyTitle": "Your buddy",
   "buddyCombinedStreak": "combined streak",
   "buddyNeitherCaves": "neither of you caves alone",
   "buddyNudge": "👊 Nudge {name}",
-  "@buddyNudge": { "placeholders": { "name": { "type": "String" } } },
+  "@buddyNudge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "buddyMessage": "💬 Message",
   "buddyPrivacyNote": "{name} sees your SOS pings and gets one nudge if you go quiet for 2 days. That's it — no puff counts shared unless you opt in.",
-  "@buddyPrivacyNote": { "placeholders": { "name": { "type": "String" } } },
+  "@buddyPrivacyNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "buddyPairsLabel": "QUITTING IS EASIER IN PAIRS",
   "buddyInviteTitle": "Invite another friend",
   "buddyCopyLink": "Copy link",
   "buddyLinkCopied": "Link copied — quitting hits different with backup.",
   "buddyNudged": "Nudge sent. {name} will feel it.",
-  "@buddyNudged": { "placeholders": { "name": { "type": "String" } } },
+  "@buddyNudged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "buddyNudgeCap": "Two nudges a day keeps it friendly. More tomorrow.",
-
   "moneyTitle": "Money back",
   "moneySavedSince": "saved since {date} · {perDay} rolling in daily",
-  "@moneySavedSince": { "placeholders": { "date": { "type": "String" }, "perDay": { "type": "String" } } },
+  "@moneySavedSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "perDay": {
+        "type": "String"
+      }
+    }
+  },
   "moneyBuysLabel": "WHAT IT ALREADY BUYS",
   "moneyToGo": "{amount} to go · ~{days} days at your pace",
-  "@moneyToGo": { "placeholders": { "amount": { "type": "String" }, "days": { "type": "int" } } },
+  "@moneyToGo": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "moneyToGoShort": "{amount} to go",
-  "@moneyToGoShort": { "placeholders": { "amount": { "type": "String" } } },
+  "@moneyToGoShort": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "moneyFromOnboarding": "the one from onboarding · {amount} to go",
-  "@moneyFromOnboarding": { "placeholders": { "amount": { "type": "String" } } },
+  "@moneyFromOnboarding": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "moneySetGoal": "Set a goal",
   "moneySetGoalSub": "name it, price it, watch the bar fill",
   "moneyGoalSheetTitle": "New savings goal",
@@ -570,16 +1082,36 @@
   "moneyGoalPriceHint": "Price",
   "moneyGoalCreate": "Start the bar",
   "moneyMathNote": "Math is yours: {weekly}/week × 52 = {yearly}/year. No invented numbers.",
-  "@moneyMathNote": { "placeholders": { "weekly": { "type": "String" }, "yearly": { "type": "String" } } },
+  "@moneyMathNote": {
+    "placeholders": {
+      "weekly": {
+        "type": "String"
+      },
+      "yearly": {
+        "type": "String"
+      }
+    }
+  },
   "moneyGoalDone": "Goal funded. Confetti earned. 🎉",
   "seedGoalKicks": "New kicks",
   "seedGoalTokyo": "Tokyo flight",
-
   "healthTitle": "Your body, healing",
   "healthAnchor": "Based on your last logged puff · {ago} ago",
-  "@healthAnchor": { "placeholders": { "ago": { "type": "String" } } },
+  "@healthAnchor": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
   "healthYouAreHere": "{milestone} — you are here",
-  "@healthYouAreHere": { "placeholders": { "milestone": { "type": "String" } } },
+  "@healthYouAreHere": {
+    "placeholders": {
+      "milestone": {
+        "type": "String"
+      }
+    }
+  },
   "healthM20min": "20 minutes",
   "healthM20minBody": "Heart rate and blood pressure drop back to normal.",
   "healthM8h": "8 hours",
@@ -606,14 +1138,37 @@
   "healthM1yBody": "Your risk profile looks like someone who never vaped daily.",
   "healthUnlockNote": "Each unlock fires a small celebration + optional share card.",
   "healthSourceNote": "Based on smoking-cessation research — vaping evidence is still emerging.",
-
   "milestonesTitle": "Milestones",
   "milestonesEarned": "{earned} of {total} earned",
-  "@milestonesEarned": { "placeholders": { "earned": { "type": "int" }, "total": { "type": "int" } } },
+  "@milestonesEarned": {
+    "placeholders": {
+      "earned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "milestonesNext": "Next: {name}",
-  "@milestonesNext": { "placeholders": { "name": { "type": "String" } } },
+  "@milestonesNext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "milestonesNextProgress": "day {day} of {target} · two more sunrises",
-  "@milestonesNextProgress": { "placeholders": { "day": { "type": "int" }, "target": { "type": "int" } } },
+  "@milestonesNextProgress": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
   "milestonesNotLeaderboard": "Badges are yours, not a leaderboard. Nobody else's grid to compare.",
   "mFirstLog": "First log",
   "mFirstCraving": "First craving beaten",
@@ -633,7 +1188,6 @@
   "mFiveHundredSaved": "$500 saved",
   "mBuddyBond": "Buddy bond",
   "mComeback": "Comeback",
-
   "moodTitle": "How's today feeling?",
   "moodSubtitle": "10 seconds. It matters more than you'd think.",
   "moodRough": "rough",
@@ -644,17 +1198,49 @@
   "moodNoteHint": "One line, optional — \"work party tonight, nervous\"",
   "moodUnlockTitle": "🔓 Mood ↔ craving link",
   "moodUnlockProgress": "{done}/{total} check-ins",
-  "@moodUnlockProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+  "@moodUnlockProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "moodUnlockNote": "{count} more and your report shows how mood drives your cravings.",
-  "@moodUnlockNote": { "placeholders": { "count": { "type": "int" } } },
+  "@moodUnlockNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "moodCta": "Check in",
   "moodSaved": "Noted. Data beats vibes. 🙌",
-
   "insightLinkTitle": "Weekly report",
   "insightTitle": "Week {week} report · {range}",
-  "@insightTitle": { "placeholders": { "week": { "type": "int" }, "range": { "type": "String" } } },
+  "@insightTitle": {
+    "placeholders": {
+      "week": {
+        "type": "int"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "insightCounter": "INSIGHT {index} OF {total}",
-  "@insightCounter": { "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } } },
+  "@insightCounter": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "insight1Headline": "You vape 3× more after 10 p.m. on weekends.",
   "insight1Body": "Friday and Saturday nights account for 41% of your weekly puffs. That's a social trigger, not a nicotine one — different playbook.",
   "insight1ChartLabel": "PUFFS BY HOUR · WEEKEND",
@@ -671,10 +1257,15 @@
   "insight4Body": "Your line drops to 100/day Tuesday. The curve gets steeper here — this is the week the Panic Button earns its keep.",
   "insight4ChartLabel": "THE WEEK AHEAD",
   "insight4Action": "Coach suggestion: pre-book one thing you love for Saturday. Reward the bend, don't white-knuckle it.",
-
   "slipTitle": "A slip is data, not defeat.",
   "slipSubtitle": "You logged puffs after {days} clean days. That's information — it tells us exactly where the plan needs armor.",
-  "@slipSubtitle": { "placeholders": { "days": { "type": "int" } } },
+  "@slipSubtitle": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "slipWhatHappened": "WHAT WAS GOING ON?",
   "slipTriggerParty": "Party",
   "slipTriggerStress": "Stress",
@@ -688,19 +1279,51 @@
   "slipCurveLabel": "YOUR CURVE — GENTLY REFLOWN",
   "slipTheBump": "the slip bump",
   "slipNewFreedom": "Freedom Day: {date} (+{days} days)",
-  "@slipNewFreedom": { "placeholders": { "date": { "type": "String" }, "days": { "type": "int" } } },
+  "@slipNewFreedom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "slipCurveNote": "Two extra days, same destination. Party nights get a pre-armed nudge + game shortcut.",
   "slipStreakSurvives": "Your {days} days still count.",
-  "@slipStreakSurvives": { "placeholders": { "days": { "type": "int" } } },
+  "@slipStreakSurvives": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "slipFlameDims": "The flame dims, it doesn't die. One clean day brings it back to full blaze.",
   "slipBackOnCurve": "Back on the curve",
   "slipTalkFirst": "Talk it through with coach first",
-
   "profileQuittingSince": "quitting since {date} · {method} · day {day}",
-  "@profileQuittingSince": { "placeholders": { "date": { "type": "String" }, "method": { "type": "String" }, "day": { "type": "int" } } },
+  "@profileQuittingSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "profileCountdownLabel": "🏆 FREEDOM DAY COUNTDOWN",
   "profileDaysTo": "days to {date}",
-  "@profileDaysTo": { "placeholders": { "date": { "type": "String" } } },
+  "@profileDaysTo": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "profileLifetimeSaved": "lifetime saved",
   "profilePuffsNotTaken": "puffs not taken",
   "profileBadgesEarned": "badges earned",
@@ -708,7 +1331,6 @@
   "profileEditAlias": "Pick your alias",
   "profileEditAvatar": "Pick your avatar",
   "profileAliasHint": "anonymous — this is all anyone sees",
-
   "settingsTitle": "Settings",
   "settingsAccount": "Account",
   "settingsSubscription": "Manage subscription",
@@ -717,7 +1339,13 @@
   "settingsNotifications": "Notifications",
   "settingsDangerHours": "Danger hours",
   "settingsDangerHoursEdit": "{range} · edit ›",
-  "@settingsDangerHoursEdit": { "placeholders": { "range": { "type": "String" } } },
+  "@settingsDangerHoursEdit": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "settingsPrivacy": "Privacy",
   "settingsPrivacyNote": "We never sell your data. No ad trackers. Ever.",
   "settingsExportData": "Export my data",
@@ -741,8 +1369,13 @@
   "settingsDangerHoursTitle": "Danger hours",
   "settingsDangerHoursNote": "We nudge you 10 minutes before your window opens. Max 3 pushes a day, quiet hours respected.",
   "settingsQuietHours": "Quiet hours: {range}",
-  "@settingsQuietHours": { "placeholders": { "range": { "type": "String" } } },
-
+  "@settingsQuietHours": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "trialEndingPushTime": "now",
   "trialEndingPush": "your trial ends tomorrow — as promised, here's the heads-up. No surprise charges.",
   "trialEndingTitle": "Trial ends tomorrow.",
@@ -752,14 +1385,18 @@
   "trialEndingCravings": "cravings beaten",
   "trialEndingSaved": "saved",
   "trialEndingKeep": "Keep Premium — {price}/yr",
-  "@trialEndingKeep": { "placeholders": { "price": { "type": "String" } } },
+  "@trialEndingKeep": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "trialEndingSwitchFree": "Switch to Free (keeps your data)",
-
   "frameMapTitle": "All 52 design frames",
   "frameMapOpen": "Browse all 52 screens →",
   "frameMapNote": "Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.",
   "frameMapEdgeNote": "These states go live with the backend — an in-memory app has no offline or server errors to show honestly.",
-
   "seedPostWin30": "FREEDOM DAY. 30 days, zero puffs the last week. The panic button carried me through weekends. If you're on day 2 and dying — it genuinely gets easier around day 8.",
   "seedPostSos": "outside the gas station. wallet in hand. someone talk me out of this",
   "seedPostDay1": "threw mine in the lake. probably bad for the lake. day 1 starts now",
@@ -769,5 +1406,13 @@
   "seedReplyWalk": "walk. just walk one block. the wallet stays heavy, you stay free. i did this exact thing tuesday",
   "seedReplyScience": "day 4 is the worst one, it's science. you're at the peak RIGHT NOW. 15 minutes and this dies",
   "seedReplyGatorade": "buy a gatorade instead. ceremonial purchase. works weirdly well",
-  "seedReplyUpdate": "update: bought the gatorade. walking home. thank you, i mean it 💙"
+  "seedReplyUpdate": "update: bought the gatorade. walking home. thank you, i mean it 💙",
+  "dangerReminderTitle": "Your danger hour is coming up",
+  "dangerReminderBody": "This is usually when it hits. You've got a plan — and 15 minutes beats it.",
+  "@dangerReminderTitle": {
+    "description": "Local notification fired 10 min before a predicted danger hour (docs/03 §8)."
+  },
+  "@dangerReminderBody": {
+    "description": "Body of the danger-hour reminder. Cites the 15-20 minute craving fact from docs/02 §8 — an approved stat."
+  }
 }

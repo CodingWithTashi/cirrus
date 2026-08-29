@@ -3,6 +3,19 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../domain/logic/reminder_planner.dart';
 
+/// What the coordinator needs from a scheduler. Exists so the scheduling
+/// DECISIONS can be tested without a platform channel — the decisions are the
+/// part that can be wrong in a way a user notices.
+abstract interface class ReminderSink {
+  Future<void> apply(
+    List<ReminderSlot> slots, {
+    required String title,
+    required String body,
+  });
+
+  Future<void> cancelAll();
+}
+
 /// Puts [ReminderSlot]s on the device clock.
 ///
 /// Danger-hour reminders are scheduled ON-DEVICE rather than pushed from a
@@ -13,7 +26,7 @@ import '../../../domain/logic/reminder_planner.dart';
 /// Everything policy-shaped — which hours, how early, quiet hours, the daily
 /// cap — lives in [ReminderPlanner] and is unit-tested. This class only
 /// translates a plan into plugin calls.
-class ReminderScheduler {
+class ReminderScheduler implements ReminderSink {
   ReminderScheduler({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
@@ -38,6 +51,7 @@ class ReminderScheduler {
     _ready = true;
   }
 
+  @override
   /// Replaces the whole schedule with [slots].
   ///
   /// Cancel-then-schedule rather than a diff: the plan is at most three
@@ -67,6 +81,7 @@ class ReminderScheduler {
     }
   }
 
+  @override
   Future<void> cancelAll() async {
     try {
       await _ensureReady();

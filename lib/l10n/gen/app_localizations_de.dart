@@ -2296,4 +2296,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get seedReplyUpdate =>
       'Update: Gatorade gekauft. laufe nach Hause. danke, ehrlich 💙';
+
+  @override
+  String get dangerReminderTitle => 'Deine kritische Stunde kommt';
+
+  @override
+  String get dangerReminderBody =>
+      'Genau jetzt wird es meist hart. Du hast einen Plan — 15 Minuten reichen.';
 }

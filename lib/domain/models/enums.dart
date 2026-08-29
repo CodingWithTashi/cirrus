@@ -11,6 +11,22 @@ enum VapeFrequency { daily, often, always }
 
 enum FirstPuffWindow { withinFive, fiveToThirty, thirtyToSixty, hourPlus }
 
+extension FirstPuffWindowHour on FirstPuffWindow {
+  /// A rough local hour for the first puff of the day, used ONLY as the
+  /// danger-hour fallback before three days of real data exist (docs/03 §8).
+  ///
+  /// The onboarding question measures time-since-waking, not a clock time, so
+  /// this assumes a 07:00 wake. That assumption is wrong for plenty of people
+  /// — which is exactly why it is a stopgap that real hour buckets replace as
+  /// soon as they exist, rather than something the plan keeps leaning on.
+  int get approximateHour => switch (this) {
+    FirstPuffWindow.withinFive => 7,
+    FirstPuffWindow.fiveToThirty => 7,
+    FirstPuffWindow.thirtyToSixty => 8,
+    FirstPuffWindow.hourPlus => 9,
+  };
+}
+
 enum NicStrength {
   mg20(0.28),
   mg35(0.49),
