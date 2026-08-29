@@ -105,7 +105,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ID | Blocker | Evidence | Sprint |
 |---|---|---|---|
 | ~~**B1**~~ | ✅ **RESOLVED Aug 29.** The four modules are written and committed (`09305ad`). **Root cause:** `lib/` in `functions/.gitignore` was unanchored, so it matched `functions/src/lib/` as well as the tsc output — the modules were almost certainly written once and silently never committed. Pattern anchored to `/lib/`. | `npm run verify` green: typecheck + lint + **33 tests / 4 files**, incl. `parsers.test.ts` which could not previously resolve its imports. `npm run build` emits to `lib/src/`; barrel loads all 9 functions. | S0 ✅ |
-| **B2** | **Functions never deployed.** Cloud Functions API has never been *enabled* on `alastpuff` (403 `SERVICE_DISABLED`). No `functions/lib/`, no `node_modules/`, no `.firebase/`. | `firebase functions:list --debug` | S0 |
+| **B2** | [UNBLOCKED, not yet deployed] Billing was **already on Blaze** - the tracker assumed an upgrade was needed and that was wrong - and the Cloud Functions API is now enabled, so `functions:list` answers instead of 403. Deps installed, build emits, barrel loads all 9. **Remaining: the two secret values** (`GEMINI_API_KEY`, `REVENUECAT_WEBHOOK_TOKEN`); deploy fails without them. Gen-2 also wants `cloudbuild`/`artifactregistry`/`run`/`eventarc`. | `gcloud billing projects describe alastpuff` -> `billingEnabled: true` | S0 |
 | **B3** | **Client cannot call the backend.** No `cloud_functions`, no `firebase_app_check` in `pubspec.yaml`; zero `httpsCallable` in `lib/`. All 5 callables set `enforceAppCheck: true` and would reject the app anyway. | `pubspec.yaml`, import grep | S1 |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
 | **B5** | **Community + Coach fake in production.** Their providers have no `switch` on `backendModeProvider` → `FakeCommunityApi`/`FakeCoachApi` on a real phone, over memory that resets on restart. The "AI coach" is `if (text.contains('crav'))` over 18 canned templates. | `lib/data/stores/providers.dart:59-87` | S2, S3 |
@@ -118,16 +118,17 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B12** | **Streak parity broken.** The TS port omits the repair-token exception present in Dart, so the server counts a token-saved day as a break — Ember would quote a lower streak than Home shows. | `streakEngine.ts:21` vs `streak_engine.dart:29-30` | S2 |
 | **B13** | 🔨 **HALF DONE.** The `.gitignore` line protecting the service-account key is now **committed** (`09305ad`), so the protection survives a `git checkout`. **Still open: rotate the key** in the GCP console — it sat unencrypted in the working tree and only the founder can rotate it. | `git show HEAD:.gitignore`; key confirmed never tracked | S0 |
 | **B14** | **Lock-screen widget absent** though founder-locked for MVP (Doc 3 header). No iOS widget extension target, no Android app widget. | `ios/Runner.xcodeproj` targets, `android/` | S0 decision |
-| **B15** | **Name unresolved.** Firebase says "Cirrus: Quit Vaping & Puff Tracker"; all code, ARB and docs say "LastPuff". PRD §15 still lists it OPEN. Blocks ASO, listings, domain, handles, wordmark. | `AndroidManifest.xml`, `Info.plist`, `app_en.arb` | S0 |
+| ~~**B15**~~ | [RESOLVED Aug 29] **The name is Cirrus** (founder). Renamed test-first: 4 keys x 5 locales, `android:label`, `CFBundleDisplayName`, pubspec. Internal identifiers (`last_puff` package, `LastPuffApp`, `undoLastPuff`) deliberately unchanged - no user sees them. **Bundle IDs unchanged and still a founder call:** moving off `com.quitvape.last_puff` means re-registering both Firebase apps. | `flutter test` 52/52; `test/brand_name_test.dart` guards all 5 locales | S0 done |
 | **B16** | **No CI, no fastlane, no store assets**, default Flutter launcher icons. | repo root, `assets/` | S0 |
+| **B17** | 🆕 **NO macOS / Xcode — the dev machine is Windows.** iOS cannot be built, run, signed, or submitted from here at all. Config files can be written (and the `GoogleService-Info.plist` pulled via `firebase apps:sdkconfig`), but nothing iOS is *verifiable* until it touches a Mac. **This is the single biggest threat to "both platforms Oct 15"** — larger than any code item, because no amount of work here retires it. Options: a Mac, or macOS CI (Codemagic / GitHub Actions `macos` runner); submission still needs the Apple account. | `flutter doctor` on win32; no Xcode toolchain | **S0 — founder decision** |
 
 ### 🔒 Security & correctness backlog (found in audit, none blocking S0)
 
 | Item | Where | Sprint |
 |---|---|---|
 | `createPost` trusts client `alias`/`avatarEmoji`/`dayN` with no validation; daily cap is check-then-write, not transactional | `createPost.ts` | S3 |
-| `posts` update rule allows arbitrary `reportCount`/`reactions` values — no increment-only or per-user constraint | `firestore.rules` | S3 |
-| Replies are `read: if signedIn()` with **no status filter** — unmoderated replies would be world-readable | `firestore.rules` | S3 |
+| ~~`posts` update rule allows arbitrary `reportCount`~~ ✅ **FIXED Aug 29** — reports are now `+1 or nothing`. **`reactions` map contents still unconstrained** — the real fix is per-user keying (`reactions{uid: emoji}`), a data-model change | `firestore.rules`, `test/rules/` | S3 |
+| ~~Replies world-readable unmoderated~~ ✅ **FIXED Aug 29** — replies now read only at `status == 'live'`, which also pins the contract `createReply` (B10) must satisfy | `firestore.rules`, `test/rules/` | S3 |
 | `rcWebhook` uses non-constant-time token compare; no replay/ordering protection | `rcWebhook.ts:37` | S1 |
 | `moderation` queue has **no reader** — no admin UI, no admin claim, nothing surfaces it | `moderatePost.ts` writes only | S3 |
 | `aiCoachChat` streaming path logs no token usage → primary path has zero cost telemetry | `aiCoachChat.ts:111-132` | S2 |
@@ -166,7 +167,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S0-1` Apple Developer Program enrollment ($99/yr) — **start today**
 - [ ] `S0-2` App Store Connect: Paid Apps agreement + **banking & tax forms** ← blocks all IAP testing
 - [ ] `S0-3` Google Play Console ($25) + merchant account
-- [ ] `S0-4` **Name decision (B15):** "LastPuff" vs "Cirrus". Blast radius — ASO title/subtitle/keywords (Doc 6 §4), store listings, domain, TikTok/IG/YT handles, the wordmark concept in Doc 7 §4 (built on the literal "LastPuff" ligature), 3 ARB keys, `AndroidManifest.xml`, `Info.plist`, Firebase display name. **Founder decision.**
+- [x] `S0-4` ✅ **Cirrus** (decided Aug 29; rename shipped). Original note: **Name decision (B15):** "LastPuff" vs "Cirrus". Blast radius — ASO title/subtitle/keywords (Doc 6 §4), store listings, domain, TikTok/IG/YT handles, the wordmark concept in Doc 7 §4 (built on the literal "LastPuff" ligature), 3 ARB keys, `AndroidManifest.xml`, `Info.plist`, Firebase display name. **Founder decision.**
 - [ ] `S0-5` Doc 7 §1 due-diligence: domain, handles, USPTO/CIPO trademark check — all currently unchecked
 - [ ] `S0-6` Widget in-or-out decision (see above)
 
@@ -244,11 +245,11 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 
 - [ ] `S3-1` `communityRepositoryProvider` switches on backend mode; add `FirebaseCommunityRepository` (B5)
 - [ ] `S3-2` Wire `createPost` callable
-- [ ] `S3-3` **Write `createReply` (B10)** — rules already deny direct creates citing a callable that was never built
+- [ ] `S3-3` **Write `createReply` (B10)** — rules already deny direct creates citing a callable that was never built — reply read contract already pinned by the rules suite: replies must be written `pending` and flipped by moderation
 - [ ] `S3-4` Extend `moderatePost` to trigger on replies too
 - [ ] `S3-5` Tighten reply read rule with a `status == 'live'` filter (today any signed-in user reads unmoderated replies)
 - [ ] `S3-6` Validate `alias`/`avatarEmoji`/`dayN` server-side against the real journey; make the 3-post cap **transactional**
-- [ ] `S3-7` Rules: constrain `reactions`/`reportCount` to increment-only, per-user keyed
+- [~] `S3-7` Rules: `reportCount` now increment-only and replies gated on `status == 'live'` (done Aug 29, `test/rules/` 28 tests). **Still open: `reactions` per-user keying** — needs the data-model change from `reactions{emoji: count}` to `reactions{uid: emoji}`
 - [ ] `S3-8` `moderatePost` fail-closed on model outage — hold as `pending`, not `live`
 - [ ] `S3-9` **Build the moderation queue reader** — nothing on disk can surface `moderation/*`. Required for the Guideline 1.2 24h commitment.
 - [ ] `S3-10` Real report / block / delete-own-content paths
@@ -355,7 +356,7 @@ Resolutions already in code (from `CLAUDE.md`) plus contradictions found across 
 | 8 | `taperRecalc` window — Doc 5 §7 "trailing 7-day" vs Doc 3 §3.3 "trailing 3 days" | **Doc 3 wins** — its math is the buildable one and matches `taperEngine.ts` |
 | 9 | Apple Watch — PRD §8 V1.1 vs Doc 5 §3 V2 | **Doc 5 wins (V2).** Separate native mini-app |
 | 10 | PRD §3 stray "$4.99/wk" | Leftover from before the $2.99 lock. **Ignore** |
-| 11 | Name — PRD §15 "OPEN" vs every other doc header "locked Aug 17" vs Firebase "Cirrus" | **⛔ Genuinely unresolved — `S0-4`** |
+| 11 | Name — PRD §15 "OPEN" vs other doc headers vs Firebase "Cirrus" | **RESOLVED Aug 29: Cirrus.** Rename shipped; `docs/01 §15` item 1 is stale |
 | 12 | Firestore model — Doc 5 §6 per-day subcollections vs implemented single `journeys/{uid}` doc | **Single doc stands for MVP** (deliberate, documented in `firebase_common.dart`). Revisit if the 1MB ceiling or multi-device merge becomes real |
 | 13 | Buddy system — Doc 3 §7/§9 assume it; `functions/README.md` says descoped Aug 2026 | **Descoped.** Buddy UI exists (`lib/features/buddy/`) but has no backend. Decide in S3 whether to hide it |
 
