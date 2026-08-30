@@ -1,156 +1,149 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import WaitlistForm from '../components/WaitlistForm.astro';
-import TaperCurve from '../components/TaperCurve.astro';
-import CostCalculator from '../components/CostCalculator.astro';
+import DependenceWidget from '../components/DependenceWidget.astro';
 import { HONEST_STATS, FAQS } from '../lib/content';
-import { SITE_TITLE, LAUNCH_DATE_LABEL } from '../consts';
-import { getPublishedPosts } from '../lib/posts';
 
-const recent = (await getPublishedPosts()).slice(0, 3);
+// Three of the five approved stats — the strongest, kept to Rangjong's
+// three-card rhythm. All five remain in content.ts for the blog to use.
+const stats = HONEST_STATS.filter((s) => ['76%', '28% → 53%', '15–20 min'].includes(s.figure));
 
-// Feature copy maps 1:1 onto engines that actually exist in lib/domain/logic/.
-// docs/08 lists what is NOT built (billing, widgets, craving forecasts, watch
-// app) — none of it is claimed here.
-const features = [
-  {
-    accent: 'var(--volt)',
-    title: 'A plan that bends, not breaks',
-    body: 'Log what you really vape and the taper does the rest — a slightly lower ceiling each day, and a Freedom Day that moves rather than a plan that snaps. Go over? A repair token absorbs it. Your streak dims; it does not die.',
-  },
-  {
-    accent: 'var(--ember)',
-    title: '2 a.m. cravings have backup now',
-    body: 'Cirrus learns the hours you actually reach for it and gets there first. When one lands anyway, Panic Mode breathes with you for the fifteen minutes it takes to pass, instead of leaving you alone with a counter.',
-  },
-  {
-    accent: 'var(--oxygen)',
-    title: 'People who get it',
-    body: 'A feed of others somewhere on the same curve. No before-and-afters, no lectures, no strangers telling you it is easy. And nothing you write is ever sold — there are no ad trackers in the app at all.',
-  },
+const screens = [
+  { src: '/screens/dependence.jpg', title: 'Your real number', caption: 'Not days clean. Puffs, going down.' },
+  { src: '/screens/home.jpg', title: 'Today', caption: 'One tap to log. The rest does itself.' },
+  { src: '/screens/pace.jpg', title: 'Your pace', caption: '14, 30 or 90 days. You pick.' },
 ];
+
 ---
 
 <BaseLayout softwareApp faq={FAQS}>
-  {/* ---------- HERO ---------- */}
+  {/* ---------- 1. HERO ---------- */}
   <section class="hero">
-    <h1>Quit vaping without going cold turkey.</h1>
-    <p class="lede">
-      {SITE_TITLE} counts your actual puffs, then walks the number down slowly enough that your
-      brain doesn't notice. No willpower speeches. No day-one reset because you had one bad Tuesday.
-    </p>
+    <div class="wrap hero__grid">
+      <div>
+        <p class="micro micro--volt">Quit vaping · coming soon</p>
+        <h1>Quit vaping without going <span class="accent">cold turkey</span>.</h1>
+        <p class="hero__sub">
+          One bad Tuesday shouldn't cost you three weeks of progress.
+        </p>
+        <WaitlistForm source="hero" id="waitlist-hero" showCount />
+      </div>
 
-    <WaitlistForm source="hero" id="waitlist-hero" />
-
-    <p class="hero-note">
-      Free to join. One email when it lands, then nothing you didn't ask for.
-    </p>
-  </section>
-
-  {/* ---------- THE CURVE ---------- */}
-  <section aria-labelledby="how">
-    <h2 id="how">How the taper actually works</h2>
-    <p>
-      You start where you actually are — say 150 puffs a day — and the daily ceiling steps down
-      from there. Early days barely pinch. By the end you're coasting to zero instead of
-      slamming into it.
-    </p>
-    <TaperCurve />
-    <p class="note curve-note">
-      Real curve, real formula — the same one in the app. Pick 14, 21, 30, 60 or 90 days and it
-      redraws around your number.
-    </p>
-  </section>
-
-  {/* ---------- COST CALCULATOR ---------- */}
-  <section aria-labelledby="cost">
-    <h2 id="cost">What vaping actually costs you</h2>
-    <p>
-      Most people have never done this multiplication on purpose. It's not a guilt trip — it's
-      just the number, and it's yours.
-    </p>
-    <CostCalculator />
-    <p class="note">
-      Every money figure in {SITE_TITLE} works exactly like this: your spend, your puff count,
-      real arithmetic. We don't have a number to sell you.
-    </p>
-  </section>
-
-  {/* ---------- FEATURES ---------- */}
-  <section aria-labelledby="what">
-    <h2 id="what">What you get</h2>
-    <ul class="features">
-      {
-        features.map((f) => (
-          <li class="feature">
-            <div class="rule" style={`background:${f.accent}`}></div>
-            <h3>{f.title}</h3>
-            <p>{f.body}</p>
-          </li>
-        ))
-      }
-    </ul>
-  </section>
-
-  {/* ---------- HONEST STATS ---------- */}
-  <section aria-labelledby="honest">
-    <h2 id="honest">Numbers we can actually stand behind</h2>
-    <p>
-      Quit apps are full of invented statistics — "78% of members quit" and similar, sourced to
-      nobody. Here is every number we'll show you, and where each one comes from.
-    </p>
-    <ul class="stats">
-      {
-        HONEST_STATS.map((s) => (
-          <li class="stat">
-            <p class="stat-figure">{s.figure}</p>
-            <p class="stat-claim">{s.claim}</p>
-            <p class="stat-source">{s.source}</p>
-          </li>
-        ))
-      }
-    </ul>
-  </section>
-
-  {/* ---------- FAQ ---------- */}
-  <section aria-labelledby="faq">
-    <h2 id="faq">Questions people actually ask</h2>
-    <div class="faq">
-      {
-        FAQS.map((item, i) => (
-          <details open={i === 0}>
-            <summary><h3>{item.q}</h3></summary>
-            <p>{item.a}</p>
-          </details>
-        ))
-      }
+      <div class="screens" style="justify-content:center">
+        <figure class="screen" style="width:260px">
+          <div class="phone">
+            <img src="/screens/dependence.jpg" width="720" height="1474" alt="Cirrus asking how many puffs you take on a normal day, showing 150 and a Moderate dependence badge." fetchpriority="high" />
+          </div>
+        </figure>
+      </div>
     </div>
   </section>
 
-  {/* ---------- CLOSING CTA ---------- */}
-  <section class="cta-final" aria-labelledby="join">
-    <h2 id="join">Be there on day one</h2>
-    <p>
-      Android lands {LAUNCH_DATE_LABEL}. iPhone is a fast-follow — it genuinely isn't built yet,
-      and we'd rather say that than take a pre-order. Either way, you'll hear from us the day
-      yours is ready.
-    </p>
-    <WaitlistForm source="footer" id="waitlist-footer" compact />
+  {/* ---------- 2. THE LIVE WIDGET ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="number">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro micro--volt">Try it right now</p>
+        <h2 id="number">What's your real number?</h2>
+        <p>This is Cirrus's actual first screen — not a mockup. Type, and it answers.</p>
+      </div>
+
+      <DependenceWidget />
+
+      <p class="widget__cta">
+        <a class="btn btn-primary" href="#join">Get this plan on launch day</a>
+      </p>
+    </div>
   </section>
 
-  {
-    recent.length > 0 && (
-      <section aria-labelledby="reading">
-        <h2 id="reading">More on quitting</h2>
-        <ul class="post-list">
-          {recent.map((post) => (
-            <li>
-              <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>
-              <p>{post.data.description}</p>
+  {/* ---------- 3. PROOF ---------- */}
+  <section class="section" aria-labelledby="inside">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro">Inside the app</p>
+        <h2 id="inside">Built already. Not a landing page with a dream.</h2>
+      </div>
+
+      <div class="screens">
+        {
+          screens.map((s) => (
+            <figure class="screen reveal">
+              <div class="phone">
+                <img src={s.src} width="720" height="1474" loading="lazy" decoding="async" alt={`Cirrus — ${s.title}`} />
+              </div>
+              <figcaption><b>{s.title}</b>{s.caption}</figcaption>
+            </figure>
+          ))
+        }
+      </div>
+
+      <div class="ember reveal">
+        <div class="ember__avatar" aria-hidden="true">AI</div>
+        <div>
+          <p class="ember__name">Ember</p>
+          <p class="ember__meta">● knows your plan · day 1</p>
+          <blockquote class="ember__bubble">
+            Hey. I'm Ember — I quit two years ago and I remember exactly how it felt. I've read
+            your plan: 50 a day, Taper, Freedom Day Sep 27. No lectures from me, ever. What's
+            going on right now?
+          </blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- 4. NUMBERS INTERSTITIAL ---------- */}
+  <section class="section section--tight section--lift section--rules" aria-labelledby="honest">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro micro--ember">No invented stats</p>
+        <h2 id="honest">Every number here has a source.</h2>
+        <p>Other quit apps ship "78% of members quit", cited to nobody. We don't.</p>
+      </div>
+
+      <ul class="stats">
+        {
+          stats.map((s, i) => (
+            <li class="stat reveal" data-delay={i}>
+              <p class="stat__figure">{s.figure}</p>
+              <p class="stat__claim">{s.claim}</p>
+              <p class="stat__source">{s.source}</p>
             </li>
-          ))}
-        </ul>
-      </section>
-    )
-  }
+          ))
+        }
+      </ul>
+
+    </div>
+  </section>
+
+  {/* ---------- 5. FAQ ---------- */}
+  <section class="section" aria-labelledby="faq">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro">Straight answers</p>
+        <h2 id="faq">Questions people actually ask</h2>
+      </div>
+
+      <div class="faq">
+        {
+          FAQS.map((item, i) => (
+            <details open={i === 0}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- 6. CLOSING CTA ---------- */}
+  <section class="section cta-band" id="join" aria-labelledby="join-h">
+    <div class="wrap">
+      <p class="micro micro--volt">Still here? Good sign.</p>
+      <h2 id="join-h">Be there on day one.</h2>
+      <p>One email when it's ready. Nothing else, ever.</p>
+      <WaitlistForm source="footer" id="waitlist-footer" cta="Join the waitlist" label="Get early access" />
+    </div>
+  </section>
 </BaseLayout>

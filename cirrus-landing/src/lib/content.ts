@@ -70,7 +70,7 @@ export const FAQS = [
   },
   {
     q: 'When is Cirrus available, and is it on iPhone?',
-    a: 'Android first, on October 15. iPhone is a fast-follow — it genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
+    a: 'Android first. iPhone is a fast-follow — it genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
   },
   {
     q: 'Is Cirrus free?',

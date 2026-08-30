@@ -149,6 +149,17 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#0a0c10" />
 
+    {/* Runs before first paint: .reveal only hides content once we know JS is
+        alive AND motion is welcome, so a failed observer can never leave the
+        page blank. */}
+    <script is:inline>
+      (function () {
+        var r = document.documentElement;
+        r.classList.add('js');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) r.classList.add('motion');
+      })();
+    </script>
+
     <Font cssVariable="--font-space-grotesk" preload />
     <Font cssVariable="--font-inter" preload />
 
@@ -195,19 +206,19 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
-      <a class="brand" href="/">
-        <img src="/logo.png" width="28" height="28" alt="" decoding="async" />
-        <span>{SITE_TITLE}</span>
-      </a>
-      <nav aria-label="Primary">
-        <a href="/blog">Blog</a>
-      </nav>
+      <div class="wrap">
+        <a class="brand" href="/">
+          <img src="/logo.png" width="30" height="30" alt="" decoding="async" />
+          <span>{SITE_TITLE}</span>
+        </a>
+        <span class="pill">Coming soon</span>
+      </div>
     </header>
 
     <main id="main">
       {
         trail && (
-          <nav class="breadcrumb" aria-label="Breadcrumb">
+          <nav class="breadcrumb wrap" aria-label="Breadcrumb">
             <ol>
               {trail.map((crumb, i) => (
                 <li>
@@ -226,16 +237,42 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     </main>
 
     <footer class="site-footer">
-      <div class="footer-links">
-        <a href="/">Quit vaping with Cirrus</a>
-        <a href="/blog">Blog</a>
-        <a href="/rss.xml">RSS</a>
-        <a href={PRIVACY_URL}>Privacy</a>
-        <a href={TERMS_URL}>Terms</a>
+      <div class="wrap">
+        <a class="brand" href="/">
+          <img src="/logo.png" width="24" height="24" alt="" decoding="async" />
+          <span style="font-size:1rem">{SITE_TITLE}</span>
+        </a>
+        <p style="margin:0">Built by someone who quit. 17+ &middot; nicotine is addictive.</p>
+        <div class="footer-links">
+          <a href="/blog">Blog</a>
+          <a href={PRIVACY_URL}>Privacy</a>
+          <a href={TERMS_URL}>Terms</a>
+        </div>
       </div>
-      <p class="footer-legal">
-        &copy; {new Date().getFullYear()} {SITE_TITLE} &middot; 17+. Nicotine is addictive.
-      </p>
     </footer>
+
+    {/* Scroll reveal. Fires once per element, then a 2.5s failsafe force-reveals
+        anything the observer missed and disconnects — content must never be
+        left hidden by a script that did not run. */}
+    <script>
+      const els = document.querySelectorAll('.reveal');
+      if (els.length && document.documentElement.classList.contains('motion')) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              e.target.classList.add('in-view');
+              io.unobserve(e.target);
+            }
+          },
+          { rootMargin: '0px 0px -10% 0px', threshold: 0.15 },
+        );
+        els.forEach((el) => io.observe(el));
+        setTimeout(() => {
+          els.forEach((el) => el.classList.add('in-view'));
+          io.disconnect();
+        }, 2500);
+      }
+    </script>
   </body>
 </html>

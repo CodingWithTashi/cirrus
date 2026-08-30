@@ -23,6 +23,7 @@ const { Content } = await render(post);
   noindex={post.data.draft}
   breadcrumbs={[{ label: 'Blog', href: '/blog' }, { label: post.data.title }]}
 >
+  <div class="wrap page">
   <article class="prose">
     <h1>{post.data.title}</h1>
     <p class="post-meta">
@@ -39,4 +40,5 @@ const { Content } = await render(post);
     <a href="/blog">All posts on quitting vaping</a>
     <a href="/">How the Cirrus taper works</a>
   </nav>
+  </div>
 </BaseLayout>

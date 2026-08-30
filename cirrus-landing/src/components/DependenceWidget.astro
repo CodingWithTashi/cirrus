@@ -1,0 +1,144 @@
+---
+// Cirrus's onboarding step 5, rebuilt for the web.
+//
+// This is the page's whole argument: instead of describing the app, let people
+// use the part of it that lands hardest. docs/06 §4 already names this the ASO
+// thumb-stopper ("first screenshot = the dependence-badge moment"), so it is the
+// right thing to put in front of a stranger.
+//
+// Every output mirrors real Dart in lib/domain/logic/, not marketing maths:
+//   DependenceLevel.forPuffs  — <=50 light, <=150 moderate, <=300 heavy, 301+ severe
+//   DependenceEngine          — round(puffs / 14) cigarettes; ~600 puffs a disposable
+//   TaperEngine               — round(B * (1 - d/P)^1.5) with the <=3, <=1, 0 tail
+//   MoneyEngine               — the visitor's own spend, x52. Their arithmetic, not ours.
+---
+
+<div class="widget" data-widget>
+  <p class="widget__q">Two questions. Then you'll know where you actually stand.</p>
+
+  <div class="widget__inputs">
+    <div class="field">
+      <label class="micro" for="w-puffs">Puffs on a normal day</label>
+      <div class="field__box">
+        <input id="w-puffs" type="number" inputmode="numeric" min="1" max="2000" step="10"
+               value="150" data-puffs aria-describedby="w-out" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="micro" for="w-spend">Spend a week</label>
+      <div class="field__box">
+        <span aria-hidden="true">$</span>
+        <input id="w-spend" type="number" inputmode="decimal" min="0" max="1000" step="5"
+               value="20" data-spend aria-describedby="w-out" />
+      </div>
+    </div>
+  </div>
+
+  <div class="widget__result" id="w-out" role="status" aria-live="polite">
+    <span class="badge" data-badge data-level="moderate">Moderate dependence</span>
+
+    <p class="widget__lines">
+      ≈ <b data-cigs>11</b> cigarettes' worth, every day
+    </p>
+    <p class="widget__money" data-year>$1,040</p>
+    <p class="micro">a year, on your own numbers</p>
+  </div>
+
+  <figure class="widget__curve" data-curve-wrap>
+    <figcaption class="curve-caption">
+      <span><b data-start>150</b> puffs</span>
+      <span class="curve-freedom">0 · Freedom Day</span>
+    </figcaption>
+    <svg viewBox="0 0 620 150" preserveAspectRatio="none" role="img"
+         aria-label="Your taper curve falling to zero over 30 days.">
+      <defs>
+        <linearGradient id="w-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8f542" stop-opacity="0.20" />
+          <stop offset="100%" stop-color="#c8f542" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <path data-area fill="url(#w-fill)" d="" />
+      <path data-line fill="none" stroke="#c8f542" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round" d="" />
+      <circle data-end r="6" fill="#ff8a00" cx="612" cy="142" />
+    </svg>
+  </figure>
+
+  <p class="micro" style="text-align:center;margin-top:0.75rem">
+    Your 30-day curve · redrawn from your number
+  </p>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-widget]');
+  if (root) {
+    const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const puffsEl = $<HTMLInputElement>('[data-puffs]');
+    const spendEl = $<HTMLInputElement>('[data-spend]');
+    const badge = $<HTMLElement>('[data-badge]');
+    const cigs = $<HTMLElement>('[data-cigs]');
+    const year = $<HTMLElement>('[data-year]');
+    const start = $<HTMLElement>('[data-start]');
+    const line = $<SVGPathElement>('[data-line]');
+    const area = $<SVGPathElement>('[data-area]');
+    const end = $<SVGCircleElement>('[data-end]');
+
+    const money = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    });
+
+    // Mirrors DependenceLevel.forPuffs in lib/domain/models/enums.dart.
+    const bandFor = (puffs: number) =>
+      puffs <= 50
+        ? { key: 'light', label: 'Light dependence' }
+        : puffs <= 150
+          ? { key: 'moderate', label: 'Moderate dependence' }
+          : puffs <= 300
+            ? { key: 'heavy', label: 'Heavy dependence' }
+            : { key: 'severe', label: 'Severe dependence' };
+
+    const W = 620, H = 150, P = 30;
+
+    // TaperEngine.limit — the tail is fixed at <=3, <=1, 0 so the plan always
+    // lands exactly on zero rather than asymptotically near it.
+    const limit = (base: number, d: number) => {
+      if (d >= P) return 0;
+      if (d === P - 1) return 1;
+      if (d === P - 2) return 3;
+      return Math.round(base * Math.pow(1 - d / P, 1.5));
+    };
+
+    const render = () => {
+      const puffs = Math.min(Math.max(Number(puffsEl.value) || 0, 1), 2000);
+      const spend = Math.min(Math.max(Number(spendEl.value) || 0, 0), 1000);
+
+      const band = bandFor(puffs);
+      badge.textContent = band.label;
+      badge.dataset.level = band.key;
+
+      cigs.textContent = String(Math.round(puffs / 14)); // ~14 puffs ~ 1 cigarette
+      year.textContent = money.format(spend * 52);
+      start.textContent = String(puffs);
+
+      const pts: string[] = [];
+      for (let d = 0; d <= P; d++) {
+        const x = 8 + ((W - 16) * d) / P;
+        const y = 12 + (H - 20) * (1 - limit(puffs, d) / puffs);
+        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+      const path = `M${pts.join(' L')}`;
+      line.setAttribute('d', path);
+      area.setAttribute('d', `${path} L${W - 8},${H - 8} L8,${H - 8} Z`);
+      const [ex, ey] = pts[pts.length - 1].split(',');
+      end.setAttribute('cx', ex);
+      end.setAttribute('cy', ey);
+    };
+
+    puffsEl.addEventListener('input', render);
+    spendEl.addEventListener('input', render);
+    render();
+  }
+</script>

@@ -14,10 +14,11 @@ export const SITE_OG_IMAGE = '/og.png';
 export const SITE_LOCALE = 'en_US';
 
 // docs/08 §1 LOCKED TARGETS: "Android at launch; iOS fast-follow" — there is no
-// Mac, so iOS cannot be built or submitted yet. Saying "iPhone and Android" here
-// would be a promise the build cannot keep, and iPhone users are precisely the
-// audience the waitlist exists to hold.
-export const LAUNCH_DATE_LABEL = 'October 15';
+// Mac, so iOS cannot be built or submitted yet. iPhone users are precisely the
+// audience the waitlist exists to hold, so the FAQ says Android-first plainly.
+//
+// No launch DATE appears anywhere on this site, deliberately: the founder's call.
+// The page says "Coming soon" and nothing more. Do not reintroduce one.
 export const LAUNCH_PLATFORM = 'Android';
 
 // Real signups already collected, per the founder. docs/07 §8 forbids faking
