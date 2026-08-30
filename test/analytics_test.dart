@@ -1,0 +1,283 @@
+import 'dart:async';
+
+import 'package:amplitude_flutter/amplitude.dart';
+import 'package:amplitude_flutter/configuration.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/data/analytics/amplitude_analytics.dart';
+import 'package:last_puff/data/analytics/analytics_options.dart';
+import 'package:last_puff/data/analytics/analytics_sinks.dart';
+import 'package:last_puff/data/backend_mode.dart';
+import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/analytics/analytics.dart';
+import 'package:last_puff/domain/analytics/lp_events.dart';
+import 'package:last_puff/domain/models/models.dart';
+import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
+
+import 'helpers.dart';
+
+/// The analytics seam: one vocabulary, many vendors, and a guarantee that a
+/// vendor failing is invisible to the user.
+///
+/// The static class this replaced could not be tested at all — it called
+/// `FirebaseAnalytics.instance` directly, so every assertion here is coverage
+/// that did not previously exist.
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('the vocabulary', () {
+    // The dashboard reads these strings. A rename in Dart that is not also a
+    // rename in Amplitude and Firebase silently orphans a chart, and the
+    // >15% drop-off alert docs/02 §7 asks for stops firing rather than
+    // reporting zero. So the names are pinned, in order, against the spec.
+    test('every event fires under its docs/02 §7 name', () {
+      final a = RecordingAnalytics()
+        ..onboardingStart()
+        ..screenCompleted('welcome', 1200)
+        ..ageGateBlocked()
+        ..ageEntryAdopted()
+        ..puffsEntered(200, 'heavy')
+        ..spendEntered(45, 2340)
+        ..methodChosen('taper')
+        ..paceChosen(30)
+        ..planRevealed()
+        ..commitHeld()
+        ..notifPrompt(granted: true)
+        ..paywallViewed('d5_default')
+        ..trialStarted('yearly')
+        ..freeContinued()
+        ..winbackShown()
+        ..winbackConverted()
+        ..puffLogged()
+        ..cravingSurvived(survived: true);
+
+      expect(a.names, [
+        'onboarding_start',
+        'screen_completed',
+        'age_gate_blocked',
+        'age_entry_adopted',
+        'puffs_entered',
+        'spend_entered',
+        'method_chosen',
+        'pace_chosen',
+        'plan_revealed',
+        'commit_held',
+        'notif_prompt',
+        'paywall_viewed',
+        'trial_started',
+        'free_continued',
+        'winback_shown',
+        'winback_converted',
+        'puff_logged',
+        'craving_outcome',
+      ]);
+
+      // Property keys are read by the same dashboards.
+      expect(a.propsOf('screen_completed'), {'screen_id': 'welcome', 'ms': 1200});
+      expect(a.propsOf('puffs_entered'), {'value': 200, 'badge': 'heavy'});
+      expect(a.propsOf('spend_entered'), {'weekly': 45, 'yearly_shown': 2340});
+      expect(a.propsOf('pace_chosen'), {'pace_days': 30});
+      expect(a.propsOf('craving_outcome'), {'survived': 'true'});
+    });
+
+    // Firebase Analytics rejects anything else outright, and a rejected event
+    // is dropped without an error anyone sees.
+    test('names and keys are snake_case and within Firebase limits', () {
+      final a = RecordingAnalytics()
+        ..onboardingStart()
+        ..screenCompleted('welcome', 1)
+        ..puffsEntered(1, 'light')
+        ..spendEntered(1, 1)
+        ..methodChosen('taper')
+        ..paceChosen(1)
+        ..notifPrompt(granted: false)
+        ..paywallViewed('v')
+        ..trialStarted('t')
+        ..cravingSurvived(survived: false);
+
+      final snake = RegExp(r'^[a-z][a-z0-9_]*$');
+      for (final event in a.events) {
+        expect(event.name, matches(snake), reason: event.name);
+        expect(event.name.length, lessThanOrEqualTo(40), reason: event.name);
+        for (final key in event.props.keys) {
+          expect(key, matches(snake), reason: '${event.name}.$key');
+          expect(key.length, lessThanOrEqualTo(40), reason: '${event.name}.$key');
+        }
+      }
+    });
+  });
+
+  group('FanOutAnalytics', () {
+    test('delivers every call to every sink', () {
+      final a = RecordingAnalytics();
+      final b = RecordingAnalytics();
+      FanOutAnalytics([a, b])
+        ..puffLogged()
+        ..screenViewed('/home')
+        ..identify('uid-1')
+        ..reset();
+
+      for (final sink in [a, b]) {
+        expect(sink.names, ['puff_logged']);
+        expect(sink.screens, ['/home']);
+        expect(sink.identified, ['uid-1']);
+        expect(sink.resets, 1);
+      }
+    });
+
+    // One vendor being down must not cost the other vendor its data, and must
+    // never reach the tap handler that fired the event.
+    test('a throwing sink neither blocks the others nor escapes', () {
+      final healthy = RecordingAnalytics();
+      final fanOut = FanOutAnalytics([_ThrowingAnalytics(), healthy]);
+
+      expect(() => fanOut.puffLogged(), returnsNormally);
+      expect(() => fanOut.screenViewed('/home'), returnsNormally);
+      expect(() => fanOut.identify('uid-1'), returnsNormally);
+      expect(() => fanOut.reset(), returnsNormally);
+
+      expect(healthy.names, ['puff_logged']);
+      expect(healthy.screens, ['/home']);
+      expect(healthy.identified, ['uid-1']);
+      expect(healthy.resets, 1);
+    });
+  });
+
+  test('NoopAnalytics swallows everything without throwing', () {
+    const noop = NoopAnalytics();
+    expect(() {
+      noop
+        ..puffLogged()
+        ..screenViewed('/home')
+        ..identify('uid-1')
+        ..reset();
+    }, returnsNormally);
+  });
+
+  group('only the release app reports', () {
+    test('the fake backend never reports', () {
+      final c = ProviderContainer(overrides: fastBackendOverrides());
+      addTearDown(c.dispose);
+      // Not just "no events": constructing a vendor SDK under `flutter test`
+      // would reach a MethodChannel that does not exist.
+      expect(c.read(analyticsProvider), isA<NoopAnalytics>());
+    });
+
+    // The one that matters for funnel hygiene. `flutter test` and every
+    // `./tool/device.ps1` run are debug builds, and a dev walking the
+    // 19 steps must not land in the funnel the >15% drop-off alert reads.
+    // This asserts the BUILD gate, not the backend one: the backend here is
+    // the real Firebase.
+    test('a non-release build never reports, even on the real backend', () {
+      expect(analyticsEnabled(BackendMode.firebase), isFalse);
+      expect(analyticsEnabled(BackendMode.fake), isFalse);
+
+      final c = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          backendModeProvider.overrideWithValue(BackendMode.firebase),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect(c.read(analyticsProvider), isA<NoopAnalytics>());
+    });
+  });
+
+  // `Amplitude(...)` returns before its native `init` lands, and the Android
+  // plugin answers an early `track` with "instance not found". A sink may
+  // never throw at its caller, so such an event would be swallowed and lost —
+  // and the first screen view fires on the very frame the sink is built.
+  test('an event fired before init completes is not lost', () async {
+    const channel = MethodChannel('amplitude_flutter_test');
+    final calls = <String>[];
+    final initReleased = Completer<void>();
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'init') await initReleased.future;
+          calls.add(call.method);
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    AmplitudeAnalytics(Amplitude(Configuration(apiKey: 'k'), channel))
+      ..puffLogged()
+      ..screenViewed('/home');
+    await pumpEventQueue();
+    expect(calls, isEmpty, reason: 'nothing may be sent before init lands');
+
+    initReleased.complete();
+    await pumpEventQueue();
+    // Both survived, in the order they were fired.
+    expect(calls, ['init', 'track', 'track']);
+  });
+
+  // The whole reason the event is emitted from the view model rather than
+  // from 19 widgets: the funnel cannot have a hole in it.
+  test('every onboarding step reports its own screen_completed', () {
+    final analytics = RecordingAnalytics();
+    final c = ProviderContainer(
+      overrides: fastBackendOverrides(analytics: analytics),
+    );
+    addTearDown(c.dispose);
+
+    // `next()` refuses to leave an unanswered step, so every answer goes in
+    // first — the same fixture shape as test/data/onboarding_test.dart.
+    final vm = c.read(onboardingProvider.notifier)
+      ..selectGender(Gender.woman)
+      ..selectAttempts(QuitAttempts.twoToFive)
+      ..selectFrequency(VapeFrequency.always)
+      ..selectStrength(NicStrength.mg50)
+      ..selectFirstPuff(FirstPuffWindow.withinFive)
+      ..toggleWhy(WhyChip.health)
+      ..toggleWorry(WorryChip.cravings)
+      ..selectMethod(QuitMethod.taper)
+      ..selectPace(30);
+    for (final d in [1, 9, 9, 5]) {
+      vm.typeBirthDigit(d);
+    }
+    for (final d in [2, 0, 0]) {
+      vm.typePuffDigit(d);
+    }
+    for (final d in [4, 5]) {
+      vm.typeSpendDigit(d);
+    }
+    for (var i = 0; i < 6; i++) {
+      vm.next();
+    }
+
+    final completed = analytics.events
+        .where((e) => e.name == 'screen_completed')
+        .toList();
+    expect(completed, hasLength(6));
+    // Six screens left, six distinct screen ids — a step that reported under
+    // its neighbour's name would read as a healthy screen and a dead one.
+    expect({for (final e in completed) e.props['screen_id']}, hasLength(6));
+    // The first step left is welcome, and leaving it is the funnel's
+    // denominator.
+    expect(completed.first.props['screen_id'], ObStep.welcome.name);
+    expect(analytics.names, contains('onboarding_start'));
+    for (final e in completed) {
+      expect(e.props['ms'], isA<int>());
+    }
+  });
+}
+
+/// A vendor that is having a bad day.
+class _ThrowingAnalytics implements AnalyticsSink {
+  @override
+  void track(AnalyticsEvent event) => throw StateError('down');
+
+  @override
+  void screenViewed(String name) => throw StateError('down');
+
+  @override
+  void identify(String userId) => throw StateError('down');
+
+  @override
+  void reset() => throw StateError('down');
+}

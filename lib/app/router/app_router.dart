@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../data/stores/providers.dart';
+import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
 import '../../domain/models/models.dart';
@@ -106,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: lpRootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
+    // `read`, not `watch`: rebuilding a GoRouter resets navigation, and the
+    // analytics seam is a plain Provider that never changes anyway. This read
+    // is also what constructs the sink, on the first frame — early enough for
+    // Amplitude's session and app-lifecycle autocapture to see the app open.
+    observers: [LpAnalyticsObserver(ref.read(analyticsProvider))],
     debugLogDiagnostics: kDebugMode,
     errorBuilder: (_, _) => const RouteNotFoundScreen(),
     redirect: (context, state) {

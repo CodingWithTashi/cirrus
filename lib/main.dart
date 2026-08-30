@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app_errors.dart';
 import 'app/last_puff_app.dart';
 import 'data/api/firebase/app_check_setup.dart';
-import 'data/api/firebase/lp_analytics.dart';
 import 'data/backend_mode.dart';
 import 'firebase_options.dart';
 
@@ -35,9 +34,6 @@ Future<void> main() async {
     // first frame. It only ever prints.
     unawaited(logAppCheckStatus());
   }
-  LpAnalytics.configure(
-    enabled: resolveBackendMode() == BackendMode.firebase && !kDebugMode,
-  );
   LpErrors.install(
     // Crash reporting only where there is a Firebase project to report to,
     // and never from debug builds — see LpErrors.install.

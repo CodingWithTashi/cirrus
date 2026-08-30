@@ -1,4 +1,3 @@
-import '../../data/api/firebase/lp_analytics.dart';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/lp_review.dart';
 import '../../data/stores/onboarding_draft_persistence.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/coach_name.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/onboarding_draft.dart';
@@ -130,7 +130,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
         entry.kind != BirthEntryKind.ageOnly) {
       return;
     }
-    LpAnalytics.ageEntryAdopted();
+    ref.read(analyticsProvider).ageEntryAdopted();
     state = state.copyWith(birthYearInput: year.toString());
   }
 
@@ -211,7 +211,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     // The hold gesture itself, not the screen advance — someone can complete
     // the commit screen without ever holding, and the two are different
     // numbers (docs/02 §7).
-    LpAnalytics.commitHeld();
+    ref.read(analyticsProvider).commitHeld();
     state = state.copyWith(committed: true);
   }
 
@@ -255,7 +255,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// shipping an unmeasured screen.
   void _completeStep() {
     final step = state.step;
-    LpAnalytics.screenCompleted(
+    final analytics = ref.read(analyticsProvider);
+    analytics.screenCompleted(
       step.name,
       DateTime.now().difference(_stepEnteredAt).inMilliseconds,
     );
@@ -264,20 +265,20 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       // mount so the Frame Map's `previewStep` jumps — which never pass
       // through welcome — cannot inflate it.
       case ObStep.welcome:
-        LpAnalytics.onboardingStart();
+        analytics.onboardingStart();
       case ObStep.puffs:
-        LpAnalytics.puffsEntered(state.puffsPerDay, state.dependence.name);
+        analytics.puffsEntered(state.puffsPerDay, state.dependence.name);
       case ObStep.spend:
-        LpAnalytics.spendEntered(
+        analytics.spendEntered(
           state.weeklySpend.round(),
           state.yearlySpend.round(),
         );
       case ObStep.method:
-        LpAnalytics.methodChosen(state.method.name);
+        analytics.methodChosen(state.method.name);
       case ObStep.pace:
-        LpAnalytics.paceChosen(state.paceDays);
+        analytics.paceChosen(state.paceDays);
       case ObStep.reveal:
-        LpAnalytics.planRevealed();
+        analytics.planRevealed();
       // `commit_held` rides the hold gesture (markCommitted) and `notif_prompt`
       // needs the OS answer, so both fire from where that fact exists.
       case ObStep.gender:
@@ -352,7 +353,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       // screen, and that screen's only exit is closing the app.
       final blocked = state.birthEntry.kind == BirthEntryKind.underAge;
       if (blocked) {
-        LpAnalytics.ageGateBlocked();
+        ref.read(analyticsProvider).ageGateBlocked();
         // docs/02 §3 A3: "No data stored." This is the only moment we learn
         // the draft must not exist. Suppression is NOT optional — the
         // `state = ...` two lines down runs through the persisting setter and

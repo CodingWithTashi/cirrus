@@ -217,15 +217,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               // point was the worse of the two: it is reachable before anyone
               // has signed in, so the first thing a new user could do is give
               // themselves somebody else's twelve-day streak.
-              if (kDebugMode) ...[
-                const SizedBox(height: 6),
-                LpTextButton(
-                  l10n.frameMapOpen,
-                  size: 12,
-                  color: lp.voltText,
-                  onTap: () => context.push(Routes.frames),
-                ),
-              ],
+
             ],
           ),
         ),

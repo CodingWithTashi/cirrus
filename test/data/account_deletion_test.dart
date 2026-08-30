@@ -89,6 +89,9 @@ class _FailingDelete implements AuthRepository {
   Future<void> deleteAccount() async => throw const NoConnectionException();
 
   @override
+  Future<String?> currentUserId() => _inner.currentUserId();
+
+  @override
   Future<JourneyState?> restoreSession() => _inner.restoreSession();
 
   @override

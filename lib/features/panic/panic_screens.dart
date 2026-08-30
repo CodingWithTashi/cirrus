@@ -21,8 +21,8 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/rolling_number.dart';
-import '../../data/api/firebase/lp_analytics.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/models/models.dart';
 
 /// Session state shared by the three panic steps (feature-local VM).
@@ -98,7 +98,7 @@ class PanicViewModel extends Notifier<PanicSession> {
   /// Craving survived → celebrate, then reset for the next session.
   void survive() {
     _resolved = true;
-    unawaited(LpAnalytics.cravingSurvived(survived: true));
+    ref.read(analyticsProvider).cravingSurvived(survived: true);
     ref
         .read(panicRepositoryProvider)
         .survived(intensity: state.intensity)
@@ -116,7 +116,7 @@ class PanicViewModel extends Notifier<PanicSession> {
   void abandon() {
     if (_resolved) return;
     _resolved = true;
-    unawaited(LpAnalytics.cravingSurvived(survived: false));
+    ref.read(analyticsProvider).cravingSurvived(survived: false);
   }
 }
 

@@ -152,4 +152,7 @@ class FirebaseAuthRepository implements AuthRepository {
     // leave the user signed in and able to retry.
     await _auth.signOut();
   }
+
+  @override
+  Future<String?> currentUserId() async => _auth.currentUser?.uid;
 }

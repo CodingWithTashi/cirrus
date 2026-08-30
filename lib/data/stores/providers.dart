@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
+import '../../domain/analytics/analytics.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/auth_api.dart';
 import '../api/coach_api.dart';
@@ -14,6 +15,10 @@ import '../api/fake/fake_community_api.dart';
 import '../api/fake/fake_journey_api.dart';
 import '../api/fake/fake_server.dart';
 import '../api/journey_api.dart';
+import '../analytics/amplitude_analytics.dart';
+import '../analytics/analytics_options.dart';
+import '../analytics/analytics_sinks.dart';
+import '../analytics/firebase_analytics_sink.dart';
 import '../backend_mode.dart';
 import '../network/connectivity.dart';
 import '../repositories/api_auth_repository.dart';
@@ -73,6 +78,32 @@ final fakeServerProvider = Provider<FakeServer>(
     isOnline: () => ref.read(connectivityProvider),
   ),
 );
+
+/// Where product events go (`domain/analytics/analytics.dart`).
+///
+/// **This list is the entire "swap the vendor later" story.** Amplitude answers
+/// the funnel and engagement questions; Firebase Analytics stays because
+/// Crashlytics audiences and Remote Config targeting read from it (docs/05).
+/// Dropping either one, or adding a third, is one entry here — no event name,
+/// no call site and no view model changes.
+///
+/// Off for the fake backend and for debug builds, so dev runs never pollute
+/// the funnel the launch gates are read from; `--dart-define=LP_ANALYTICS=on`
+/// overrides that for on-device verification. Off also means [NoopAnalytics],
+/// never null, so no caller ever null-checks — and so `flutter test` never
+/// constructs Amplitude's MethodChannel.
+final analyticsProvider = Provider<AnalyticsSink>((ref) {
+  final backend = ref.watch(backendModeProvider);
+  if (!analyticsEnabled(backend)) return const NoopAnalytics();
+  return FanOutAnalytics([
+    AmplitudeAnalytics(),
+    // Only where `main()` has actually called `Firebase.initializeApp`.
+    // `FirebaseAnalytics.instance` throws without it, and `LP_ANALYTICS=on`
+    // is allowed to turn analytics on over the fake backend — where Amplitude
+    // works fine and Firebase has nothing to talk to.
+    if (backend == BackendMode.firebase) FirebaseAnalyticsSink(),
+  ]);
+});
 
 final authApiProvider = Provider<AuthApi>(
   (ref) => FakeAuthApi(ref.watch(fakeServerProvider)),

@@ -9,8 +9,9 @@ import '../../../app/theme/lp_colors.dart';
 import '../../../app/theme/lp_dimens.dart';
 import '../../../app/theme/lp_typography.dart';
 import '../../../core/utils/l10n_ext.dart';
-import '../../../data/api/firebase/lp_analytics.dart';
 import '../../../data/api/firebase/push_service.dart';
+import '../../../data/stores/providers.dart';
+import '../../../domain/analytics/lp_events.dart';
 import '../../../core/utils/lp_format.dart';
 import '../../../core/utils/lp_haptics.dart';
 import '../../../core/utils/lp_review.dart';
@@ -587,7 +588,7 @@ class NotificationsStep extends ConsumerWidget {
             // is not a dead end: the flow continues either way, and docs/03
             // §8 re-asks after the first survived craving.
             final granted = await PushService.requestPermission();
-            unawaited(LpAnalytics.notifPrompt(granted: granted));
+            ref.read(analyticsProvider).notifPrompt(granted: granted);
             if (context.mounted) context.go(Routes.paywall);
           },
         ),
@@ -597,7 +598,7 @@ class NotificationsStep extends ConsumerWidget {
           onTap: () {
             // Skipping never opens the OS dialog, so this is a decline we
             // made ourselves — still a denied outcome for the funnel.
-            unawaited(LpAnalytics.notifPrompt(granted: false));
+            ref.read(analyticsProvider).notifPrompt(granted: false);
             context.go(Routes.paywall);
           },
         ),

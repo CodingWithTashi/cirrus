@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
@@ -14,7 +15,16 @@ import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 ///
 /// Settings restore is off: tests assert against the documented defaults, not
 /// against whatever the host machine's shared_preferences last held.
-List<Override> fastBackendOverrides({bool online = true, DateTime? now}) => [
+///
+/// Pass [analytics] to capture the events a flow emits; without it the pinned
+/// fake backend already resolves the seam to `NoopAnalytics`, so no vendor SDK
+/// is ever constructed under `flutter test`.
+List<Override> fastBackendOverrides({
+  bool online = true,
+  DateTime? now,
+  AnalyticsSink? analytics,
+}) => [
+  if (analytics != null) analyticsProvider.overrideWithValue(analytics),
   backendModeProvider.overrideWithValue(BackendMode.fake),
   apiLatencyProvider.overrideWithValue(Duration.zero),
   connectivityPollIntervalProvider.overrideWithValue(null),
@@ -36,4 +46,36 @@ class ToggleConnectivity extends ConnectivityStore {
 
   // ignore: use_setters_to_change_properties
   void set(bool online) => state = online;
+}
+
+/// An [AnalyticsSink] that sends nothing and remembers everything, so a test
+/// can assert on the funnel a flow actually emits. The static class this seam
+/// replaced could not be observed at all.
+class RecordingAnalytics implements AnalyticsSink {
+  final List<AnalyticsEvent> events = [];
+  final List<String> screens = [];
+  final List<String> identified = [];
+  int resets = 0;
+
+  /// Event names in order — what most assertions actually want.
+  List<String> get names => [for (final e in events) e.name];
+
+  Map<String, Object>? propsOf(String name) {
+    for (final e in events) {
+      if (e.name == name) return e.props;
+    }
+    return null;
+  }
+
+  @override
+  void track(AnalyticsEvent event) => events.add(event);
+
+  @override
+  void screenViewed(String name) => screens.add(name);
+
+  @override
+  void identify(String userId) => identified.add(userId);
+
+  @override
+  void reset() => resets++;
 }

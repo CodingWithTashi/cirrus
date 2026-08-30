@@ -10,8 +10,8 @@ import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/repositories/repositories.dart';
-import '../api/firebase/lp_analytics.dart';
 import '../seed/seed_data.dart';
 import 'providers.dart';
 
@@ -39,11 +39,28 @@ class JourneyStore extends Notifier<JourneyState?> {
   void _syncUserContext() =>
       ref.read(userContextRepositoryProvider).sync().ignore();
 
+  /// Binds analytics to the account.
+  ///
+  /// Without it every reinstall looks like a brand-new person, so retention
+  /// and the onboarding funnel both read low for reasons that are not real.
+  /// The sink is captured BEFORE the await — `ref` after an async gap is the
+  /// bug this store has been bitten by elsewhere.
+  void _identifyForAnalytics() {
+    final analytics = ref.read(analyticsProvider);
+    _auth
+        .currentUserId()
+        .then((uid) {
+          if (uid != null) analytics.identify(uid);
+        })
+        .ignore();
+  }
+
   /// Everything a freshly-established session should pull from the server.
   /// One call so a new session path cannot wire half of it.
   void _onSessionEstablished() {
     _syncUserContext();
     pullPlanAdvice();
+    _identifyForAnalytics();
   }
 
   /// Reads the nightly taper verdict from the server-owned user document and
@@ -171,6 +188,10 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Optimistic: signed out locally at once, the API ack is write-behind.
   void signOut() {
     state = null;
+    // Before the sign-out call, so the identity is unbound even if the ack
+    // never lands. On a shared phone the alternative is the next person's
+    // events arriving under the last person's user id.
+    ref.read(analyticsProvider).reset();
     _auth.signOut().ignore();
   }
 
@@ -183,6 +204,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// confirms.
   Future<void> deleteAccount() async {
     await _auth.deleteAccount();
+    ref.read(analyticsProvider).reset();
     state = null;
   }
 
@@ -205,7 +227,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     // week — so this is the one habit-loop event the metric cannot be
     // computed without. Emitted from the store, not the four views that call
     // logPuff, so a new entry point can't ship unmeasured.
-    LpAnalytics.puffLogged().ignore();
+    ref.read(analyticsProvider).puffLogged();
     final when = at ?? _now;
     final key = JourneyState.dateKey(when);
     final log =

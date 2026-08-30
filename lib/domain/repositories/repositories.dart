@@ -35,6 +35,15 @@ abstract interface class AuthRepository {
   Future<void> signOut();
 
   Future<void> deleteAccount();
+
+  /// The signed-in account's stable id, or null when there is no session — or
+  /// no id safe to use as one.
+  ///
+  /// Exists for analytics identity: without it a returning user's funnel is a
+  /// fresh device every reinstall, and signing out on a shared phone leaves
+  /// the next person's events attributed to the previous one. It is NOT a
+  /// permission check — nothing is authorized by this value.
+  Future<String?> currentUserId();
 }
 
 /// Persistence of the quit journey itself.
