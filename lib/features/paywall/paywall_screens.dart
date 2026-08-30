@@ -48,6 +48,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     LpAnalytics.paywallViewed('d5_default');
   }
 
+  void _leave(GoRouter router) => leavePaywall(router);
+
   Future<void> _startTrial() async {
     unawaited(LpHaptics.celebrate());
     // Reported at the moment of intent, before the (currently non-existent)
@@ -70,8 +72,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (!mounted) return;
       context.go(Routes.day1);
     } else {
+      // Leave FIRST, then change the tier. See `leavePaywall`.
+      _leave(GoRouter.of(context));
       ref.read(quitStoreProvider.notifier).setTier(SubscriptionTier.premium);
-      context.pop();
     }
   }
 
@@ -626,22 +629,22 @@ class TrialEndingScreen extends ConsumerWidget {
               LpButton(
                 l10n.trialEndingKeep(LpPricing.yearly),
                 onTap: () {
+                  leavePaywall(GoRouter.of(context));
                   ref
                       .read(quitStoreProvider.notifier)
                       .setTier(SubscriptionTier.premium);
                   LpAnalytics.trialStarted(_Tier.yearly.name);
-                  context.pop();
                 },
               ),
               const SizedBox(height: 6),
               LpTextButton(
                 l10n.trialEndingSwitchFree,
                 onTap: () {
+                  leavePaywall(GoRouter.of(context));
                   ref
                       .read(quitStoreProvider.notifier)
                       .setTier(SubscriptionTier.free);
                   LpAnalytics.freeContinued();
-                  context.pop();
                 },
               ),
             ],
@@ -649,5 +652,24 @@ class TrialEndingScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Closes a paywall. Call this BEFORE changing the tier, never after.
+///
+/// Changing the tier bumps the router's `refreshListenable`, and Riverpod
+/// delivers that notification asynchronously — so a pop performed first was
+/// undone a microtask later when the refresh rebuilt the match list and
+/// restored the imperatively pushed entry. The user was left staring at the
+/// paywall they had just paid past, with `canPop()` reporting true and the pop
+/// visibly doing nothing.
+///
+/// Leaving first means the refresh recomputes from the destination instead.
+void leavePaywall(GoRouter router) {
+  // A paywall reached by a deep link has nothing beneath it.
+  if (router.canPop()) {
+    router.pop();
+  } else {
+    router.go(Routes.home);
   }
 }
