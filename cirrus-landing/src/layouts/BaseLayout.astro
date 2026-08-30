@@ -1,0 +1,125 @@
+---
+// Every page renders through this layout, so <head> is correct in exactly one
+// place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Set on blog posts so the JSON-LD switches from WebSite to BlogPosting. */
+  type?: 'website' | 'article';
+  publishedAt?: Date;
+  updatedAt?: Date;
+  /** Per-page social image; falls back to the site default. */
+  image?: string;
+  /** Keep drafts and utility pages out of the index. */
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description = SITE_DESCRIPTION,
+  type = 'website',
+  publishedAt,
+  updatedAt,
+  image = SITE_OG_IMAGE,
+  noindex = false,
+} = Astro.props;
+
+// Home shows the bare brand; every other page gets "Page · Cirrus" so search
+// results stay readable and don't repeat the brand twice.
+const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_DESCRIPTION}`;
+
+// Astro.site comes from `site` in astro.config.mjs.
+//
+// `build.format: 'file'` writes /blog/post.html, so Astro.url.pathname carries a
+// .html suffix that the sitemap (which emits clean paths) does not. Strip the
+// extension and any trailing slash, or Google sees two URLs for one page and
+// the canonical points at the copy the sitemap never mentions.
+const cleanPath = Astro.url.pathname
+  .replace(/\/index\.html$/, '/')
+  .replace(/\.html$/, '')
+  .replace(/(.)\/$/, '$1');
+const canonical = new URL(cleanPath, Astro.site);
+const ogImage = image ? new URL(image, Astro.site) : null;
+
+const jsonLd = type === 'article'
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: title,
+      description,
+      url: canonical.href,
+      datePublished: publishedAt?.toISOString(),
+      dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+      publisher: { '@type': 'Organization', name: SITE_TITLE, url: Astro.site?.href },
+      ...(ogImage ? { image: ogImage.href } : {}),
+    }
+  : {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+      url: Astro.site?.href,
+    };
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE_TITLE} blog`}
+      href={new URL('rss.xml', Astro.site)}
+    />
+
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={title ?? SITE_TITLE} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={SITE_TITLE} />
+    <meta property="og:locale" content={SITE_LOCALE} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title ?? SITE_TITLE} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
+    {updatedAt && <meta property="article:modified_time" content={updatedAt.toISOString()} />}
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">{SITE_TITLE}</a>
+      <nav>
+        <a href="/blog">Blog</a>
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; {new Date().getFullYear()} {SITE_TITLE}</p>
+    </footer>
+  </body>
+</html>

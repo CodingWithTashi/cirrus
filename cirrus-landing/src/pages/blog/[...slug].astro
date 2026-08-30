@@ -1,0 +1,38 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPublishedPosts, formatDate } from '../../lib/posts';
+
+// Static route generation: every published post becomes a prerendered HTML file
+// at build time. Nothing is rendered per request.
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  type="article"
+  publishedAt={post.data.publishedAt}
+  updatedAt={post.data.updatedAt}
+  noindex={post.data.draft}
+>
+  <article class="prose">
+    <h1>{post.data.title}</h1>
+    <p class="post-meta">
+      <time datetime={post.data.publishedAt.toISOString()}>
+        {formatDate(post.data.publishedAt)}
+      </time>
+      {post.data.updatedAt && <> · updated {formatDate(post.data.updatedAt)}</>}
+    </p>
+
+    <Content />
+  </article>
+
+  <p style="margin-top:3rem"><a href="/blog">&larr; All posts</a></p>
+</BaseLayout>

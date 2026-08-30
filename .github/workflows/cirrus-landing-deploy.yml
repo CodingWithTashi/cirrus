@@ -1,0 +1,63 @@
+name: Deploy cirrus-landing
+
+# Manual only. The Flutter app and the landing page share this repo, so nothing
+# here fires on push — run it from Actions -> "Deploy cirrus-landing" -> Run workflow
+# and pick the target with the dropdown.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Cloudflare Pages target
+        type: choice
+        required: true
+        default: preview
+        options:
+          - preview
+          - production
+
+concurrency:
+  group: cirrus-landing-${{ inputs.environment }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: cirrus-landing
+
+jobs:
+  deploy:
+    name: Build and deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: cirrus-landing/.nvmrc
+          cache: npm
+          cache-dependency-path: cirrus-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Catches broken links to content, bad prop types, and — via the content
+      # collection schema — any blog post with a missing or over-long title or
+      # meta description, before it can reach the live site.
+      - name: Typecheck
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      # Deploy with the wrangler pinned in package-lock.json, so CI and a local
+      # `npm run deploy` run the exact same version. Project name and output dir
+      # come from cirrus-landing/wrangler.jsonc.
+      #
+      # Cloudflare Pages decides production vs preview from the branch name: the
+      # project's production branch (main) publishes to cirrusquit.com, any other
+      # name gets a preview URL.
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy --branch="$BRANCH" --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BRANCH: ${{ inputs.environment == 'production' && 'main' || format('preview-{0}', github.ref_name) }}
