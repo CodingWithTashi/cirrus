@@ -777,3 +777,36 @@ by decision), the `admin` claim that makes the moderation queue openable on a
 device, the service-account key rotation (`B13`), Play Console and banking,
 Mixpanel's token, store assets and icons (`B16`), and iOS — which needs a Mac.
 
+### What only a real phone could tell us (Aug 30, final device pass)
+
+Two bugs that no other layer could have found, both on the Pixel 8, both in
+portrait-shaped screens:
+
+- **Nothing locked orientation.** No `android:screenOrientation`, no
+  `setPreferredOrientations` — so the app followed the phone into landscape,
+  where it has no layout at all. Sign-in overflowed by 149px, taking three
+  production cases down with it. `flutter test` pumps portrait sizes and
+  excludes overflow by design; the emulator runs upright. It took a phone
+  lying on a desk. Locked in the manifest and in `main.dart`.
+- **The third panic step overflowed by 26px** — four loop-breakers with
+  subtitles, grown when the buddy option became the longer SOS one, on the
+  screen someone reads mid-craving. The first fix made it worse: the
+  `StepScrollView` idiom is min-height + `IntrinsicHeight`, and the intrinsic
+  walk over the animating `_CravingTimer` killed the app outright, exactly as
+  the Health screen note warns. It scrolls inside an `Expanded` now — no
+  intrinsic pass, timer and CTA still pinned.
+
+**Final state, all measured:**
+
+| Layer | Result |
+|---|---|
+| `flutter analyze` | clean |
+| Flutter unit + widget | **310** |
+| functions pure | **76** |
+| functions rules (emulator, local) | **42** |
+| functions integration (emulator, local) | **163** |
+| On-device E2E, fake backend | **31/31**, zero overflow |
+| On-device E2E, production Firebase | **10/10** |
+
+**591 automated tests**, from 230 at the start of the day, plus 41 on device.
+
