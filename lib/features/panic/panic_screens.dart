@@ -77,14 +77,10 @@ class PanicViewModel extends Notifier<PanicSession> {
   /// already on screen before this resolves, which is the point — a craving
   /// does not wait on a round-trip (docs/04 §7).
   void _openSession() {
-    ref
-        .read(panicRepositoryProvider)
-        .begin()
-        .then((availability) {
-          // The notifier may already be gone (flow closed mid-flight).
-          if (!_disposed) state = state.copyWith(availability: availability);
-        })
-        .ignore();
+    ref.read(panicRepositoryProvider).begin().then((availability) {
+      // The notifier may already be gone (flow closed mid-flight).
+      if (!_disposed) state = state.copyWith(availability: availability);
+    }).ignore();
   }
 
   void next() => state = state.copyWith(step: state.step + 1);
@@ -598,49 +594,73 @@ class _BreakLoopStep extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(l10n.panicLoopSubtitle, style: LpType.body14(lp.textSecondary)),
           const SizedBox(height: 26),
-          option(
-            icon: const Text('🎮', style: TextStyle(fontSize: 22)),
-            tint: lp.volt,
-            title: l10n.panicLoopGame,
-            sub: l10n.panicLoopGameSub,
-            onTap: () => context.push(Routes.game),
-          ),
-          // The social loop-breaker (docs/03 §7). This used to be "ping your
-          // buddy", which pinged nobody: Quit Buddies was descoped in Aug 2026
-          // and the buddy it named was invented by the app. The stage it
-          // occupies in the hook — someone else pulling you out — is real and
-          // worth keeping, so it now opens the composer pre-tagged SOS. Live
-          // SOS posts pin to the top of the feed for an hour and real quitters
-          // answer them, which is what the fake ping was pretending to do.
-          option(
-            icon: const Text('🆘', style: TextStyle(fontSize: 22)),
-            tint: lp.ember,
-            title: l10n.panicLoopSos,
-            sub: l10n.panicLoopSosSub,
-            onTap: () {
-              LpHaptics.medium();
-              context.push('${Routes.compose}?tag=${PostTag.sos.name}');
-            },
-          ),
-          option(
-            icon: Text(
-              'AI',
-              style: LpType.displaySmall(lp.oxygenText, size: 16),
+          // The four loop-breakers scroll; the timer and the "it passed" CTA
+          // below stay pinned where a craving needs to find them.
+          //
+          // Found on a real device: a 26px overflow stripe on the third panic
+          // step. Four options with subtitles do not fit every viewport, and
+          // they grew when the buddy option became the longer SOS one.
+          //
+          // Deliberately NOT the `StepScrollView` idiom the auth forms use.
+          // That is min-height + `IntrinsicHeight`, and an intrinsic walk over
+          // the animating `_CravingTimer` below is the exact combination that
+          // took the Health screen down — it crashed this screen outright when
+          // tried here. `Expanded` takes the slack instead, so there is no
+          // intrinsic pass at all.
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  option(
+                    icon: const Text('🎮', style: TextStyle(fontSize: 22)),
+                    tint: lp.volt,
+                    title: l10n.panicLoopGame,
+                    sub: l10n.panicLoopGameSub,
+                    onTap: () => context.push(Routes.game),
+                  ),
+                  // The social loop-breaker (docs/03 §7). This used to be "ping your
+                  // buddy", which pinged nobody: Quit Buddies was descoped in Aug 2026
+                  // and the buddy it named was invented by the app. The stage it
+                  // occupies in the hook — someone else pulling you out — is real and
+                  // worth keeping, so it now opens the composer pre-tagged SOS. Live
+                  // SOS posts pin to the top of the feed for an hour and real quitters
+                  // answer them, which is what the fake ping was pretending to do.
+                  option(
+                    icon: const Text('🆘', style: TextStyle(fontSize: 22)),
+                    tint: lp.ember,
+                    title: l10n.panicLoopSos,
+                    sub: l10n.panicLoopSosSub,
+                    onTap: () {
+                      LpHaptics.medium();
+                      context.push('${Routes.compose}?tag=${PostTag.sos.name}');
+                    },
+                  ),
+                  option(
+                    icon: Text(
+                      'AI',
+                      style: LpType.displaySmall(lp.oxygenText, size: 16),
+                    ),
+                    tint: lp.oxygen,
+                    title: l10n.panicLoopCoach,
+                    sub: aiAvailable
+                        ? l10n.panicLoopCoachSub(hourLabel)
+                        : l10n.panicLoopCoachLocked,
+                    // The intensity rides along: `aiCoachChat` switches to its short,
+                    // directive PANIC MODE voice when it is present, and until now no
+                    // client ever sent it — so Ember answered a 9/10 craving in the
+                    // same open-question register it uses for a quiet Tuesday.
+                    onTap: () => aiAvailable
+                        ? context.go(
+                            '${Routes.coach}?panic=${session.intensity}',
+                          )
+                        : context.push(Routes.paywall),
+                  ),
+                ],
+              ),
             ),
-            tint: lp.oxygen,
-            title: l10n.panicLoopCoach,
-            sub: aiAvailable
-                ? l10n.panicLoopCoachSub(hourLabel)
-                : l10n.panicLoopCoachLocked,
-            // The intensity rides along: `aiCoachChat` switches to its short,
-            // directive PANIC MODE voice when it is present, and until now no
-            // client ever sent it — so Ember answered a 9/10 craving in the
-            // same open-question register it uses for a quiet Tuesday.
-            onTap: () => aiAvailable
-                ? context.go('${Routes.coach}?panic=${session.intensity}')
-                : context.push(Routes.paywall),
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           const Center(child: _CravingTimer(late: true)),
           const SizedBox(height: 14),
           LpTextButton(
