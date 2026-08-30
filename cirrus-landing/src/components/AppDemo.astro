@@ -23,23 +23,23 @@ const { part = 'phone' } = Astro.props;
 {part === 'phone' && (
   <div class="phone phone--live" data-demo>
     <div class="app">
-      <div class="app__top">
-        <button class="app__back" type="button" data-reset aria-label="Start over">‹</button>
-        <div class="app__progress"><span></span></div>
-        <span class="app__step">5/12</span>
-      </div>
-
       <h3 class="app__q" data-mode-label>Puffs on a normal day?</h3>
 
       <div class="app__readout">
-        <p class="app__num" data-num aria-live="polite">150</p>
+        <div class="app__numrow">
+          <p class="app__num" data-num aria-live="polite">150</p>
+          <div class="app__stepper">
+            <button type="button" data-step="up" aria-label="Increase">▲</button>
+            <button type="button" data-step="down" aria-label="Decrease">▼</button>
+          </div>
+        </div>
         <p class="app__badge"><span class="badge" data-badge data-level="moderate">Moderate dependence</span></p>
         <p class="app__equiv">≈ <b data-cigs>11</b> cigarettes' worth of puffs</p>
         <p class="app__quip" data-quip>A pack a day, in vape clothing. Extremely fixable.</p>
       </div>
 
       <button class="app__alt" type="button" data-toggle-mode>
-        Not sure? Estimate from device life →
+        Not sure? Use device life →
       </button>
 
       <div class="app__pad" data-pad role="group" aria-label="Number pad">
@@ -197,9 +197,14 @@ const { part = 'phone' } = Astro.props;
       });
     });
 
-    $<HTMLButtonElement>('[data-reset]').addEventListener('click', () => {
-      entry = mode === 'puffs' ? '150' : '3';
-      render();
+    document.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const step = mode === 'puffs' ? 10 : 1;
+        const max = mode === 'puffs' ? 2000 : 40;
+        const next = (Number(entry) || 0) + (btn.dataset.step === 'up' ? step : -step);
+        entry = String(Math.min(Math.max(next, 0), max));
+        render();
+      });
     });
 
     alt.addEventListener('click', () => {
@@ -207,8 +212,8 @@ const { part = 'phone' } = Astro.props;
       entry = mode === 'puffs' ? '150' : '3';
       label.textContent = mode === 'puffs' ? 'Puffs on a normal day?' : 'Disposables a week?';
       alt.textContent = mode === 'puffs'
-        ? 'Not sure? Estimate from device life →'
-        : '← Actually, I know my puff count';
+        ? 'Not sure? Use device life →'
+        : '← I know my puff count';
       render();
     });
 
