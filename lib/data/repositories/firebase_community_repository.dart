@@ -64,7 +64,7 @@ class FirebaseCommunityRepository implements CommunityRepository {
     for (final doc in replies.docs) {
       final postId = doc.reference.parent.parent?.id;
       if (postId == null) continue;
-      (repliesByPost[postId] ??= []).add(_toReply(doc.data()));
+      (repliesByPost[postId] ??= []).add(_toReply(doc.id, doc.data()));
     }
 
     await _loadMyReactions();
@@ -153,6 +153,17 @@ class FirebaseCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<void> reportReply({
+    required String postId,
+    required String replyId,
+  }) async {
+    await _functions.call('reportReply', {
+      'postId': postId,
+      'replyId': replyId,
+    });
+  }
+
+  @override
   Future<void> blockAuthor(String alias) async {
     // Blocking is viewer-side by design: aliases are per-account and there is
     // no server-side relationship to store. Mutual invisibility (docs/03 §9)
@@ -186,7 +197,8 @@ class FirebaseCommunityRepository implements CommunityRepository {
     );
   }
 
-  Reply _toReply(Map<String, dynamic> data) => Reply(
+  Reply _toReply(String id, Map<String, dynamic> data) => Reply(
+    id: id,
     alias: data['alias'] as String? ?? 'quitter',
     avatarEmoji: data['avatarEmoji'] as String? ?? '🔥',
     text: data['text'] as String? ?? '',

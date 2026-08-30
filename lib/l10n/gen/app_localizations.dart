@@ -2594,11 +2594,11 @@ abstract class AppLocalizations {
   /// **'I got you 💬'**
   String get communityIGotYou;
 
-  /// No description provided for @communityReplyingNow.
+  /// No description provided for @communityRepliedCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} replying now…'**
-  String communityReplyingNow(int count);
+  /// **'{count} already replied'**
+  String communityRepliedCount(int count);
 
   /// No description provided for @communityReport.
   ///
@@ -2687,7 +2687,7 @@ abstract class AppLocalizations {
   /// No description provided for @communitySosBanner.
   ///
   /// In en, this message translates to:
-  /// **'🛡️ {count} people have your back right now'**
+  /// **'🛡️ {count} people had your back'**
   String communitySosBanner(int count);
 
   /// No description provided for @communityAddVoice.

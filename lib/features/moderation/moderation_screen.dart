@@ -88,7 +88,7 @@ class ModerationScreen extends ConsumerWidget {
               for (final item in state.items) ...[
                 _FlagCard(
                   item: item,
-                  busy: state.resolving.contains(item.postId),
+                  busy: state.resolving.contains(item.flagId),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -136,7 +136,7 @@ class _FlagCard extends ConsumerWidget {
     final l10n = context.l10n;
     final ok = await ref
         .read(moderationStoreProvider.notifier)
-        .resolve(item.postId, action: action);
+        .resolve(item.flagId, action: action);
     if (!context.mounted || ok) return;
     // The row stays put on failure — a decision that did not land must not
     // look like one that did.

@@ -26,10 +26,23 @@ const RESOLUTIONS = ['allow', 'block'] as const;
 type Resolution = (typeof RESOLUTIONS)[number];
 
 export interface QueueItem {
+  /**
+   * The moderation document's own id, and the ONLY thing `resolveModeration`
+   * should be handed back.
+   *
+   * A reply flag is stored at `moderation/{replyId}` and carries `postId` as a
+   * field. Resolving by `postId` therefore wrote to a *different document* —
+   * the parent post's — so the reply's flag stayed `reviewed: false` forever
+   * and came back in the queue every day, while the parent post's status got
+   * flipped in its place.
+   */
+  flagId: string;
   postId: string;
+  /** Set only for reply flags. */
+  replyId: string | null;
   action: string;
   reason: string;
-  /** Null when the post is already gone — the flag outlives its subject. */
+  /** Null when the content is already gone — the flag outlives its subject. */
   text: string | null;
   status: string | null;
   alias: string | null;
@@ -78,18 +91,33 @@ export const moderationQueue = onCall(
     const items: QueueItem[] = [];
     for (const flag of flags.docs) {
       const postId = (flag.get('postId') as string | undefined) ?? flag.id;
-      const post = await postsCol().doc(postId).get();
+      const kind = (flag.get('kind') as string | undefined) ?? 'post';
+      const replyId = (flag.get('replyId') as string | undefined) ?? null;
+
+      // Hydrate from the thing that was actually flagged. Reply flags used to
+      // be hydrated from their PARENT POST, so the founder reviewed innocent
+      // text and either cleared a reply they never read or blocked a post
+      // nobody reported.
+      const target =
+        kind === 'reply' && replyId !== null
+          ? await postsCol().doc(postId).collection('replies').doc(replyId).get()
+          : await postsCol().doc(postId).get();
+
       items.push({
+        flagId: flag.id,
         postId,
+        replyId,
         action: (flag.get('action') as string | undefined) ?? 'flag',
         reason: (flag.get('reason') as string | undefined) ?? '',
-        kind: (flag.get('kind') as string | undefined) ?? 'post',
-        text: post.exists ? ((post.get('text') as string | null) ?? null) : null,
-        status: post.exists
-          ? ((post.get('status') as string | null) ?? null)
+        kind,
+        text: target.exists
+          ? ((target.get('text') as string | null) ?? null)
           : null,
-        alias: post.exists
-          ? ((post.get('alias') as string | null) ?? null)
+        status: target.exists
+          ? ((target.get('status') as string | null) ?? null)
+          : null,
+        alias: target.exists
+          ? ((target.get('alias') as string | null) ?? null)
           : null,
       });
     }
@@ -110,10 +138,16 @@ export const resolveModeration = onCall(
   async (request): Promise<{ok: true}> => {
     const uid = requireAdmin(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
-    const postId = requireText(data['postId'], 'postId', 200);
+    // The flag's own id. `postId` was accepted here, which for a reply flag
+    // named the wrong document in both directions — see QueueItem.flagId.
+    const flagId = requireText(data['flagId'], 'flagId', 200);
     const action = asEnum<Resolution>(data['action'], RESOLUTIONS);
 
-    await db.collection('moderation').doc(postId).set(
+    const flagRef = db.collection('moderation').doc(flagId);
+    const flag = await flagRef.get();
+    if (!flag.exists) throw new HttpsError('not-found', 'Not found.');
+
+    await flagRef.set(
       {
         reviewed: true,
         reviewedAt: FieldValue.serverTimestamp(),
@@ -124,13 +158,19 @@ export const resolveModeration = onCall(
     );
 
     if (action !== null) {
-      const post = postsCol().doc(postId);
-      if ((await post.get()).exists) {
-        await post.update({status: action === 'block' ? 'blocked' : 'live'});
+      const postId = (flag.get('postId') as string | undefined) ?? flagId;
+      const replyId = (flag.get('replyId') as string | undefined) ?? null;
+      const kind = (flag.get('kind') as string | undefined) ?? 'post';
+      const target =
+        kind === 'reply' && replyId !== null
+          ? postsCol().doc(postId).collection('replies').doc(replyId)
+          : postsCol().doc(postId);
+      if ((await target.get()).exists) {
+        await target.update({status: action === 'block' ? 'blocked' : 'live'});
       }
     }
 
-    log.info('moderation.resolved', {reviewer: uid, postId, action});
+    log.info('moderation.resolved', {reviewer: uid, flagId, action});
     return {ok: true};
   },
 );

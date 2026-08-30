@@ -1468,8 +1468,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get communityIGotYou => 'Te cubro 💬';
 
   @override
-  String communityReplyingNow(int count) {
-    return '$count respondiendo ahora…';
+  String communityRepliedCount(int count) {
+    return '$count ya respondieron';
   }
 
   @override
@@ -1522,7 +1522,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String communitySosBanner(int count) {
-    return '🛡️ $count personas te cubren ahora mismo';
+    return '🛡️ $count personas te cubrieron';
   }
 
   @override

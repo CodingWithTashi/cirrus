@@ -95,14 +95,14 @@ class ModerationStore extends AutoDisposeNotifier<ModerationState> {
   /// Resolves one flag. Returns false when the server refused, so the caller
   /// can surface it — the row stays in the list either way until a reload
   /// proves it gone.
-  Future<bool> resolve(String postId, {ModerationResolution? action}) async {
-    state = state.copyWith(resolving: {...state.resolving, postId});
+  Future<bool> resolve(String flagId, {ModerationResolution? action}) async {
+    state = state.copyWith(resolving: {...state.resolving, flagId});
     try {
-      await _repo.resolve(postId, action: action);
+      await _repo.resolve(flagId, action: action);
     } on Object {
       if (!_disposed) {
         state = state.copyWith(
-          resolving: {...state.resolving}..remove(postId),
+          resolving: {...state.resolving}..remove(flagId),
         );
       }
       return false;
@@ -111,8 +111,8 @@ class ModerationStore extends AutoDisposeNotifier<ModerationState> {
     state = state.copyWith(
       // Dropped locally rather than re-fetched: the queue is paged and a
       // reload after every decision would re-walk it 50 rows at a time.
-      items: [...state.items]..removeWhere((i) => i.postId == postId),
-      resolving: {...state.resolving}..remove(postId),
+      items: [...state.items]..removeWhere((i) => i.flagId == flagId),
+      resolving: {...state.resolving}..remove(flagId),
     );
     return true;
   }

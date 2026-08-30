@@ -19,6 +19,7 @@ import '../helpers.dart';
 /// queue, and a refused decision must not look like an applied one.
 void main() {
   const flagged = ModerationItem(
+    flagId: 'p1',
     postId: 'p1',
     action: 'flag',
     reason: 'possible self-harm',
@@ -119,8 +120,13 @@ void main() {
     tester,
   ) async {
     repo.items = const [
+      // A reply flag: its own id, with the parent post as a field. Resolving
+      // this used to write to `moderation/p2` — the parent's document — so the
+      // reply's flag was never marked reviewed and came back tomorrow.
       ModerationItem(
+        flagId: 'r9',
         postId: 'p2',
+        replyId: 'r9',
         action: 'block',
         reason: 'harassment',
         kind: 'reply',
@@ -134,7 +140,11 @@ void main() {
     await tester.tap(find.text(l10n.moderationDismiss));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(repo.resolved, [('p2', null)]);
+    // The FLAG's id, not the parent post's. Resolving by postId wrote to
+    // `moderation/p2` — a different document — so this reply's flag stayed
+    // unreviewed and returned to the queue every day, while p2's status was
+    // flipped in its place.
+    expect(repo.resolved, [('r9', null)]);
     expect(c.read(moderationStoreProvider).items, isEmpty);
   });
 }

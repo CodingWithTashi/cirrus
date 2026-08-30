@@ -63,6 +63,14 @@ abstract interface class CommunityRepository {
 
   Future<void> reportPost(String postId);
 
+  /// Flags a reply for review.
+  ///
+  /// Separate from [reportPost] because the rules deny every client write to a
+  /// reply — a reader has to be able to raise a count without being able to
+  /// touch the text, the author or the status — so this goes through a
+  /// callable rather than an increment.
+  Future<void> reportReply({required String postId, required String replyId});
+
   Future<void> blockAuthor(String alias);
 
 }
@@ -140,7 +148,9 @@ abstract interface class ModerationRepository {
   Future<List<ModerationItem>> queue({bool includeReviewed = false});
 
   /// Marks the flag reviewed. A null [action] records "looked, it stands".
-  Future<void> resolve(String postId, {ModerationResolution? action});
+  ///
+  /// Takes the FLAG's id, not the post's — see [ModerationItem.flagId].
+  Future<void> resolve(String flagId, {ModerationResolution? action});
 }
 
 /// The read side of the server-owned `users/{uid}` document.

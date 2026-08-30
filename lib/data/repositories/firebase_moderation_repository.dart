@@ -52,15 +52,17 @@ class FirebaseModerationRepository implements ModerationRepository {
   }
 
   @override
-  Future<void> resolve(String postId, {ModerationResolution? action}) async {
+  Future<void> resolve(String flagId, {ModerationResolution? action}) async {
     await _functions.call('resolveModeration', {
-      'postId': postId,
+      'flagId': flagId,
       'action': ?action?.name,
     });
   }
 
   static ModerationItem _decode(Map<String, dynamic> json) => ModerationItem(
+    flagId: json['flagId'] as String? ?? json['postId'] as String? ?? '',
     postId: json['postId'] as String? ?? '',
+    replyId: json['replyId'] as String?,
     action: json['action'] as String? ?? 'flag',
     reason: json['reason'] as String? ?? '',
     kind: json['kind'] as String? ?? 'post',

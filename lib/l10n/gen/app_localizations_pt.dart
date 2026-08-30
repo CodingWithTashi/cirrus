@@ -1469,8 +1469,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get communityIGotYou => 'Estou aqui 💬';
 
   @override
-  String communityReplyingNow(int count) {
-    return '$count a responder agora…';
+  String communityRepliedCount(int count) {
+    return '$count já responderam';
   }
 
   @override
@@ -1523,7 +1523,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String communitySosBanner(int count) {
-    return '🛡️ $count pessoas estão contigo agora mesmo';
+    return '🛡️ $count pessoas apoiaram-te';
   }
 
   @override

@@ -184,6 +184,7 @@ class SavingsGoal {
 
 class Reply {
   const Reply({
+    required this.id,
     required this.alias,
     required this.avatarEmoji,
     this.text,
@@ -191,6 +192,13 @@ class Reply {
     this.isOp = false,
     this.isMine = false,
   }) : assert(text != null || seedTextId != null);
+
+  /// The reply's own document id.
+  ///
+  /// Firestore has always had one and the client threw it away, so a reply
+  /// could be rendered but never addressed — which is why reporting one could
+  /// only ever have been a snackbar.
+  final String id;
 
   final String alias;
   final String avatarEmoji;
@@ -219,7 +227,6 @@ class Post {
     this.reactions = const {},
     this.myReactions = const {},
     this.replies = const [],
-    this.replyingNow = 0,
     this.isMine = false,
     this.hidden = false,
   }) : assert(text != null || seedTextId != null);
@@ -241,7 +248,6 @@ class Post {
   final Map<String, int> reactions;
   final Set<String> myReactions;
   final List<Reply> replies;
-  final int replyingNow;
   final bool isMine;
 
   /// Hidden by report threshold or block (moderation UX).
@@ -251,7 +257,6 @@ class Post {
     Map<String, int>? reactions,
     Set<String>? myReactions,
     List<Reply>? replies,
-    int? replyingNow,
     bool? hidden,
   }) => Post(
     id: id,
@@ -265,7 +270,6 @@ class Post {
     reactions: reactions ?? this.reactions,
     myReactions: myReactions ?? this.myReactions,
     replies: replies ?? this.replies,
-    replyingNow: replyingNow ?? this.replyingNow,
     isMine: isMine,
     hidden: hidden ?? this.hidden,
   );
@@ -539,16 +543,30 @@ enum ModerationResolution { allow, block }
 /// when nobody ever saw them.
 class ModerationItem {
   const ModerationItem({
+    required this.flagId,
     required this.postId,
     required this.action,
     required this.reason,
     required this.kind,
+    this.replyId,
     this.text,
     this.status,
     this.alias,
   });
 
+  /// The moderation document's own id — what [ModerationRepository.resolve]
+  /// must be given.
+  ///
+  /// Resolving by [postId] silently addressed the wrong document for a reply
+  /// flag, which is stored under its own id with the parent as a field: the
+  /// reply's flag was never marked reviewed and reappeared in the queue every
+  /// day, while the parent post's status was flipped instead.
+  final String flagId;
+
   final String postId;
+
+  /// Set only for reply flags.
+  final String? replyId;
 
   /// What the classifier did — `flag` or `block`.
   final String action;

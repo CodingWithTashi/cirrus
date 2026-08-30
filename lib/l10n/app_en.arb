@@ -899,8 +899,8 @@
   "communityTagMilestone": "Milestone",
   "communityTagVent": "Vent",
   "communityIGotYou": "I got you 💬",
-  "communityReplyingNow": "{count} replying now…",
-  "@communityReplyingNow": {
+  "communityRepliedCount": "{count} already replied",
+  "@communityRepliedCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -931,7 +931,7 @@
   "communityTagIt": "TAG IT",
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
   "communityTagRequired": "Pick a tag — it routes your post to the right people.",
-  "communitySosBanner": "🛡️ {count} people have your back right now",
+  "communitySosBanner": "🛡️ {count} people had your back",
   "@communitySosBanner": {
     "placeholders": {
       "count": {

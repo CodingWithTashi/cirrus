@@ -28,6 +28,7 @@ export {weeklyInsight} from './handlers/weeklyInsight';
 export {rcWebhook} from './handlers/rcWebhook';
 export {createPost} from './handlers/createPost';
 export {createReply} from './handlers/createReply';
+export {reportReply} from './handlers/reportReply';
 export {moderateReply} from './handlers/moderateReply';
 export {onReaction} from './handlers/onReaction';
 export {moderationQueue, resolveModeration} from './handlers/moderationQueue';

@@ -117,9 +117,13 @@ void main() {
         reactions: const {'💪': 3},
         myReactions: const {'💪'},
         replies: const [
-          Reply(alias: '@nightbee', avatarEmoji: '🐝', text: 'hold the line'),
+          Reply(
+            id: 'r1',
+            alias: '@nightbee',
+            avatarEmoji: '🐝',
+            text: 'hold the line',
+          ),
         ],
-        replyingNow: 2,
         isMine: true,
       );
       final wire = jsonEncode(PostCodec.encode(post));

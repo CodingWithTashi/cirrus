@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import 'community_prefs.dart';
 import 'providers.dart';
 
 /// Lifecycle of the feed's initial fetch. Mutations after `ready` stay
@@ -84,10 +85,26 @@ class CommunityStore extends Notifier<CommunityState> {
     ref.onDispose(() => alive = false);
     _alive = () => alive;
     unawaited(_load());
+    unawaited(_restorePrefs());
     return const CommunityState(posts: []);
   }
 
   CommunityRepository get _repo => ref.read(communityRepositoryProvider);
+
+  /// Brings back who this reader has blocked and muted.
+  ///
+  /// Merged into whatever is already in state rather than assigned over it: a
+  /// user who blocks somebody in the first second after launch must not have
+  /// that undone by a restore landing a moment later.
+  Future<void> _restorePrefs() async {
+    final stored = await CommunityPrefs.restore();
+    if (!_alive()) return;
+    if (stored.blocked.isEmpty && stored.muted.isEmpty) return;
+    state = state.copyWith(
+      blocked: {...stored.blocked, ...state.blocked},
+      muted: {...stored.muted, ...state.muted},
+    );
+  }
 
   Future<void> _load() async {
     try {
@@ -159,7 +176,6 @@ class CommunityStore extends Notifier<CommunityState> {
       text: text,
       createdAt: DateTime.now(),
       isMine: true,
-      replyingNow: tag == PostTag.sos ? 3 : 0,
       hidden: violatesCommunityRules(text),
     );
     state = state.copyWith(posts: [post, ...state.posts]);
@@ -193,6 +209,9 @@ class CommunityStore extends Notifier<CommunityState> {
 
   void addReply(String postId, String text) {
     final reply = Reply(
+      // Local id until the feed reloads with the server's. Distinct enough to
+      // key a list and to be recognised as not-yet-server-side.
+      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
       alias: _myAlias,
       avatarEmoji: _myAvatar,
       text: text,
@@ -235,10 +254,39 @@ class CommunityStore extends Notifier<CommunityState> {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(blocked: {...state.blocked, post.alias});
     _repo.blockAuthor(post.alias).ignore();
+    _persist();
   }
 
   void muteAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(muted: {...state.muted, post.alias});
+    _persist();
+  }
+
+  /// Flags one reply, and hides it for this reader immediately.
+  ///
+  /// The button used to be `showLpSnack(context, 'Reported')` and nothing
+  /// else: the app said the report was filed and filed nothing. The hide is
+  /// local and immediate because the reader should not have to keep looking at
+  /// what they just reported while moderation catches up.
+  void reportReply({required String postId, required String replyId}) {
+    state = state.copyWith(
+      posts: [
+        for (final p in state.posts)
+          if (p.id == postId)
+            p.copyWith(
+              replies: p.replies.where((r) => r.id != replyId).toList(),
+            )
+          else
+            p,
+      ],
+    );
+    _repo.reportReply(postId: postId, replyId: replyId).ignore();
+  }
+
+  void _persist() {
+    unawaited(
+      CommunityPrefs.save(blocked: state.blocked, muted: state.muted),
+    );
   }
 }
