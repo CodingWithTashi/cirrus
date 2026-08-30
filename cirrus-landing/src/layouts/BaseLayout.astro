@@ -2,7 +2,7 @@
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font } from 'astro:assets';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, PRIVACY_URL, TERMS_URL } from '../consts';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -24,6 +24,15 @@ interface Props {
   breadcrumbs?: { label: string; href?: string }[];
   /** Home advertises the app itself via SoftwareApplication. */
   softwareApp?: boolean;
+  /** Post tags. Emitted as schema keywords + articleSection, not <meta keywords>. */
+  keywords?: readonly string[];
+  /** Measured, not claimed — see readingTime() in lib/posts.ts. */
+  wordCount?: number;
+  readingMinutes?: number;
+  /** Named author. Falls back to the organisation when a post has no byline. */
+  author?: { name: string; title?: string };
+  /** The blog index passes its posts so the listing is machine-readable. */
+  blogPosts?: readonly { title: string; url: string; date: Date }[];
 }
 
 const {
@@ -37,6 +46,11 @@ const {
   faq,
   breadcrumbs,
   softwareApp = false,
+  keywords,
+  wordCount,
+  readingMinutes,
+  author,
+  blogPosts,
 } = Astro.props;
 
 // Home gets brand + tagline; every other page gets "Page · Cirrus" so results
@@ -61,12 +75,23 @@ const ogImage = image ? new URL(image, Astro.site) : null;
 
 // Structured data, emitted as one @graph so the page ships a single script tag
 // and the entities can cross-reference each other by @id.
+// Google's Article guidance wants publisher.logo as a real ImageObject with
+// dimensions, not a bare URL string — a plain string is silently ignored and
+// the article loses its publisher attribution in rich results.
 const org = {
   '@type': 'Organization',
   '@id': `${Astro.site?.href}#org`,
   name: SITE_TITLE,
   url: Astro.site?.href,
-  logo: new URL('/logo.png', Astro.site).href,
+  logo: {
+    '@type': 'ImageObject',
+    url: new URL('/logo.png', Astro.site).href,
+    width: 512,
+    height: 512,
+  },
+  // Profiles Google uses to connect the site to a known entity. Empty until
+  // real accounts exist — a sameAs pointing at nothing is worse than none.
+  ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {}),
 };
 
 const primary =
@@ -76,17 +101,34 @@ const primary =
         headline: title,
         description,
         url: canonical.href,
+        // Without mainEntityOfPage Google has to guess which URL the article
+        // belongs to, which matters the moment a post is syndicated anywhere.
+        mainEntityOfPage: { '@type': 'WebPage', '@id': canonical.href },
         datePublished: publishedAt?.toISOString(),
         dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+        inLanguage: 'en',
         publisher: { '@id': org['@id'] },
-        ...(ogImage ? { image: ogImage.href } : {}),
+        // A named human when there is one; the organisation otherwise. Never
+        // absent — an article with no author at all is the single most common
+        // reason health content fails Google's quality bar.
+        author: author
+          ? { '@type': 'Person', name: author.name, ...(author.title ? { jobTitle: author.title } : {}) }
+          : { '@id': org['@id'] },
+        ...(keywords?.length ? { keywords: keywords.join(', '), articleSection: keywords[0] } : {}),
+        ...(wordCount ? { wordCount } : {}),
+        ...(readingMinutes ? { timeRequired: `PT${readingMinutes}M` } : {}),
+        ...(ogImage
+          ? { image: { '@type': 'ImageObject', url: ogImage.href, width: 1200, height: 630 } }
+          : {}),
       }
     : {
         '@type': 'WebSite',
         '@id': `${Astro.site?.href}#website`,
         name: SITE_TITLE,
+        alternateName: 'Cirrus Quit',
         description: SITE_DESCRIPTION,
         url: Astro.site?.href,
+        inLanguage: 'en',
         publisher: { '@id': org['@id'] },
       };
 
@@ -112,6 +154,25 @@ if (softwareApp) {
     // A free tier exists; paid plans are not listed because the billing
     // integration is not built yet and schema prices must be real.
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  });
+}
+
+// The blog index as a Blog entity, so the listing itself is machine-readable
+// rather than just a page that happens to contain links.
+if (blogPosts?.length) {
+  graph.push({
+    '@type': 'Blog',
+    '@id': `${Astro.site?.href}blog#blog`,
+    name: `${SITE_TITLE} blog`,
+    url: new URL('/blog', Astro.site).href,
+    inLanguage: 'en',
+    publisher: { '@id': org['@id'] },
+    blogPost: blogPosts.map((post) => ({
+      '@type': 'BlogPosting',
+      headline: post.title,
+      url: new URL(post.url, Astro.site).href,
+      datePublished: post.date.toISOString(),
+    })),
   });
 }
 

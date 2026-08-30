@@ -622,58 +622,404 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .breadcrumb a:hover { color: var(--volt); }
 .breadcrumb [aria-current='page'] { color: var(--text); }
 
-/* ---------- blog ---------- */
+/* ============================================================
+   Blog
+   ============================================================
+
+   One set of article tokens, the same ones Medium, Squarespace and the default
+   WordPress themes converge on: ~19px body, 1.65 line-height, a measure around
+   68 characters, and generous space between blocks. Everything else on this
+   site is a landing page and can be loud; an article is for reading, so the
+   only jobs here are rhythm and contrast.
+
+   Deliberately plain. No cards, chips, tinted callouts or coloured tiles —
+   they read as a dashboard, not a piece of writing. The devices below (pull
+   quote, figure, table, takeaways, contents) are the ones every publishing
+   platform ships, and nothing else. */
+
+/* ---------- index ---------- */
 
 .page { padding-block: clamp(40px, 7vw, 72px); }
 .page h1 { font-size: clamp(2rem, 5vw, 3rem); }
 .lede { font-size: 1.125rem; color: var(--muted); max-width: 48ch; }
 
-.post-list { list-style: none; padding: 0; margin: 2rem 0 0; max-width: var(--measure); }
-.post-list li { padding: 1.5rem 0; border-bottom: 1px solid var(--border); }
+.post-list { list-style: none; padding: 0; margin: 2.5rem 0 0; max-width: 42rem; }
+.post-list li { padding: 1.75rem 0; border-bottom: 1px solid var(--border); }
 .post-list li:first-child { padding-top: 0; }
-.post-list h2, .post-list h3 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+.post-list h2, .post-list h3 { font-size: 1.375rem; margin: 0 0 0.35rem; }
 .post-list a { color: var(--text); text-decoration: none; }
 .post-list a:hover { color: var(--volt); }
-.post-list p { color: var(--muted); margin: 0.5rem 0 0; font-size: 0.9375rem; }
+.post-list p { color: var(--muted); margin: 0.5rem 0 0; font-size: 1rem; }
 
 .post-meta {
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
 
-.prose { max-width: var(--measure); }
-.prose h2 { margin-top: 2.5rem; font-size: 1.375rem; }
-.prose code {
-  background: var(--slate);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.875em;
+/* ---------- reading progress ---------- */
+
+.progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  z-index: 20;
+  pointer-events: none;
 }
-.prose pre {
-  background: var(--slate);
-  border: 1px solid var(--border);
-  padding: 1rem;
-  border-radius: var(--r);
-  overflow-x: auto;
+.progress__bar {
+  height: 100%;
+  width: 0;
+  background: var(--volt);
+  box-shadow: var(--glow-volt);
 }
-.prose pre code { background: none; border: none; padding: 0; }
+
+/* ---------- the article ---------- */
+
+/* The article column is the shell; the READING measure is applied to each child
+   instead, left-aligned, so anything that ever needs to be wider than the
+   measure can opt out with `max-width: none` rather than reaching for vw units
+   (vw includes the scrollbar, so a vw-sized element overflows and gets clipped). */
+.prose {
+  max-width: var(--shell);
+  margin-inline: auto;
+  font-size: 1.1875rem;
+  line-height: 1.65;
+}
+/* Left-aligned, NOT centred. The site header, the breadcrumb and the article
+   all start on the same axis — a column centred inside the shell sits ~200px
+   right of the breadcrumb above it and reads as unmoored from the page. */
+.prose > * {
+  max-width: 42rem;
+  margin-inline: 0;
+}
+
+.prose h1 { font-size: clamp(2.1rem, 5.5vw, 3.1rem); line-height: 1.06; }
+
+/* Space above a heading, very little below it: a heading belongs to the text
+   that follows, and equal margins make it float between two sections. */
+.prose h2 { font-size: clamp(1.5rem, 3.4vw, 1.875rem); margin: 3rem 0 0; }
+.prose h3 { font-size: 1.3125rem; margin: 2.25rem 0 0; }
+.prose h2 + p,
+.prose h3 + p,
+.prose h2 + ul,
+.prose h3 + ul { margin-top: 0.85rem; }
+
+.prose p,
+.prose ul,
+.prose ol { margin-block: 1.4rem; }
+.prose li { margin-block: 0.5rem; }
+.prose ul, .prose ol { padding-left: 1.35rem; }
+.prose strong { color: var(--text); font-weight: 600; }
+
+/* Underlined in the body, because in a wall of prose colour alone is a weak
+   affordance and fails for colourblind readers. */
+.prose p a,
+.prose li a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgb(200 245 66 / 0.45);
+}
+.prose p a:hover, .prose li a:hover { text-decoration-color: var(--volt); }
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 3rem;
+}
+
+/* The deck — one grey line under the headline saying what the piece is. */
+.standfirst {
+  font-size: 1.3125rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 1.1rem 0 0;
+}
+
+/* ---------- pull quote ---------- */
+
 .prose blockquote {
-  margin: 1.5rem 0;
-  padding-left: 1rem;
+  margin: 2.25rem 0;
+  padding-left: 1.25rem;
   border-left: 3px solid var(--ember);
+  font-size: 1.3125rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.prose blockquote p { margin-block: 0.5rem; }
+.prose blockquote cite {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  font-style: normal;
   color: var(--muted);
 }
+
+/* ---------- images ---------- */
+
+.prose figure { margin: 2.25rem 0; }
+.prose figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+}
+.prose figcaption {
+  margin-top: 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ---------- image placeholder ----------
+   A reserved slot, sized to the real image's aspect ratio so the layout you are
+   reviewing is the layout you will ship. Obviously unfinished on purpose —
+   nobody should be able to publish one of these by accident. Swap it for a
+   plain <figure> the moment the file lands in public/blog/<slug>/. */
+
+.imgslot {
+  display: grid;
+  place-content: center;
+  gap: 0.3rem;
+  text-align: center;
+  margin: 2.25rem 0;
+  padding: 1.25rem;
+  aspect-ratio: var(--ratio, 16 / 9);
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 10px,
+    rgb(255 255 255 / 0.015) 10px 20px
+  );
+}
+.imgslot p { margin: 0; }
+.imgslot__label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+.imgslot__name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--text);
+  word-break: break-all;
+}
+.imgslot__spec {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.imgslot__what {
+  font-size: 0.9375rem;
+  color: var(--muted);
+  max-width: 34ch;
+  margin-inline: auto !important;
+  line-height: 1.45;
+}
+
+/* A portrait screenshot at the full measure would be taller than the viewport. */
+.prose .figure--phone img { max-width: 15rem; }
+
+/* ---------- tables ---------- */
+
+.table-wrap {
+  overflow-x: auto;
+  margin-block: 2rem;
+}
+.table-wrap:focus-visible { outline: 2px solid var(--volt); outline-offset: 4px; }
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 30rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.prose th,
+.prose td {
+  text-align: left;
+  padding: 0.75rem 1rem 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.prose thead th {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom-color: var(--muted);
+}
+.prose td:first-child { color: var(--text); }
+
+/* ---------- key takeaways ---------- */
+
+.tldr {
+  margin: 2rem 0 0;
+  padding: 1.35rem 0;
+  border-block: 1px solid var(--border);
+}
+.tldr h2 {
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.9rem;
+}
+.tldr ul { margin: 0; padding-left: 1.2rem; }
+.tldr li { margin-block: 0.55rem; font-size: 1.0625rem; line-height: 1.5; }
+
+/* ---------- contents ---------- */
+
+.toc { margin: 1.75rem 0 0; }
+.toc summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.toc summary::-webkit-details-marker { display: none; }
+.toc summary::after { content: ' ▾'; }
+.toc[open] summary::after { content: ' ▴'; }
+.toc ol {
+  /* The headings number themselves, so a list counter would double it. */
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  font-size: 1rem;
+}
+.toc li { margin-block: 0.45rem; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--volt); text-decoration: underline; }
+
+/* ---------- byline (E-E-A-T) ----------
+   Rendered only when a real person is named. Never a placeholder — see the
+   note in src/content.config.ts. */
+
+.byline {
+  margin: 1.25rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+.byline p { margin: 0.2rem 0 0; }
+.byline b { color: var(--text); font-weight: 600; }
+
+/* ---------- tags ---------- */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tags li {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* ---------- FAQ, sources, disclaimer ---------- */
+
+.post-faq, .post-sources { margin-top: 3.5rem; }
+.post-faq h2, .post-sources h2 { margin-top: 0; }
+.post-faq .faq { margin-top: 1.25rem; font-size: 1rem; }
+.post-faq .faq details:first-of-type { border-top: 1px solid var(--border); }
+.post-faq .faq p { font-size: 1.0625rem; }
+
+.post-sources > p { color: var(--muted); font-size: 1rem; margin-top: 0.85rem; }
+.post-sources ol {
+  margin: 1.25rem 0 0;
+  padding-left: 1.35rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.post-sources li { margin-block: 0.7rem; }
+.post-sources a { color: var(--muted); text-decoration-color: var(--border); }
+.post-sources a:hover { color: var(--volt); }
+.post-sources__id { display: block; font-size: 0.8125rem; color: #67707e; word-break: break-word; }
+
+.disclaimer {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.disclaimer p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.5; }
+.disclaimer b { color: var(--text); }
+
+/* ---------- share ---------- */
+
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+.share p { margin: 0; color: var(--muted); }
+.share a, .share button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.share a:hover, .share button:hover { color: var(--volt); }
+
+/* ---------- end-of-post CTA ---------- */
+
+.post-cta {
+  max-width: 42rem;
+  margin: 3rem 0 0;
+  padding: clamp(1.35rem, 4vw, 1.9rem);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(80% 130% at 10% 0%, rgb(200 245 66 / 0.1) 0%, transparent 62%),
+    radial-gradient(70% 120% at 95% 100%, rgb(255 138 0 / 0.12) 0%, transparent 62%),
+    var(--slate);
+}
+.post-cta h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-size: clamp(1.4rem, 3.6vw, 1.8rem);
+  margin: 0.5rem 0 0;
+}
+.post-cta > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
+.post-cta .waitlist { margin-top: 1.2rem; }
+
+/* ---------- footer nav ---------- */
 
 .post-footer-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
 }
 
 /* ============================================================

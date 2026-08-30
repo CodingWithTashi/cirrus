@@ -1,19 +1,30 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getPublishedPosts, formatDate } from '../../lib/posts';
+import { getPublishedPosts, formatDate, readingTime } from '../../lib/posts';
 
 const posts = await getPublishedPosts();
 ---
 
+{/*
+  The title used to be the single word "Blog", which produced "Blog · Cirrus" in
+  results — a title tag spent on a word nobody searches. A listing page is a
+  ranking asset in its own right, so it names what it is a list of.
+*/}
 <BaseLayout
-  title="Blog"
-  description="Notes on quitting vaping — what the research says, what actually works, and how Cirrus is built."
+  title="Quit vaping guides, research and honest numbers"
+  description="Evidence-led writing on quitting vaping: what a taper actually does, how many puffs a day is a lot, and what the research says works. Every figure cited."
   breadcrumbs={[{ label: 'Blog' }]}
+  blogPosts={posts.map((post) => ({
+    title: post.data.title,
+    url: `/blog/${post.id}`,
+    date: post.data.publishedAt,
+  }))}
 >
   <div class="wrap page">
-  <h1>Blog</h1>
+  <h1>Quit vaping, honestly</h1>
   <p class="lede">
-    Notes on quitting vaping — what the research says, what actually works, and how Cirrus is built.
+    What the research actually says about quitting vaping, tapering off nicotine and counting
+    your real puff count. No invented statistics — every number here carries its source.
   </p>
 
   {
@@ -30,6 +41,7 @@ const posts = await getPublishedPosts();
               <time datetime={post.data.publishedAt.toISOString()}>
                 {formatDate(post.data.publishedAt)}
               </time>
+              {` · ${readingTime(post.body ?? '')} min read`}
             </p>
             <p>{post.data.description}</p>
           </li>
@@ -38,8 +50,11 @@ const posts = await getPublishedPosts();
     )
   }
 
+  {/* Descriptive anchor text, not "click here". An internal link is the main
+      way a listing page passes relevance to the page it points at, and the
+      words inside the link are most of that signal. */}
   <p style="margin-top:3rem">
-    <a href="/">Back to quitting vaping with Cirrus</a>
+    <a href="/">See how the Cirrus puff counter and taper plan work</a>
   </p>
   </div>
 </BaseLayout>

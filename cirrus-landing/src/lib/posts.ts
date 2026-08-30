@@ -12,6 +12,24 @@ export async function getPublishedPosts(): Promise<CollectionEntry<'blog'>[]> {
   return posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
 }
 
+/**
+ * Reading time in whole minutes, measured rather than claimed — the same rule
+ * the rest of the site follows for numbers. 200 wpm is the usual figure for
+ * screen reading of non-fiction.
+ *
+ * Strips inline HTML before counting. A post carrying a few figures and image
+ * placeholders has a lot of markup in its body, and counting `<figcaption>` as
+ * a word pushed the estimate a whole minute over what anyone actually reads.
+ */
+export function readingTime(body: string): number {
+  const prose = body
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[#*_`>|-]/g, ' ')
+    .trim();
+  const words = prose ? prose.split(/\s+/).length : 0;
+  return Math.max(1, Math.round(words / 200));
+}
+
 export function formatDate(date: Date): string {
   // Frontmatter dates are plain calendar dates, which z.coerce.date() parses as
   // UTC midnight. Formatting those in the local zone renders the previous day

@@ -79,6 +79,86 @@ arithmetic or carries a citation.** The cost calculator is the visitor's own
 arithmetic; the stats block cites every figure. Adding a statistic means adding
 its source in the same change.
 
+### Blog posts
+
+Markdown in `src/content/blog/`; the filename is the URL. `src/content.config.ts`
+enforces the frontmatter at build time, so a broken post fails `npm run build`
+rather than shipping. Beyond `title`/`description`/`publishedAt`:
+
+| Field | What it does |
+|---|---|
+| `faq` | List of `{q, a}`. Rendered as the visible FAQ **and** as `FAQPage` schema, from this one definition — same anti-drift rule as the landing page FAQ. Never put a post's FAQ in the body. |
+| `sources` | List of `{text, id?, url?}`. Renders the citation list. `id` (DOI/PMID/PMC) shows on screen so the citation survives a dead link. |
+| `medical` | Adds the standard medical disclaimer. Set it on anything touching health, dependence or medication. |
+| `author`, `authorTitle` | Byline. |
+| `reviewedBy`, `reviewedByTitle`, `reviewedOn` | Clinical reviewer credit. |
+| `standfirst` | The deck: one line under the headline. Distinct from `description`, which is written for a search result. |
+| `takeaways` | Bullets for the TL;DR box above the article. Inline HTML allowed, so figures can be `<b>`-set. |
+| `image`, `imageAlt` | Per-post card, rendered by `npm run og`. Used **twice** — as `og:image` and as the featured image at the top of the post — so the two can never disagree. Falls back to `/og.png`. |
+
+Reading time is **measured from the post body at 200 wpm**, not typed into
+frontmatter — same reason no other number on this site is hand-entered.
+
+Two things that are easy to get wrong:
+
+- **The byline fields are never defaulted, and must never be filled with a
+  placeholder.** Google treats nicotine and lung content as "Your Money or Your
+  Life" and applies its strictest quality bar; a named author plus a named
+  clinical reviewer does more for a health post's ranking than any technical
+  tweak. But a fabricated author, or a reviewer who did not review, is worse
+  than no byline — so the template renders nothing at all when they are absent.
+- **Wide tables need `<div class="table-wrap" tabindex="0">` around them**, which
+  means writing that table as HTML rather than a pipe table. Astro 7's default
+  Markdown processor takes no rehype plugins, so the wrapper cannot be added
+  automatically, and an unwrapped table clips on a phone.
+
+The table of contents and the reading time are both **derived**, never typed: the
+TOC comes from `render()`'s `headings` (so it cannot drift from the real H2s) and
+the reading time is measured from the body. The progress bar, share row and
+end-of-post form come from the template.
+
+#### In-article furniture
+
+Deliberately almost none. An article is for reading, so the only devices are the
+ones every publishing platform ships: a pull quote (plain `>` blockquote), a
+figure with a caption, and a table. No cards, chips, tinted callouts or coloured
+tiles — they read as a dashboard, not a piece of writing.
+
+Article type is set once in `global.css`: **19px / 1.65 line-height / 42rem
+measure** (~68 characters), which is where Medium, Squarespace and the default
+WordPress themes all land. The rest of the site stays at 16px; only `.prose`
+changes.
+
+Images: put files in `public/blog/<slug>/` and use a plain `<figure>` with an
+`<img>` and a `<figcaption>`. Add `class="figure--phone"` for a portrait
+screenshot, or it renders taller than the viewport.
+
+A slot with no file yet gets a `.imgslot` placeholder carrying the intended
+path, pixel size and a note on what to shoot. It reserves the real aspect ratio
+via `--ratio`, so the layout under review is the layout that ships. Replace it
+with a `<figure>` when the file lands — it is styled to look obviously
+unfinished so it cannot be published by accident.
+
+`public/og/` is written by `npm run og` and holds **generated** cards only. Photos
+go in `public/blog/<slug>/`, or the next `npm run og` leaves you unable to tell
+which files are authored and which are output.
+
+**`.prose` is the shell width; the reading measure is applied to its children,
+left-aligned.** Left, not centred: the site header, the breadcrumb and the
+article all start on the same axis, and a column centred inside the shell sits
+about 200px right of the breadcrumb above it and reads as detached from the
+page.
+
+Images stay inside the reading measure like everything else. If a figure ever
+needs to break out, give it `max-width: none` — never a `100vw` width, because
+`vw` includes the scrollbar and the figure ends up a few pixels wider than the
+viewport, then gets silently clipped by `body { overflow-x: hidden }`.
+
+**Post CTAs are the waitlist, not store buttons.** There is no store listing yet
+(`PLAY_STORE_URL` is empty), and a download button that goes nowhere is the
+exact failure mode the app's own rules ban. The end-of-post form tags its
+signups `blog-<slug>`, which is what tells you a post is converting.
+
 ## SEO notes
 
 The `<head>` is owned by `src/layouts/BaseLayout.astro` — canonical, Open Graph,
@@ -89,6 +169,33 @@ Twitter card and JSON-LD all derive from `src/consts.ts` and the page's props.
 Verified live: `http`→`https` 301, `/page.html` and `/page/` both 308 to the
 clean URL, Googlebot and Bingbot unblocked, Brotli active, sitemap carries
 `<lastmod>` for posts.
+
+### Structured data
+
+One `@graph` per page, built in `BaseLayout.astro`. Three things in it are load-bearing
+and easy to break:
+
+- **`publisher.logo` must be an `ImageObject` with dimensions.** A bare URL string is
+  silently ignored and the article loses publisher attribution in rich results.
+- **`BlogPosting.author` is never absent.** A named `Person` when a post has a byline,
+  the `Organization` otherwise. Health content with no author at all is the most common
+  reason a page fails Google's quality bar.
+- **`mainEntityOfPage`** pins the article to its canonical URL, which starts mattering
+  the moment a post is syndicated.
+
+`SOCIAL_PROFILES` in `consts.ts` feeds `Organization.sameAs` and is deliberately empty:
+that is how Google ties a domain to a known entity, so fill it when real accounts exist.
+A `sameAs` pointing at a profile that does not exist is worse than none.
+
+### Keyword targeting
+
+One page targets one query. The blog index is not a filing cabinet — it carries its own
+title and copy for "quitting vaping" rather than spending a title tag on the word "Blog".
+
+Internal links are the main way relevance moves between pages here, and the anchor text
+is most of that signal, so links read "knowing your real puff count", never "click here"
+or a bare URL. Two or three per post; a page stuffed with self-links reads as spam to
+readers and to Google alike.
 
 ### Canonical host
 

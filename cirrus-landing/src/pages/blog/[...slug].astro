@@ -1,7 +1,9 @@
 ---
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getPublishedPosts, formatDate } from '../../lib/posts';
+import WaitlistForm from '../../components/WaitlistForm.astro';
+import { SITE_TITLE } from '../../consts';
+import { getPublishedPosts, formatDate, readingTime } from '../../lib/posts';
 
 // Static route generation: every published post becomes a prerendered HTML file
 // at build time. Nothing is rendered per request.
@@ -11,7 +13,26 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+// `headings` is derived from the rendered Markdown, so the table of contents is
+// generated from the article's real H2s and cannot drift out of sync with them.
+const { Content, headings } = await render(post);
+const {
+  faq,
+  sources,
+  takeaways,
+  standfirst,
+  author,
+  authorTitle,
+  reviewedBy,
+  reviewedByTitle,
+  reviewedOn,
+  medical,
+} = post.data;
+
+const toc = headings.filter((h) => h.depth === 2);
+const minutes = readingTime(post.body ?? '');
+const words = (post.body ?? '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+const url = new URL(`/blog/${post.id}`, Astro.site).href;
 ---
 
 <BaseLayout
@@ -20,9 +41,19 @@ const { Content } = await render(post);
   type="article"
   publishedAt={post.data.publishedAt}
   updatedAt={post.data.updatedAt}
+  image={post.data.image}
   noindex={post.data.draft}
   breadcrumbs={[{ label: 'Blog', href: '/blog' }, { label: post.data.title }]}
+  faq={faq.length ? faq : undefined}
+  keywords={post.data.tags}
+  wordCount={words}
+  readingMinutes={minutes}
+  author={author ? { name: author, title: authorTitle } : undefined}
 >
+  {/* How far through a long read you are. Decorative — the article is fully
+      readable without it, so it is hidden from assistive tech. */}
+  <div class="progress" aria-hidden="true"><div class="progress__bar" id="progress-bar"></div></div>
+
   <div class="wrap page">
   <article class="prose">
     <h1>{post.data.title}</h1>
@@ -31,10 +62,161 @@ const { Content } = await render(post);
         {formatDate(post.data.publishedAt)}
       </time>
       {post.data.updatedAt && <> · updated {formatDate(post.data.updatedAt)}</>}
+      {` · ${minutes} min read`}
     </p>
 
+    {standfirst && <p class="standfirst">{standfirst}</p>}
+
+    {
+      /* Byline. Rendered only when a real person is named — see the E-E-A-T note
+         in src/content.config.ts. No placeholder, ever. */
+      (author || reviewedBy) && (
+        <div class="byline">
+          {author && (
+            <p>
+              <span class="byline__role">Written by</span>{' '}
+              <b>{author}</b>
+              {authorTitle && <span class="byline__title">, {authorTitle}</span>}
+            </p>
+          )}
+          {reviewedBy && (
+            <p>
+              <span class="byline__role">Medically reviewed by</span>{' '}
+              <b>{reviewedBy}</b>
+              {reviewedByTitle && <span class="byline__title">, {reviewedByTitle}</span>}
+              {reviewedOn && (
+                <span class="byline__title">
+                  {' '}· <time datetime={reviewedOn.toISOString()}>{formatDate(reviewedOn)}</time>
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    {
+      takeaways.length > 0 && (
+        <aside class="tldr" aria-labelledby="tldr-h">
+          <h2 id="tldr-h">Key takeaways</h2>
+          <ul>
+            {takeaways.map((t) => (
+              <li set:html={t} />
+            ))}
+          </ul>
+        </aside>
+      )
+    }
+
+    {
+      toc.length > 2 && (
+        <details class="toc" open>
+          <summary>Contents</summary>
+          <ol>
+            {toc.map((h) => (
+              <li>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )
+    }
+
     <Content />
+
+    {
+      faq.length > 0 && (
+        <section class="post-faq" aria-labelledby="post-faq-h">
+          <h2 id="post-faq-h">Questions people actually ask</h2>
+          <div class="faq">
+            {faq.map((item, i) => (
+              <details open={i === 0}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      sources.length > 0 && (
+        <section class="post-sources" aria-labelledby="post-sources-h">
+          <h2 id="post-sources-h">Sources</h2>
+          <p>Every figure above traces to one of these. In publication order.</p>
+          <ol>
+            {sources.map((s) => (
+              <li>
+                {s.url ? <a href={s.url} rel="noopener" target="_blank">{s.text}</a> : s.text}
+                {s.id && <span class="post-sources__id">{s.id}</span>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+
+    {
+      medical && (
+        <aside class="disclaimer">
+          <p>
+            <b>Medical disclaimer.</b> This article is for information only and is not medical
+            advice. Nicotine dependence is a treatable medical condition, so talk to a doctor
+            or pharmacist about the options that fit your situation, including prescription
+            medication.
+          </p>
+        </aside>
+      )
+    }
   </article>
+
+  {
+    post.data.tags.length > 0 && (
+      <ul class="tags" aria-label="Tags">
+        {post.data.tags.map((tag) => (
+          <li>{tag}</li>
+        ))}
+      </ul>
+    )
+  }
+
+  {/* Plain links, no third-party widgets: a share button that loads a vendor
+      script would put a tracker on a page about not being tracked. */}
+  <div class="share">
+    <p>Share</p>
+    <a
+      href={`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(post.data.title)}`}
+      rel="noopener"
+      target="_blank">Reddit</a
+    >
+    <a
+      href={`https://x.com/intent/post?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.data.title)}`}
+      rel="noopener"
+      target="_blank">X</a
+    >
+    <a
+      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
+      rel="noopener"
+      target="_blank">LinkedIn</a
+    >
+    <button type="button" data-copy={url}>Copy link</button>
+  </div>
+
+  {/* The post's own CTA. A real form rather than store buttons: the app is not
+      on a store yet, and a dead download button is worse than no button. The
+      source tag is what tells you the blog is converting. */}
+  <section class="post-cta post-cta--end" id="get-cirrus" aria-labelledby="get-cirrus-h">
+    <p class="micro micro--volt">{SITE_TITLE} · coming soon</p>
+    <h2 id="get-cirrus-h">Start with the number you're avoiding</h2>
+    <p>
+      Most people have no idea what their daily puff count actually is. Cirrus counts it for you,
+      finds the hours you reach hardest, and tapers from there. Android first, iPhone right behind
+      it.
+    </p>
+    <WaitlistForm source={`blog-${post.id}`} id="waitlist-post" cta="Join the waitlist" label="Get early access" showCount />
+  </section>
 
   <nav class="post-footer-nav" aria-label="Post navigation">
     <a href="/blog">All posts on quitting vaping</a>
@@ -42,3 +224,46 @@ const { Content } = await render(post);
   </nav>
   </div>
 </BaseLayout>
+
+<script>
+  // Reading progress. Scales a bar rather than animating width so it stays on
+  // the compositor, and reads scrollHeight fresh each frame because images and
+  // the FAQ accordion change the document height after load.
+  const bar = document.getElementById('progress-bar');
+  if (bar) {
+    let queued = false;
+    const paint = () => {
+      queued = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+      bar.style.width = `${pct * 100}%`;
+    };
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(paint);
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll, { passive: true });
+    paint();
+  }
+
+  // Copy link. Falls back to the share sheet on phones, where the clipboard API
+  // is the less useful of the two.
+  const copy = document.querySelector<HTMLButtonElement>('.share button[data-copy]');
+  copy?.addEventListener('click', async () => {
+    const url = copy.dataset.copy!;
+    try {
+      if (navigator.share) await navigator.share({ url, title: document.title });
+      else {
+        await navigator.clipboard.writeText(url);
+        const label = copy.textContent;
+        copy.textContent = 'Copied';
+        setTimeout(() => (copy.textContent = label), 1600);
+      }
+    } catch {
+      /* The user dismissed the share sheet, or the page has no clipboard
+         permission. Either way there is nothing useful to say about it. */
+    }
+  });
+</script>

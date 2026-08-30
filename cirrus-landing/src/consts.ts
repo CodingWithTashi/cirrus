@@ -29,6 +29,12 @@ export const WAITLIST_COUNT = 103;
 // waitlist until then and switches itself when this is filled in.
 export const PLAY_STORE_URL = '';
 
+// Official profiles, emitted as Organization.sameAs. This is how Google ties
+// the domain to a known entity rather than treating it as an anonymous site,
+// so fill it in the moment the accounts exist. Deliberately empty for now: a
+// sameAs pointing at a profile that does not exist is worse than no sameAs.
+export const SOCIAL_PROFILES: string[] = [];
+
 // Legal pages currently live on Firebase Hosting, not this domain.
 export const PRIVACY_URL = 'https://alastpuff.web.app/privacy';
 export const TERMS_URL = 'https://alastpuff.web.app/terms';
