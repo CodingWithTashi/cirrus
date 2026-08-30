@@ -37,6 +37,48 @@ pick `preview` or `production`. Nothing deploys on push.
    `cirrusquit.com` (and `www`). The domain is attached in the dashboard, not
    from `wrangler.jsonc`, so it survives deploys.
 
+## Waitlist
+
+The hero and footer forms post to `functions/api/subscribe.ts` — a **Cloudflare
+Pages Function**, not an Astro route. Config is in `wrangler.jsonc` `vars`:
+`LISTMONK_URL` and `LISTMONK_LIST_UUID`. Neither is a secret; Listmonk's public
+subscription endpoint takes no API key, the list just has to be public.
+
+Two things worth knowing before changing this:
+
+- **Do not reach for `@astrojs/cloudflare`.** It targets Workers: it restructures
+  `dist/` into `client/` + `server/` and injects an `ASSETS` binding whose name
+  Pages reserves, which breaks `wrangler pages deploy`. A Pages Function sits
+  beside the static build instead, so every page stays prerendered.
+- **The server hop is not optional.** Listmonk needs no key, but sends no CORS
+  headers, so a browser cannot post to it directly.
+
+The endpoint rejects cross-origin posts, drops honeypot submissions without
+calling Listmonk, validates, and rate-limits per IP (8/min). The form is a real
+`<form>` with a real `action`, so it still works with JavaScript off.
+
+Test it locally against the real Pages runtime:
+
+```
+npm run build
+npx wrangler pages dev dist --binding LISTMONK_URL=... --binding LISTMONK_LIST_UUID=...
+```
+
+Use invalid addresses when testing anything that fires repeatedly — valid ones
+reach the live list and have to be cleaned out of Listmonk by hand.
+
+## Content rules
+
+`src/lib/content.ts` holds the FAQ and the approved statistics. Both are rendered
+into visible markup *and* structured data from that one source, so the two can
+never drift — FAQ schema describing content a visitor cannot see is a manual-action
+risk.
+
+Per docs/02 §8, **no number appears on this site unless it is the visitor's own
+arithmetic or carries a citation.** The cost calculator is the visitor's own
+arithmetic; the stats block cites every figure. Adding a statistic means adding
+its source in the same change.
+
 ## SEO notes
 
 The `<head>` is owned by `src/layouts/BaseLayout.astro` — canonical, Open Graph,
