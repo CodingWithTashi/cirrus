@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, fontProviders } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
@@ -12,6 +12,28 @@ export default defineConfig({
   // agreeing with it, so Google never sees two URLs for one page.
   trailingSlash: 'never',
   build: { format: 'file' },
+
+  // Self-hosted, preloaded — no third-party request at runtime. docs/07 §3
+  // locks these two faces: Space Grotesk for display and all numbers, Inter for
+  // body. Never a serif.
+  fonts: [
+    {
+      name: 'Space Grotesk',
+      cssVariable: '--font-space-grotesk',
+      provider: fontProviders.google(),
+      weights: [700],
+      styles: ['normal'],
+      subsets: ['latin'],
+    },
+    {
+      name: 'Inter',
+      cssVariable: '--font-inter',
+      provider: fontProviders.google(),
+      weights: [400, 600],
+      styles: ['normal'],
+      subsets: ['latin'],
+    },
+  ],
 
   integrations: [
     sitemap({

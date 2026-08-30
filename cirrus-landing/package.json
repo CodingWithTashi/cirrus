@@ -11,7 +11,8 @@
     "preview": "astro preview",
     "check": "astro check",
     "deploy": "astro build && wrangler pages deploy",
-    "astro": "astro"
+    "astro": "astro",
+    "og": "node scripts/og.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
@@ -24,6 +25,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@resvg/resvg-js": "^2.6.2",
+    "opentype.js": "^2.0.0",
     "typescript": "^6.0.3",
     "wrangler": "^4.127.1"
   }

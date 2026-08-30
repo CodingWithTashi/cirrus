@@ -1,28 +1,84 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE_TITLE, SITE_TAGLINE } from '../consts';
+import { SITE_TITLE, SITE_TAGLINE, APP_STORE_URL } from '../consts';
 import { getPublishedPosts, formatDate } from '../lib/posts';
 
 const recent = (await getPublishedPosts()).slice(0, 3);
+
+// Three blocks, per docs/06 §5. Each maps to a shipped engine or surface — no
+// feature here is aspirational, and none of them quotes a number, because the
+// honest-stats rule (docs/02 §8) says every figure has to come from your own
+// data. Yours does; a landing page's can't.
+const features = [
+  {
+    accent: 'var(--volt)',
+    title: 'A plan built on your numbers',
+    body: 'Tell it what you actually vape. It works out a taper you can hold, then adjusts as you go — not a generic countdown to a date you picked.',
+  },
+  {
+    accent: 'var(--ember)',
+    title: 'A coach that knows your day',
+    body: 'It learns when your cravings hit and says something useful before they do. When one lands anyway, panic mode breathes with you until it passes.',
+  },
+  {
+    accent: 'var(--oxygen)',
+    title: 'People who get it',
+    body: 'No lectures, no before-and-afters. Just others somewhere on the same taper, on the days that are hard.',
+  },
+];
 ---
 
 <BaseLayout>
-  <h1>{SITE_TITLE}</h1>
-  <p class="lede">{SITE_TAGLINE}.</p>
-
-  <p>
-    A taper plan built around your actual habits — real numbers, no guesswork.
-    Coming soon to iOS and Android.
+  <h1>{SITE_TAGLINE}.</h1>
+  <p class="lede">
+    {SITE_TITLE} builds a taper from what you actually vape, then holds you to it —
+    honest math, a coach in your pocket, and people who get it.
   </p>
+
+  <div class="cta-row">
+    {
+      APP_STORE_URL ? (
+        <a class="btn btn-primary" href={APP_STORE_URL}>Get {SITE_TITLE}</a>
+      ) : (
+        <a class="btn btn-primary" href="/blog">Read the blog</a>
+      )
+    }
+    <span class="note">{APP_STORE_URL ? 'iPhone and Android' : 'iPhone and Android — coming soon'}</span>
+  </div>
+
+  <ul class="features">
+    {
+      features.map((f) => (
+        <li class="feature">
+          <div class="rule" style={`background:${f.accent}`}></div>
+          <h3>{f.title}</h3>
+          <p>{f.body}</p>
+        </li>
+      ))
+    }
+  </ul>
+
+  <section>
+    <h2>Why tapering</h2>
+    <p>
+      Quitting cold turkey works for some people and fails most. A taper lowers the
+      dose slowly enough that your body keeps up, which is why {SITE_TITLE} counts
+      puffs instead of days — the number that's actually going down.
+    </p>
+    <p>
+      Every figure in the app comes from what you log. Nothing is invented to make
+      a chart look better.
+    </p>
+  </section>
 
   {
     recent.length > 0 && (
-      <section style="margin-top:3rem">
+      <section>
         <h2>Latest posts</h2>
         <ul class="post-list">
           {recent.map((post) => (
             <li>
-              <h2><a href={`/blog/${post.id}`}>{post.data.title}</a></h2>
+              <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>
               <p class="post-meta">
                 <time datetime={post.data.publishedAt.toISOString()}>
                   {formatDate(post.data.publishedAt)}

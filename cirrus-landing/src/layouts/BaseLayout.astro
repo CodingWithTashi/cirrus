@@ -1,6 +1,7 @@
 ---
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
+import { Font } from 'astro:assets';
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
 import '../styles/global.css';
 
@@ -71,6 +72,10 @@ const jsonLd = type === 'article'
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#0a0c10" />
+
+    <Font cssVariable="--font-space-grotesk" preload />
+    <Font cssVariable="--font-inter" preload />
 
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -120,6 +125,7 @@ const jsonLd = type === 'article'
 
     <footer class="site-footer">
       <p>&copy; {new Date().getFullYear()} {SITE_TITLE}</p>
+      <p><a href="/rss.xml">RSS</a></p>
     </footer>
   </body>
 </html>

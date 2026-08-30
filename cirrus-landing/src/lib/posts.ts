@@ -13,5 +13,13 @@ export async function getPublishedPosts(): Promise<CollectionEntry<'blog'>[]> {
 }
 
 export function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  // Frontmatter dates are plain calendar dates, which z.coerce.date() parses as
+  // UTC midnight. Formatting those in the local zone renders the previous day
+  // anywhere west of UTC — a post dated 2026-08-30 displayed as August 29.
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
