@@ -15,6 +15,7 @@ import {insightPrompt} from '../ai/prompts';
 import {ModelUnavailableError} from '../ai/model';
 import {db, FieldValue, insightDoc, journeyDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
+import {sendToUser} from '../lib/push';
 import {ungated} from '../lib/usage';
 import {decodeJourney} from '../domain/journeyCodec';
 import {dayKeyIn} from '../domain/dateKey';
@@ -131,6 +132,17 @@ async function generateFor(uid: string, timeZone: string): Promise<boolean> {
     ...insight,
     weekId,
     createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // A report the user never learns about is a report nobody reads. This is one
+  // of the few things worth a push: it happened on the server, on a schedule,
+  // and the device had no way to know.
+  // The report is generated in the user's own language, so its own headline
+  // is better push copy than anything a lookup table could hold.
+  await sendToUser(uid, {
+    title: insight.headline,
+    body: insight.win,
+    route: '/insight',
   });
   return true;
 }

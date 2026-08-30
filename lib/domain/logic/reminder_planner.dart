@@ -63,16 +63,23 @@ abstract final class ReminderPlanner {
   /// inside that window is dropped rather than shifted: moving a 2am nudge to
   /// 8am would fire it nine hours after the craving it was meant to precede,
   /// which is worse than not firing.
+  /// [overrideHours], when set, replaces the detected hours entirely. That is
+  /// the Settings "Danger hours" editor: a window the user chose beats a
+  /// window we inferred, because they know about the Friday shift that their
+  /// last fourteen days do not show. Every other rule still applies — the
+  /// 10-minute lead, quiet hours, and the daily cap are safety rails, not
+  /// defaults to be overridden.
   static List<ReminderSlot> plan({
     required Iterable<DayLog> logs,
     required int quietStartHour,
     required int quietEndHour,
     required bool notificationsOn,
     int? fallbackHour,
+    List<int>? overrideHours,
   }) {
     if (!notificationsOn) return const [];
 
-    var hours = riskiestHours(logs);
+    var hours = overrideHours ?? riskiestHours(logs);
     if (hours.isEmpty && fallbackHour != null) hours = [fallbackHour];
 
     final slots = <ReminderSlot>[];

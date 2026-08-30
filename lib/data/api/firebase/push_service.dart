@@ -49,8 +49,51 @@ abstract final class PushService {
   /// Fires when FCM rotates the token, which it does on reinstall, restore,
   /// and occasionally on its own. Without this the server would keep pushing
   /// to a dead token and the user would silently stop hearing from us.
+  ///
+  /// This getter existed with **zero subscribers**, so that is exactly what
+  /// happened: every reinstall orphaned the device and nobody found out,
+  /// because the failure of a push is silence and silence looks like nothing.
   static Stream<String> get onTokenRefresh =>
       FirebaseMessaging.instance.onTokenRefresh;
+
+  /// A push arriving while the app is open and in front of the user.
+  ///
+  /// Android does not draw a system notification in this state, so without
+  /// handling it the message simply never appears.
+  static Stream<RemoteMessage> get onForeground =>
+      FirebaseMessaging.onMessage;
+
+  /// The user tapped a push and the app was already running in the background.
+  static Stream<RemoteMessage> get onOpened =>
+      FirebaseMessaging.onMessageOpenedApp;
+
+  /// The push that cold-started the app, if any. Consumed once — asking twice
+  /// returns it again, which would re-navigate on every restart.
+  static Future<RemoteMessage?> initialMessage() async {
+    try {
+      return await FirebaseMessaging.instance.getInitialMessage();
+    } on Object catch (error) {
+      debugPrint('push: initial message lookup failed — $error');
+      return null;
+    }
+  }
+
+  /// The in-app destination a push asks for, or null when it names none or
+  /// names one we do not recognise.
+  ///
+  /// Allow-listed rather than passed through: a route is an instruction, and
+  /// an instruction taken from a payload should only ever be one we chose to
+  /// accept. Today the sender is ours, which is the best possible time to
+  /// decide it does not get to say anything it likes.
+  static String? routeFor(RemoteMessage message, Set<String> allowed) {
+    final route = message.data['route'];
+    if (route is! String || route.isEmpty) return null;
+    final path = Uri.tryParse(route)?.path;
+    if (path == null) return null;
+    return allowed.any((a) => path == a || path.startsWith('$a/'))
+        ? route
+        : null;
+  }
 
   static bool _granted(AuthorizationStatus status) =>
       status == AuthorizationStatus.authorized ||

@@ -12,6 +12,7 @@ class SettingsState {
     this.notificationsOn = true,
     this.dangerStartHour = 21,
     this.dangerEndHour = 24,
+    this.dangerHoursCustom = false,
     this.quietStartHour = 23,
     this.quietEndHour = 8,
     this.trialReminderOn = true,
@@ -25,6 +26,12 @@ class SettingsState {
   final bool notificationsOn;
   final int dangerStartHour;
   final int dangerEndHour;
+
+  /// Whether [dangerStartHour] is the user's own choice rather than the
+  /// shipped default. Needed because the default is a real hour: without this
+  /// flag there is no way to tell "9pm, because they said so" from "9pm,
+  /// because nobody has said anything", and the detected hours would never win.
+  final bool dangerHoursCustom;
   final int quietStartHour;
   final int quietEndHour;
   final bool trialReminderOn;
@@ -38,6 +45,7 @@ class SettingsState {
     bool? notificationsOn,
     int? dangerStartHour,
     int? dangerEndHour,
+    bool? dangerHoursCustom,
     bool? trialReminderOn,
     bool? winbackShown,
   }) => SettingsState(
@@ -46,6 +54,7 @@ class SettingsState {
     notificationsOn: notificationsOn ?? this.notificationsOn,
     dangerStartHour: dangerStartHour ?? this.dangerStartHour,
     dangerEndHour: dangerEndHour ?? this.dangerEndHour,
+    dangerHoursCustom: dangerHoursCustom ?? this.dangerHoursCustom,
     quietStartHour: quietStartHour,
     quietEndHour: quietEndHour,
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
@@ -97,7 +106,11 @@ class SettingsStore extends Notifier<SettingsState> {
       _commit(state.copyWith(notificationsOn: on));
 
   void setDangerWindow(int startHour, int endHour) => _commit(
-    state.copyWith(dangerStartHour: startHour, dangerEndHour: endHour),
+    state.copyWith(
+      dangerStartHour: startHour,
+      dangerEndHour: endHour,
+      dangerHoursCustom: true,
+    ),
   );
 
   void setTrialReminder(bool on) =>

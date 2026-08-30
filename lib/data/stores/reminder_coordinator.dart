@@ -44,6 +44,12 @@ class ReminderCoordinator {
       quietEndHour: settings.quietEndHour,
       notificationsOn: settings.notificationsOn,
       fallbackHour: journey.profile.firstPuff?.approximateHour,
+      // A window the user set in Settings beats the detected buckets. One
+      // nudge, just before the window opens — a three-hour window does not
+      // mean three notifications.
+      overrideHours: settings.dangerHoursCustom
+          ? [settings.dangerStartHour % 24]
+          : null,
     );
 
     final fingerprint = slots.map((s) => '${s.id}@${s.hour}:${s.minute}').join(',');

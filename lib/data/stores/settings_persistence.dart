@@ -23,6 +23,7 @@ abstract final class SettingsPersistence {
   static const _notificationsOn = 'settings.notificationsOn';
   static const _dangerStart = 'settings.dangerStartHour';
   static const _dangerEnd = 'settings.dangerEndHour';
+  static const _dangerCustom = 'settings.dangerHoursCustom';
   static const _trialReminderOn = 'settings.trialReminderOn';
   static const _winbackShown = 'settings.winbackShown';
 
@@ -43,6 +44,8 @@ abstract final class SettingsPersistence {
         dangerStartHour:
             prefs.getInt(_dangerStart) ?? defaults.dangerStartHour,
         dangerEndHour: prefs.getInt(_dangerEnd) ?? defaults.dangerEndHour,
+        dangerHoursCustom:
+            prefs.getBool(_dangerCustom) ?? defaults.dangerHoursCustom,
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
@@ -64,6 +67,7 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_notificationsOn, state.notificationsOn);
       await prefs.setInt(_dangerStart, state.dangerStartHour);
       await prefs.setInt(_dangerEnd, state.dangerEndHour);
+      await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
     } on Object {
