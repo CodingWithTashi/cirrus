@@ -1,89 +1,152 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE_TITLE, SITE_TAGLINE, APP_STORE_URL } from '../consts';
-import { getPublishedPosts, formatDate } from '../lib/posts';
+import WaitlistForm from '../components/WaitlistForm.astro';
+import TaperCurve from '../components/TaperCurve.astro';
+import CostCalculator from '../components/CostCalculator.astro';
+import { HONEST_STATS, FAQS } from '../lib/content';
+import { SITE_TITLE, LAUNCH_DATE_LABEL } from '../consts';
+import { getPublishedPosts } from '../lib/posts';
 
 const recent = (await getPublishedPosts()).slice(0, 3);
 
-// Three blocks, per docs/06 §5. Each maps to a shipped engine or surface — no
-// feature here is aspirational, and none of them quotes a number, because the
-// honest-stats rule (docs/02 §8) says every figure has to come from your own
-// data. Yours does; a landing page's can't.
+// Feature copy maps 1:1 onto engines that actually exist in lib/domain/logic/.
+// docs/08 lists what is NOT built (billing, widgets, craving forecasts, watch
+// app) — none of it is claimed here.
 const features = [
   {
     accent: 'var(--volt)',
-    title: 'A plan built on your numbers',
-    body: 'Tell it what you actually vape. It works out a taper you can hold, then adjusts as you go — not a generic countdown to a date you picked.',
+    title: 'A plan that bends, not breaks',
+    body: 'Log what you really vape and the taper does the rest — a slightly lower ceiling each day, and a Freedom Day that moves rather than a plan that snaps. Go over? A repair token absorbs it. Your streak dims; it does not die.',
   },
   {
     accent: 'var(--ember)',
-    title: 'A coach that knows your day',
-    body: 'It learns when your cravings hit and says something useful before they do. When one lands anyway, panic mode breathes with you until it passes.',
+    title: '2 a.m. cravings have backup now',
+    body: 'Cirrus learns the hours you actually reach for it and gets there first. When one lands anyway, Panic Mode breathes with you for the fifteen minutes it takes to pass, instead of leaving you alone with a counter.',
   },
   {
     accent: 'var(--oxygen)',
     title: 'People who get it',
-    body: 'No lectures, no before-and-afters. Just others somewhere on the same taper, on the days that are hard.',
+    body: 'A feed of others somewhere on the same curve. No before-and-afters, no lectures, no strangers telling you it is easy. And nothing you write is ever sold — there are no ad trackers in the app at all.',
   },
 ];
 ---
 
-<BaseLayout>
-  <h1>{SITE_TAGLINE}.</h1>
-  <p class="lede">
-    {SITE_TITLE} builds a taper from what you actually vape, then holds you to it —
-    honest math, a coach in your pocket, and people who get it.
-  </p>
-
-  <div class="cta-row">
-    {
-      APP_STORE_URL ? (
-        <a class="btn btn-primary" href={APP_STORE_URL}>Get {SITE_TITLE}</a>
-      ) : (
-        <a class="btn btn-primary" href="/blog">Read the blog</a>
-      )
-    }
-    <span class="note">{APP_STORE_URL ? 'iPhone and Android' : 'iPhone and Android — coming soon'}</span>
-  </div>
-
-  <ul class="features">
-    {
-      features.map((f) => (
-        <li class="feature">
-          <div class="rule" style={`background:${f.accent}`}></div>
-          <h3>{f.title}</h3>
-          <p>{f.body}</p>
-        </li>
-      ))
-    }
-  </ul>
-
-  <section>
-    <h2>Why tapering</h2>
-    <p>
-      Quitting cold turkey works for some people and fails most. A taper lowers the
-      dose slowly enough that your body keeps up, which is why {SITE_TITLE} counts
-      puffs instead of days — the number that's actually going down.
+<BaseLayout softwareApp faq={FAQS}>
+  {/* ---------- HERO ---------- */}
+  <section class="hero">
+    <h1>Quit vaping without going cold turkey.</h1>
+    <p class="lede">
+      {SITE_TITLE} counts your actual puffs, then walks the number down slowly enough that your
+      brain doesn't notice. No willpower speeches. No day-one reset because you had one bad Tuesday.
     </p>
-    <p>
-      Every figure in the app comes from what you log. Nothing is invented to make
-      a chart look better.
+
+    <WaitlistForm source="hero" id="waitlist-hero" />
+
+    <p class="hero-note">
+      Free to join. One email when it lands, then nothing you didn't ask for.
     </p>
+  </section>
+
+  {/* ---------- THE CURVE ---------- */}
+  <section aria-labelledby="how">
+    <h2 id="how">How the taper actually works</h2>
+    <p>
+      You start where you actually are — say 150 puffs a day — and the daily ceiling steps down
+      from there. Early days barely pinch. By the end you're coasting to zero instead of
+      slamming into it.
+    </p>
+    <TaperCurve />
+    <p class="note curve-note">
+      Real curve, real formula — the same one in the app. Pick 14, 21, 30, 60 or 90 days and it
+      redraws around your number.
+    </p>
+  </section>
+
+  {/* ---------- COST CALCULATOR ---------- */}
+  <section aria-labelledby="cost">
+    <h2 id="cost">What vaping actually costs you</h2>
+    <p>
+      Most people have never done this multiplication on purpose. It's not a guilt trip — it's
+      just the number, and it's yours.
+    </p>
+    <CostCalculator />
+    <p class="note">
+      Every money figure in {SITE_TITLE} works exactly like this: your spend, your puff count,
+      real arithmetic. We don't have a number to sell you.
+    </p>
+  </section>
+
+  {/* ---------- FEATURES ---------- */}
+  <section aria-labelledby="what">
+    <h2 id="what">What you get</h2>
+    <ul class="features">
+      {
+        features.map((f) => (
+          <li class="feature">
+            <div class="rule" style={`background:${f.accent}`}></div>
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  {/* ---------- HONEST STATS ---------- */}
+  <section aria-labelledby="honest">
+    <h2 id="honest">Numbers we can actually stand behind</h2>
+    <p>
+      Quit apps are full of invented statistics — "78% of members quit" and similar, sourced to
+      nobody. Here is every number we'll show you, and where each one comes from.
+    </p>
+    <ul class="stats">
+      {
+        HONEST_STATS.map((s) => (
+          <li class="stat">
+            <p class="stat-figure">{s.figure}</p>
+            <p class="stat-claim">{s.claim}</p>
+            <p class="stat-source">{s.source}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  {/* ---------- FAQ ---------- */}
+  <section aria-labelledby="faq">
+    <h2 id="faq">Questions people actually ask</h2>
+    <div class="faq">
+      {
+        FAQS.map((item, i) => (
+          <details open={i === 0}>
+            <summary><h3>{item.q}</h3></summary>
+            <p>{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </section>
+
+  {/* ---------- CLOSING CTA ---------- */}
+  <section class="cta-final" aria-labelledby="join">
+    <h2 id="join">Be there on day one</h2>
+    <p>
+      Android lands {LAUNCH_DATE_LABEL}. iPhone is a fast-follow — it genuinely isn't built yet,
+      and we'd rather say that than take a pre-order. Either way, you'll hear from us the day
+      yours is ready.
+    </p>
+    <WaitlistForm source="footer" id="waitlist-footer" compact />
   </section>
 
   {
     recent.length > 0 && (
-      <section>
-        <h2>Latest posts</h2>
+      <section aria-labelledby="reading">
+        <h2 id="reading">More on quitting</h2>
         <ul class="post-list">
           {recent.map((post) => (
             <li>
               <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>
-              <p class="post-meta">
-                <time datetime={post.data.publishedAt.toISOString()}>
-                  {formatDate(post.data.publishedAt)}
-                </time>
-              </p>
+              <p>{post.data.description}</p>
             </li>
           ))}
         </ul>

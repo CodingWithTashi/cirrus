@@ -2,7 +2,7 @@
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font } from 'astro:assets';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, PRIVACY_URL, TERMS_URL } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -16,6 +16,14 @@ interface Props {
   image?: string;
   /** Keep drafts and utility pages out of the index. */
   noindex?: boolean;
+  /** Emits FAQPage structured data. Must mirror FAQ markup actually on the page —
+      schema describing invisible content is a manual-action risk. */
+  faq?: readonly { q: string; a: string }[];
+  /** Trail for the visible breadcrumb and its BreadcrumbList schema. Home is
+      prepended automatically; omit on the home page, which has no parent. */
+  breadcrumbs?: { label: string; href?: string }[];
+  /** Home advertises the app itself via SoftwareApplication. */
+  softwareApp?: boolean;
 }
 
 const {
@@ -26,6 +34,9 @@ const {
   updatedAt,
   image = SITE_OG_IMAGE,
   noindex = false,
+  faq,
+  breadcrumbs,
+  softwareApp = false,
 } = Astro.props;
 
 // Home gets brand + tagline; every other page gets "Page · Cirrus" so results
@@ -48,25 +59,86 @@ const cleanPath = Astro.url.pathname
 const canonical = new URL(cleanPath, Astro.site);
 const ogImage = image ? new URL(image, Astro.site) : null;
 
-const jsonLd = type === 'article'
-  ? {
-      '@context': 'https://schema.org',
-      '@type': 'BlogPosting',
-      headline: title,
-      description,
-      url: canonical.href,
-      datePublished: publishedAt?.toISOString(),
-      dateModified: (updatedAt ?? publishedAt)?.toISOString(),
-      publisher: { '@type': 'Organization', name: SITE_TITLE, url: Astro.site?.href },
-      ...(ogImage ? { image: ogImage.href } : {}),
-    }
-  : {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: SITE_TITLE,
-      description: SITE_DESCRIPTION,
-      url: Astro.site?.href,
-    };
+// Structured data, emitted as one @graph so the page ships a single script tag
+// and the entities can cross-reference each other by @id.
+const org = {
+  '@type': 'Organization',
+  '@id': `${Astro.site?.href}#org`,
+  name: SITE_TITLE,
+  url: Astro.site?.href,
+  logo: new URL('/logo.png', Astro.site).href,
+};
+
+const primary =
+  type === 'article'
+    ? {
+        '@type': 'BlogPosting',
+        headline: title,
+        description,
+        url: canonical.href,
+        datePublished: publishedAt?.toISOString(),
+        dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+        publisher: { '@id': org['@id'] },
+        ...(ogImage ? { image: ogImage.href } : {}),
+      }
+    : {
+        '@type': 'WebSite',
+        '@id': `${Astro.site?.href}#website`,
+        name: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        url: Astro.site?.href,
+        publisher: { '@id': org['@id'] },
+      };
+
+const graph: Record<string, unknown>[] = [org, primary];
+
+// The app itself. Android-only until iOS is buildable (docs/08 B17), and the
+// rating is declared 17+ to match the content guidance in docs/06 §2.5.
+if (softwareApp) {
+  graph.push({
+    '@type': 'SoftwareApplication',
+    name: SITE_TITLE,
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'Android',
+    contentRating: '17+',
+    description: SITE_DESCRIPTION,
+    url: Astro.site?.href,
+    publisher: { '@id': org['@id'] },
+    // A free tier exists; paid plans are not listed because the billing
+    // integration is not built yet and schema prices must be real.
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  });
+}
+
+if (faq?.length) {
+  graph.push({
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  });
+}
+
+// Home is always position 1 so the trail Google sees starts at the site root.
+const trail = breadcrumbs?.length
+  ? [{ label: 'Home', href: '/' }, ...breadcrumbs]
+  : null;
+
+if (trail) {
+  graph.push({
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((crumb, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: crumb.label,
+      ...(crumb.href ? { item: new URL(crumb.href, Astro.site).href } : {}),
+    })),
+  });
+}
+
+const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
 ---
 
 <!doctype html>
@@ -120,20 +192,50 @@ const jsonLd = type === 'article'
   </head>
 
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
-      <a class="brand" href="/">{SITE_TITLE}</a>
-      <nav>
+      <a class="brand" href="/">
+        <img src="/logo.png" width="28" height="28" alt="" decoding="async" />
+        <span>{SITE_TITLE}</span>
+      </a>
+      <nav aria-label="Primary">
         <a href="/blog">Blog</a>
       </nav>
     </header>
 
-    <main>
+    <main id="main">
+      {
+        trail && (
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              {trail.map((crumb, i) => (
+                <li>
+                  {crumb.href && i < trail.length - 1 ? (
+                    <a href={crumb.href}>{crumb.label}</a>
+                  ) : (
+                    <span aria-current="page">{crumb.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
       <slot />
     </main>
 
     <footer class="site-footer">
-      <p>&copy; {new Date().getFullYear()} {SITE_TITLE}</p>
-      <p><a href="/rss.xml">RSS</a></p>
+      <div class="footer-links">
+        <a href="/">Quit vaping with Cirrus</a>
+        <a href="/blog">Blog</a>
+        <a href="/rss.xml">RSS</a>
+        <a href={PRIVACY_URL}>Privacy</a>
+        <a href={TERMS_URL}>Terms</a>
+      </div>
+      <p class="footer-legal">
+        &copy; {new Date().getFullYear()} {SITE_TITLE} &middot; 17+. Nicotine is addictive.
+      </p>
     </footer>
   </body>
 </html>

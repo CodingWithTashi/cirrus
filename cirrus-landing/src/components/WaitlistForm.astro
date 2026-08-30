@@ -1,0 +1,134 @@
+---
+// Waitlist capture. Posts to the Pages Function at /api/subscribe.
+//
+// Progressive enhancement on purpose: it is a real <form> with a real action,
+// so it still works with JavaScript off or broken. The script upgrades it to an
+// inline success state so nobody loses their place on the page.
+import { WAITLIST_COUNT, LAUNCH_PLATFORM, LAUNCH_DATE_LABEL } from '../consts';
+
+interface Props {
+  /** Distinguishes hero vs footer submissions if we ever want to compare them. */
+  source?: string;
+  /** The hero form is the page's main action and gets focus priority. */
+  id?: string;
+  compact?: boolean;
+}
+
+const { source = 'hero', id = 'waitlist', compact = false } = Astro.props;
+---
+
+<form
+  class="waitlist"
+  id={id}
+  method="POST"
+  action="/api/subscribe"
+  data-waitlist
+  data-source={source}
+>
+  <div class="waitlist-row">
+    <label class="sr-only" for={`${id}-email`}>Your email address</label>
+    <input
+      id={`${id}-email`}
+      class="waitlist-input"
+      type="email"
+      name="email"
+      inputmode="email"
+      autocomplete="email"
+      placeholder="you@email.com"
+      required
+      aria-describedby={`${id}-status`}
+    />
+    <input type="hidden" name="source" value={source} />
+    {/* Honeypot. Hidden from people and assistive tech; bots fill it anyway. */}
+    <div class="hp" aria-hidden="true">
+      <label for={`${id}-website`}>Leave this empty</label>
+      <input id={`${id}-website`} type="text" name="website" tabindex="-1" autocomplete="off" />
+    </div>
+    <button class="btn btn-primary waitlist-btn" type="submit">Join the waitlist</button>
+  </div>
+
+  <p class="waitlist-meta" id={`${id}-status`} data-status role="status" aria-live="polite">
+    {!compact && (
+      <>
+        <strong>{WAITLIST_COUNT} joined already</strong>
+        <span class="dot-sep" aria-hidden="true">·</span>
+      </>
+    )}
+    {LAUNCH_PLATFORM} {LAUNCH_DATE_LABEL}
+    <span class="dot-sep" aria-hidden="true">·</span>
+    iPhone right after
+  </p>
+</form>
+
+<script>
+  // One handler for every waitlist form on the page.
+  document.querySelectorAll<HTMLFormElement>('form[data-waitlist]').forEach((form) => {
+    const status = form.querySelector<HTMLElement>('[data-status]');
+    const button = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    const input = form.querySelector<HTMLInputElement>('input[type=email]');
+    if (!status || !button || !input) return;
+
+    const original = status.innerHTML;
+
+    const say = (msg: string, tone: 'ok' | 'err') => {
+      status.textContent = msg;
+      status.dataset.tone = tone;
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+
+      button.disabled = true;
+      const label = button.textContent;
+      button.textContent = 'Joining…';
+      status.dataset.tone = '';
+      status.textContent = '';
+
+      try {
+        const res = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({
+            email: input.value,
+            source: form.dataset.source ?? 'hero',
+            website: (form.querySelector<HTMLInputElement>('input[name=website]')?.value ?? ''),
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+
+        if (res.ok && data.ok) {
+          form.dataset.done = 'true';
+          input.value = '';
+          say("You're on the list. Check your email to confirm — that last step is the one people forget.", 'ok');
+          return;
+        }
+        if (data.error === 'invalid_email') {
+          say("That email doesn't look right. Mind checking it?", 'err');
+        } else if (data.error === 'rate_limited') {
+          say('That was a lot of tries. Give it a minute.', 'err');
+        } else {
+          say("Something broke on our end — not your fault. Try again in a moment?", 'err');
+        }
+      } catch {
+        say('Looks like you are offline. Try again when you have signal.', 'err');
+      } finally {
+        button.disabled = false;
+        button.textContent = label ?? 'Join the waitlist';
+        // Restore the social-proof line if the visitor edits and retries.
+        if (form.dataset.done !== 'true') {
+          input.addEventListener(
+            'input',
+            () => {
+              if (status.dataset.tone === 'err') {
+                status.innerHTML = original;
+                status.dataset.tone = '';
+              }
+            },
+            { once: true },
+          );
+        }
+      }
+    });
+  });
+</script>

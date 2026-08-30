@@ -21,6 +21,7 @@ const { Content } = await render(post);
   publishedAt={post.data.publishedAt}
   updatedAt={post.data.updatedAt}
   noindex={post.data.draft}
+  breadcrumbs={[{ label: 'Blog', href: '/blog' }, { label: post.data.title }]}
 >
   <article class="prose">
     <h1>{post.data.title}</h1>
@@ -34,5 +35,8 @@ const { Content } = await render(post);
     <Content />
   </article>
 
-  <p style="margin-top:3rem"><a href="/blog">&larr; All posts</a></p>
+  <nav class="post-footer-nav" aria-label="Post navigation">
+    <a href="/blog">All posts on quitting vaping</a>
+    <a href="/">How the Cirrus taper works</a>
+  </nav>
 </BaseLayout>

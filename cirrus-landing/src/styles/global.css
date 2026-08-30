@@ -244,3 +244,260 @@ section > h2 { font-size: 1.5rem; margin: 0 0 1rem; }
   border-left: 3px solid var(--ember);
   color: var(--muted);
 }
+
+/* ============================================================
+   Landing page — waitlist, calculator, stats, FAQ
+   ============================================================ */
+
+/* Relapse Red from docs/07 §3, the one palette token the site was missing. */
+:root { --relapse: #ff5c5c; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Visible only once tabbed to — the first stop for a keyboard user. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  background: var(--volt);
+  color: var(--void);
+  padding: 0.6rem 1rem;
+  border-radius: 0 0 8px 0;
+  font-weight: 700;
+}
+.skip-link:focus { left: 0; }
+
+/* Keyboard focus must stay obvious on a dark ground. */
+:where(a, button, input, summary):focus-visible {
+  outline: 2px solid var(--volt);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.brand img { display: block; border-radius: 6px; }
+.brand::before { content: none; } /* superseded by the real logo mark */
+
+/* Hero ------------------------------------------------------ */
+.hero { margin-top: 1rem; }
+.hero h1 { max-width: 16ch; }
+.hero .lede { font-size: 1.25rem; max-width: 46ch; margin-bottom: 2rem; }
+.hero-note { color: var(--muted); font-size: 0.875rem; margin: 1rem 0 0; }
+
+/* Waitlist form --------------------------------------------- */
+.waitlist { margin: 0; max-width: 34rem; }
+
+.waitlist-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+.waitlist-input {
+  flex: 1 1 15rem;
+  min-width: 0;
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.8rem 1rem;
+}
+.waitlist-input::placeholder { color: #6b7482; }
+.waitlist-input:focus { border-color: var(--volt); }
+
+.waitlist-btn { flex: 0 0 auto; cursor: pointer; padding: 0.8rem 1.4rem; }
+.waitlist-btn[disabled] { opacity: 0.6; cursor: progress; }
+
+.waitlist-meta {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0.75rem 0 0;
+  min-height: 1.4em;
+}
+.waitlist-meta strong { color: var(--text); font-weight: 600; }
+.waitlist-meta[data-tone='ok'] { color: var(--volt); }
+.waitlist-meta[data-tone='err'] { color: var(--relapse); }
+.dot-sep { margin: 0 0.4rem; }
+
+/* Honeypot: off-screen rather than display:none, which some bots detect. */
+.hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+form[data-waitlist][data-done='true'] .waitlist-row { display: none; }
+
+/* Curve ------------------------------------------------------ */
+.curve-note { margin-top: 0.75rem; }
+
+/* Cost calculator -------------------------------------------- */
+.calc {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: var(--measure);
+}
+
+.calc-label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  margin-bottom: 0.75rem;
+}
+
+.calc-field { display: flex; align-items: center; gap: 0.5rem; }
+
+.calc-currency {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.calc-field input {
+  width: 7rem;
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.4rem 0.7rem;
+}
+.calc-field input:focus { border-color: var(--volt); }
+.calc-suffix { color: var(--muted); }
+
+.calc-out { margin-top: 1.5rem; }
+.calc-lead { color: var(--muted); margin: 0; font-size: 0.9375rem; }
+
+.calc-big {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  color: var(--volt);
+  margin: 0.15rem 0 1rem;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgb(200 245 66 / 0.28);
+}
+
+.calc-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
+
+.calc-chips li {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.calc-chip-note { font-style: italic; }
+
+/* Honest stats ------------------------------------------------ */
+.stats { list-style: none; padding: 0; margin: 2rem 0 0; display: grid; gap: 1rem; }
+@media (min-width: 46rem) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+.stat {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.stat-figure {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--volt);
+  margin: 0 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.stat-claim { margin: 0 0 0.6rem; font-size: 0.9375rem; }
+.stat-source {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+/* FAQ --------------------------------------------------------- */
+.faq { margin-top: 1.5rem; max-width: var(--measure); }
+
+.faq details {
+  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0;
+}
+
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 2rem 1rem 0;
+  position: relative;
+}
+.faq summary::-webkit-details-marker { display: none; }
+
+.faq summary h3 {
+  display: inline;
+  font-size: 1.0625rem;
+  margin: 0;
+}
+
+.faq summary::after {
+  content: '+';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--volt);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.faq details[open] summary::after { content: '−'; }
+
+.faq p { margin: 0 0 1.25rem; color: var(--muted); }
+
+/* Closing CTA -------------------------------------------------- */
+.cta-final {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+}
+.cta-final h2 { margin-top: 0; }
+.cta-final p { max-width: var(--measure); }
+
+/* Breadcrumbs -------------------------------------------------- */
+.breadcrumb { margin: 0 0 1.5rem; font-size: 0.875rem; }
+.breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0; }
+.breadcrumb li + li::before { content: '/'; color: var(--muted); margin-right: 0.4rem; }
+.breadcrumb a { color: var(--muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--volt); }
+.breadcrumb [aria-current='page'] { color: var(--text); }
+
+/* Footer ------------------------------------------------------- */
+.site-footer { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 1rem; }
+.footer-legal { margin: 0; }
+
+.post-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}

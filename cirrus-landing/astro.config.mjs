@@ -53,8 +53,9 @@ export default defineConfig({
 
   integrations: [
     sitemap({
-      // 404 has noindex; the RSS route is not a page.
-      filter: (page) => !/\/404\/?$/.test(page),
+      // Both carry noindex; the sitemap must agree with the tag or Google sees
+      // a page it is told to index and told not to. RSS is not a page at all.
+      filter: (page) => !/\/(404|thanks)\/?$/.test(page),
       serialize(item) {
         const slug = item.url.match(/\/blog\/([^/]+)\/?$/)?.[1];
         const lastmod = slug && postDates.get(slug);

@@ -8,6 +8,7 @@ const posts = await getPublishedPosts();
 <BaseLayout
   title="Blog"
   description="Notes on quitting vaping — what the research says, what actually works, and how Cirrus is built."
+  breadcrumbs={[{ label: 'Blog' }]}
 >
   <h1>Blog</h1>
   <p class="lede">
@@ -17,7 +18,7 @@ const posts = await getPublishedPosts();
   {
     posts.length === 0 ? (
       <p class="post-meta" style="margin-top:2rem">
-        No posts yet. Add a Markdown file to <code>src/content/blog/</code> to publish one.
+        No posts yet — the first ones are being written.
       </p>
     ) : (
       <ul class="post-list">
@@ -35,4 +36,8 @@ const posts = await getPublishedPosts();
       </ul>
     )
   }
+
+  <p style="margin-top:3rem">
+    <a href="/">Back to quitting vaping with Cirrus</a>
+  </p>
 </BaseLayout>
