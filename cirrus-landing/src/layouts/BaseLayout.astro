@@ -2,7 +2,7 @@
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font } from 'astro:assets';
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -28,9 +28,12 @@ const {
   noindex = false,
 } = Astro.props;
 
-// Home shows the bare brand; every other page gets "Page · Cirrus" so search
-// results stay readable and don't repeat the brand twice.
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_DESCRIPTION}`;
+// Home gets brand + tagline; every other page gets "Page · Cirrus" so results
+// stay readable without repeating the brand twice. Home used to fall back to
+// SITE_DESCRIPTION, which produced a 143-character title reading "Cirrus —
+// Cirrus builds..." — Google truncates around 60 and the repetition wasted the
+// most valuable words in the result.
+const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_TAGLINE}`;
 
 // Astro.site comes from `site` in astro.config.mjs.
 //
@@ -84,6 +87,7 @@ const jsonLd = type === 'article'
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link
       rel="alternate"
@@ -99,6 +103,10 @@ const jsonLd = type === 'article'
     <meta property="og:site_name" content={SITE_TITLE} />
     <meta property="og:locale" content={SITE_LOCALE} />
     {ogImage && <meta property="og:image" content={ogImage} />}
+    {/* Declared so scrapers can lay the card out before the image downloads. */}
+    {ogImage && <meta property="og:image:width" content="1200" />}
+    {ogImage && <meta property="og:image:height" content="630" />}
+    {ogImage && <meta property="og:image:alt" content={`${SITE_TITLE} — ${SITE_TAGLINE}`} />}
 
     <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={title ?? SITE_TITLE} />

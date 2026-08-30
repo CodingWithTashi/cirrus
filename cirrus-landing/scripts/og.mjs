@@ -120,4 +120,23 @@ const resvg = new Resvg(svg, {
 });
 
 writeFileSync(here('../public/og.png'), resvg.render().asPng());
-console.log(`wrote public/og.png (1200x630) — headline on ${lines.length} line(s)`);
+
+// Apple touch icon: the brand mark on Void, 180x180. Same renderer so the ember
+// glow matches the card exactly.
+const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff8a00" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="180" height="180" fill="#0a0c10"/>
+  <circle cx="90" cy="90" r="72" fill="url(#g)"/>
+  <circle cx="90" cy="90" r="34" fill="#ff8a00"/>
+</svg>`;
+writeFileSync(
+  here('../public/apple-touch-icon.png'),
+  new Resvg(iconSvg, { fitTo: { mode: 'width', value: 180 } }).render().asPng(),
+);
+
+console.log(`wrote public/og.png (1200x630) — headline on ${lines.length} line(s), and apple-touch-icon.png (180x180)`);

@@ -1,0 +1,21 @@
+# Cloudflare Pages reads this at the edge. Order matters: later rules win.
+
+/*
+  # HSTS. Pages already 301s http->https, but this stops the browser from
+  # making the insecure request at all on repeat visits. No `preload` — that
+  # is a one-way submission to a browser-baked list, so opt in deliberately.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
+
+# Astro fingerprints these filenames, so the content at a given URL never
+# changes. Pages' default is max-age=14400 + must-revalidate, which makes every
+# repeat visitor re-check fonts and CSS that provably cannot have changed —
+# wasted round trips against Core Web Vitals.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/og.png
+  Cache-Control: public, max-age=604800
