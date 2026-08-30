@@ -733,3 +733,47 @@ moderation queue cannot be opened on a device until the `admin` claim is
 granted; Terms and Privacy stay plain text until the policy pages exist,
 because a link to a 404 looks like the document exists.
 
+### Closing the rest of it (Aug 30, later)
+
+**The emulator suites were never CI-only.** Android Studio ships a JDK at
+`Android Studio/jbr`, which is all the Firestore emulator needed. `test:rules`
+and `test:integration` run locally in about twenty seconds, and the first thing
+they did was catch three breakages from the `postId` → `flagId` change that
+could not have been verified any other way.
+
+Every server handler now has a test. Previously only their pure helpers did,
+which is the wrong shape of coverage for this backend: `rcWebhook` is an
+unauthenticated public endpoint granting entitlements, and every failure branch
+of `aiCoachChat` returns a *cheerful* envelope, so an outage and a quiet day
+look identical.
+
+| Suite | Was | Now |
+|---|---|---|
+| Flutter unit + widget | 234 | **310** |
+| functions pure | 64 | **76** |
+| functions integration | 72 | **163** |
+| rules | 42 | 42 |
+| On-device E2E (fake) | 30 | 30 |
+| On-device E2E (production) | 10 | 10 |
+
+**Two more real bugs, both found by writing the tests:**
+
+- **Upgrading from inside the app left you on the paywall.** `setTier` bumps
+  the router's `refreshListenable`, Riverpod delivers that asynchronously, and
+  the refresh rebuilt the match list a microtask later and restored the pushed
+  route. `canPop()` said true, the pop visibly did nothing. Navigate first,
+  mutate second.
+- **Reply flags addressed the wrong document** in both directions — already
+  fixed earlier that day, now actually verified against the emulator.
+
+**Terms and Privacy are live** at `alastpuff.web.app/privacy` and `/terms`,
+written from what the code actually does — what is stored, who processes it,
+what `deleteUserData` erases, and that Ember's memory is readable and
+deletable in Settings. The app footer links to them. `S5-4` is closed except
+for a legal read-through, which is a founder call, not an engineering one.
+
+**Still open, and all of it founder-side:** billing (`ENTITLEMENT_MODE=ungated`
+by decision), the `admin` claim that makes the moderation queue openable on a
+device, the service-account key rotation (`B13`), Play Console and banking,
+Mixpanel's token, store assets and icons (`B16`), and iOS — which needs a Mac.
+

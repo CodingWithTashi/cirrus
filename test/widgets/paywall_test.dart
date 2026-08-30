@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
+import 'package:last_puff/core/utils/lp_links.dart';
 import 'package:last_puff/core/utils/lp_pricing.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -152,6 +153,50 @@ void main() {
         container.read(quitStoreProvider)!.profile.tier,
         SubscriptionTier.premium,
       );
+    });
+  });
+
+  group('the legal links', () {
+    testWidgets('Terms and Privacy are tappable, not decoration', (
+      tester,
+    ) async {
+      // Play will not accept a listing without these, and for as long as the
+      // policy pages did not exist they were rendered as plain text. They are
+      // published now, so they have to actually be links — and be recognisable
+      // as links to a reviewer looking for them.
+      ignoreFontWidthOverflow();
+      final container = ProviderContainer(overrides: fastBackendOverrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const LastPuffApp(),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      for (final label in [l10n.authTerms, l10n.authPrivacy]) {
+        final text = tester.widget<Text>(find.text(label));
+        expect(
+          text.style?.decoration,
+          TextDecoration.underline,
+          reason: '$label must not be styled as plain copy',
+        );
+        expect(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.byType(GestureDetector),
+          ),
+          findsWidgets,
+          reason: '$label must be tappable',
+        );
+      }
+    });
+
+    test('point at the published pages', () {
+      expect(LpLinks.privacy.toString(), 'https://alastpuff.web.app/privacy');
+      expect(LpLinks.terms.toString(), 'https://alastpuff.web.app/terms');
     });
   });
 

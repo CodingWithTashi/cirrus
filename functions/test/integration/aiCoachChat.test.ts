@@ -151,12 +151,19 @@ describe('the happy path', () => {
 
   it('persists both turns so the thread survives a restart', async () => {
     await run(caller());
-    const stored = await coachMessages('alice').orderBy('ts').get();
+    const stored = await coachMessages('alice').get();
     expect(stored.size).toBe(2);
-    expect(stored.docs.map((d) => d.get('role') as string)).toEqual([
-      'user',
-      'model',
-    ]);
+
+    // Order is deliberately NOT asserted: both turns go in one batch with
+    // `serverTimestamp()`, so they can land on the same millisecond and the
+    // ordering between them is genuinely undefined. What matters is that both
+    // roles are stored and carry their own text.
+    const byRole = new Map(
+      stored.docs.map((d) => [d.get('role') as string, d.get('text') as string]),
+    );
+    expect([...byRole.keys()].sort()).toEqual(['model', 'user']);
+    expect(byRole.get('user')).toBe('craving hard right now');
+    expect(byRole.get('model')).toContain('Fifteen minutes');
   });
 
   it('reports the allowance the server is actually enforcing', async () => {

@@ -10,6 +10,7 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
@@ -201,15 +202,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               // named a control that could not exist — the same reason the two
               // real Restore buttons were deleted rather than faked. It comes
               // back with subscriptions, where it is a store requirement.
-              //
-              // Terms and Privacy stay plain text deliberately. They are store
-              // requirements and they need to be links, but the policy pages
-              // are not published yet, and a link to a 404 is worse than a
-              // label: it looks like the document exists.
-              Text(
-                '${l10n.authTerms} · ${l10n.authPrivacy}',
-                textAlign: TextAlign.center,
-                style: LpType.caption(lp.textSecondary),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _LegalLink(label: l10n.authTerms, url: LpLinks.terms),
+                  Text(
+                    ' · ',
+                    style: LpType.caption(lp.textSecondary),
+                  ),
+                  _LegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
+                ],
               ),
               // Debug builds only — see the note in Settings. This entry
               // point was the worse of the two: it is reachable before anyone
@@ -725,6 +727,33 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// One of the two legal links in the sign-in footer.
+///
+/// Underlined rather than merely tinted: these have to be recognisable as
+/// links to a store reviewer looking for them, and colour alone is not enough
+/// for someone who cannot distinguish it.
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.url});
+
+  final String label;
+  final Uri url;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return GestureDetector(
+      onTap: () => LpLinks.open(url),
+      child: Text(
+        label,
+        style: LpType.caption(
+          lp.textSecondary,
+        ).copyWith(decoration: TextDecoration.underline),
       ),
     );
   }
