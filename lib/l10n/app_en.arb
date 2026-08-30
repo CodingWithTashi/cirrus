@@ -83,9 +83,21 @@
   "obWelcomeCounterHint": "puffs a day — you're about to find out",
   "obWelcomeTitle": "How dependent are you, really?",
   "obWelcomeSubtitle": "2-minute check-up. Brutally honest results. A plan built for you.",
-  "obWelcomeFactLabel": "Already checked up?",
-  "obWelcomeFactValue": "83% finish in under 2 min",
   "obWelcomeCta": "Start my check-up",
+  "obResumeTitle": "Pick up where you left off?",
+  "obResumeBody": "You'd answered {answered} of {total} questions. Nothing's lost.",
+  "@obResumeBody": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "obResumeCta": "Carry on",
+  "obResumeFresh": "Start fresh",
   "obGenderTitle": "How do you identify?",
   "obGenderSubtitle": "Calibrates your plan — nicotine metabolism differs.",
   "obGenderWoman": "Woman",
@@ -94,6 +106,53 @@
   "obGenderPrivacyNote": "🔒 Private. Never shown to the community.",
   "obBirthYearTitle": "What year were you born?",
   "obBirthYearSubtitle": "Your plan adapts to your age.",
+  "obBirthYearHint": "Year or age — either one works.",
+  "obBirthYearAge": "You're {age}.",
+  "@obBirthYearAge": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "obBirthYearAgeOffer": "{age}? That'd be born {year}.",
+  "@obBirthYearAgeOffer": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "obBirthYearAgeConfirm": "That's me",
+  "obBirthYearUnderConfirm": "Born {year}? That makes you {age}.",
+  "@obBirthYearUnderConfirm": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "obBirthYearUnderCta": "Yes, I'm {age}",
+  "@obBirthYearUnderCta": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "obBirthYearFix": "Let me fix that",
+  "obBirthYearErrorFuture": "That year hasn't happened yet. Want another go?",
+  "obBirthYearErrorTooOld": "The oldest person ever verified made it to 122. Let's try that again.",
+  "@obBirthYearErrorTooOld": {
+    "description": "122 = Jeanne Calment, the oldest verified human lifespan. It is the hard upper bound on the birth-year field; see docs/02 §8."
+  },
+  "obBirthYearErrorUnknown": "That's not a year — and not an age either. One more go.",
   "obUnder18Title": "We can't help you here — but this can.",
   "obUnder18Subtitle": "Cirrus is built for 18+. These two are free, private, and made for people your age. They work.",
   "obUnder18TiqTitle": "This is Quitting",
@@ -171,9 +230,6 @@
       }
     }
   },
-  "obSpendKickerSmall": "That's a new phone. Every year.",
-  "obSpendKickerMid": "That's a flight to Tokyo. Every year.",
-  "obSpendKickerBig": "That's rent money. Every single year.",
   "obSpendPerMonthChip": "{amount} / month",
   "@obSpendPerMonthChip": {
     "placeholders": {
@@ -191,13 +247,78 @@
     }
   },
   "obSpendYourMath": "your math, not ours",
+  "obSpendComparisonOne": "That's {item}. Every year.",
+  "@obSpendComparisonOne": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "obSpendComparisonTwo": "That's {item} — twice over. Every year.",
+  "@obSpendComparisonTwo": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "obSpendComparisonMany": "That's {item}, {count} times over. Every year.",
+  "@obSpendComparisonMany": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "obSpendItemGymMonth": "a month at the gym",
+  "obSpendItemConcertTicket": "a concert ticket, good seats",
+  "obSpendItemRunningShoes": "a proper pair of running shoes",
+  "obSpendItemDentalCleaning": "a dental cleaning",
+  "obSpendItemWinterCoat": "a winter coat that actually works",
+  "obSpendItemFestivalTicket": "a festival ticket, camping and all",
+  "obSpendItemWeekendAway": "a weekend away",
+  "obSpendItemBike": "a bike worth riding",
+  "obSpendItemDrivingLessons": "a full set of driving lessons",
+  "obSpendItemNewPhone": "a new phone",
+  "obSpendItemLaptop": "a laptop that isn't dying",
+  "obSpendItemEmergencyFund": "a real emergency fund",
+  "obSpendItemYogaYear": "a year of unlimited yoga",
+  "obSpendItemMonthOfRent": "a month of rent",
+  "obSpendItemFamilyHoliday": "a family holiday",
+  "obSpendItemUsedCar": "a car that gets you there",
   "obFirstPuffTitle": "First puff after waking up?",
   "obFirstPuffWithin5": "Within 5 minutes",
   "obFirstPuff5to30": "5–30 minutes",
   "obFirstPuff30to60": "30–60 minutes",
   "obFirstPuffHourPlus": "An hour or more",
-  "obFirstPuffScienceLabel": "THE SCIENCE",
   "obFirstPuffScience": "Time-to-first-puff is the strongest single predictor of dependence. 76% of young vapers reach for it within 30 min of waking.",
+  "obFactLabelScience": "THE SCIENCE",
+  "obFactLabelYourNumbers": "YOUR NUMBERS",
+  "obFactTried": "Among daily young users, failed quit attempts went from 28% to 53% between 2020 and 2024. The devices got better at their job. That isn't you getting weaker — it's an arms race nobody asked you to enter.",
+  "@obFactTried": {
+    "description": "Source: JAMA Network Open, failed quit attempts among daily young users 28% -> 53%, 2020-2024. On the approved list in docs/02 section 8."
+  },
+  "obFactStrength": "That's ≈{mg} mg of nicotine a day. Your numbers, our multiplying. Your vape, meanwhile, has never once suggested a portion size.",
+  "@obFactStrength": {
+    "placeholders": {
+      "mg": {
+        "type": "int"
+      }
+    },
+    "description": "Arithmetic on the user's own puff count and nicotine strength (DependenceEngine.nicotineMg). Always rendered with the approximately sign."
+  },
+  "obFactWorryCravings": "Most cravings peak and pass inside 15–20 minutes. Shorter than waiting for a table. The panic button is built around exactly that window.",
+  "@obFactWorryCravings": {
+    "description": "Source: nicotine craving literature, most cravings pass in 15-20 minutes. On the approved list in docs/02 section 8."
+  },
+  "obFactWorrySocial": "Peer support raises quit success by around 40%. Yes — strangers on the internet. We were surprised too.",
+  "@obFactWorrySocial": {
+    "description": "Source: peer-support cessation literature, roughly 40% uplift. On the approved list in docs/02 section 8."
+  },
   "obWhyTitle": "Why do you want out?",
   "obWhySubtitle": "Pick all that hit. Your coach will use these when it gets hard.",
   "obWhyHealth": "Health",
@@ -295,6 +416,33 @@
   "obRevealPuffsLabel": "puffs you won't take",
   "obRevealProofLabel": "HONEST PROOF",
   "obRevealProof": "24% quit with a structured program vs 19% alone — randomized trial of 2,588 young adults. Not magic. Better odds.",
+  "obRevealComparisonOne": "By Freedom Day, that's {item}.",
+  "@obRevealComparisonOne": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "obRevealComparisonTwo": "By Freedom Day, that's {item} — twice over.",
+  "@obRevealComparisonTwo": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "obRevealComparisonMany": "By Freedom Day, that's {item}, {count} times over.",
+  "@obRevealComparisonMany": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "obRevealCta": "I'm ready",
   "obCommitTitle": "Make it real.",
   "obCommitSubtitle": "Hold the button. Mean it.",
@@ -314,8 +462,53 @@
   "obRatingBetaTester": "BETA TESTER",
   "obRatingQuote1": "\"The panic button got me through week one. I'd have caved on day 3 without it.\"",
   "obRatingQuote2": "\"First app that didn't talk to me like a doctor or my mom.\"",
-  "obRatingCardTitle": "Enjoying Cirrus?",
-  "obRatingCardSubtitle": "Tap a star to rate it on the App Store.",
+  "obRatingCta": "Rate Cirrus",
+  "obCoachNameTitle": "Meet {name}.",
+  "@obCoachNameTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
+  "obCoachNameAsk": "{name} is the name we gave it. But a friend you name yourself is more yours — call it whatever you'd actually text at 2am.",
+  "@obCoachNameAsk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obCoachNameFieldLabel": "Coach's name",
+  "obCoachNameSuggestions": "Or borrow one:",
+  "obCoachNameKeep": "Keep {name}",
+  "@obCoachNameKeep": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obCoachNameCta": "That's the one",
+  "obCoachNameLater": "You can change it any time in Settings.",
+  "obCoachNameErrorEmpty": "Give them something to be called.",
+  "obCoachNameErrorLong": "Keep it to 20 characters or fewer.",
+  "obCoachNameErrorChars": "Letters, numbers, spaces and - ' only.",
+  "obCoachNameErrorRejected": "Let's pick a different one.",
+  "settingsCoachName": "Your coach's name",
+  "coachRenamed": "Alright — {name} from now on.",
+  "@coachRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obCoachNameSuggestion1": "Pip",
+  "obCoachNameSuggestion2": "Fin",
+  "obCoachNameSuggestion3": "Koda",
+  "obCoachNameSuggestion4": "Wren",
   "obNotifTitle": "Backup, exactly when you cave.",
   "obNotifSubtitle": "Not spam. One nudge before your danger hours, one when you hit a milestone.",
   "obNotifPreviewTime": "Fri 9:54 PM",
@@ -579,7 +772,14 @@
   "coachChipSlipped": "I slipped",
   "coachChipProgress": "Show my progress",
   "coachInputHint": "Message your coach…",
-  "coachTyping": "Ember is typing…",
+  "coachTyping": "{name} is typing…",
+  "@coachTyping": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "coachFreeCounter": "{count, plural, one{{count} free message left today} other{{count} free messages left today}}",
   "@coachFreeCounter": {
     "placeholders": {
@@ -615,9 +815,12 @@
       }
     }
   },
-  "coachGreeting": "Hey. I'm Ember — I quit two years ago and I remember exactly how it felt. I've read your plan: {puffs} a day, {method}, Freedom Day {date}. No lectures from me, ever. What's going on right now?",
+  "coachGreeting": "Hey. I'm {name} — I quit two years ago and I remember exactly how it felt. I've read your plan: {puffs} a day, {method}, Freedom Day {date}. No lectures from me, ever. What's going on right now?",
   "@coachGreeting": {
     "placeholders": {
+      "name": {
+        "type": "String"
+      },
       "puffs": {
         "type": "int"
       },
@@ -708,7 +911,14 @@
       }
     }
   },
-  "coachSafetyNote": "Ember is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.",
+  "coachSafetyNote": "{name} is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.",
+  "@coachSafetyNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "planTitle": "Your plan",
   "planHeaderMeta": "{method} · {days} days",
   "@planHeaderMeta": {
@@ -1148,7 +1358,14 @@
   "insightCravingsChartLabel": "CRAVINGS SURVIVED, LAST 7 DAYS",
   "insightHoursChartLabel": "PUFFS BY HOUR, LAST 14 DAYS",
   "insightPendingTitle": "No report yet",
-  "insightPendingBody": "Ember writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there's a week to read.",
+  "insightPendingBody": "{name} writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there's a week to read.",
+  "@insightPendingBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "insightCounter": "INSIGHT {index} OF {total}",
   "@insightCounter": {
     "placeholders": {
@@ -1234,12 +1451,40 @@
   "profileEditAlias": "Pick your alias",
   "profileEditAvatar": "Pick your avatar",
   "profileAliasHint": "anonymous — this is all anyone sees",
-  "memoriesTitle": "What Ember remembers",
-  "memoriesIntro": "Things you've told Ember, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn't say.",
-  "memoriesEmpty": "Nothing yet. Ember starts remembering once you tell it something about your life.",
+  "memoriesTitle": "What {name} remembers",
+  "@memoriesTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoriesIntro": "Things you've told {name}, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn't say.",
+  "@memoriesIntro": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoriesEmpty": "Nothing yet. {name} starts remembering once you tell it something about your life.",
+  "@memoriesEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "memoriesFailed": "Couldn't load these right now.",
   "memoriesForget": "Forget this",
-  "memoriesForgotten": "Forgotten. Ember won't bring it up again.",
+  "memoriesForgotten": "Forgotten. {name} won't bring it up again.",
+  "@memoriesForgotten": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "memoriesForgetFailed": "That didn't go through — it's still remembered.",
   "memoriesKindPerson": "Someone in your life",
   "memoriesKindTrigger": "A trigger",
@@ -1247,7 +1492,14 @@
   "memoriesKindMilestone": "Something you're working toward",
   "memoriesKindPreference": "How you like to be talked to",
   "memoriesKindContext": "About you",
-  "settingsMemories": "What Ember remembers",
+  "settingsMemories": "What {name} remembers",
+  "@settingsMemories": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moderationTitle": "Review queue",
   "moderationEmpty": "Nothing waiting. Every flag is reviewed.",
   "moderationFailed": "Couldn't open the queue.",
@@ -1357,7 +1609,14 @@
     "description": "Body of the danger-hour reminder. Cites the 15-20 minute craving fact from docs/02 §8 — an approved stat."
   },
   "communityLoading": "Pulling in the feed…",
-  "memoriesLoading": "Checking what Ember kept…",
+  "memoriesLoading": "Checking what {name} kept…",
+  "@memoriesLoading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "coachLoadingThread": "Catching up on your chat…",
   "moderationLoading": "Loading the queue…",
   "authWorking": "One sec…"

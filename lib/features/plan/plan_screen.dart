@@ -6,6 +6,7 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
+import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
@@ -42,8 +43,9 @@ class PlanScreen extends ConsumerWidget {
     final halfway = TaperEngine.halfwayDay(plan);
     final halfwayLimit = TaperEngine.limitFor(plan, halfway);
     final cravingsFadeDay = TaperEngine.cravingsFadeDay(plan);
-    final cravingsFadeDate = plan.startDate.add(
-      Duration(days: cravingsFadeDay - 1),
+    final cravingsFadeDate = LpDate.addDays(
+      plan.startDate,
+      cravingsFadeDay - 1,
     );
 
     return Scaffold(
@@ -126,7 +128,7 @@ class PlanScreen extends ConsumerWidget {
                 title: l10n.planHalfwayTitle(halfway),
                 sub: l10n.planHalfwaySub(halfwayLimit),
                 trailing: LpFormat.shortDate(
-                  plan.startDate.add(Duration(days: halfway - 1)),
+                  LpDate.addDays(plan.startDate, halfway - 1),
                   locale,
                 ),
               ),

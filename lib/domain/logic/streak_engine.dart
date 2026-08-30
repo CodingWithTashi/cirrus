@@ -1,3 +1,4 @@
+import '../date_key.dart';
 import '../models/models.dart';
 
 /// Freedom Streak + repair tokens (docs/03 §5).
@@ -13,7 +14,7 @@ abstract final class StreakEngine {
   /// Days that used a repair token still count.
   static int currentStreak(Map<DateTime, DayLog> logsByDate, DateTime today) {
     var streak = 0;
-    var cursor = DateTime(today.year, today.month, today.day);
+    var cursor = LpDate.dayStart(today);
     // An unconfirmed (in-progress) or slipped today dims the flame, never
     // kills it (docs/02) — judge the chain from yesterday instead.
     final todayLog = logsByDate[cursor];
@@ -21,7 +22,7 @@ abstract final class StreakEngine {
         todayLog != null &&
         todayLog.isConfirmed &&
         (!todayLog.isOverLimit || todayLog.repairTokenUsed);
-    if (!todayHolds) cursor = cursor.subtract(const Duration(days: 1));
+    if (!todayHolds) cursor = LpDate.addDays(cursor, -1);
     while (true) {
       final log = logsByDate[cursor];
       if (log == null) break;
@@ -29,7 +30,7 @@ abstract final class StreakEngine {
           log.isConfirmed && (!log.isOverLimit || log.repairTokenUsed);
       if (!holds) break;
       streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
+      cursor = LpDate.addDays(cursor, -1);
     }
     return streak;
   }

@@ -342,6 +342,80 @@ void main() {
     );
   });
 
+  testWidgets('matchedTestimonials returns the seeded quotes, tailored', (
+    tester,
+  ) async {
+    // Proves the collection was seeded, the rules let the callable (and only
+    // the callable) read it, and the ranking runs in production. An empty list
+    // is a legitimate answer the app handles — it keeps the bundled quotes —
+    // so it has to be asserted against, or a silently empty collection would
+    // look exactly like success.
+    final e2e = await session(tester);
+
+    final quotes = await e2e.container
+        .read(testimonialsRepositoryProvider)
+        .matched(
+          whys: const {WhyChip.health},
+          worries: const {WorryChip.cravings},
+          attempts: QuitAttempts.twoToFive,
+          gender: Gender.woman,
+          dependence: DependenceLevel.heavy,
+        );
+
+    expect(
+      quotes,
+      hasLength(2),
+      reason: 'the testimonials collection is empty or unreadable — run '
+          '`npm run seed:testimonials`',
+    );
+    // Cravings is the worry that was named, and the row tagged with it carries
+    // the heaviest signal, so it must lead.
+    expect(quotes.first.id, 'beta-panic-week-one');
+    expect(quotes.first.text, isNotEmpty);
+
+    // The rows carry consent references and locale provenance. Only id and
+    // text may cross the wire.
+    expect(quotes.map((q) => q.id).toSet(), hasLength(2));
+  });
+
+  testWidgets('setCoachName accepts a real name and refuses a bad one', (
+    tester,
+  ) async {
+    // Proves three things at once that only production can prove: the callable
+    // is reachable, the guard runs there, and `data/name-denylist.json`
+    // actually shipped with the deploy — if it did not, the guard silently
+    // degrades to impersonation-only and nothing would say so.
+    final e2e = await session(tester);
+    final repo = e2e.container.read(coachNameRepositoryProvider);
+
+    expect(
+      await repo.reserve('Wren'),
+      isTrue,
+      reason: 'an ordinary name was refused',
+    );
+
+    // Short terms must match the WHOLE name, never a substring, or this one
+    // comes back refused — and a guard that blocks somebody's own name is
+    // worse than no guard, because it will not say why.
+    expect(
+      await repo.reserve('Cassie'),
+      isTrue,
+      reason: 'the Scunthorpe rule is not live on the deployed guard',
+    );
+
+    expect(
+      await repo.reserve('Cirrus'),
+      isFalse,
+      reason: 'impersonation was accepted',
+    );
+
+    expect(
+      await repo.reserve('sh1t'),
+      isFalse,
+      reason: 'the denylist did not ship with the deploy',
+    );
+  });
+
   testWidgets('createPost is accepted and the post carries no uid', (
     tester,
   ) async {

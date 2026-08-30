@@ -1,0 +1,46 @@
+[
+  {
+    "id": "beta-panic-week-one",
+    "text": "The panic button got me through week one. I'd have caved on day 3 without it.",
+    "locale": "en",
+    "sourceLocale": "en",
+    "translationOf": null,
+    "attribution": "betaTester",
+    "consentRef": "shipping in app_en.arb as obRatingQuote1",
+    "status": "live",
+    "whys": [],
+    "worries": [
+      "cravings",
+      "failing"
+    ],
+    "attempts": [],
+    "gender": [],
+    "dependence": [
+      "heavy",
+      "severe"
+    ],
+    "weight": 0.6
+  },
+  {
+    "id": "beta-not-a-doctor",
+    "text": "First app that didn't talk to me like a doctor or my mom.",
+    "locale": "en",
+    "sourceLocale": "en",
+    "translationOf": null,
+    "attribution": "betaTester",
+    "consentRef": "shipping in app_en.arb as obRatingQuote2",
+    "status": "live",
+    "whys": [],
+    "worries": [
+      "stress",
+      "breaks"
+    ],
+    "attempts": [
+      "twoToFive",
+      "moreThanFive"
+    ],
+    "gender": [],
+    "dependence": [],
+    "weight": 0.5
+  }
+]

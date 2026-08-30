@@ -140,3 +140,31 @@ describe('decodeJourney', () => {
     expect(() => decodeJourney('nope')).toThrow(JourneyDecodeError);
   });
 });
+
+describe('coachName', () => {
+  it('is null when nobody renamed the coach', () => {
+    const journey = decodeJourney(fixture());
+    expect(journey.profile.coachName).toBeNull();
+  });
+
+  it('is trimmed, de-controlled and capped', () => {
+    // Client-owned free text headed for a prompt. Parity with the Dart
+    // validator, which caps at 20 grapheme clusters.
+    const cases: [unknown, string | null][] = [
+      ['  Wren  ', 'Wren'],
+      [`Wr${String.fromCharCode(0)}en`, 'Wren'],
+      ['W'.repeat(40), 'W'.repeat(20)],
+      ['   ', null],
+      ['', null],
+      [42, null],
+      [null, null],
+      [undefined, null],
+    ];
+    for (const [raw, expected] of cases) {
+      const raw_ = fixture();
+      raw_['profile'] = {...raw_['profile'], coachName: raw};
+      const journey = decodeJourney(raw_);
+      expect(journey.profile.coachName).toBe(expected);
+    }
+  });
+});

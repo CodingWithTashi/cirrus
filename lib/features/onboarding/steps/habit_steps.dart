@@ -16,6 +16,8 @@ import '../../../core/widgets/rolling_number.dart';
 import '../../../domain/logic/dependence_engine.dart';
 import '../../../domain/models/models.dart';
 import '../onboarding_view_model.dart';
+import '../tailoring.dart';
+import 'step_fact.dart';
 import 'step_body.dart';
 
 /// B1 — frequency, blunt-friendly copy.
@@ -340,6 +342,11 @@ class StrengthStep extends ConsumerWidget {
         ),
         const SizedBox(height: 18),
         LpNoteCard(l10n.obStrengthNote),
+        const SizedBox(height: 14),
+        StepFact(
+          text: ObTailoring.fact(context, ObStep.strength, state)?.$1,
+          tone: StepFactTone.yourNumbers,
+        ),
         const Spacer(),
         LpButton(
           l10n.commonContinue,
@@ -363,13 +370,11 @@ class SpendStep extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
     final weekly = state.weeklySpend;
 
-    final kicker = weekly <= 0
-        ? ''
-        : state.yearlySpend < 800
-        ? l10n.obSpendKickerSmall
-        : state.yearlySpend < 2600
-        ? l10n.obSpendKickerMid
-        : l10n.obSpendKickerBig;
+    // Was three fixed sentences chosen by two hardcoded dollar thresholds
+    // ("That's a new phone. Every year." for anything under $800). Now it is
+    // an item that actually divides into their figure, chosen from what they
+    // have told us so far. Null when nothing fits — an honest blank.
+    final kicker = ObTailoring.spendComparison(context, state);
 
     return StepBody(
       title: l10n.obSpendTitle,
@@ -419,10 +424,14 @@ class SpendStep extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  kicker,
-                  style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
-                ),
+                if (kicker != null)
+                  Text(
+                    kicker,
+                    style: LpType.body14(
+                      lp.textPrimary,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -483,7 +492,6 @@ class FirstPuffStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lp = context.lp;
     final l10n = context.l10n;
     final state = ref.watch(onboardingProvider);
     final vm = ref.read(onboardingProvider.notifier);
@@ -505,27 +513,7 @@ class FirstPuffStep extends ConsumerWidget {
         option(FirstPuffWindow.thirtyToSixty, l10n.obFirstPuff30to60),
         option(FirstPuffWindow.hourPlus, l10n.obFirstPuffHourPlus),
         const SizedBox(height: 6),
-        LpCard(
-          radius: LpDimens.rInput,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.obFirstPuffScienceLabel,
-                style: LpType.caption11(
-                  lp.voltText,
-                  weight: FontWeight.w600,
-                ).copyWith(letterSpacing: 0.5),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                l10n.obFirstPuffScience,
-                style: LpType.body13(lp.textSecondary),
-              ),
-            ],
-          ),
-        ),
+        StepFact(text: ObTailoring.fact(context, ObStep.firstPuff, state)?.$1),
         const Spacer(),
         LpButton(
           l10n.commonContinue,

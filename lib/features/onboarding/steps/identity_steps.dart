@@ -15,6 +15,8 @@ import '../../../core/widgets/numeric_keypad.dart';
 import '../../../core/widgets/press_scale.dart';
 import '../../../domain/models/models.dart';
 import '../onboarding_view_model.dart';
+import '../tailoring.dart';
+import 'step_fact.dart';
 import 'step_body.dart';
 
 /// A2 — gender, with the privacy promise pinned under the options.
@@ -65,6 +67,44 @@ class BirthYearStep extends ConsumerWidget {
     final l10n = context.l10n;
     final state = ref.watch(onboardingProvider);
     final vm = ref.read(onboardingProvider.notifier);
+    final entry = state.birthEntry;
+    final age = entry.age ?? 0;
+    final year = entry.year ?? 0;
+
+    // Plenty of people answer "what year were you born?" with their age. The
+    // caption names whatever we understood — including "we didn't" — so the
+    // CTA is never dark with nothing on screen to explain it.
+    final (caption, tone, adoptable) = switch (entry.kind) {
+      BirthEntryKind.empty ||
+      BirthEntryKind.typing => (l10n.obBirthYearHint, lp.textSecondary, false),
+      BirthEntryKind.ageOffer ||
+      BirthEntryKind.ageOnly => (
+        l10n.obBirthYearAgeOffer(age, year),
+        lp.textPrimary,
+        true,
+      ),
+      BirthEntryKind.year => (l10n.obBirthYearAge(age), lp.textSecondary, false),
+      BirthEntryKind.underAge => (
+        l10n.obBirthYearUnderConfirm(year, age),
+        lp.cautionText,
+        false,
+      ),
+      BirthEntryKind.future => (
+        l10n.obBirthYearErrorFuture,
+        lp.cautionText,
+        false,
+      ),
+      BirthEntryKind.tooOld => (
+        l10n.obBirthYearErrorTooOld,
+        lp.cautionText,
+        false,
+      ),
+      BirthEntryKind.impossible => (
+        l10n.obBirthYearErrorUnknown,
+        lp.cautionText,
+        false,
+      ),
+    };
 
     return StepBody(
       title: l10n.obBirthYearTitle,
@@ -79,7 +119,9 @@ class BirthYearStep extends ConsumerWidget {
               if (state.birthYearInput.isEmpty)
                 Text(' ', style: LpType.numberHero(lp.textPrimary, size: 76))
               else
-                // Frame 3 note: "digits roll in (odometer)".
+                // Frame 3 note: "digits roll in (odometer)". Adopting an age
+                // rewrites the buffer, so the odometer replays 28 -> 1998 and
+                // the user watches us understand them.
                 for (final (i, char) in state.birthYearInput.split('').indexed)
                   _RollInDigit(
                     key: ValueKey('$i$char'),
@@ -98,17 +140,91 @@ class BirthYearStep extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        // Fixed height so the keypad never moves under the caption, and a
+        // cross-fade rather than a resize: this whole column lives inside
+        // StepScrollView's IntrinsicHeight, and an animating intrinsic height
+        // there is what took the Health screen down for every user past day 1.
+        SizedBox(
+          height: 74,
+          child: AnimatedSwitcher(
+            duration: LpMotion.fast,
+            switchInCurve: LpMotion.ease,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(
+                  begin: const Offset(0, 0.25),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: Column(
+              key: ValueKey('${entry.kind}$caption'),
+              children: [
+                Text(
+                  caption,
+                  textAlign: TextAlign.center,
+                  style: LpType.body14(tone, weight: FontWeight.w600),
+                ),
+                if (adoptable) ...[
+                  const SizedBox(height: 10),
+                  _AdoptChip(
+                    label: l10n.obBirthYearAgeConfirm,
+                    onTap: vm.adoptAgeEntry,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
         const Spacer(),
         NumericKeypad(
           onDigit: vm.typeBirthDigit,
           onBackspace: vm.backspaceBirth,
         ),
         const SizedBox(height: 14),
-        LpButton(
-          l10n.commonContinue,
-          onTap: state.canContinue ? vm.next : null,
-        ),
+        if (entry.kind == BirthEntryKind.underAge) ...[
+          // The gate ends the session with no way back, so it costs a
+          // deliberate "Yes, I'm 15" rather than one mistyped digit.
+          LpButton(l10n.obBirthYearUnderCta(age), onTap: vm.next),
+          const SizedBox(height: 6),
+          LpTextButton(l10n.obBirthYearFix, onTap: vm.clearBirthYear),
+        ] else
+          LpButton(
+            l10n.commonContinue,
+            onTap: state.canContinue ? vm.next : null,
+          ),
       ],
+    );
+  }
+}
+
+/// "That's me" — takes the offered age-to-year substitution.
+class _AdoptChip extends StatelessWidget {
+  const _AdoptChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: lp.surfaceInset,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: lp.voltFocus, width: 1.5),
+        ),
+        child: Text(
+          label,
+          style: LpType.displaySmall(lp.voltText, size: 14),
+        ),
+      ),
     );
   }
 }
@@ -394,6 +510,8 @@ class TriedStep extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(height: 14),
+        StepFact(text: ObTailoring.fact(context, ObStep.tried, state)?.$1),
         const Spacer(),
         LpButton(
           l10n.commonContinue,

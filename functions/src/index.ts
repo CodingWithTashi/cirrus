@@ -33,3 +33,5 @@ export {moderateReply} from './handlers/moderateReply';
 export {onReaction} from './handlers/onReaction';
 export {moderationQueue, resolveModeration} from './handlers/moderationQueue';
 export {coachMemories, forgetCoachMemory} from './handlers/coachMemories';
+export {matchedTestimonials} from './handlers/testimonials';
+export {setCoachName} from './handlers/coachName';

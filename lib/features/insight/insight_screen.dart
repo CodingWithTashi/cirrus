@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
+import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_charts.dart';
@@ -82,7 +83,7 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     final week = ((snap?.dayNumber ?? 7) / 7).ceil();
     final now = DateTime.now();
     final range =
-        '${LpFormat.shortDate(now.subtract(const Duration(days: 6)), locale)}–${LpFormat.shortDate(now, locale)}';
+        '${LpFormat.shortDate(LpDate.addDays(now, -6), locale)}–${LpFormat.shortDate(now, locale)}';
 
     final report = ref.watch(weeklyInsightProvider).valueOrNull;
     final cards = report == null || journey == null
@@ -120,7 +121,10 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
             ),
             Expanded(
               child: cards.isEmpty
-                  ? const _PendingReport()
+                  ? _PendingReport(
+                      coachName:
+                          ref.watch(coachNameProvider) ?? l10n.coachName,
+                    )
                   : PageView.builder(
                       controller: _controller,
                       itemCount: cards.length,
@@ -343,7 +347,9 @@ class _CardView extends StatelessWidget {
 /// that explains itself keeps the promise; four paragraphs of invented
 /// statistics would have broken it.
 class _PendingReport extends StatelessWidget {
-  const _PendingReport();
+  const _PendingReport({required this.coachName});
+
+  final String coachName;
 
   @override
   Widget build(BuildContext context) {
@@ -364,7 +370,7 @@ class _PendingReport extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              l10n.insightPendingBody,
+              l10n.insightPendingBody(coachName),
               textAlign: TextAlign.center,
               style: LpType.body13(lp.textSecondary),
             ),

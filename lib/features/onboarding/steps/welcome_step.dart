@@ -18,6 +18,13 @@ class WelcomeStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
+    final vm = ref.read(onboardingProvider.notifier);
+    // A draft found on disk waits for an explicit yes: two auth entry points
+    // set an email and then push straight here, so silently adopting an
+    // abandoned OTHER account's answers would be a data bug, not a nicety.
+    final resumable = ref.watch(
+      onboardingProvider.select((s) => s.resumable),
+    );
     // Wrapped for the same reason StepBody is: this is the screen the register
     // flow lands on with the keyboard still up.
     return StepScrollView(
@@ -63,31 +70,49 @@ class WelcomeStep extends ConsumerWidget {
               style: LpType.body15(lp.textSecondary),
             ),
             const Spacer(),
-            LpCard(
-              radius: 14,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.obWelcomeFactLabel,
-                    style: LpType.body13(lp.textSecondary),
-                  ),
-                  Text(
-                    l10n.obWelcomeFactValue,
-                    style: LpType.body13(
-                      lp.textPrimary,
-                      weight: FontWeight.w600,
+            // A card here used to read "83% finish in under 2 min". That number
+            // is in no source, and docs/02 §8 lists any uncited number as
+            // banned forever — on screen one of the funnel, of all places.
+            // What belongs here instead is a draft they can actually resume.
+            if (resumable != null) ...[
+              LpCard(
+                radius: 14,
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.obResumeTitle,
+                      style: LpType.emphasis(lp.textPrimary),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.obResumeBody(resumable.answered, resumable.total),
+                      style: LpType.body13(lp.textSecondary),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        LpTextButton(
+                          l10n.obResumeCta,
+                          color: lp.voltText,
+                          size: 14,
+                          onTap: vm.resumeDraft,
+                        ),
+                        const SizedBox(width: 18),
+                        LpTextButton(
+                          l10n.obResumeFresh,
+                          size: 14,
+                          onTap: vm.discardDraft,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            LpButton(
-              l10n.obWelcomeCta,
-              onTap: () => ref.read(onboardingProvider.notifier).next(),
-            ),
+              const SizedBox(height: 14),
+            ],
+            LpButton(l10n.obWelcomeCta, onTap: vm.next),
             // "Restore purchase" lived here and only showed a snack. There is
             // no billing SDK to restore from (docs/08 B4), so it was claiming
             // to restore purchases that cannot exist. It returns with

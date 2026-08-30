@@ -1,4 +1,5 @@
 import '../../domain/logic/taper_engine.dart';
+import '../../domain/date_key.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -9,7 +10,7 @@ import '../../domain/models/models.dart';
 abstract final class SeedData {
   static JourneyState journey(DateTime now) {
     final today = JourneyState.dateKey(now);
-    final start = today.subtract(const Duration(days: 11));
+    final start = LpDate.addDays(today, -11);
 
     final plan = QuitPlan(
       method: QuitMethod.taper,
@@ -41,7 +42,7 @@ abstract final class SeedData {
 
     final days = <DateTime, DayLog>{};
     for (var i = 0; i < actuals.length; i++) {
-      final date = start.add(Duration(days: i));
+      final date = LpDate.addDays(start, i);
       final d = i + 1;
       days[date] = DayLog(
         date: date,

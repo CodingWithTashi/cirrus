@@ -9,6 +9,7 @@
  */
 import {describe, expect, it} from 'vitest';
 import {currentStreak, flameFor} from '../src/domain/streakEngine';
+import {addDays} from '../src/domain/dateKey';
 import type {DayLog} from '../src/domain/types';
 
 const TODAY = '2026-08-16';
@@ -91,6 +92,21 @@ describe('currentStreak — parity with the Dart engine', () => {
   it('a slip today also anchors to yesterday rather than zeroing', () => {
     const d = days(log(day(1), 1, 76), log(day(0), 90, 72));
     expect(currentStreak(d, TODAY)).toBe(1);
+  });
+
+  it('a streak survives a DST change in both directions', () => {
+    // Parity case with the Dart suite. This side walks STRING keys through
+    // `addDays`, so it was always immune — the Dart side walked DateTimes with
+    // `subtract(Duration(days: 1))`, i.e. 24 absolute hours, and lost the
+    // streak twice a year. Pinned here so the fixed client cannot re-drift.
+    for (const anchor of ['2026-11-04', '2026-10-28', '2026-03-11', '2026-04-01']) {
+      const days: Record<string, DayLog> = {};
+      for (let back = 0; back < 10; back++) {
+        const key = addDays(anchor, -back);
+        days[key] = log(key, 10, 100);
+      }
+      expect(currentStreak(days, anchor)).toBe(10);
+    }
   });
 
   it('a slip today with a token counts today too', () => {

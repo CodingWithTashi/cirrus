@@ -9,3 +9,9 @@ coverage/
 ui-debug.log
 firebase-debug.log
 firestore-debug.log
+
+# Founder-supplied terms for the coach-name guard (`src/lib/nameGuard.ts`).
+# Deliberately out of git: a maintained list of slurs sitting in a repo is a
+# liability of its own, and the guard works without it — impersonation is
+# blocked by the tokens in the source, and `coach_name.dart` still applies.
+data/name-denylist.json

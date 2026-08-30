@@ -73,6 +73,15 @@ export const postsCol = (): CollectionReference => db.collection('posts');
 export const moderationDoc = (postId: string): DocumentReference =>
   db.collection('moderation').doc(postId);
 
+/**
+ * Beta-tester quotes for the D3 rating ask. Server-only, like `moderation`:
+ * the rows carry consent references and locale provenance that no client has
+ * any business reading, and `matchedTestimonials` returns only the two fields
+ * the screen renders.
+ */
+export const testimonialsCol = (): CollectionReference =>
+  db.collection('testimonials');
+
 // --- Shape of the server-owned document -------------------------------------
 
 /** Mirror of RevenueCat. The ONLY thing the coach trusts for tier. */
@@ -90,6 +99,8 @@ export interface DailyCounter {
 }
 
 export interface UserDoc {
+  /** What this person renamed their coach to. Set by `setCoachName` only. */
+  readonly coachName?: string;
   /** IANA zone, written by syncUserContext. Crons page on this. */
   readonly tz?: string;
   readonly locale?: string;

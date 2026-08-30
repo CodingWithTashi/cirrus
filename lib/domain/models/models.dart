@@ -1,6 +1,7 @@
 /// Immutable domain entities. Pure Dart — no Flutter imports.
 library;
 
+import '../date_key.dart';
 import 'enums.dart';
 
 export 'enums.dart';
@@ -18,6 +19,7 @@ class UserProfile {
     this.attempts,
     this.frequency,
     this.firstPuff,
+    this.coachName,
   });
 
   final String alias;
@@ -32,6 +34,20 @@ class UserProfile {
   final VapeFrequency? frequency;
   final FirstPuffWindow? firstPuff;
 
+  /// What this person calls their coach.
+  ///
+  /// **Null means they never chose**, not "Ember" — the default is an ARB
+  /// string (`l10n.coachName`), so a hardcoded brand word never enters the
+  /// domain model, existing journeys need no migration, and every read site is
+  /// `profile.coachName ?? l10n.coachName`.
+  ///
+  /// This copy drives the UI only. The version the model is told about lives on
+  /// the server-owned `users/{uid}`, written solely by the validated
+  /// `setCoachName` callable — because this document is client-owned, so a name
+  /// written here is arbitrary client input and putting it straight into a
+  /// system prompt would be a live injection surface.
+  final String? coachName;
+
   bool get isPremium => tier != SubscriptionTier.free;
 
   UserProfile copyWith({
@@ -41,6 +57,7 @@ class UserProfile {
     String? email,
     Set<WhyChip>? whys,
     Set<WorryChip>? worries,
+    String? coachName,
   }) => UserProfile(
     alias: alias ?? this.alias,
     avatarEmoji: avatarEmoji ?? this.avatarEmoji,
@@ -53,6 +70,7 @@ class UserProfile {
     attempts: attempts,
     frequency: frequency,
     firstPuff: firstPuff,
+    coachName: coachName ?? this.coachName,
   );
 }
 
@@ -81,11 +99,10 @@ class QuitPlan {
 
   int get totalDays => paceDays + stretchDays;
 
-  DateTime get freedomDate => startDate.add(Duration(days: totalDays - 1));
+  DateTime get freedomDate => LpDate.addDays(startDate, totalDays - 1);
 
   /// 1-based day index for [date]; values above [totalDays] mean maintenance.
-  int dayNumber(DateTime date) =>
-      _dateOnly(date).difference(startDate).inDays + 1;
+  int dayNumber(DateTime date) => LpDate.daysBetween(startDate, date) + 1;
 
   double get costPerPuff =>
       baselinePuffsPerDay == 0 ? 0 : weeklySpend / (7 * baselinePuffsPerDay);
@@ -108,7 +125,6 @@ class QuitPlan {
     stretchDays: stretchDays ?? this.stretchDays,
   );
 
-  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 }
 
 class DayLog {
@@ -496,9 +512,7 @@ class PlanAdvice {
   final int stretchDelta;
 
   bool appliesTo(DateTime day) =>
-      forDay.year == day.year &&
-      forDay.month == day.month &&
-      forDay.day == day.day;
+      LpDate.dayStart(forDay) == LpDate.dayStart(day);
 }
 
 /// The Sunday AI report `weeklyInsight` generates (docs/04 §5).
@@ -606,4 +620,17 @@ class CoachMemory {
   /// One sentence, in the third person, as the extraction wrote it.
   final String text;
   final MemoryKind kind;
+}
+
+/// A real beta tester's words, shown on the D3 rating ask.
+///
+/// Carries no name, no age and no photo, and there is deliberately no field
+/// for one: docs/02 §3 D3 names the competitor's invented "Sarah, 29" as
+/// exactly the review-bomb risk this product is positioned against. The server
+/// holds each row's consent reference and never sends it.
+class Testimonial {
+  const Testimonial({required this.id, required this.text});
+
+  final String id;
+  final String text;
 }

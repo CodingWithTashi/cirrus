@@ -32,15 +32,16 @@ class CoachMemoriesScreen extends ConsumerWidget {
     final lp = context.lp;
     final l10n = context.l10n;
     final memories = ref.watch(coachMemoriesProvider);
+    final coach = ref.watch(coachNameProvider) ?? l10n.coachName;
 
     return Scaffold(
       appBar: AppBar(
         leading: BackChevron(onTap: () => context.pop()),
-        title: Text(l10n.memoriesTitle),
+        title: Text(l10n.memoriesTitle(coach)),
       ),
       body: SafeArea(
         child: memories.when(
-          loading: () => LpLoadingState(label: l10n.memoriesLoading),
+          loading: () => LpLoadingState(label: l10n.memoriesLoading(coach)),
           // A failed load must not read as "Ember remembers nothing" — that is
           // a reassuring answer to an unanswered question.
           error: (_, _) => LpErrorState(
@@ -53,13 +54,13 @@ class CoachMemoriesScreen extends ConsumerWidget {
           data: (items) => ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
-              Text(l10n.memoriesIntro, style: LpType.body13(lp.textSecondary)),
+              Text(l10n.memoriesIntro(coach), style: LpType.body13(lp.textSecondary)),
               const SizedBox(height: 18),
               if (items.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 40),
                   child: Text(
-                    l10n.memoriesEmpty,
+                    l10n.memoriesEmpty(coach),
                     textAlign: TextAlign.center,
                     style: LpType.body14(lp.textSecondary),
                   ),
@@ -104,7 +105,12 @@ class _MemoryCardState extends ConsumerState<_MemoryCard> {
       return;
     }
     if (!mounted) return;
-    showLpSnack(context, l10n.memoriesForgotten);
+    showLpSnack(
+      context,
+      l10n.memoriesForgotten(
+        ref.read(coachNameProvider) ?? l10n.coachName,
+      ),
+    );
     ref.invalidate(coachMemoriesProvider);
   }
 

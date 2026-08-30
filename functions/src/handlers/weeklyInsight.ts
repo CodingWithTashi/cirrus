@@ -74,7 +74,9 @@ export const weeklyInsight = onSchedule(
         if (weekday !== 'Sun') continue;
 
         try {
-          if (await generateFor(doc.id, tz)) generated++;
+          // The server-owned name, already on the doc we just read — the
+          // report must not call itself Ember for someone who renamed it.
+          if (await generateFor(doc.id, tz, data.coachName)) generated++;
         } catch (error) {
           log.warn('weeklyInsight.user_failed', {uid: doc.id, error: String(error)});
         }
@@ -88,7 +90,11 @@ export const weeklyInsight = onSchedule(
   },
 );
 
-async function generateFor(uid: string, timeZone: string): Promise<boolean> {
+async function generateFor(
+  uid: string,
+  timeZone: string,
+  coachName?: string,
+): Promise<boolean> {
   const snap = await journeyDoc(uid).get();
   if (!snap.exists) return false;
 
@@ -113,7 +119,7 @@ async function generateFor(uid: string, timeZone: string): Promise<boolean> {
   try {
     const result = await model.generate({
       model: MODEL_PREMIUM.value(),
-      systemInstruction: insightPrompt(journey.profile.alias),
+      systemInstruction: insightPrompt(journey.profile.alias, coachName),
       turns: [{role: 'user', text: JSON.stringify(payload)}],
       maxOutputTokens: 400,
       temperature: 0.6,

@@ -13,17 +13,18 @@ import '../../../data/api/firebase/lp_analytics.dart';
 import '../../../data/api/firebase/push_service.dart';
 import '../../../core/utils/lp_format.dart';
 import '../../../core/utils/lp_haptics.dart';
+import '../../../core/utils/lp_review.dart';
 import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/lp_buttons.dart';
 import '../../../core/widgets/lp_card.dart';
 import '../../../core/widgets/lp_charts.dart';
 import '../../../core/widgets/lp_misc.dart';
-import '../../../core/widgets/press_scale.dart';
 import '../../../core/widgets/progress_ring.dart';
 import '../../../core/widgets/rolling_number.dart';
 import '../../../domain/logic/money_engine.dart';
 import '../../../domain/logic/taper_engine.dart';
 import '../onboarding_view_model.dart';
+import '../tailoring.dart';
 import 'step_body.dart';
 
 /// D1 — the dopamine reveal: curve draws in, counters roll up staggered.
@@ -131,6 +132,18 @@ class RevealStep extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
+        // What the projected saving actually buys. A different figure from the
+        // spend screen's, and by now every answer exists, so the catalogue can
+        // draw on their reasons too — the two screens never repeat each other.
+        if (ObTailoring.revealComparison(context, state, projectedSaved)
+            case final line?) ...[
+          Text(
+            line,
+            textAlign: TextAlign.center,
+            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+        ],
         LpCard(
           radius: LpDimens.rInput,
           padding: const EdgeInsets.all(16),
@@ -414,7 +427,15 @@ class RatingStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
+    final state = ref.watch(onboardingProvider);
     final vm = ref.read(onboardingProvider.notifier);
+
+    // Warmed on leaving the worries screen, four steps back. Empty means the
+    // fetch found nothing, came back short, or never landed — all of which end
+    // in the same honest place: the two quotes bundled in the ARB files.
+    final quotes = state.testimonials.isNotEmpty
+        ? state.testimonials.map((t) => t.text).toList()
+        : [l10n.obRatingQuote1, l10n.obRatingQuote2];
 
     Widget quote(String text) => LpCard(
       padding: const EdgeInsets.all(16),
@@ -424,6 +445,9 @@ class RatingStep extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // The stars belong to the QUOTE — they are what this person
+              // rated us, not a control. See the CTA below for why there is no
+              // star picker anywhere near the store prompt.
               Text(
                 '★★★★★',
                 style: TextStyle(
@@ -450,7 +474,12 @@ class RatingStep extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(text, style: LpType.body13(lp.textPrimary)),
+          Text(
+            text,
+            style: LpType.body13(lp.textPrimary),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -462,53 +491,37 @@ class RatingStep extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(l10n.obRatingSubtitle, style: LpType.body14(lp.textSecondary)),
         const SizedBox(height: 22),
-        quote(l10n.obRatingQuote1),
+        quote(quotes[0]),
         const SizedBox(height: 12),
-        quote(l10n.obRatingQuote2),
+        quote(quotes[1]),
         const Spacer(),
-        LpCard(
-          radius: LpDimens.rBento,
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
-          child: Column(
-            children: [
-              Text(
-                l10n.obRatingCardTitle,
-                style: LpType.emphasis(lp.textPrimary),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.obRatingCardSubtitle,
-                style: LpType.caption(lp.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              PressScale(
-                onTap: () {
-                  // Real build: trigger StoreKit in_app_review here.
-                  LpHaptics.medium();
-                  vm.next();
-                },
-                child: Text(
-                  '★★★★★',
-                  style: TextStyle(
-                    color: lp.textFaint,
-                    fontSize: 26,
-                    letterSpacing: 6,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Divider(color: lp.border, height: 16),
-              LpTextButton(
-                l10n.commonNotNow,
-                // Deliberately the iOS system-dialog link blue in both themes
-                // — this card pastiches the StoreKit rating sheet.
-                color: const Color(0xFF6EA5FF),
-                size: 15,
-                onTap: vm.next,
-              ),
-            ],
-          ),
-        ),
+        // This used to be a five-star row inside a card pastiching the StoreKit
+        // sheet, and tapping it did nothing but advance. It cannot come back:
+        // asking for a rating ahead of the system prompt, or routing by
+        // sentiment, is review gating — Apple Guideline 1.1.7, and Google Play
+        // forbids asking the user's opinion at all before presenting the
+        // rating card, including a picker that routes every value identically.
+        // Android is the launch platform.
+        //
+        // So: one honest button, and no claim about what happened afterwards.
+        // Neither OS reports whether its sheet appeared or what the user did,
+        // so a "thanks for rating!" here would be a control that only shows a
+        // success snack — about something we could not have observed.
+        if (state.reviewAvailable)
+          LpButton(
+            l10n.obRatingCta,
+            onTap: () async {
+              LpHaptics.medium();
+              await LpReview.request();
+              vm.next();
+            },
+          )
+        else
+          // No sheet is coming — a sideloaded build, a spent quota, or a
+          // desktop. A dead button is worse than none, so it is simply not here.
+          LpButton(l10n.commonContinue, onTap: vm.next),
+        const SizedBox(height: 6),
+        LpTextButton(l10n.commonNotNow, size: 15, onTap: vm.next),
       ],
     );
   }

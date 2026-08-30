@@ -20,6 +20,7 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 import 'danger_hours_sheet.dart';
+import '../../domain/logic/coach_name.dart';
 
 /// Frame 50 — settings: account, subscription, notifications with the
 /// danger-hours editor inline, privacy (export/delete one tap deep),
@@ -101,9 +102,19 @@ class SettingsScreen extends ConsumerWidget {
             // Sits with the privacy controls, not with the coach: the reason
             // to open it is "what does this thing know about me", and the
             // answer belongs beside Export and Delete.
+            // Renaming lives here rather than in the chat header: that header
+            // is one mis-tap from a rename in the middle of a craving.
+            row(
+              emoji: '🔥',
+              label: l10n.settingsCoachName,
+              value: ref.watch(coachNameProvider) ?? l10n.coachName,
+              onTap: () => _showRenameCoachSheet(context, ref),
+            ),
             row(
               emoji: '🧠',
-              label: l10n.settingsMemories,
+              label: l10n.settingsMemories(
+                ref.watch(coachNameProvider) ?? l10n.coachName,
+              ),
               value: '',
               onTap: () => context.push(Routes.memories),
             ),
@@ -512,4 +523,104 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
       ],
     );
   }
+}
+
+/// Renaming the coach after onboarding.
+///
+/// Memories and stored transcripts are deliberately NOT rewritten. Memories
+/// are third-person facts about the user, and rewriting stored model output
+/// would falsify a transcript — it *was* called that then. The greeting
+/// re-renders for free (it is template-resolved at render time) and the next
+/// model turn uses the new name immediately, so the only thing that looks back
+/// is the history, which is the one thing that should.
+void _showRenameCoachSheet(BuildContext context, WidgetRef ref) {
+  final l10n = context.l10n;
+  final current = ref.read(coachNameProvider);
+  final field = TextEditingController(text: current ?? '');
+  var busy = false;
+  var rejected = false;
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (context, setSheetState) {
+        final lp = context.lp;
+        final typed = field.text;
+        final error = switch (CoachName.validate(typed)) {
+          CoachNameError.empty => typed.trim().isEmpty ? '' : '',
+          CoachNameError.tooLong => l10n.obCoachNameErrorLong,
+          CoachNameError.badCharacters => l10n.obCoachNameErrorChars,
+          null => rejected ? l10n.obCoachNameErrorRejected : '',
+        };
+        final blocked = typed.trim().isEmpty || error.isNotEmpty;
+
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 28,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 20),
+              Text(
+                l10n.settingsCoachName,
+                style: LpType.titleSm(lp.textPrimary),
+              ),
+              const SizedBox(height: 16),
+              LpField(
+                label: l10n.obCoachNameFieldLabel,
+                controller: field,
+                hint: l10n.coachName,
+                onChanged: (_) => setSheetState(() => rejected = false),
+              ),
+              SizedBox(
+                height: 22,
+                child: error.isEmpty
+                    ? null
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 6, left: 4),
+                        child: Text(
+                          error,
+                          style: LpType.caption(lp.cautionText),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              LpButton(
+                l10n.commonSave,
+                busy: busy,
+                onTap: blocked
+                    ? null
+                    : () async {
+                        setSheetState(() => busy = true);
+                        final name = CoachName.normalize(field.text);
+                        final ok = await ref
+                            .read(quitStoreProvider.notifier)
+                            .reserveCoachName(name);
+                        if (!context.mounted) return;
+                        if (!ok) {
+                          setSheetState(() {
+                            busy = false;
+                            rejected = true;
+                          });
+                          return;
+                        }
+                        Navigator.of(context).pop();
+                        // A snack, not a coach bubble: this is the app
+                        // acknowledging a settings change, and a synthetic
+                        // message in the thread would not survive a restore —
+                        // a small lie about what was actually said.
+                        showLpSnack(context, l10n.coachRenamed(name));
+                      },
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }

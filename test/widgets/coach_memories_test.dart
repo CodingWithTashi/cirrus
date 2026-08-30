@@ -66,7 +66,7 @@ void main() {
     await pump(tester);
 
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    expect(find.text(l10n.memoriesEmpty), findsOneWidget);
+    expect(find.text(l10n.memoriesEmpty(l10n.coachName)), findsOneWidget);
   });
 
   testWidgets('a failed load never reads as "nothing remembered"', (
@@ -79,7 +79,7 @@ void main() {
     expect(find.text(l10n.memoriesFailed), findsOneWidget);
     // "We could not look" and "there is nothing" are the same picture and very
     // different facts — and here the reassuring one is the lie.
-    expect(find.text(l10n.memoriesEmpty), findsNothing);
+    expect(find.text(l10n.memoriesEmpty(l10n.coachName)), findsNothing);
   });
 
   testWidgets('forgetting removes it once the server confirms', (tester) async {

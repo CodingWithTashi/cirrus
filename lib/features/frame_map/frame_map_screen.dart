@@ -89,32 +89,37 @@ class FrameMapScreen extends ConsumerWidget {
       (16, 'D1 · Plan reveal', () => _onboarding(ref, context, ObStep.reveal)),
       (
         17,
+        'D1b · Name your coach',
+        () => _onboarding(ref, context, ObStep.coachName),
+      ),
+      (
+        18,
         'D2 · Hold to commit',
         () => _onboarding(ref, context, ObStep.commit),
       ),
-      (18, 'D3 · Rating ask', () => _onboarding(ref, context, ObStep.rating)),
+      (19, 'D3 · Rating ask', () => _onboarding(ref, context, ObStep.rating)),
       (
-        19,
+        20,
         'D4 · Notifications',
         () => _onboarding(ref, context, ObStep.notifications),
       ),
-      (20, 'D5 · Paywall', () => _withJourney(ref, context, Routes.paywall)),
+      (21, 'D5 · Paywall', () => _withJourney(ref, context, Routes.paywall)),
       (
-        21,
+        22,
         'D5b · Free plan',
         () => _withJourney(ref, context, Routes.paywallFree),
       ),
       (
-        22,
+        23,
         'D5c · Win-back offer',
         () => _withJourney(ref, context, Routes.winback),
       ),
       (
-        23,
+        24,
         'D5d · Trial ending',
         () => _withJourney(ref, context, Routes.trialEnding),
       ),
-      (24, 'Day-1 checklist', () => _withJourney(ref, context, Routes.day1)),
+      (25, 'Day-1 checklist', () => _withJourney(ref, context, Routes.day1)),
     ];
 
     List<(int, String, void Function())> run2() => [

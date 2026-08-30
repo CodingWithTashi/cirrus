@@ -226,3 +226,41 @@ abstract interface class UserContextRepository {
   /// session. Callers ignore the future.
   Future<void> sync({String? fcmToken});
 }
+
+/// The two quotes shown on the D3 rating ask, chosen for what this person just
+/// told us they are afraid of.
+///
+/// The answers travel in the request rather than being read from the journey,
+/// because at step 18 of 19 the journey document does not exist yet — it is
+/// created after the paywall. That is safe for the same reason timezone and
+/// locale are: none of them is a privilege, so a lying client only gets itself
+/// a less relevant quote.
+abstract interface class TestimonialsRepository {
+  /// Empty when nothing fits, when the backend is unreachable, or when the
+  /// pool is too small to fill both cards — the view keeps its bundled quotes
+  /// in every one of those cases rather than showing a half-filled screen.
+  Future<List<Testimonial>> matched({
+    required Set<WhyChip> whys,
+    required Set<WorryChip> worries,
+    QuitAttempts? attempts,
+    Gender? gender,
+    required DependenceLevel dependence,
+  });
+}
+
+/// The server-owned copy of what the user calls their coach.
+///
+/// Two copies exist on purpose. `journeys/{uid}.profile.coachName` is
+/// client-owned and drives the UI; this one is written only through a
+/// validated callable and is the ONLY version the model is told about —
+/// because the journey document is written wholesale by the app, so a name
+/// taken from it would be unvalidated client text going into a system prompt.
+abstract interface class CoachNameRepository {
+  /// True when the server accepted it. False is a definite refusal.
+  ///
+  /// Anything else — offline, a timeout, a backend that will not answer —
+  /// THROWS, and the caller accepts the name locally: this is the user's own
+  /// private word, and losing the funnel to a moderation round-trip is the
+  /// worse failure.
+  Future<bool> reserve(String name);
+}

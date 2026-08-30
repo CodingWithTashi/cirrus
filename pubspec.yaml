@@ -36,6 +36,10 @@ dependencies:
   # shortcode and a live site — and someone we have just told we cannot coach
   # should not have to copy a string and find their own way there.
   url_launcher: ^6.3.1
+  # The native store review sheet. Wrapped in `core/utils/lp_review.dart`:
+  # neither platform tells you whether the sheet appeared or what the user
+  # did, so nothing in the UI may claim a rating was submitted.
+  in_app_review: ^2.0.10
   firebase_crashlytics: ^5.3.0
   firebase_analytics: ^12.5.0
   flutter_local_notifications: ^22.3.0

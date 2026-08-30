@@ -103,6 +103,14 @@ export interface UserProfile {
   readonly whys: readonly WhyChip[];
   readonly worries: readonly WorryChip[];
   readonly firstPuff: FirstPuffWindow | null;
+  /**
+   * What this person renamed their coach to, or null if they never did.
+   *
+   * Read from the CLIENT-owned journey, so it is untrusted input and is
+   * sanitized on decode. The version that reaches the model comes from the
+   * server-owned `users/{uid}.coachName`, written only by `setCoachName`.
+   */
+  readonly coachName: string | null;
   // The rest of the 19-step quiz. The server used to drop these, so the coach
   // could not tell a first-time quitter from someone on their sixth attempt,
   // or an all-day vaper from a social one — the two facts that most change

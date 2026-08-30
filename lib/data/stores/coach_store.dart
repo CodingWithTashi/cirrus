@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/date_key.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import 'providers.dart';
@@ -268,8 +269,7 @@ class CoachStore extends Notifier<CoachState> {
     return next;
   }
 
-  static int _ymd(DateTime? d) =>
-      d == null ? 20260101 : d.year * 10000 + d.month * 100 + d.day;
+  static int _ymd(DateTime? d) => d == null ? 20260101 : LpDate.toYmdInt(d);
 
   String _nextId() => 'm${_idCounter++}';
 }

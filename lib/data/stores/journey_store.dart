@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/date_key.dart';
 import '../../domain/logic/dependence_engine.dart';
 import '../../domain/logic/money_engine.dart';
 import '../../domain/logic/streak_engine.dart';
@@ -213,7 +214,7 @@ class JourneyStore extends Notifier<JourneyState?> {
 
     final wasOver = log.puffs > log.limit;
     final buckets = Map<int, int>.from(log.hourBuckets);
-    buckets[when.hour] = (buckets[when.hour] ?? 0) + 1;
+    buckets[LpDate.hour(when)] = (buckets[LpDate.hour(when)] ?? 0) + 1;
     var updated = log.copyWith(puffs: log.puffs + 1, hourBuckets: buckets);
 
     var tokens = s.repairTokens;
@@ -224,7 +225,7 @@ class JourneyStore extends Notifier<JourneyState?> {
       // (docs/03 §5); with no token the recovery flow arms.
       final streakBefore = StreakEngine.currentStreak(
         s.days,
-        when.subtract(const Duration(days: 1)),
+        LpDate.addDays(when, -1),
       );
       if (tokens > 0) {
         tokens -= 1;
@@ -237,7 +238,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     if (updated.limit > 0 && updated.puffs > updated.limit * 2) {
       pendingSlip ??= StreakEngine.currentStreak(
         s.days,
-        when.subtract(const Duration(days: 1)),
+        LpDate.addDays(when, -1),
       );
     }
 
@@ -435,6 +436,32 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
+  /// Sends a chosen coach name to the server guard, then keeps it locally.
+  ///
+  /// Returns false only on a definite refusal. Offline, a timeout, or any
+  /// other wire failure returns TRUE and the name is kept: it is the user's
+  /// own private word, rendered to nobody else, so refusing it because a
+  /// backend was slow would be the worse outcome. The server-owned copy — the
+  /// only one the model ever sees — simply does not get written, so a name
+  /// that never passed the guard can never reach a prompt.
+  ///
+  /// Usable before a journey exists (the onboarding step runs pre-paywall),
+  /// which is why the local write is conditional and the callable is not.
+  Future<bool> reserveCoachName(String name) async {
+    var accepted = true;
+    try {
+      accepted = await ref.read(coachNameRepositoryProvider).reserve(name);
+    } on Object {
+      accepted = true;
+    }
+    if (!accepted) return false;
+    final s = state;
+    if (s != null) {
+      _commit(s.copyWith(profile: s.profile.copyWith(coachName: name)));
+    }
+    return true;
+  }
+
   void setTier(SubscriptionTier tier) {
     final s = state;
     if (s == null) return;
@@ -505,15 +532,13 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// later would be describing something else.
   bool _hasComeback(JourneyState s) => s.days.values.any((over) {
     if (!over.isOverLimit || !over.isConfirmed) return false;
-    final next = s.days[JourneyState.dateKey(
-      over.date.add(const Duration(days: 1)),
-    )];
+    final next = s.days[LpDate.addDays(over.date, 1)];
     return next != null && next.isConfirmed && !next.isOverLimit;
   });
 
   bool _hasCleanWeekend(JourneyState s) => s.days.values.any((l) {
     if (l.date.weekday != DateTime.saturday) return false;
-    final sunday = s.days[l.date.add(const Duration(days: 1))];
+    final sunday = s.days[LpDate.addDays(l.date, 1)];
     return !l.isOverLimit &&
         l.isConfirmed &&
         sunday != null &&

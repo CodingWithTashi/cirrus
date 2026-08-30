@@ -15,7 +15,8 @@ import type {CallableRequest} from 'firebase-functions/v2/https';
 import {panicSession} from '../../src/handlers/panicSession';
 import {syncUserContext} from '../../src/handlers/syncUserContext';
 import {reportReply} from '../../src/handlers/reportReply';
-import {db, postsCol, userDoc} from '../../src/lib/firestore';
+import {matchedTestimonials} from '../../src/handlers/testimonials';
+import {db, postsCol, testimonialsCol, userDoc} from '../../src/lib/firestore';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -263,5 +264,100 @@ describe('reportReply', () => {
       .doc('p1').collection('replies').doc('r9').get();
     expect(reply.get('text')).toBe('just buy the 50mg ones');
     expect(reply.get('alias')).toBe('nightbee');
+  });
+});
+
+describe('matchedTestimonials', () => {
+  async function seed(
+    id: string,
+    fields: Record<string, unknown> = {},
+  ): Promise<void> {
+    await testimonialsCol().doc(id).set({
+      text: `quote ${id}`,
+      locale: 'en',
+      status: 'live',
+      whys: [],
+      worries: [],
+      attempts: [],
+      gender: [],
+      dependence: [],
+      weight: 0.5,
+      consentRef: 'release-2026-08',
+      ...fields,
+    });
+  }
+
+  it('returns the two quotes that answer the fear they named', async () => {
+    await seed('cravings', {worries: ['cravings']});
+    await seed('stress', {worries: ['stress']});
+    await seed('generic');
+
+    const {testimonials} = await matchedTestimonials.run(
+      caller({worries: ['cravings']}),
+    );
+
+    expect(testimonials).toHaveLength(2);
+    expect(testimonials[0]!.id).toBe('cravings');
+    // The rows carry a consent reference and translation provenance. Only the
+    // two fields the card renders may cross the wire.
+    expect(Object.keys(testimonials[0]!).sort()).toEqual(['id', 'text']);
+  });
+
+  it('never returns a quote that is not live', async () => {
+    await seed('hidden-one', {status: 'hidden'});
+    await seed('live-one');
+    await seed('live-two');
+
+    const {testimonials} = await matchedTestimonials.run(caller());
+
+    expect(testimonials.map((t) => t.id).sort()).toEqual(['live-one', 'live-two']);
+  });
+
+  it('falls back to English rather than half-filling the screen', async () => {
+    // One tailored card beside one generic one reads as a bug, so the fallback
+    // is wholesale.
+    await seed('fr-only', {locale: 'fr'});
+    await seed('en-one');
+    await seed('en-two');
+
+    const {testimonials} = await matchedTestimonials.run({
+      data: {timeZone: 'Europe/Paris', locale: 'fr-FR'},
+      auth: {uid: 'alice', token: {}},
+      rawRequest: {},
+      acceptsStreaming: false,
+    } as unknown as CallableRequest<unknown>);
+
+    expect(testimonials.map((t) => t.id).sort()).toEqual(['en-one', 'en-two']);
+  });
+
+  it('returns nothing rather than one card when the pool is short', async () => {
+    await seed('lonely');
+
+    const {testimonials} = await matchedTestimonials.run(caller());
+
+    // The client keeps its bundled quotes; two honest generic ones beat a
+    // half-filled screen.
+    expect(testimonials).toEqual([]);
+  });
+
+  it('refuses an unauthenticated caller', async () => {
+    await expect(
+      matchedTestimonials.run({
+        data: {},
+        rawRequest: {},
+        acceptsStreaming: false,
+      } as unknown as CallableRequest<unknown>),
+    ).rejects.toThrow();
+  });
+
+  it('ignores tag values it does not recognise', async () => {
+    await seed('a');
+    await seed('b');
+
+    const {testimonials} = await matchedTestimonials.run(
+      caller({worries: ['telepathy'], gender: 'martian', dependence: 7}),
+    );
+
+    expect(testimonials).toHaveLength(2);
   });
 });

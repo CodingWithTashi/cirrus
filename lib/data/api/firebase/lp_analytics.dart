@@ -48,6 +48,11 @@ abstract final class LpAnalytics {
   /// This counts the event only — no birth year, no identifiers.
   static Future<void> ageGateBlocked() => _log('age_gate_blocked');
 
+  /// Someone typed an age instead of a year and took the offered swap.
+  /// Tells us whether the age-entry affordance earns its keep. The value is
+  /// never recorded — this is the same no-identifiers rule as [ageGateBlocked].
+  static Future<void> ageEntryAdopted() => _log('age_entry_adopted');
+
   static Future<void> puffsEntered(int value, String badge) =>
       _log('puffs_entered', {'value': value, 'badge': badge});
 

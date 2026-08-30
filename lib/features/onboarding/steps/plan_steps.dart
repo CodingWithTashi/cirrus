@@ -17,6 +17,8 @@ import '../../../core/widgets/progress_ring.dart';
 import '../../../domain/logic/taper_engine.dart';
 import '../../../domain/models/models.dart';
 import '../onboarding_view_model.dart';
+import '../tailoring.dart';
+import 'step_fact.dart';
 import 'step_body.dart';
 
 /// C1 — whys stack into a visible "Your Why" card (IKEA effect).
@@ -126,6 +128,8 @@ class WorriesStep extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        StepFact(text: ObTailoring.fact(context, ObStep.worries, state)?.$1),
         const SizedBox(height: 14),
         LpButton(
           l10n.commonContinue,

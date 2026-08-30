@@ -44,6 +44,7 @@ lives in `users/{uid}`, which `firestore.rules` makes read-only to clients.
 | `moderatePost` | Firestore onCreate | Gemini classification → live/blocked + review queue |
 | `taperRecalc` | hourly cron | Adaptive taper advice (docs/03 §3.3) → `users/{uid}.planAdvice` |
 | `weeklyInsight` | hourly cron | Premium-only Sunday report (docs/04 §5) |
+| `matchedTestimonials` | callable | The two beta-tester quotes for D3, ranked against the answers the caller sends |
 | `rcWebhook` | HTTPS | RevenueCat → the trusted entitlement mirror |
 
 `dangerHourPush` from docs/05 §7 is **deliberately absent**. Danger-hour

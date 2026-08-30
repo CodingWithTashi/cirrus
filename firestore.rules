@@ -154,6 +154,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Beta-tester quotes for the D3 rating ask. Reached only through the
+    // matchedTestimonials callable, which returns the two fields the screen
+    // renders — the rows themselves carry consent references and translation
+    // provenance that no client needs. Written by the seeder (Admin SDK).
+    //
+    // Explicit rather than left to the default deny below, so that adding a
+    // reader later is a deliberate edit here and not an accident.
+    match /testimonials/{id} {
+      allow read, write: if false;
+    }
+
     // Default deny. Any collection added later is closed until it is
     // deliberately opened here.
     match /{document=**} {

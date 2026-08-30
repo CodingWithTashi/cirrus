@@ -179,13 +179,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Check-up de 2 minutos. Resultados brutalmente honestos. Um plano feito para ti.';
 
   @override
-  String get obWelcomeFactLabel => 'Já fizeste o check-up?';
-
-  @override
-  String get obWelcomeFactValue => '83% terminam em menos de 2 min';
-
-  @override
   String get obWelcomeCta => 'Começar o meu check-up';
+
+  @override
+  String get obResumeTitle => 'Continuamos onde ficaste?';
+
+  @override
+  String obResumeBody(int answered, int total) {
+    return 'Tinhas respondido a $answered de $total perguntas. Não se perdeu nada.';
+  }
+
+  @override
+  String get obResumeCta => 'Continuar';
+
+  @override
+  String get obResumeFresh => 'Começar de novo';
 
   @override
   String get obGenderTitle => 'Como te identificas?';
@@ -211,6 +219,47 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obBirthYearSubtitle => 'O teu plano adapta-se à tua idade.';
+
+  @override
+  String get obBirthYearHint => 'Ano ou idade — qualquer um serve.';
+
+  @override
+  String obBirthYearAge(int age) {
+    return 'Tens $age.';
+  }
+
+  @override
+  String obBirthYearAgeOffer(int age, int year) {
+    return '$age? Isso seria nascer em $year.';
+  }
+
+  @override
+  String get obBirthYearAgeConfirm => 'Sou eu';
+
+  @override
+  String obBirthYearUnderConfirm(int year, int age) {
+    return 'Nasceste em $year? Então tens $age.';
+  }
+
+  @override
+  String obBirthYearUnderCta(int age) {
+    return 'Sim, tenho $age';
+  }
+
+  @override
+  String get obBirthYearFix => 'Deixa-me corrigir';
+
+  @override
+  String get obBirthYearErrorFuture =>
+      'Esse ano ainda não chegou. Outra tentativa?';
+
+  @override
+  String get obBirthYearErrorTooOld =>
+      'A pessoa mais velha alguma vez verificada chegou aos 122. Vamos tentar de novo.';
+
+  @override
+  String get obBirthYearErrorUnknown =>
+      'Isso não é um ano — nem uma idade. Mais uma vez.';
 
   @override
   String get obUnder18Title => 'Aqui não te podemos ajudar — mas isto pode.';
@@ -381,15 +430,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get obSpendKickerSmall => 'Um telemóvel novo. Todos os anos.';
-
-  @override
-  String get obSpendKickerMid => 'Um voo para Tóquio. Todos os anos.';
-
-  @override
-  String get obSpendKickerBig => 'Dinheiro de renda. Todos os anos.';
-
-  @override
   String obSpendPerMonthChip(String amount) {
     return '$amount / mês';
   }
@@ -401,6 +441,70 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obSpendYourMath => 'as tuas contas, não as nossas';
+
+  @override
+  String obSpendComparisonOne(String item) {
+    return 'Isso é $item. Todos os anos.';
+  }
+
+  @override
+  String obSpendComparisonTwo(String item) {
+    return 'Isso é $item, duas vezes. Todos os anos.';
+  }
+
+  @override
+  String obSpendComparisonMany(String item, int count) {
+    return 'Isso é $item, $count vezes. Todos os anos.';
+  }
+
+  @override
+  String get obSpendItemGymMonth => 'um mês de ginásio';
+
+  @override
+  String get obSpendItemConcertTicket => 'um bilhete de concerto, bons lugares';
+
+  @override
+  String get obSpendItemRunningShoes => 'um par de ténis de corrida a sério';
+
+  @override
+  String get obSpendItemDentalCleaning => 'uma limpeza dentária';
+
+  @override
+  String get obSpendItemWinterCoat => 'um casaco de inverno que aquece mesmo';
+
+  @override
+  String get obSpendItemFestivalTicket =>
+      'um bilhete de festival, campismo incluído';
+
+  @override
+  String get obSpendItemWeekendAway => 'um fim de semana fora';
+
+  @override
+  String get obSpendItemBike => 'uma bicicleta que apetece andar';
+
+  @override
+  String get obSpendItemDrivingLessons => 'um curso completo de condução';
+
+  @override
+  String get obSpendItemNewPhone => 'um telemóvel novo';
+
+  @override
+  String get obSpendItemLaptop => 'um portátil que não está a morrer';
+
+  @override
+  String get obSpendItemEmergencyFund => 'um fundo de emergência a sério';
+
+  @override
+  String get obSpendItemYogaYear => 'um ano de ioga ilimitado';
+
+  @override
+  String get obSpendItemMonthOfRent => 'um mês de renda';
+
+  @override
+  String get obSpendItemFamilyHoliday => 'umas férias em família';
+
+  @override
+  String get obSpendItemUsedCar => 'um carro que te leva lá';
 
   @override
   String get obFirstPuffTitle => 'Primeira passa depois de acordar?';
@@ -418,11 +522,31 @@ class AppLocalizationsPt extends AppLocalizations {
   String get obFirstPuffHourPlus => 'Uma hora ou mais';
 
   @override
-  String get obFirstPuffScienceLabel => 'A CIÊNCIA';
-
-  @override
   String get obFirstPuffScience =>
       'O tempo até à primeira passa é o melhor preditor de dependência. 76% dos jovens vapers pegam nele nos 30 min após acordar.';
+
+  @override
+  String get obFactLabelScience => 'A CIÊNCIA';
+
+  @override
+  String get obFactLabelYourNumbers => 'OS TEUS NÚMEROS';
+
+  @override
+  String get obFactTried =>
+      'Entre quem vapa todos os dias, as tentativas falhadas passaram de 28% para 53% entre 2020 e 2024. Os aparelhos ficaram melhores no que fazem. Não és tu a ficar mais fraco — é uma corrida ao armamento para a qual ninguém te inscreveu.';
+
+  @override
+  String obFactStrength(int mg) {
+    return 'São ≈$mg mg de nicotina por dia. Os teus números, as nossas contas. O teu vape, entretanto, nunca sugeriu uma dose.';
+  }
+
+  @override
+  String get obFactWorryCravings =>
+      'A maioria das vontades sobe e passa em 15–20 minutos. Menos do que esperar por mesa. O botão de pânico foi feito exatamente para essa janela.';
+
+  @override
+  String get obFactWorrySocial =>
+      'O apoio de pares aumenta o sucesso em cerca de 40%. Sim — desconhecidos na internet. Também nos surpreendeu.';
 
   @override
   String get obWhyTitle => 'Porque queres sair?';
@@ -591,6 +715,21 @@ class AppLocalizationsPt extends AppLocalizations {
       '24% largam com um programa estruturado vs 19% sozinhos — ensaio aleatorizado com 2.588 jovens adultos. Não é magia. São melhores probabilidades.';
 
   @override
+  String obRevealComparisonOne(String item) {
+    return 'Até ao Dia da Liberdade, isso é $item.';
+  }
+
+  @override
+  String obRevealComparisonTwo(String item) {
+    return 'Até ao Dia da Liberdade, isso é $item, duas vezes.';
+  }
+
+  @override
+  String obRevealComparisonMany(String item, int count) {
+    return 'Até ao Dia da Liberdade, isso é $item, $count vezes.';
+  }
+
+  @override
   String get obRevealCta => 'Estou pronto';
 
   @override
@@ -634,11 +773,70 @@ class AppLocalizationsPt extends AppLocalizations {
       '\"A primeira app que não fala comigo como um médico ou a minha mãe.\"';
 
   @override
-  String get obRatingCardTitle => 'Estás a gostar do Cirrus?';
+  String get obRatingCta => 'Avaliar o Cirrus';
 
   @override
-  String get obRatingCardSubtitle =>
-      'Toca numa estrela para avaliar na App Store.';
+  String obCoachNameTitle(String name) {
+    return 'Conhece $name.';
+  }
+
+  @override
+  String get obCoachNameSubtitle =>
+      'O teu coach. Largou há dois anos, lembra-se exatamente de como se sente e já leu o teu plano.';
+
+  @override
+  String obCoachNameAsk(String name) {
+    return '$name foi o nome que nós demos. Mas um amigo a quem dás tu o nome é mais teu — chama-lhe aquilo que lhe escreverias mesmo às 2 da manhã.';
+  }
+
+  @override
+  String get obCoachNameFieldLabel => 'Nome do coach';
+
+  @override
+  String get obCoachNameSuggestions => 'Ou usa um destes:';
+
+  @override
+  String obCoachNameKeep(String name) {
+    return 'Ficar com $name';
+  }
+
+  @override
+  String get obCoachNameCta => 'É esse';
+
+  @override
+  String get obCoachNameLater => 'Podes mudar quando quiseres nas Definições.';
+
+  @override
+  String get obCoachNameErrorEmpty => 'Dá-lhe um nome.';
+
+  @override
+  String get obCoachNameErrorLong => 'No máximo 20 caracteres.';
+
+  @override
+  String get obCoachNameErrorChars => 'Só letras, números, espaços e - \'.';
+
+  @override
+  String get obCoachNameErrorRejected => 'Escolhe outro.';
+
+  @override
+  String get settingsCoachName => 'O nome do teu coach';
+
+  @override
+  String coachRenamed(String name) {
+    return 'Feito — $name a partir de agora.';
+  }
+
+  @override
+  String get obCoachNameSuggestion1 => 'Pip';
+
+  @override
+  String get obCoachNameSuggestion2 => 'Fin';
+
+  @override
+  String get obCoachNameSuggestion3 => 'Koda';
+
+  @override
+  String get obCoachNameSuggestion4 => 'Wren';
 
   @override
   String get obNotifTitle => 'Reforços, mesmo quando cedes.';
@@ -1093,7 +1291,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get coachInputHint => 'Escreve ao teu coach…';
 
   @override
-  String get coachTyping => 'O Ember está a escrever…';
+  String coachTyping(String name) {
+    return '$name está a escrever…';
+  }
 
   @override
   String coachFreeCounter(num count) {
@@ -1179,8 +1379,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String coachGreeting(int puffs, String method, String date) {
-    return 'Olá. Sou o Ember — larguei há dois anos e lembro-me exatamente de como se sente. Li o teu plano: $puffs por dia, $method, Dia da liberdade a $date. De mim nunca vêm sermões. O que se passa agora?';
+  String coachGreeting(String name, int puffs, String method, String date) {
+    return 'Olá. Sou $name — larguei há dois anos e lembro-me exatamente de como se sente. Li o teu plano: $puffs por dia, $method, Dia da liberdade a $date. De mim nunca vêm sermões. O que se passa agora?';
   }
 
   @override
@@ -1248,8 +1448,9 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get coachSafetyNote =>
-      'O Ember é uma ferramenta de apoio, não um médico. Em crise? Liga ou envia mensagem para o 988 (EUA e Canadá), a qualquer hora.';
+  String coachSafetyNote(String name) {
+    return '$name é uma ferramenta de apoio, não um médico. Em crise? Liga ou envia mensagem para o 988 (EUA e Canadá), a qualquer hora.';
+  }
 
   @override
   String get planTitle => 'O teu plano';
@@ -1840,8 +2041,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get insightPendingTitle => 'Ainda sem relatório';
 
   @override
-  String get insightPendingBody =>
-      'A Ember escreve um todos os domingos a partir da semana que registaste mesmo: as tuas horas, os teus estados de espírito, as tuas vitórias. Não há nada para mostrar até haver uma semana para ler.';
+  String insightPendingBody(String name) {
+    return '$name escreve um todos os domingos a partir da semana que registaste mesmo: as tuas horas, os teus estados de espírito, as tuas vitórias. Não há nada para mostrar até haver uma semana para ler.';
+  }
 
   @override
   String insightCounter(int index, int total) {
@@ -1952,15 +2154,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get profileAliasHint => 'anónimo — é tudo o que veem';
 
   @override
-  String get memoriesTitle => 'O que a Ember recorda';
+  String memoriesTitle(String name) {
+    return 'O que $name recorda';
+  }
 
   @override
-  String get memoriesIntro =>
-      'Coisas que contaste à Ember, guardadas para te serem úteis daqui a semanas em vez de recomeçar sempre. Só o que escreveste: nunca os teus números, nunca algo que não disseste.';
+  String memoriesIntro(String name) {
+    return 'Coisas que contaste a $name, guardadas para te serem úteis daqui a semanas em vez de recomeçar sempre. Só o que escreveste: nunca os teus números, nunca algo que não disseste.';
+  }
 
   @override
-  String get memoriesEmpty =>
-      'Ainda nada. A Ember começa a recordar quando lhe contas algo da tua vida.';
+  String memoriesEmpty(String name) {
+    return 'Ainda nada. $name começa a recordar quando lhe contas algo da tua vida.';
+  }
 
   @override
   String get memoriesFailed => 'Não foi possível carregar agora.';
@@ -1969,7 +2175,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memoriesForget => 'Esquecer isto';
 
   @override
-  String get memoriesForgotten => 'Esquecido. A Ember não volta a mencionar.';
+  String memoriesForgotten(String name) {
+    return 'Esquecido. $name não volta a mencionar.';
+  }
 
   @override
   String get memoriesForgetFailed => 'Não foi aplicado — continua guardado.';
@@ -1993,7 +2201,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memoriesKindContext => 'Sobre ti';
 
   @override
-  String get settingsMemories => 'O que a Ember recorda';
+  String settingsMemories(String name) {
+    return 'O que $name recorda';
+  }
 
   @override
   String get moderationTitle => 'Fila de revisão';
@@ -2223,7 +2433,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get communityLoading => 'A carregar o feed…';
 
   @override
-  String get memoriesLoading => 'A ver o que o Ember guardou…';
+  String memoriesLoading(String name) {
+    return 'A ver o que $name guardou…';
+  }
 
   @override
   String get coachLoadingThread => 'A recuperar a tua conversa…';

@@ -181,7 +181,27 @@ Upgrade prompts: contextual only (hitting a cap), never interstitial spam, max 1
 | "Social accountability raises quit success ~40%" | Peer-support cessation literature |
 | "≈14 puffs ≈ 1 cigarette" | Research heuristic; present as "≈", never exact |
 | Money figures | User's own input × 52, real arithmetic only |
+| "≈{mg} mg of nicotine a day" (B3 fact) | `DependenceEngine.nicotineMg` — the user's own puff count × the absorbed mg/puff for their stated strength (docs/03 §2). Their arithmetic, not a claim. Always shown with "≈" |
+| Spend-comparison item prices (B4, D1) | `lib/domain/logic/spend_comparisons.dart` header table — rounded US median bands, one line of provenance per item, reviewed 2026-08-30. **Never rendered**: a price is only ever a divisor, so the screen shows the user's own money and our noun |
 | Banned forever | "78% of members quit," "2× faster," "27% more likely" — any uncited number |
+
+**Where each approved row is spent.** A fact may only appear on screen if it is
+in this table, and adding one here is part of the same change that renders it.
+
+| Row | Rendered by |
+|---|---|
+| 24% vs 19% RCT | `obRevealProof` — D1 plan reveal |
+| 76% within 30 min | `obFirstPuffScience` — B5, via `StepFact` |
+| 28% → 53% failed attempts | `obFactTried` — A4, only when they have tried before |
+| Cravings pass in 15–20 min | `obFactWorryCravings` — C2, when they name cravings |
+| Peer support ~40% | `obFactWorrySocial` — C2, when they name social pressure |
+| ≈14 puffs ≈ 1 cigarette | `obPuffsCigEquiv` — B2 live equivalence |
+| Nicotine mg | `obFactStrength` — B3, via `StepFact` |
+
+Steps with no row left to spend say nothing. That is the design, not a gap:
+`ObTailoring.fact` is exhaustive over all 19 `ObStep`s, so a new screen forces
+a deliberate "there is nothing honest to put here" rather than an invented
+statistic.
 
 ---
 

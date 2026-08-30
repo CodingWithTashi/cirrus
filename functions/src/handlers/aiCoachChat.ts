@@ -32,6 +32,7 @@ import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
 import {
   EMBER_SYSTEM_PROMPT,
   MEMORY_EXTRACTION_PROMPT,
+  coachNameInstruction,
   localeInstruction,
   memorySection,
   panicAddendum,
@@ -44,7 +45,7 @@ import {
   worthExtracting,
   type MemoryKind,
 } from '../lib/memories';
-import {coachMessages, FieldValue, journeyDoc} from '../lib/firestore';
+import {coachMessages, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log, safeMeta} from '../lib/logger';
 import {claimCoachMessage, refundCoachMessage, tierFor} from '../lib/usage';
@@ -94,6 +95,15 @@ export const aiCoachChat = onCall(
       typeof data['panicIntensity'] === 'number' ? data['panicIntensity'] : null;
 
     const tier = await tierFor(caller.uid);
+    // The server-owned copy, written only by the validated `setCoachName`.
+    // The journey has one too, but that document is client-written, so the
+    // name from it is untrusted text and must never reach the prompt.
+    const userSnap = await userDoc(caller.uid).get();
+    const storedName: unknown = userSnap.get('coachName');
+    const coachName =
+      typeof storedName === 'string' && storedName.trim().length > 0
+        ? storedName.trim()
+        : null;
     const journeySnap = await journeyDoc(caller.uid).get();
     if (!journeySnap.exists) {
       // No journey yet = not onboarded. Greet rather than burn a model call.
@@ -137,6 +147,10 @@ export const aiCoachChat = onCall(
     const systemInstruction =
       EMBER_SYSTEM_PROMPT +
       localeInstruction(caller.locale) +
+      // From the SERVER-owned document, never from the journey: that one is
+      // client-written, so a name taken from it would be unvalidated text
+      // going straight into a system prompt.
+      (coachName !== null ? coachNameInstruction(coachName) : '') +
       (panicIntensity !== null ? panicAddendum(panicIntensity) : '') +
       `\n\n${card.text}` +
       memorySection(memories);

@@ -1,3 +1,4 @@
+import '../date_key.dart';
 import '../logic/danger_hours.dart';
 import '../logic/money_engine.dart';
 import '../logic/streak_engine.dart';
@@ -47,7 +48,9 @@ class JourneyState {
   /// anyone whose plan has already finished.
   final PlanAdvice? planAdvice;
 
-  static DateTime dateKey(DateTime d) => DateTime(d.year, d.month, d.day);
+  /// Local midnight — the day map's key. Delegates to the one truncation in
+  /// the app; the name and its call sites stay put.
+  static DateTime dateKey(DateTime d) => LpDate.dayStart(d);
 
   DayLog? logFor(DateTime date) => days[dateKey(date)];
 
@@ -186,9 +189,7 @@ class TodaySnapshot {
   int get puffsLeft => (limit - puffs).clamp(0, 999999);
 
   int get daysToFreedom {
-    final diff = JourneyState.dateKey(
-      freedomDate,
-    ).difference(JourneyState.dateKey(now)).inDays;
+    final diff = LpDate.daysBetween(now, freedomDate);
     return diff < 0 ? 0 : diff;
   }
 }

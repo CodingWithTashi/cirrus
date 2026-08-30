@@ -52,6 +52,28 @@ void main() {
       expect(day7.moodNote, 'work party tonight, nervous');
     });
 
+    test('a renamed coach round-trips, and its absence stays absent', () {
+      // Null means "never chose", not "Ember" — the default is an ARB string,
+      // so existing Firestore journeys need no migration and nothing in the
+      // domain model hardcodes the brand word.
+      expect(journey.profile.coachName, isNull);
+      final encoded =
+          JourneyCodec.encode(journey)['profile'] as Map<String, dynamic>;
+      expect(
+        encoded['coachName'],
+        isNull,
+        reason: 'a journey nobody renamed must not claim a name',
+      );
+
+      final named = journey.copyWith(
+        profile: journey.profile.copyWith(coachName: 'Wren'),
+      );
+      final wire = jsonEncode(JourneyCodec.encode(named));
+      final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
+      expect(back.profile.coachName, 'Wren');
+      expect(jsonEncode(JourneyCodec.encode(back)), wire);
+    });
+
     test('planAdvice round-trips, and its absence stays absent', () {
       // The seed journey carries no advice — the nightly cron has never run
       // for it — so the null case is the one the demo backend exercises daily.

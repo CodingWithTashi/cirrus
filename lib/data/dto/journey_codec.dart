@@ -66,6 +66,7 @@ abstract final class JourneyCodec {
     'attempts': p.attempts?.name,
     'frequency': p.frequency?.name,
     'firstPuff': p.firstPuff?.name,
+    'coachName': p.coachName,
   };
 
   static UserProfile decodeProfile(Map<String, dynamic> json) => UserProfile(
@@ -90,6 +91,7 @@ abstract final class JourneyCodec {
     attempts: enumByNameOrNull(QuitAttempts.values, json['attempts']),
     frequency: enumByNameOrNull(VapeFrequency.values, json['frequency']),
     firstPuff: enumByNameOrNull(FirstPuffWindow.values, json['firstPuff']),
+    coachName: json['coachName'] as String?,
   );
 
   static Map<String, dynamic> encodePlan(QuitPlan p) => {

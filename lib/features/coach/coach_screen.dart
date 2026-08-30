@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
+import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_card.dart';
@@ -79,7 +80,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         CoachChip.progress => context.l10n.coachChipProgress,
       };
 
-  String _resolve(BuildContext context, CoachMessage m) {
+  String _resolve(BuildContext context, CoachMessage m, String coachName) {
     // A model-authored reply is already prose in the user's language (the
     // server pins it from the caller's locale), so it renders verbatim. The
     // template is the fallback for deterministic replies and for anything the
@@ -95,18 +96,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
     return switch (m.template!) {
       CoachTemplate.greeting => l10n.coachGreeting(
+        coachName,
         i('puffs'),
         m.args['method'] == 'coldTurkey'
             ? l10n.planMethodCold
             : l10n.planMethodTaper,
-        LpFormat.shortDate(
-          DateTime(
-            i('freedomYmd') ~/ 10000,
-            (i('freedomYmd') % 10000) ~/ 100,
-            i('freedomYmd') % 100,
-          ),
-          locale,
-        ),
+        LpFormat.shortDate(LpDate.fromYmdInt(i('freedomYmd')), locale),
       ),
       CoachTemplate.craving1 => l10n.coachReplyCraving1,
       CoachTemplate.craving2 => l10n.coachReplyCraving2(i('count')),
@@ -141,6 +136,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final l10n = context.l10n;
     final locale = context.localeTag;
     final coach = ref.watch(coachStoreProvider);
+    final coachName = ref.watch(coachNameProvider) ?? l10n.coachName;
     final store = ref.read(coachStoreProvider.notifier);
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
@@ -217,7 +213,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       isUser: m.role == CoachRole.user,
                       text: m.role == CoachRole.user
                           ? (m.text ?? _chipLabel(context, m.chipEcho ?? 0))
-                          : _resolve(context, m),
+                          : _resolve(context, m, coachName),
                     ),
                     if (m.showWeekCard && journey != null) ...[
                       const SizedBox(height: 12),
@@ -225,7 +221,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                     ],
                     const SizedBox(height: 12),
                   ],
-                  if (coach.isTyping) const _TypingBubble(),
+                  if (coach.isTyping) _TypingBubble(coachName: coachName),
                 ],
               ),
             ),
@@ -323,7 +319,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
               child: Text(
-                l10n.coachSafetyNote,
+                l10n.coachSafetyNote(coachName),
                 textAlign: TextAlign.center,
                 style: LpType.micro(lp.textFaint),
               ),
@@ -389,7 +385,11 @@ class _Bubble extends StatelessWidget {
 
 /// Ember's flame pulses while "typing" (docs/04 §8).
 class _TypingBubble extends StatefulWidget {
-  const _TypingBubble();
+  const _TypingBubble({required this.coachName});
+
+  /// Passed in rather than read here: this is a plain StatefulWidget, and the
+  /// screen reader label is the one place the name must not silently fall back.
+  final String coachName;
 
   @override
   State<_TypingBubble> createState() => _TypingBubbleState();
@@ -415,7 +415,7 @@ class _TypingBubbleState extends State<_TypingBubble>
       alignment: Alignment.centerLeft,
       // Screen readers hear "Ember is typing…" while the flame pulses.
       child: Semantics(
-        label: context.l10n.coachTyping,
+        label: context.l10n.coachTyping(widget.coachName),
         liveRegion: true,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),

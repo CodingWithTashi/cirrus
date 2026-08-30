@@ -8,6 +8,7 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_misc.dart';
 import 'onboarding_view_model.dart';
+import 'steps/coach_name_step.dart';
 import 'steps/habit_steps.dart';
 import 'steps/identity_steps.dart';
 import 'steps/payoff_steps.dart';
@@ -44,6 +45,7 @@ class OnboardingFlow extends ConsumerWidget {
       ObStep.pace => const PaceStep(),
       ObStep.building => const BuildingStep(),
       ObStep.reveal => const RevealStep(),
+      ObStep.coachName => const CoachNameStep(),
       ObStep.commit => const CommitStep(),
       ObStep.rating => const RatingStep(),
       ObStep.notifications => const NotificationsStep(),

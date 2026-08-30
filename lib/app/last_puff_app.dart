@@ -113,7 +113,13 @@ class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
     // registers itself with the binding on construction, so it must not be
     // built lazily on first access.
     _listener = AppLifecycleListener(
-      onResume: () => ref.read(quitStoreProvider.notifier).pullPlanAdvice(),
+      onResume: () {
+        ref.read(quitStoreProvider.notifier).pullPlanAdvice();
+        // The same problem this widget already solves for plan advice: a
+        // process Android froze overnight comes back on yesterday's date, and
+        // its timers may never have fired.
+        ref.read(dayClockProvider.notifier).refresh();
+      },
     );
   }
 

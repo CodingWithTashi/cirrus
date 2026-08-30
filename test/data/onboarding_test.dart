@@ -91,6 +91,91 @@ void main() {
       }
     });
 
+    test('a future year cannot reach the gate, and cannot advance', () {
+      // The reported bug: 2812 computed an age of -786, which is < 18, so a
+      // mistyped digit dropped an adult onto the under-18 screen whose only
+      // exit is closing the app.
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      typeYear(vm, 2812);
+
+      expect(c.read(onboardingProvider).canContinue, isFalse);
+      vm.next();
+
+      expect(c.read(onboardingProvider).step, ObStep.birthYear);
+    });
+
+    test('an impossibly old year cannot advance either', () {
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      typeYear(vm, 1000);
+
+      expect(c.read(onboardingProvider).canContinue, isFalse);
+      vm.next();
+
+      expect(c.read(onboardingProvider).step, ObStep.birthYear);
+    });
+
+    test('typing an age puts an adult into the funnel', () {
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      // "28", not "1998" — the thing people actually do on this screen.
+      vm..typeBirthDigit(2)..typeBirthDigit(8);
+
+      expect(c.read(onboardingProvider).canContinue, isTrue);
+      expect(c.read(onboardingProvider).birthYear, DateTime.now().year - 28);
+      vm.next();
+
+      expect(c.read(onboardingProvider).step, ObStep.tried);
+    });
+
+    test('an ambiguous two-digit entry waits for the user to confirm', () {
+      // "19" is an age AND the first half of 1998, so it is offered and never
+      // adopted on its own.
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      vm..typeBirthDigit(1)..typeBirthDigit(9);
+
+      expect(c.read(onboardingProvider).canContinue, isFalse);
+
+      vm.adoptAgeEntry();
+
+      expect(
+        c.read(onboardingProvider).birthYearInput,
+        '${DateTime.now().year - 19}',
+      );
+      expect(c.read(onboardingProvider).canContinue, isTrue);
+    });
+
+    test('an under-18 age gates exactly like an under-18 year', () {
+      // The gate must not be dodgeable by answering in a different unit.
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      vm..typeBirthDigit(1)..typeBirthDigit(5);
+
+      vm.next();
+
+      expect(c.read(onboardingProvider).step, ObStep.under18);
+    });
+
+    test('"let me fix that" returns an empty field, never a dead end', () {
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier);
+      vm.state = vm.state.copyWith(step: ObStep.birthYear);
+      typeYear(vm, DateTime.now().year - 15);
+
+      vm.clearBirthYear();
+
+      expect(c.read(onboardingProvider).birthYearInput, isEmpty);
+      expect(c.read(onboardingProvider).canContinue, isFalse);
+      expect(c.read(onboardingProvider).step, ObStep.birthYear);
+    });
+
     test('going back from `tried` returns to the year, not the gate', () {
       final c = container();
       final vm = c.read(onboardingProvider.notifier);

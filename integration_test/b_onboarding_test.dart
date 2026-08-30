@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/core/widgets/lp_selectables.dart';
@@ -8,11 +9,11 @@ import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
 import 'harness.dart';
 
-/// The 19-step first session (docs/02 §2), the age gate, and the paywall it
+/// The 20-step first session (docs/02 §2 plus D1b), the age gate, and the
 /// ends on.
 ///
 /// This is the funnel every acquisition number in docs/08 §2 divides through,
-/// so the thing being proved is unglamorous: **every one of the 19 screens
+/// so the thing being proved is unglamorous: **every one of the 20 screens
 /// renders, its Continue enables once answered, and the flow reaches a created
 /// journey.** A screen that silently fails to advance costs the whole cohort.
 void main() {
@@ -46,7 +47,7 @@ void main() {
     }
   }
 
-  testWidgets('a guest walks all 19 steps to a created journey', (
+  testWidgets('a guest walks all 20 steps to a created journey', (
     tester,
   ) async {
     final e2e = await E2E.boot(tester);
@@ -93,12 +94,20 @@ void main() {
     expect(draft.weeklySpend, 25);
     expect(draft.birthYear, 2000);
 
-    // pace → building → reveal → commit → rating → notifications
+    // pace → building → reveal → coachName → commit → rating → notifications
     await e2e.tapText(e2e.l10n.obPaceCta);
     await e2e.waitFor(const Duration(seconds: 4)); // building animation
     expect(e2e.showing(e2e.l10n.obRevealCta), isTrue,
         reason: 'reveal never arrived; on screen: ${e2e.texts()}');
     await e2e.tapText(e2e.l10n.obRevealCta);
+
+    // D1b — name the coach. Keeping the default must leave `coachName` null,
+    // not the literal word, so an untouched profile is indistinguishable from
+    // every profile that existed before this screen did.
+    expect(e2e.showing(e2e.l10n.obCoachNameKeep(e2e.l10n.coachName)), isTrue,
+        reason: 'coach naming never arrived; on screen: ${e2e.texts()}');
+    await e2e.tapText(e2e.l10n.obCoachNameKeep(e2e.l10n.coachName));
+    await e2e.settle();
 
     // The hold-to-commit gesture is a 3s press, not a tap.
     final holdTarget = find.text(e2e.l10n.obCommitHold);
@@ -159,12 +168,65 @@ void main() {
     await pickFirstAndContinue(e2e);
     // A 15-year-old in 2026.
     await typeDigits(e2e, '2011');
-    await e2e.tapText(e2e.l10n.commonContinue);
+    // The gate ends the session with no way back, so it now costs a deliberate
+    // "Yes, I'm 15" rather than a Continue tap. A mistyped digit must never be
+    // enough to reach it.
+    await e2e.tapText(e2e.l10n.obBirthYearUnderCta(DateTime.now().year - 2011));
     await e2e.settle();
 
     expect(e2e.container.read(onboardingProvider).step, ObStep.under18,
         reason: 'age gate did not fire; on screen: ${e2e.texts()}');
     expect(e2e.container.read(quitStoreProvider), isNull);
+  });
+
+  testWidgets('a mistyped year is explained, not treated as a child', (
+    tester,
+  ) async {
+    // 2812 used to compute an age of -786, which is less than 18, so a fat
+    // finger dropped an adult onto the under-18 screen — whose only exit is
+    // closing the app.
+    final e2e = await E2E.boot(tester);
+    await e2e.waitFor(const Duration(seconds: 2));
+    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-typo@cirrus.app');
+    await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
+    await e2e.tapText(e2e.l10n.authCreateAccount);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    await e2e.tapText(e2e.l10n.obWelcomeCta);
+    await pickFirstAndContinue(e2e);
+    await typeDigits(e2e, '2812');
+    await e2e.settle();
+
+    expect(find.text(e2e.l10n.obBirthYearErrorFuture), findsOneWidget,
+        reason: 'no explanation shown; on screen: ${e2e.texts()}');
+
+    await e2e.tapText(e2e.l10n.commonContinue);
+    await e2e.settle();
+    expect(e2e.container.read(onboardingProvider).step, ObStep.birthYear);
+
+    // Clear it on the real keypad and answer with an AGE instead — the thing
+    // people actually do on a screen that asks for a year.
+    for (var i = 0; i < 4; i++) {
+      await e2e.tap(
+        find.descendant(
+          of: find.byType(NumericKeypad),
+          matching: find.byIcon(Icons.backspace_outlined),
+        ),
+        why: 'keypad backspace',
+      );
+    }
+    await typeDigits(e2e, '28');
+    await e2e.settle();
+
+    final year = DateTime.now().year - 28;
+    expect(find.text(e2e.l10n.obBirthYearAgeOffer(28, year)), findsOneWidget,
+        reason: 'age was not understood; on screen: ${e2e.texts()}');
+
+    await e2e.tapText(e2e.l10n.commonContinue);
+    await e2e.settle();
+    expect(e2e.container.read(onboardingProvider).step, ObStep.tried);
+    expect(e2e.container.read(onboardingProvider).birthYear, year);
   });
 
   testWidgets('back works on every quiz step and keeps the answers', (

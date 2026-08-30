@@ -25,6 +25,7 @@ import 'package:last_puff/features/stats/stats_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
+import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
 /// Every screen, laid out, in both themes and at two sizes.
 ///
@@ -65,10 +66,34 @@ void main() {
     'Winback': const WinbackScreen(),
     'TrialEnding': const TrialEndingScreen(),
     'Onboarding': const OnboardingFlow(),
+    for (final name in [
+      'ObBirthYear',
+      'ObSpend',
+      'ObWorries',
+      'ObReveal',
+      'ObCoachName',
+      'ObRating',
+    ])
+      name: const OnboardingFlow(),
     'FrameMap': const FrameMapScreen(),
     'EdgeStates': const EdgeStatesPreviewScreen(),
     'Moderation': const ModerationScreen(),
     'CoachMemories': const CoachMemoriesScreen(),
+  };
+
+  /// Onboarding steps worth a layout pass of their own.
+  ///
+  /// `'Onboarding'` above only ever renders the welcome screen. These are the
+  /// screens this change added copy to, and the ones whose new cards sit
+  /// inside `StepScrollView`'s `IntrinsicHeight` — the walk that took the
+  /// Health screen down when something below it reported an infinite height.
+  const previewed = {
+    'ObBirthYear': ObStep.birthYear,
+    'ObSpend': ObStep.spend,
+    'ObWorries': ObStep.worries,
+    'ObReveal': ObStep.reveal,
+    'ObCoachName': ObStep.coachName,
+    'ObRating': ObStep.rating,
   };
 
   /// A small phone and a large one, both logical pixels at dpr 1.
@@ -106,6 +131,10 @@ void main() {
           // A live day-12 journey: the state most screens are written for, and
           // the one that has completed milestones, goals, streaks and history.
           container.read(quitStoreProvider.notifier).seedDemoJourney();
+          final step = previewed[screen.key];
+          if (step != null) {
+            container.read(onboardingProvider.notifier).previewStep(step);
+          }
 
           // Collected individually: `takeException` folds several errors into
           // one "Multiple exceptions" wrapper, which would make the overflow

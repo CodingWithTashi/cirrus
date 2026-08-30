@@ -16,7 +16,7 @@ import {REGION} from '../config';
 import {db, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
 import {decodeJourney, JourneyDecodeError} from '../domain/journeyCodec';
-import {dayKeyIn} from '../domain/dateKey';
+import {dayKeyIn, hourIn} from '../domain/dateKey';
 import {trailingDays} from '../domain/streakEngine';
 import {adviseTomorrow, dayNumber} from '../domain/taperEngine';
 import {totalDays} from '../domain/types';
@@ -128,9 +128,7 @@ export async function recalcOne(uid: string, timeZone: string): Promise<void> {
  * user's tz is written so `recalcHourUtc` stays correct across DST.
  */
 export function recalcHourUtcFor(timeZone: string, now = new Date()): number {
-  const localHour = Number.parseInt(
-    new Intl.DateTimeFormat('en-GB', {timeZone, hour: '2-digit', hour12: false}).format(now),
-    10,
-  );
-  return (now.getUTCHours() - localHour + 1 + 48) % 24;
+  // `hourIn` is the tested version of the same Intl incantation this used to
+  // inline — one implementation, so the two cannot drift across a DST change.
+  return (now.getUTCHours() - hourIn(now, timeZone) + 1 + 48) % 24;
 }
