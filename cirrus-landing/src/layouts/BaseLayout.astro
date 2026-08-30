@@ -168,8 +168,11 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
+    {/* SVG first for crisp tabs; PNGs for browsers that ignore it. All generated
+        from the app's own mark — see scripts/ and public/logo.png. */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link
@@ -211,7 +214,10 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
           <img src="/logo.png" width="30" height="30" alt="" decoding="async" />
           <span>{SITE_TITLE}</span>
         </a>
-        <span class="pill">Coming soon</span>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="/blog">Blog</a>
+          <span class="pill">Coming soon</span>
+        </nav>
       </div>
     </header>
 

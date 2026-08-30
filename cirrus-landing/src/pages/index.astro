@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import WaitlistForm from '../components/WaitlistForm.astro';
-import DependenceWidget from '../components/DependenceWidget.astro';
+import AppDemo from '../components/AppDemo.astro';
 import { HONEST_STATS, FAQS } from '../lib/content';
 
 // Three of the five approved stats — the strongest, kept to Rangjong's
@@ -29,13 +29,7 @@ const screens = [
         <WaitlistForm source="hero" id="waitlist-hero" showCount />
       </div>
 
-      <div class="screens" style="justify-content:center">
-        <figure class="screen" style="width:260px">
-          <div class="phone">
-            <img src="/screens/dependence.jpg" width="720" height="1474" alt="Cirrus asking how many puffs you take on a normal day, showing 150 and a Moderate dependence badge." fetchpriority="high" />
-          </div>
-        </figure>
-      </div>
+      <AppDemo part="phone" />
     </div>
   </section>
 
@@ -43,16 +37,12 @@ const screens = [
   <section class="section section--lift section--rules" aria-labelledby="number">
     <div class="wrap">
       <div class="section__head">
-        <p class="micro micro--volt">Try it right now</p>
-        <h2 id="number">What's your real number?</h2>
-        <p>This is Cirrus's actual first screen — not a mockup. Type, and it answers.</p>
+        <p class="micro micro--volt">Live · no signup</p>
+        <h2 id="number">So what does that number cost you?</h2>
+        <p>Tap the keypad up there. Everything below moves with it.</p>
       </div>
 
-      <DependenceWidget />
-
-      <p class="widget__cta">
-        <a class="btn btn-primary" href="#join">Get this plan on launch day</a>
-      </p>
+      <AppDemo part="output" />
     </div>
   </section>
 
