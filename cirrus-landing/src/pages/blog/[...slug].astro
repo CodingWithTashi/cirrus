@@ -29,6 +29,15 @@ const {
   medical,
 } = post.data;
 
+// Onward links. Posts sharing a tag first, then the most recent, capped at three.
+// Without these the cluster is a set of dead ends and nothing passes relevance
+// between the posts.
+const related = await (async () => {
+  const others = (await getPublishedPosts()).filter((p) => p.id !== post.id);
+  const shared = others.filter((p) => p.data.tags.some((t) => post.data.tags.includes(t)));
+  return [...new Set([...shared, ...others])].slice(0, 3);
+})();
+
 const toc = headings.filter((h) => h.depth === 2);
 const minutes = readingTime(post.body ?? '');
 const words = (post.body ?? '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
@@ -217,6 +226,22 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
     </p>
     <WaitlistForm source={`blog-${post.id}`} id="waitlist-post" cta="Join the waitlist" label="Get early access" showCount />
   </section>
+
+  {
+    related.length > 0 && (
+      <aside class="related" aria-labelledby="related-h">
+        <h2 id="related-h">Keep reading</h2>
+        <ul class="post-list">
+          {related.map((r) => (
+            <li>
+              <h3><a href={`/blog/${r.id}`}>{r.data.title}</a></h3>
+              <p>{r.data.description}</p>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    )
+  }
 
   <nav class="post-footer-nav" aria-label="Post navigation">
     <a href="/blog">All posts on quitting vaping</a>

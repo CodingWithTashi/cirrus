@@ -129,9 +129,45 @@ measure** (~68 characters), which is where Medium, Squarespace and the default
 WordPress themes all land. The rest of the site stays at 16px; only `.prose`
 changes.
 
-Images: put files in `public/blog/<slug>/` and use a plain `<figure>` with an
-`<img>` and a `<figcaption>`. Add `class="figure--phone"` for a portrait
-screenshot, or it renders taller than the viewport.
+#### Images
+
+**Never put a content image in `public/`.** Astro only optimizes what it can see
+in `src/`, and anything under `public/` is copied through untouched: no WebP, no
+`srcset`, no content hash, and therefore no `immutable` cache header either.
+
+Post images live next to the post (`src/content/blog/<slug>/`) and are referenced
+with **native Markdown syntax**, which is the only form Astro's Markdown
+processor optimizes. Raw `<img src="...">` passes through unchanged, so it is
+silently the slow path:
+
+```
+<figure>
+
+![Alt text describing the photo](./my-post/photo.jpg)
+
+<figcaption>The caption.</figcaption>
+</figure>
+```
+
+The **blank lines around the image are load-bearing** — without them CommonMark
+emits the `![]()` as literal text. The `<figure>` and its `class` survive, so
+`class="figure--phone"` still works for a portrait screenshot (which otherwise
+renders taller than the viewport). Markdown wraps the image in a `<p>`; the
+`.prose figure p { margin: 0 }` rule strips the inherited paragraph margin.
+
+Images used in `.astro` files use `<Image>` from `astro:assets` with imports from
+`src/assets/`. Pass **width only, never width and height**, for the phone
+screenshots: `.phone img` crops from the top via `object-position`, while sharp's
+default `cover` fit crops from the centre, so a mismatched height visibly
+reframes them.
+
+`public/logo.png` stays where it is despite being unrendered — it is the
+`Organization.logo` URL in the JSON-LD, which must be a stable, unhashed raster
+PNG that crawlers can fetch. Do not point structured data at `/_astro/`.
+
+Source files should be no wider than **2× their display size**. The prose column
+is 672px, so 1344 is the ceiling; an 1800px source only makes Astro generate
+variants nothing can display, and `sizes` then over-selects them on desktop.
 
 A slot with no file yet gets a `.imgslot` placeholder carrying the intended
 path, pixel size and a note on what to shoot. It reserves the real aspect ratio
@@ -195,7 +231,19 @@ title and copy for "quitting vaping" rather than spending a title tag on the wor
 Internal links are the main way relevance moves between pages here, and the anchor text
 is most of that signal, so links read "knowing your real puff count", never "click here"
 or a bare URL. Two or three per post; a page stuffed with self-links reads as spam to
-readers and to Google alike.
+readers and to Google alike. Each post also gets three automatic onward links from the
+"Keep reading" block, which prefers posts sharing a tag.
+
+**ONE QUERY, ONE PAGE.** Two pages answering the same question compete, and Google
+usually resolves that by ranking neither. The trap here is `FAQS` in `src/lib/content.ts`:
+those questions are real search queries, they render on the home page as copy *and* as
+`FAQPage` schema, and several are now owned by a post. Where that is true the home answer
+is cut to two sentences plus a `more` link to the post. `more` is visible markup only and
+is deliberately absent from the schema.
+
+Check for collisions after adding any post — parse the JSON-LD on every built page and
+assert no `FAQPage` question string appears twice. That check caught a real duplicate
+("How much nicotine is in a Geek Bar Pulse?") across two posts.
 
 ### Canonical host
 

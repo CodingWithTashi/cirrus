@@ -575,6 +575,11 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .faq details[open] summary::after { content: '−'; }
 .faq p { margin: 0 0 1.25rem; color: var(--muted); }
 
+/* Hand-off link to the post that owns a query. See the ONE QUERY, ONE PAGE note
+   in src/lib/content.ts. */
+.faq__more { font-size: 0.9375rem; }
+.faq__more a { text-underline-offset: 0.2em; }
+
 /* ---------- closing CTA band ---------- */
 
 .cta-band {
@@ -759,6 +764,9 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 /* ---------- images ---------- */
 
 .prose figure { margin: 2.25rem 0; }
+/* Markdown wraps an image in a paragraph. Strip the inherited margin so the
+   figure hugs the image. */
+.prose figure p { margin: 0; }
 .prose figure img {
   display: block;
   width: 100%;
@@ -1011,6 +1019,25 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 }
 .post-cta > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
 .post-cta .waitlist { margin-top: 1.2rem; }
+
+/* ---------- related posts ---------- */
+
+.related {
+  max-width: 42rem;
+  margin: 3.5rem 0 0;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+.related h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-size: 1.375rem;
+  margin: 0;
+}
+.related .post-list { margin-top: 1.5rem; }
+.related .post-list li { padding: 1.25rem 0; }
+.related .post-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 
 /* ---------- footer nav ---------- */
 

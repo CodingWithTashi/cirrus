@@ -29,6 +29,16 @@ export default defineConfig({
   trailingSlash: 'never',
   build: { format: 'file' },
 
+  // `constrained` makes Astro emit a real srcset and a sizes attribute for every
+  // optimized image, so a phone downloads a phone-sized file. Output lands in
+  // /_astro/* with a content hash, which the immutable cache rule in
+  // public/_headers already covers.
+  //
+  // Leave `responsiveStyles` at its default of false. Turning it on injects
+  // Astro's own image CSS, which would start fighting the sizing rules in
+  // global.css (`.phone img` sets its own aspect-ratio and object-fit).
+  image: { layout: 'constrained' },
+
   // Self-hosted, preloaded — no third-party request at runtime. docs/07 §3
   // locks these two faces: Space Grotesk for display and all numbers, Inter for
   // body. Never a serif.

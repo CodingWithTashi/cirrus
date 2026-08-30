@@ -24,13 +24,13 @@ const posts = await getPublishedPosts();
   <h1>Quit vaping, honestly</h1>
   <p class="lede">
     What the research actually says about quitting vaping, tapering off nicotine and counting
-    your real puff count. No invented statistics — every number here carries its source.
+    your real puff count. No invented statistics, and every number here carries its source.
   </p>
 
   {
     posts.length === 0 ? (
       <p class="post-meta" style="margin-top:2rem">
-        No posts yet — the first ones are being written.
+        No posts yet. The first ones are being written.
       </p>
     ) : (
       <ul class="post-list">

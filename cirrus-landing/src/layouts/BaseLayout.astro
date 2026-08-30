@@ -1,7 +1,8 @@
 ---
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
-import { Font } from 'astro:assets';
+import { Font, Image } from 'astro:assets';
+import logo from '../assets/logo.png';
 import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL } from '../consts';
 import '../styles/global.css';
 
@@ -58,7 +59,7 @@ const {
 // SITE_DESCRIPTION, which produced a 143-character title reading "Cirrus —
 // Cirrus builds..." — Google truncates around 60 and the repetition wasted the
 // most valuable words in the result.
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_TAGLINE}`;
+const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} · ${SITE_TAGLINE}`;
 
 // Astro.site comes from `site` in astro.config.mjs.
 //
@@ -277,7 +278,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <header class="site-header">
       <div class="wrap">
         <a class="brand" href="/">
-          <img src="/logo.png" width="30" height="30" alt="" decoding="async" />
+          <Image src={logo} width={30} height={30} layout="fixed" alt="" />
           <span>{SITE_TITLE}</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
@@ -311,7 +312,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <footer class="site-footer">
       <div class="wrap">
         <a class="brand" href="/">
-          <img src="/logo.png" width="24" height="24" alt="" decoding="async" />
+          <Image src={logo} width={24} height={24} layout="fixed" alt="" />
           <span style="font-size:1rem">{SITE_TITLE}</span>
         </a>
         <p style="margin:0">Built by someone who quit. 17+ &middot; nicotine is addictive.</p>

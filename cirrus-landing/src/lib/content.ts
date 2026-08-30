@@ -46,6 +46,13 @@ export const HONEST_STATS = [
  * FAQ. Each question is one somebody actually types into Google — that is the
  * point of the section. Answers are short enough to be quoted as a snippet and
  * honest enough to survive being quoted out of context.
+ *
+ * ONE QUERY, ONE PAGE. Where a blog post now owns a question, the answer here is
+ * deliberately cut to a two-sentence summary with a `more` link to that post.
+ * A full answer in both places puts the home page and the post in competition
+ * for the same search, and Google usually resolves that by ranking neither.
+ * `more` is rendered as a visible link but is NOT part of the FAQPage schema —
+ * the schema carries the plain answer only.
  */
 export const FAQS = [
   {
@@ -54,15 +61,17 @@ export const FAQS = [
   },
   {
     q: 'How many puffs a day is a lot?',
-    a: 'There is no clean line, but the honest maths helps: roughly 14 puffs is about one cigarette, so 150 puffs a day is in the region of ten. A puff counter only helps if it starts from your real number rather than one it wishes you had.',
+    a: 'There is no clean line, and no health body publishes one. Roughly 14 puffs is about one cigarette, so 150 a day is in the region of ten.',
+    more: { label: 'The full answer, and the question that tells you more', href: '/blog/how-many-puffs-a-day-is-a-lot' },
   },
   {
     q: 'How many puffs are in a disposable vape?',
-    a: 'Most disposables advertise somewhere between 600 and several thousand puffs, and the label is optimistic. Cirrus estimates from your device life when you do not want to count, then corrects itself as you log.',
+    a: 'Fewer than the box says. Advertised counts come from a machine taking short, even puffs, so real use commonly lands well under the number on the front.',
+    more: { label: 'Why the box number is optimistic', href: '/blog/how-many-puffs-in-a-disposable-vape' },
   },
   {
     q: 'What does vaping actually cost per year?',
-    a: 'Take what you spend a week and multiply by 52 — that is it. At £20 or $20 a week that is over a thousand a year. Use the calculator above with your own number; we are not going to invent one for you.',
+    a: 'Take what you spend a week and multiply by 52. At £20 or $20 a week that is over a thousand a year. Use the calculator above with your own number; we are not going to invent one for you.',
   },
   {
     q: 'What happens if I slip and go over my limit?',
@@ -70,7 +79,8 @@ export const FAQS = [
   },
   {
     q: 'How long does vaping withdrawal last?',
-    a: 'The sharp part is usually the first week, peaking around days 3 to 5, with irritability, poor sleep and a short fuse. Most people find it has faded a lot by week two. Tapering exists precisely so you never hit that wall at full force — you walk down instead of falling off.',
+    a: 'Symptoms usually start within a day and peak on day two or three, earlier than most people expect. Most of the physical side settles within about ten days.',
+    more: { label: 'The day-by-day timeline', href: '/blog/how-long-does-vaping-withdrawal-last' },
   },
   {
     q: 'What are the benefits of quitting vaping?',
@@ -82,7 +92,7 @@ export const FAQS = [
   },
   {
     q: 'When is Cirrus available, and is it on iPhone?',
-    a: 'Android first. iPhone is a fast-follow — it genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
+    a: 'Android first. iPhone is a fast-follow. It genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
   },
   {
     q: 'Is Cirrus free?',
@@ -90,6 +100,7 @@ export const FAQS = [
   },
   {
     q: 'How is this different from Puff Count?',
-    a: 'Mostly honesty and price. Most quit vaping apps are a vape tracker and little else. We publish sources for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own. A full comparison is coming to the blog.',
+    a: 'Mostly honesty, and which phone you own. We publish a source for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own.',
+    more: { label: 'What to look for in a puff counter app', href: '/blog/how-to-choose-a-puff-counter-app' },
   },
 ] as const;

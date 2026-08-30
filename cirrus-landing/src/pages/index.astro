@@ -1,5 +1,9 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import dependenceShot from '../assets/screens/dependence.jpg';
+import homeShot from '../assets/screens/home.jpg';
+import paceShot from '../assets/screens/pace.jpg';
 import WaitlistForm from '../components/WaitlistForm.astro';
 import AppDemo from '../components/AppDemo.astro';
 import { HONEST_STATS, FAQS } from '../lib/content';
@@ -9,9 +13,9 @@ import { HONEST_STATS, FAQS } from '../lib/content';
 const stats = HONEST_STATS.filter((s) => ['76%', '28% → 53%', '15–20 min'].includes(s.figure));
 
 const screens = [
-  { src: '/screens/dependence.jpg', title: 'Your real number', caption: 'Not days clean. Puffs, going down.' },
-  { src: '/screens/home.jpg', title: 'Today', caption: 'One tap to log. The rest does itself.' },
-  { src: '/screens/pace.jpg', title: 'Your pace', caption: '14, 30 or 90 days. You pick.' },
+  { img: dependenceShot, title: 'Your real number', caption: 'Not days clean. Puffs, going down.' },
+  { img: homeShot, title: 'Today', caption: 'One tap to log. The rest does itself.' },
+  { img: paceShot, title: 'Your pace', caption: '14, 30 or 90 days. You pick.' },
 ];
 
 ---
@@ -39,7 +43,7 @@ const screens = [
     <div class="wrap">
       <div class="section__head">
         <p class="micro micro--volt">Live · no signup</p>
-        <h2 id="number">So what does that number cost you?</h2>
+        <h2 id="number">What does vaping actually cost you a year?</h2>
         <p>Tap the keypad up there. Everything below moves with it.</p>
       </div>
 
@@ -52,7 +56,7 @@ const screens = [
     <div class="wrap">
       <div class="section__head">
         <p class="micro">Inside the app</p>
-        <h2 id="inside">Built already. Not a landing page with a dream.</h2>
+        <h2 id="inside">A quit vaping app that's built, not a landing page with a dream.</h2>
         <p>A puff counter, a taper plan, a coach for the cravings, and people on the same curve.</p>
       </div>
 
@@ -61,7 +65,7 @@ const screens = [
           screens.map((s) => (
             <figure class="screen reveal">
               <div class="phone">
-                <img src={s.src} width="720" height="1474" loading="lazy" decoding="async" alt={`Cirrus quit vaping app — ${s.title}: ${s.caption}`} />
+                <Image src={s.img} width={208} layout="fixed" loading="lazy" alt={`Cirrus quit vaping app, ${s.title}: ${s.caption}`} />
               </div>
               <figcaption><b>{s.title}</b>{s.caption}</figcaption>
             </figure>
@@ -75,7 +79,7 @@ const screens = [
           <p class="ember__name">Ember</p>
           <p class="ember__meta">● knows your plan · day 1</p>
           <blockquote class="ember__bubble">
-            Hey. I'm Ember — I quit two years ago and I remember exactly how it felt. I've read
+            Hey. I'm Ember. I quit two years ago and I remember exactly how it felt. I've read
             your plan: 50 a day, Taper, Freedom Day Sep 27. No lectures from me, ever. What's
             going on right now?
           </blockquote>
@@ -113,7 +117,7 @@ const screens = [
     <div class="wrap">
       <div class="section__head">
         <p class="micro">Straight answers</p>
-        <h2 id="faq">Questions people actually ask</h2>
+        <h2 id="faq">Quit vaping questions people actually ask</h2>
       </div>
 
       <div class="faq">
@@ -122,6 +126,9 @@ const screens = [
             <details open={i === 0}>
               <summary>{item.q}</summary>
               <p>{item.a}</p>
+              {/* Where a post owns the query, the snippet here hands off to it
+                  rather than answering in full. See the note in content.ts. */}
+              {'more' in item && <p class="faq__more"><a href={item.more.href}>{item.more.label}</a></p>}
             </details>
           ))
         }

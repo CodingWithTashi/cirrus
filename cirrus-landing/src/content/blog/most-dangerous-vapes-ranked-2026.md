@@ -37,12 +37,12 @@ faq:
       Glas. Elf Bar, Geek Bar, Lost Mary, Raz and every other popular disposable have never
       been authorized. Authorization isn't a safety endorsement either, and no vape is
       authorized as a quitting aid.
-  - q: How much nicotine is in a Geek Bar Pulse?
+  - q: What is 6-methyl nicotine?
     a: >-
-      About 800mg, which is roughly 16ml of e-liquid at 5% (50mg/ml). The Pulse X holds around
-      900mg. Adjusting for how much nicotine your body actually absorbs, that's equivalent to
-      roughly 300–500 cigarettes per device. Higher figures you'll see quoted use raw puff
-      counts, which overstates it.
+      A synthetic analogue of nicotine, one methyl group different from the real thing. That
+      difference is enough to fall outside the law regulating nicotine, so it reaches shelves
+      with no premarket safety review. Preclinical work suggests it binds nicotinic receptors
+      up to 3.3 times more strongly than nicotine. It is sold as Metatine, Nixotine or Imotine.
   - q: Is there such a thing as a safe vape?
     a: >-
       No. Every category we assessed carries measurable risk: heavy metals, carbonyls, or
@@ -93,9 +93,9 @@ ran it through a mass spectrometer, saw the lead reading, and assumed the machin
 It wasn't.
 
 <figure>
-<img src="/blog/most-dangerous-vapes/hero.jpeg" width="1024" height="559"
-     fetchpriority="high" decoding="async"
-     alt="Vaping gear laid out on a grey surface: a Vaporesso XROS 3 Nano pod kit and its box, replacement pods, a VooPoo box mod with a sub-ohm tank, four spare coils, cotton wick, a USB cable and two bottles of nicotine-salt e-liquid.">
+
+![Vaping gear laid out on a grey surface: a Vaporesso XROS 3 Nano pod kit and its box, replacement pods, a VooPoo box mod with a sub-ohm tank, four spare coils, cotton wick, a USB cable and two bottles of nicotine-salt e-liquid.](./most-dangerous-vapes/hero.jpeg)
+
 <figcaption>A refillable pod kit, a sub-ohm box mod, spare coils and nicotine-salt e-liquid at 30mg/ml.</figcaption>
 </figure>
 
@@ -161,9 +161,9 @@ One brand used a leaded bronze alloy for a part that isn't even the coil, and me
 into the liquid before anyone took a first puff.
 
 <figure>
-<img src="/blog/most-dangerous-vapes/teardown.jpeg" width="1800" height="1207"
-     loading="lazy" decoding="async"
-     alt="A labelled cutaway of a disposable vape, its two shell halves opened out. Callouts mark the integrated mouthpiece, an 800mAh lithium-ion battery, power management circuitry, a cotton wick and coil assembly saturated with e-liquid, the e-liquid level, the airflow tube and activation sensor, brass electrical contacts, a spring-loaded pin connection and internal wiring.">
+
+![A labelled cutaway of a disposable vape, its two shell halves opened out. Callouts mark the integrated mouthpiece, an 800mAh lithium-ion battery, power management circuitry, a cotton wick and coil assembly saturated with e-liquid, the e-liquid level, the airflow tube and activation sensor, brass electrical contacts, a spring-loaded pin connection and internal wiring.](./most-dangerous-vapes/teardown.jpeg)
+
 <figcaption>Inside a disposable: battery, control board, saturated wick and coil, airflow sensor, brass contacts. The leaded alloy the UC Davis team found was in a part that does no heating at all.</figcaption>
 </figure>
 
@@ -189,9 +189,9 @@ Counterintuitively, the worst readings come from *small* puffs with the airflow 
 airy puffs cool the coil down.
 
 <figure>
-<img src="/blog/most-dangerous-vapes/subohm.jpeg" width="1024" height="687"
-     loading="lazy" decoding="async"
-     alt="A VooPoo box mod with a sub-ohm tank, its screen reading 100+ watts at 3.82 volts through a 0.20 ohm coil, beside a bottle of e-liquid, cotton wick and two spare coils.">
+
+![A VooPoo box mod with a sub-ohm tank, its screen reading 100+ watts at 3.82 volts through a 0.20 ohm coil, beside a bottle of e-liquid, cotton wick and two spare coils.](./most-dangerous-vapes/subohm.jpeg)
+
 <figcaption>100 watts through a 0.20-ohm coil. Roughly the conditions that take carbonyls from under 2 micrograms per puff to somewhere between 7 and 15.</figcaption>
 </figure>
 
@@ -249,12 +249,13 @@ Varenicline is an old, cheap, generic prescription pill. It was well tolerated, 
 who quit vaping didn't switch to smoking instead.
 
 The useful bit is the pattern. The stack beats any single piece: medication, plus support, plus
-something counting what you actually do.
+something keeping count for you.
 
 <figure class="figure--phone">
-<img src="/screens/home.jpg" width="720" height="1474" loading="lazy" decoding="async"
-     alt="The Cirrus home screen showing today's puff count against a daily limit, with a log button.">
-<figcaption>The third layer: what you actually did today, not what you think you did.</figcaption>
+
+![The Cirrus home screen showing today's puff count against a daily limit, with a log button.](../../assets/screens/home.jpg)
+
+<figcaption>The third layer: what you did today, not what you think you did.</figcaption>
 </figure>
 
 That last layer is Cirrus, a [quit vaping app that counts your puffs and tapers them down](/)

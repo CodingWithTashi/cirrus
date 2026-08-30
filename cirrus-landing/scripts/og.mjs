@@ -154,6 +154,9 @@ console.log(`wrote public/og.png (1200x630) — headline on ${lines.length} line
 // The rank blocks below carry the article's own ranking; the colours are the
 // risk levels the piece assigns, not a gradient invented to look like data.
 
+const VOLT = '#c8f542';
+const EMBER = '#ff8a00';
+
 const POSTS = [
   {
     slug: 'most-dangerous-vapes-ranked-2026',
@@ -162,9 +165,53 @@ const POSTS = [
     blocks: [
       { n: '1', label: 'THC carts', color: '#ff5c5c' },
       { n: '2', label: '6-MN vapes', color: '#ff5c5c' },
-      { n: '3', label: 'Disposables', color: '#ff8a00' },
-      { n: '4', label: 'Sub-ohm mods', color: '#ff8a00' },
-      { n: '5', label: 'Closed pods', color: '#c8f542' },
+      { n: '3', label: 'Disposables', color: EMBER },
+      { n: '4', label: 'Sub-ohm mods', color: EMBER },
+      { n: '5', label: 'Closed pods', color: VOLT },
+    ],
+  },
+  {
+    slug: 'how-many-puffs-a-day-is-a-lot',
+    eyebrow: 'PUFF COUNT · WHAT THE EVIDENCE SAYS',
+    headline: 'How many puffs a day is a lot?',
+    blocks: [
+      { n: '≈14', label: 'puffs ≈ 1 cigarette', color: VOLT },
+      { n: '76%', label: 'vape within 30 min', color: EMBER },
+      { n: '41%', label: '20+ days a month', color: EMBER },
+      { n: '27%', label: 'vape every day', color: EMBER },
+    ],
+  },
+  {
+    slug: 'how-many-puffs-in-a-disposable-vape',
+    eyebrow: 'DISPOSABLES · THE REAL NUMBERS',
+    headline: 'How many puffs are in a disposable vape?',
+    blocks: [
+      { n: '800mg', label: 'nicotine, one Pulse', color: EMBER },
+      { n: '300–500', label: 'cigarette equivalent', color: EMBER },
+      { n: '66%', label: 'of youth vapers', color: VOLT },
+      { n: '97.6%', label: 'unauthorized sales', color: '#ff5c5c' },
+    ],
+  },
+  {
+    slug: 'how-long-does-vaping-withdrawal-last',
+    eyebrow: 'WITHDRAWAL · THE TIMELINE',
+    headline: 'How long does vaping withdrawal last?',
+    blocks: [
+      { n: '4–24h', label: 'symptoms start', color: VOLT },
+      { n: 'Day 2–3', label: 'the peak', color: EMBER },
+      { n: '10 days', label: 'physical eases', color: VOLT },
+      { n: '3–4 wks', label: 'mostly through it', color: VOLT },
+    ],
+  },
+  {
+    slug: 'how-to-choose-a-puff-counter-app',
+    eyebrow: 'PUFF COUNTER APPS · WHAT TO LOOK FOR',
+    headline: 'How to choose a puff counter app',
+    blocks: [
+      { n: '1', label: 'Your real number', color: VOLT },
+      { n: '2', label: 'Sources you can check', color: VOLT },
+      { n: '3', label: 'Adapts when you slip', color: VOLT },
+      { n: '4', label: 'A free tier that works', color: VOLT },
     ],
   },
 ];
