@@ -48,19 +48,20 @@ Verified live: `http`→`https` 301, `/page.html` and `/page/` both 308 to the
 clean URL, Googlebot and Bingbot unblocked, Brotli active, sitemap carries
 `<lastmod>` for posts.
 
-### Known gap: www does not redirect
+### Canonical host
 
-`www.cirrusquit.com` serves the site rather than 301-ing to the apex. Every page
-canonicalises to the apex, so Google consolidates them and this is not costing
-rankings — but a redirect is the stronger signal.
+`www.cirrusquit.com` 301s to the apex via a zone-level **Redirect Rule** ("www to
+apex", matching `https://www.cirrusquit.com/*` → `https://cirrusquit.com/${1}`,
+preserve query string). It lives in the Cloudflare dashboard, not in this repo.
 
-Cloudflare Pages `_redirects` cannot fix it: it matches on path only, so a rule
-whose source is a full URL is parsed and ignored with no error. It needs a
-zone-level **Redirect Rule** (dashboard → cirrusquit.com → Rules → Redirect
-Rules → Create):
+Two things to know if you ever touch it:
 
-- If: `hostname` equals `www.cirrusquit.com`
-- Then: dynamic redirect to `concat("https://cirrusquit.com", http.request.uri.path)`, status 301, preserve query string
+- Pages `_redirects` **cannot** do this. It matches on path only, so a rule whose
+  source is a full URL is parsed and ignored with no error — the redirect simply
+  never fires.
+- Keep `www.cirrusquit.com` attached to the Pages project under Custom domains.
+  The TLS handshake happens before the redirect, so detaching it breaks
+  `https://www` with a certificate error instead of redirecting.
 
 ### Cloudflare managed robots.txt
 
