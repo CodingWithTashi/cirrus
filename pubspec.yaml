@@ -32,6 +32,10 @@ dependencies:
   firebase_app_check: ^0.4.7
   flutter_timezone: ^5.1.0
   shared_preferences: ^2.5.5
+  # Opens the under-18 quit resources. Those are real destinations — an SMS
+  # shortcode and a live site — and someone we have just told we cannot coach
+  # should not have to copy a string and find their own way there.
+  url_launcher: ^6.3.1
   firebase_crashlytics: ^5.3.0
   firebase_analytics: ^12.5.0
   flutter_local_notifications: ^22.3.0

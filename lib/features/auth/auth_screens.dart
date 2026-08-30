@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -197,18 +197,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ),
               const Spacer(),
+              // "Restore Purchase" is gone: there is no billing SDK, so it
+              // named a control that could not exist — the same reason the two
+              // real Restore buttons were deleted rather than faked. It comes
+              // back with subscriptions, where it is a store requirement.
+              //
+              // Terms and Privacy stay plain text deliberately. They are store
+              // requirements and they need to be links, but the policy pages
+              // are not published yet, and a link to a 404 is worse than a
+              // label: it looks like the document exists.
               Text(
-                '${l10n.authTerms} · ${l10n.authPrivacy} · ${l10n.authRestorePurchase}',
+                '${l10n.authTerms} · ${l10n.authPrivacy}',
                 textAlign: TextAlign.center,
                 style: LpType.caption(lp.textSecondary),
               ),
-              const SizedBox(height: 6),
-              LpTextButton(
-                l10n.frameMapOpen,
-                size: 12,
-                color: lp.voltText,
-                onTap: () => context.push(Routes.frames),
-              ),
+              // Debug builds only — see the note in Settings. This entry
+              // point was the worse of the two: it is reachable before anyone
+              // has signed in, so the first thing a new user could do is give
+              // themselves somebody else's twelve-day streak.
+              if (kDebugMode) ...[
+                const SizedBox(height: 6),
+                LpTextButton(
+                  l10n.frameMapOpen,
+                  size: 12,
+                  color: lp.voltText,
+                  onTap: () => context.push(Routes.frames),
+                ),
+              ],
             ],
           ),
         ),

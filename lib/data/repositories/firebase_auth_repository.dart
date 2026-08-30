@@ -82,8 +82,29 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> register({required String email, required String password}) =>
       guardAuth(() async {
-        // TODO(follow-up): link a guest (anonymous) session instead of
-        // creating a fresh account, so a Frame-Map journey survives sign-up.
+        // Upgrade the guest rather than replacing them.
+        //
+        // Guest onboarding runs on an anonymous account (`create()` mints one
+        // when there is no session), so registering with a fresh account left
+        // the anonymous uid — and the entire nineteen-step journey written
+        // under it — orphaned in Firestore, and dropped the user back on an
+        // empty app. `linkWithCredential` keeps the uid, so the journey, the
+        // coach transcript and everything under `users/{uid}` come with them.
+        final current = _auth.currentUser;
+        if (current != null && current.isAnonymous) {
+          try {
+            await current.linkWithCredential(
+              EmailAuthProvider.credential(email: email, password: password),
+            );
+            return;
+          } on FirebaseAuthException catch (error) {
+            // `credential-already-in-use` / `email-already-in-use` mean this
+            // address belongs to a real account already. That is not a link,
+            // it is a sign-in, and falling through would report "already in
+            // use" — which is the truth and what the view expects.
+            if (error.code != 'provider-already-linked') rethrow;
+          }
+        }
         await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -146,14 +147,21 @@ class Under18Step extends ConsumerWidget {
     final lp = context.lp;
     final l10n = context.l10n;
 
-    // Frame 4: resource buttons act — the copyable contact is the honest
-    // stand-in for SMS/web deep links until an url_launcher integration.
+    // Frame 4: the resource buttons open the resource.
+    //
+    // They used to copy a string to the clipboard and claim "Link copied",
+    // which is the least useful possible outcome for the one screen we show
+    // somebody under 18: we have just told them we will not coach them, so
+    // handing them a string to paste somewhere themselves is where most of
+    // them stop. Falls back to the clipboard only if nothing can handle the
+    // link — a dead button here is worse than a copied one.
     Widget resource(
       String title,
       String body,
       String cta, {
       bool volt = false,
       required String copyText,
+      required Uri target,
     }) => LpCard(
       radius: LpDimens.rCard,
       padding: const EdgeInsets.all(18),
@@ -166,6 +174,16 @@ class Under18Step extends ConsumerWidget {
           const SizedBox(height: 12),
           PressScale(
             onTap: () async {
+              var opened = false;
+              try {
+                opened = await launchUrl(
+                  target,
+                  mode: LaunchMode.externalApplication,
+                );
+              } on Object {
+                opened = false;
+              }
+              if (opened || !context.mounted) return;
               await Clipboard.setData(ClipboardData(text: copyText));
               if (context.mounted) {
                 showLpSnack(context, context.l10n.buddyLinkCopied);
@@ -227,6 +245,9 @@ class Under18Step extends ConsumerWidget {
           l10n.obUnder18TiqCta,
           volt: true,
           copyText: 'DITCHVAPE → 88709',
+          // Opens the messaging app with the shortcode and body prefilled;
+          // sending is still the reader's decision.
+          target: Uri.parse('sms:88709?body=DITCHVAPE'),
         ),
         const SizedBox(height: 12),
         resource(
@@ -234,6 +255,7 @@ class Under18Step extends ConsumerWidget {
           l10n.obUnder18MlmqBody,
           l10n.obUnder18MlmqCta,
           copyText: 'https://mylifemyquit.org',
+          target: Uri.parse('https://mylifemyquit.org'),
         ),
         const Spacer(),
         Text(

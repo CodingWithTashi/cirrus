@@ -483,6 +483,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     award('cleanWeekend', _hasCleanWeekend(s));
     award('halfNicotine', _isHalfNicotine(s));
     award('freedomDay', day > s.plan.totalDays && streak >= 1);
+    award('comeback', _hasComeback(s));
 
     return s.copyWith(
       longestStreak: longest,
@@ -490,6 +491,25 @@ class JourneyStore extends Notifier<JourneyState?> {
       earnedBadges: badges,
     );
   }
+
+  /// docs/03 §5 — the Comeback: a day over the limit, then straight back
+  /// under it the very next day.
+  ///
+  /// This badge shipped in the grid and was awarded by nothing. It sat
+  /// permanently grey and inflated the "N/17 earned" denominator for
+  /// everybody, so the one badge specifically about recovering from a bad day
+  /// was itself a small standing reproach.
+  ///
+  /// "The next day" is the whole point: the promise is that a slip costs you
+  /// one day and not the attempt, and a rule that let you claim it a week
+  /// later would be describing something else.
+  bool _hasComeback(JourneyState s) => s.days.values.any((over) {
+    if (!over.isOverLimit || !over.isConfirmed) return false;
+    final next = s.days[JourneyState.dateKey(
+      over.date.add(const Duration(days: 1)),
+    )];
+    return next != null && next.isConfirmed && !next.isOverLimit;
+  });
 
   bool _hasCleanWeekend(JourneyState s) => s.days.values.any((l) {
     if (l.date.weekday != DateTime.saturday) return false;
