@@ -54,7 +54,7 @@ export const FAQS = [
   },
   {
     q: 'How many puffs a day is a lot?',
-    a: 'There is no clean line, but the honest maths helps: roughly 14 puffs is about one cigarette, so 150 puffs a day is in the region of ten. Cirrus starts from whatever your real number is rather than a number it wishes you had.',
+    a: 'There is no clean line, but the honest maths helps: roughly 14 puffs is about one cigarette, so 150 puffs a day is in the region of ten. A puff counter only helps if it starts from your real number rather than one it wishes you had.',
   },
   {
     q: 'How many puffs are in a disposable vape?',
@@ -69,6 +69,18 @@ export const FAQS = [
     a: 'Nothing dramatic. A repair token absorbs one over-limit day so your streak dims instead of dying, and the plan stretches your Freedom Day rather than resetting you to day one. A slip is data, not failure.',
   },
   {
+    q: 'How long does vaping withdrawal last?',
+    a: 'The sharp part is usually the first week, peaking around days 3 to 5, with irritability, poor sleep and a short fuse. Most people find it has faded a lot by week two. Tapering exists precisely so you never hit that wall at full force — you walk down instead of falling off.',
+  },
+  {
+    q: 'What are the benefits of quitting vaping?',
+    a: 'Sleep and taste tend to come back first, usually within a couple of weeks. Breathing and stamina follow. The money is immediate and often the most motivating: whatever you spend a week, multiply by 52. We will not quote you a percentage we cannot source.',
+  },
+  {
+    q: 'What quit vaping methods actually work?',
+    a: 'Broadly three: cold turkey, tapering, and nicotine replacement. Cold turkey is fastest and has the lowest success rate. Tapering trades speed for a much higher chance of it sticking. NRT can support either. Cirrus is a taper app because that is the method most people can actually hold.',
+  },
+  {
     q: 'When is Cirrus available, and is it on iPhone?',
     a: 'Android first. iPhone is a fast-follow — it genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
   },
@@ -78,6 +90,6 @@ export const FAQS = [
   },
   {
     q: 'How is this different from Puff Count?',
-    a: 'Mostly honesty and price. We publish sources for every statistic, the free tier is not a lockout, and there is a real coach plus a community rather than a counter on its own. An in-depth comparison is coming to the blog.',
+    a: 'Mostly honesty and price. Most quit vaping apps are a vape tracker and little else. We publish sources for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own. A full comparison is coming to the blog.',
   },
 ] as const;

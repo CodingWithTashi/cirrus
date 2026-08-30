@@ -24,7 +24,8 @@ const screens = [
         <p class="micro micro--volt">Quit vaping · coming soon</p>
         <h1>Quit vaping without going <span class="accent">cold turkey</span>.</h1>
         <p class="hero__sub">
-          One bad Tuesday shouldn't cost you three weeks of progress.
+          The quit vaping app that tapers you down instead of demanding you stop dead.
+          One bad Tuesday shouldn't cost you three weeks.
         </p>
         <WaitlistForm source="hero" id="waitlist-hero" showCount />
       </div>
@@ -52,6 +53,7 @@ const screens = [
       <div class="section__head">
         <p class="micro">Inside the app</p>
         <h2 id="inside">Built already. Not a landing page with a dream.</h2>
+        <p>A puff counter, a taper plan, a coach for the cravings, and people on the same curve.</p>
       </div>
 
       <div class="screens">
@@ -59,7 +61,7 @@ const screens = [
           screens.map((s) => (
             <figure class="screen reveal">
               <div class="phone">
-                <img src={s.src} width="720" height="1474" loading="lazy" decoding="async" alt={`Cirrus — ${s.title}`} />
+                <img src={s.src} width="720" height="1474" loading="lazy" decoding="async" alt={`Cirrus quit vaping app — ${s.title}: ${s.caption}`} />
               </div>
               <figcaption><b>{s.title}</b>{s.caption}</figcaption>
             </figure>
@@ -131,7 +133,7 @@ const screens = [
   <section class="section cta-band" id="join" aria-labelledby="join-h">
     <div class="wrap">
       <p class="micro micro--volt">Still here? Good sign.</p>
-      <h2 id="join-h">Be there on day one.</h2>
+      <h2 id="join-h">Your last puff is closer than you think.</h2>
       <p>One email when it's ready. Nothing else, ever.</p>
       <WaitlistForm source="footer" id="waitlist-footer" cta="Join the waitlist" label="Get early access" />
     </div>

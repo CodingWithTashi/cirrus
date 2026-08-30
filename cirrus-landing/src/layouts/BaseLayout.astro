@@ -101,6 +101,11 @@ if (softwareApp) {
     applicationCategory: 'HealthApplication',
     operatingSystem: 'Android',
     contentRating: '17+',
+    alternateName: 'Cirrus — Quit Vaping',
+    // schema.org keywords is a real, read field — unlike <meta name="keywords">,
+    // which Google dropped in 2009 and Bing treats as a spam signal.
+    keywords:
+      'quit vaping, quit vaping app, stop vaping, puff counter, vape tracker, taper off vaping, vaping cravings, vaping withdrawal, nicotine',
     description: SITE_DESCRIPTION,
     url: Astro.site?.href,
     publisher: { '@id': org['@id'] },

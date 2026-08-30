@@ -8,7 +8,7 @@
 export const SITE_TITLE = 'Cirrus';
 export const SITE_TAGLINE = 'Quit vaping without going cold turkey';
 export const SITE_DESCRIPTION =
-  'Cirrus counts your real puffs and walks the number down slowly enough that your brain keeps up. A taper that bends when you slip — and no invented stats.';
+  'The quit vaping app that counts your real puffs and tapers them down to zero. No cold turkey, no day-one resets, and not a single invented statistic.';
 
 export const SITE_OG_IMAGE = '/og.png';
 export const SITE_LOCALE = 'en_US';
