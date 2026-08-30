@@ -6,6 +6,8 @@ publishedAt: 2026-08-30
 tags: ['puff count', 'research']
 draft: false
 medical: true
+author: Gurmey
+authorTitle: Content Writer
 image: /og/how-many-puffs-a-day-is-a-lot.png
 imageAlt: Four figures on a dark card - 14 puffs is roughly one cigarette, 76% vape within 30 minutes of waking, 41% vape 20 or more days a month, 27% vape daily
 

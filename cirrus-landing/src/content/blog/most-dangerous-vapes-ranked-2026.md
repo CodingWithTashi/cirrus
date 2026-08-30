@@ -6,6 +6,8 @@ publishedAt: 2026-08-30
 tags: ['vape safety', 'research']
 draft: false
 medical: true
+author: Gurmey
+authorTitle: Content Writer
 image: /og/most-dangerous-vapes-ranked-2026.png
 imageAlt: The five vape categories ranked one to five, colour-coded from critical red down to elevated green
 

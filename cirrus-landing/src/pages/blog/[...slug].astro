@@ -84,15 +84,13 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
           {author && (
             <p>
               <span class="byline__role">Written by</span>{' '}
-              <b>{author}</b>
-              {authorTitle && <span class="byline__title">, {authorTitle}</span>}
+              <b>{author}</b>{authorTitle && <span class="byline__title">, {authorTitle}</span>}
             </p>
           )}
           {reviewedBy && (
             <p>
               <span class="byline__role">Medically reviewed by</span>{' '}
-              <b>{reviewedBy}</b>
-              {reviewedByTitle && <span class="byline__title">, {reviewedByTitle}</span>}
+              <b>{reviewedBy}</b>{reviewedByTitle && <span class="byline__title">, {reviewedByTitle}</span>}
               {reviewedOn && (
                 <span class="byline__title">
                   {' '}· <time datetime={reviewedOn.toISOString()}>{formatDate(reviewedOn)}</time>

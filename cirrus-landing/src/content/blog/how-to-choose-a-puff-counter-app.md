@@ -6,6 +6,8 @@ publishedAt: 2026-08-30
 tags: ['puff count', 'quitting vaping']
 draft: false
 medical: true
+author: Gurmey
+authorTitle: Content Writer
 image: /og/how-to-choose-a-puff-counter-app.png
 imageAlt: Four numbered criteria on a dark card - your real number, sources you can check, adapts when you slip, a free tier that works
 

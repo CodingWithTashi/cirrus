@@ -6,6 +6,8 @@ publishedAt: 2026-08-30
 tags: ['puff count', 'vape safety']
 draft: false
 medical: true
+author: Gurmey
+authorTitle: Content Writer
 image: /og/how-many-puffs-in-a-disposable-vape.png
 imageAlt: Four figures on a dark card - 800mg of nicotine in one Geek Bar Pulse, 300 to 500 cigarette equivalent, 66% of youth vapers use disposables, 97.6% of sales unauthorized
 

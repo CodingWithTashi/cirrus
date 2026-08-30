@@ -6,6 +6,8 @@ publishedAt: 2026-08-30
 tags: ['quitting vaping', 'research']
 draft: false
 medical: true
+author: Gurmey
+authorTitle: Content Writer
 image: /og/how-long-does-vaping-withdrawal-last.png
 imageAlt: A timeline on a dark card - symptoms start 4 to 24 hours in, peak on day 2 to 3, physical symptoms ease by 10 days, mostly through it by 3 to 4 weeks
 
