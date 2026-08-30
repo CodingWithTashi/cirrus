@@ -645,3 +645,91 @@ Two harness lessons worth keeping:
 **Test coverage:** Flutter 81 · functions 47 · rules 35 · integration 67 — **230 tests**, from 0 runnable at session start.
 
 **Deployed:** 14 Cloud Functions, Firestore rules (three times — the second closed two live holes, the third took reaction counts away from clients), indexes.
+
+---
+
+## 16. THE "NOTHING WORKS" SESSION (Aug 30)
+
+Founder report: *"ai is not even working shows 'signal dropped mid…', nothing
+seems working at the moment."*
+
+**The backend was never broken.** All 16 functions were deployed with real
+traffic; Gemini had answered with real token counts and vector recall had
+worked (`nearest=0.348`) hours earlier. `flutter test` was 234/234 green and
+`npm run verify` 64/64.
+
+### The one cause, and why it looked like ten
+
+`AppCheck token was rejected` on `aiCoachChat`, `panicSession` and
+`syncUserContext`, in production logs, for every call from the device. Debug
+builds used `AndroidDebugProvider()`, whose secret **rotates on every
+install** — and `flutter test integration_test` uninstalls the app when it
+finishes, so a token registered after a run was already stale.
+
+Every callable sets `enforceAppCheck: true`, so the coach, panic, community
+and user-sync all died at the same gate. And a gen-2 callable answers a failed
+App Check with the same `unauthenticated` it uses for a missing user, which
+the client filed under `NoConnectionException` — so **Ember told users who
+were demonstrably online to try again once they reconnected**, and the real
+cause was never named on any screen or in any log.
+
+Fixed by pinning the debug secret (`AndroidDebugProvider` takes a `debugToken`,
+so it is pure Dart — no native factory) and by giving a refused build its own
+place in the taxonomy. `BackendRejectedException`, its own copy in five
+locales, `CoachTemplate.backendRejected`, and a launch-time diagnostic that
+prints whether a token was obtainable at all — which immediately earned itself
+by catching a Pixel dozing with network restricted.
+
+### Everything else was a last-hop disconnection
+
+The pattern in almost every remaining defect: a feature fully built, unit
+tested, and then discarding its own output one line from the finish.
+
+| Built | Discarded at | Effect |
+|---|---|---|
+| `ReminderPlanner` computes hour + minute, coordinator fingerprints them | `periodicallyShow` ignores both and repeats every 24h **from the call** | The danger-hour nudge fired at whatever moment the app last synced. Forever. |
+| Server stores both coach turns and feeds the model ten | Client returned an empty thread on build | Cold start looked like meeting Ember for the first time while it recalled last week |
+| `aiCoachChat` has a streaming branch and `sendChunk` | Client called the callable unary, so `acceptsStreaming` was always false | The most alive thing in the product arrived as a finished paragraph after a spinner |
+| `panicIntensity` + `PANIC_MODE_ADDENDUM` written and ready | No client ever sent it | A 9/10 craving got the same open-question register as a quiet Tuesday |
+| FCM token collected on every sign-in | Nothing ever read the field; no handlers; `onTokenRefresh` had zero subscribers | Push dead end to end, and a device identifier held for no reason |
+| Settings "Danger hours" editor persists a window | Nothing read it | The control controlled nothing |
+| `moderateReply` writes `moderation/{replyId}` | Queue hydrated from the parent post; resolve wrote `moderation/{postId}` | Reply flags showed the wrong content, could never be resolved, returned daily |
+
+### Invented numbers, again
+
+- `_sosBackupBase = 17` — a constant floor under "N people have your back", on
+  the one screen whose value is that somebody real is there. Now replies +
+  reactions, hidden at zero.
+- `replyingNow: tag == sos ? 3 : 0` — your own new post claimed three people
+  were replying. The field is deleted: no backend could ever compute it.
+- The reply flag was `showLpSnack('Reported')` with no repository call, under a
+  comment reading "flagging a reply is one tap" — on the one surface
+  Guideline 1.2 is actually about.
+
+### Ship blockers found on the way
+
+- **The frame map shipped to users.** Reachable from Settings and from the
+  sign-in screen *before anyone signs in*; it seeds the demo day-12 fixture for
+  anyone without a journey, which then syncs to Firestore. Now `kDebugMode`.
+- **Registering orphaned the guest.** `register()` created a fresh account
+  instead of linking the anonymous one, stranding the whole 19-step journey.
+- **The Comeback badge was awarded by nothing** and inflated the "N/17" figure.
+- **Under-18 resources copied a string to the clipboard** instead of opening.
+
+### Verified
+
+| What | Result |
+|---|---|
+| `f_firebase_backend_test` against production | **10/10**, three runs |
+| Streaming reached production | `coach.turn` logging `streaming=True` with real token counts — a path that previously logged nothing at all |
+| App Check rejections after the fix | **zero** |
+| Flutter unit + widget | **279** (from 234) |
+| Functions pure suite | **76** (from 64) |
+
+**Still open, and honestly so:** billing remains out of scope by founder
+decision (`ENTITLEMENT_MODE=ungated`); rules (42) and functions-integration
+(72) run in CI only, because there is no Java on the dev machine; the
+moderation queue cannot be opened on a device until the `admin` claim is
+granted; Terms and Privacy stay plain text until the policy pages exist,
+because a link to a 404 looks like the document exists.
+
