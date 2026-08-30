@@ -36,3 +36,35 @@ pick `preview` or `production`. Nothing deploys on push.
 3. After the first production run: Pages project → **Custom domains** → add
    `cirrusquit.com` (and `www`). The domain is attached in the dashboard, not
    from `wrangler.jsonc`, so it survives deploys.
+
+## SEO notes
+
+The `<head>` is owned by `src/layouts/BaseLayout.astro` — canonical, Open Graph,
+Twitter card and JSON-LD all derive from `src/consts.ts` and the page's props.
+`public/_headers` sets edge caching and security headers; the fingerprinted
+`/_astro/*` assets are `immutable` for a year.
+
+Verified live: `http`→`https` 301, `/page.html` and `/page/` both 308 to the
+clean URL, Googlebot and Bingbot unblocked, Brotli active, sitemap carries
+`<lastmod>` for posts.
+
+### Known gap: www does not redirect
+
+`www.cirrusquit.com` serves the site rather than 301-ing to the apex. Every page
+canonicalises to the apex, so Google consolidates them and this is not costing
+rankings — but a redirect is the stronger signal.
+
+Cloudflare Pages `_redirects` cannot fix it: it matches on path only, so a rule
+whose source is a full URL is parsed and ignored with no error. It needs a
+zone-level **Redirect Rule** (dashboard → cirrusquit.com → Rules → Redirect
+Rules → Create):
+
+- If: `hostname` equals `www.cirrusquit.com`
+- Then: dynamic redirect to `concat("https://cirrusquit.com", http.request.uri.path)`, status 301, preserve query string
+
+### Cloudflare managed robots.txt
+
+The zone injects its own `robots.txt` block above the generated one, blocking
+GPTBot, ClaudeBot, Google-Extended, CCBot and others (`ai-train=no`). Search
+crawlers are explicitly allowed, so indexing is unaffected — but posts will not
+be usable as AI training data or cited in AI answers. Toggle in AI Crawl Control.

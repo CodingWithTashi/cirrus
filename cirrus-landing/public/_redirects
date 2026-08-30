@@ -1,4 +1,0 @@
-# One canonical host. Both www and the apex resolve to this project, and while
-# every page's canonical tag already points at the apex, a 301 is a stronger and
-# simpler signal than asking crawlers to trust the tag.
-https://www.cirrusquit.com/* https://cirrusquit.com/:splat 301
