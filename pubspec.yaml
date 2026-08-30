@@ -46,6 +46,8 @@ dependencies:
   # Needed by flutter_local_notifications' zonedSchedule: a repeating daily
   # alarm has to be anchored in a real timezone, or DST silently shifts it.
   timezone: ^0.11.1
+  flutter_launcher_icons: ^0.14.4
+  amplitude_flutter: ^4.7.1
 
 dev_dependencies:
   flutter_test:
@@ -78,3 +80,40 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+
+# Launcher icons — regenerate with `dart run flutter_launcher_icons` after
+# changing any source art below. The generated files under android/ios are
+# committed, so this only needs to run when the art changes.
+#
+# Two things the generator does that must be undone afterwards: it rewrites
+# ios/Runner.xcodeproj/project.pbxproj, clobbering
+# ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS from YES to
+# "AppIcon" (a loose match on the ASSETCATALOG_COMPILER_ prefix — the real
+# APPICON_NAME setting is already correct, so just `git checkout` that file),
+# and it minifies AppIcon.appiconset/Contents.json onto one line.
+flutter_launcher_icons:
+  # Full artwork: legacy Android mipmaps + every iOS size.
+  image_path: "assets/images/cirrus.png"
+  android: "ic_launcher"
+  min_sdk_android: 21
+
+  # Adaptive icon (Android 8+). The artwork's own corners are exactly #0A0C10,
+  # so a matching flat background makes the inset seam invisible under every
+  # launcher mask — the art square is clipped by the mask, but only ever against
+  # its own colour. The inset is not cosmetic: the mark spans 90% of the source
+  # height and the small dot sits on the art's circumscribed circle, so at the
+  # default inset a round mask cuts the swirl's tail and the dot. 21% lands the
+  # whole mark inside the 66dp circle Android guarantees is never masked.
+  adaptive_icon_background: "#0A0C10"
+  adaptive_icon_foreground: "assets/images/cirrus.png"
+  adaptive_icon_foreground_inset: 21
+
+  # Themed icon (Android 13+): a solid silhouette of the swirl, generated from
+  # the artwork by high-passing the glow away. Without it, themed launchers fall
+  # back to the colour icon.
+  adaptive_icon_monochrome: "assets/images/cirrus_monochrome.png"
+
+  ios: true
+  # App Store rejects an icon with an alpha channel; the source has none today,
+  # but this keeps that true if the art is ever re-exported with one.
+  remove_alpha_ios: true
