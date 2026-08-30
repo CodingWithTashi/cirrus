@@ -7,15 +7,11 @@
   "commonCancel": "Annuler",
   "commonDone": "Terminé",
   "commonSave": "Enregistrer",
-  "commonRetry": "Réessayer",
   "commonUndo": "Annuler",
   "commonEdit": "Modifier",
   "commonClose": "Fermer",
   "commonNotNow": "Pas maintenant",
   "commonMaybeLater": "Plus tard",
-  "commonOfflineBanner": "Hors ligne — tes taffes sont enregistrées sur ton téléphone et se synchronisent au retour.",
-  "commonErrorTitle": "Petit couac.",
-  "commonErrorBody": "Tes données vont bien. Touche pour réessayer.",
   "commonDayN": "jour {day}",
   "authSignInTitle": "On met ton plan\nen sécurité.",
   "authSignInSubtitle": "Anonyme par défaut — tu choisiras un alias pour la communauté.",
@@ -634,5 +630,10 @@
   "seedReplyGatorade": "achète un soda à la place. achat cérémoniel. ça marche bizarrement bien",
   "seedReplyUpdate": "update : soda acheté. je rentre à pied. merci, sincèrement 💙",
   "dangerReminderTitle": "Ton heure à risque approche",
-  "dangerReminderBody": "C'est souvent maintenant que ça frappe. Tu as un plan, et 15 minutes suffisent."
+  "dangerReminderBody": "C'est souvent maintenant que ça frappe. Tu as un plan, et 15 minutes suffisent.",
+  "communityLoading": "On charge le fil…",
+  "memoriesLoading": "On regarde ce qu'Ember a retenu…",
+  "coachLoadingThread": "On récupère votre conversation…",
+  "moderationLoading": "Chargement de la file…",
+  "authWorking": "Une seconde…"
 }

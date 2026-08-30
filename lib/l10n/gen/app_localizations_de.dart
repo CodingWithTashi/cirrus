@@ -32,9 +32,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonSave => 'Speichern';
 
   @override
-  String get commonRetry => 'Erneut versuchen';
-
-  @override
   String get commonUndo => 'Rückgängig';
 
   @override
@@ -48,17 +45,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get commonMaybeLater => 'Vielleicht später';
-
-  @override
-  String get commonOfflineBanner =>
-      'Offline — deine Züge werden lokal gespeichert und später synchronisiert.';
-
-  @override
-  String get commonErrorTitle => 'Kurzer Schluckauf.';
-
-  @override
-  String get commonErrorBody =>
-      'Deinen Daten geht\'s gut. Tippe zum Wiederholen.';
 
   @override
   String commonDayN(int day) {
@@ -2240,4 +2226,19 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get dangerReminderBody =>
       'Genau jetzt wird es meist hart. Du hast einen Plan — 15 Minuten reichen.';
+
+  @override
+  String get communityLoading => 'Feed wird geladen…';
+
+  @override
+  String get memoriesLoading => 'Mal sehen, was Ember behalten hat…';
+
+  @override
+  String get coachLoadingThread => 'Wir holen euren Chat…';
+
+  @override
+  String get moderationLoading => 'Warteschlange wird geladen…';
+
+  @override
+  String get authWorking => 'Einen Moment…';
 }

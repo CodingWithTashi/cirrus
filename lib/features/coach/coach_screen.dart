@@ -8,6 +8,7 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/journey_state.dart';
@@ -203,7 +204,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             ),
             // Thread.
             Expanded(
-              child: ListView(
+              child: coach.isRestoring && coach.messages.isEmpty
+                  // Restoring the transcript is a different wait from Ember
+                  // thinking, and saying which one it is costs nothing.
+                  ? LpLoadingState(label: l10n.coachLoadingThread)
+                  : ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 children: [

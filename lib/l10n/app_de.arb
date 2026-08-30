@@ -7,15 +7,11 @@
   "commonCancel": "Abbrechen",
   "commonDone": "Fertig",
   "commonSave": "Speichern",
-  "commonRetry": "Erneut versuchen",
   "commonUndo": "Rückgängig",
   "commonEdit": "Bearbeiten",
   "commonClose": "Schließen",
   "commonNotNow": "Jetzt nicht",
   "commonMaybeLater": "Vielleicht später",
-  "commonOfflineBanner": "Offline — deine Züge werden lokal gespeichert und später synchronisiert.",
-  "commonErrorTitle": "Kurzer Schluckauf.",
-  "commonErrorBody": "Deinen Daten geht's gut. Tippe zum Wiederholen.",
   "commonDayN": "Tag {day}",
   "authSignInTitle": "Bringen wir deinen\nPlan in Sicherheit.",
   "authSignInSubtitle": "Standardmäßig anonym — für die Community wählst du einen Alias.",
@@ -634,5 +630,10 @@
   "seedReplyGatorade": "kauf dir stattdessen ein Gatorade. zeremonieller Kauf. funktioniert seltsam gut",
   "seedReplyUpdate": "Update: Gatorade gekauft. laufe nach Hause. danke, ehrlich 💙",
   "dangerReminderTitle": "Deine kritische Stunde kommt",
-  "dangerReminderBody": "Genau jetzt wird es meist hart. Du hast einen Plan — 15 Minuten reichen."
+  "dangerReminderBody": "Genau jetzt wird es meist hart. Du hast einen Plan — 15 Minuten reichen.",
+  "communityLoading": "Feed wird geladen…",
+  "memoriesLoading": "Mal sehen, was Ember behalten hat…",
+  "coachLoadingThread": "Wir holen euren Chat…",
+  "moderationLoading": "Warteschlange wird geladen…",
+  "authWorking": "Einen Moment…"
 }

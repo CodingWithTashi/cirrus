@@ -146,12 +146,6 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get commonSave;
 
-  /// No description provided for @commonRetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get commonRetry;
-
   /// No description provided for @commonUndo.
   ///
   /// In en, this message translates to:
@@ -181,24 +175,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Maybe later'**
   String get commonMaybeLater;
-
-  /// No description provided for @commonOfflineBanner.
-  ///
-  /// In en, this message translates to:
-  /// **'Offline — logs saved on your phone, syncing when you\'re back.'**
-  String get commonOfflineBanner;
-
-  /// No description provided for @commonErrorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Something hiccuped.'**
-  String get commonErrorTitle;
-
-  /// No description provided for @commonErrorBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Your data is fine. Tap to retry.'**
-  String get commonErrorBody;
 
   /// No description provided for @commonDayN.
   ///
@@ -3913,6 +3889,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This is usually when it hits. You\'ve got a plan — and 15 minutes beats it.'**
   String get dangerReminderBody;
+
+  /// No description provided for @communityLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Pulling in the feed…'**
+  String get communityLoading;
+
+  /// No description provided for @memoriesLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking what Ember kept…'**
+  String get memoriesLoading;
+
+  /// No description provided for @coachLoadingThread.
+  ///
+  /// In en, this message translates to:
+  /// **'Catching up on your chat…'**
+  String get coachLoadingThread;
+
+  /// No description provided for @moderationLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the queue…'**
+  String get moderationLoading;
+
+  /// No description provided for @authWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'One sec…'**
+  String get authWorking;
 }
 
 class _AppLocalizationsDelegate

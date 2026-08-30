@@ -33,9 +33,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commonSave => 'Enregistrer';
 
   @override
-  String get commonRetry => 'Réessayer';
-
-  @override
   String get commonUndo => 'Annuler';
 
   @override
@@ -49,16 +46,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get commonMaybeLater => 'Plus tard';
-
-  @override
-  String get commonOfflineBanner =>
-      'Hors ligne — tes taffes sont enregistrées sur ton téléphone et se synchronisent au retour.';
-
-  @override
-  String get commonErrorTitle => 'Petit couac.';
-
-  @override
-  String get commonErrorBody => 'Tes données vont bien. Touche pour réessayer.';
 
   @override
   String commonDayN(int day) {
@@ -2234,4 +2221,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get dangerReminderBody =>
       'C\'est souvent maintenant que ça frappe. Tu as un plan, et 15 minutes suffisent.';
+
+  @override
+  String get communityLoading => 'On charge le fil…';
+
+  @override
+  String get memoriesLoading => 'On regarde ce qu\'Ember a retenu…';
+
+  @override
+  String get coachLoadingThread => 'On récupère votre conversation…';
+
+  @override
+  String get moderationLoading => 'Chargement de la file…';
+
+  @override
+  String get authWorking => 'Une seconde…';
 }

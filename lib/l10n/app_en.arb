@@ -14,15 +14,11 @@
   "commonCancel": "Cancel",
   "commonDone": "Done",
   "commonSave": "Save",
-  "commonRetry": "Retry",
   "commonUndo": "Undo",
   "commonEdit": "Edit",
   "commonClose": "Close",
   "commonNotNow": "Not now",
   "commonMaybeLater": "Maybe later",
-  "commonOfflineBanner": "Offline — logs saved on your phone, syncing when you're back.",
-  "commonErrorTitle": "Something hiccuped.",
-  "commonErrorBody": "Your data is fine. Tap to retry.",
   "commonDayN": "day {day}",
   "@commonDayN": {
     "placeholders": {
@@ -1359,5 +1355,10 @@
   },
   "@dangerReminderBody": {
     "description": "Body of the danger-hour reminder. Cites the 15-20 minute craving fact from docs/02 §8 — an approved stat."
-  }
+  },
+  "communityLoading": "Pulling in the feed…",
+  "memoriesLoading": "Checking what Ember kept…",
+  "coachLoadingThread": "Catching up on your chat…",
+  "moderationLoading": "Loading the queue…",
+  "authWorking": "One sec…"
 }

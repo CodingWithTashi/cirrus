@@ -6,6 +6,7 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
@@ -55,8 +56,8 @@ class ModerationScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: switch (state.status) {
-          ModerationStatus.loading => const Center(
-            child: CircularProgressIndicator(),
+          ModerationStatus.loading => LpLoadingState(
+            label: l10n.moderationLoading,
           ),
           // A failed load must never render as an empty queue: "nothing to
           // review" and "we could not look" are the same picture and very

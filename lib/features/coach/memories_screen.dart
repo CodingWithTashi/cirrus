@@ -6,6 +6,7 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
@@ -39,7 +40,7 @@ class CoachMemoriesScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: memories.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => LpLoadingState(label: l10n.memoriesLoading),
           // A failed load must not read as "Ember remembers nothing" — that is
           // a reassuring answer to an unanswered question.
           error: (_, _) => LpErrorState(

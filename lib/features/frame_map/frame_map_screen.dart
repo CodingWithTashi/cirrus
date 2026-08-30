@@ -8,7 +8,9 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../onboarding/onboarding_view_model.dart';
@@ -302,11 +304,28 @@ class EdgeStatesPreviewScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
-            const SectionLabel('Offline'),
-            const LpOfflineBanner(),
-            const SizedBox(height: 20),
+            // The real surfaces, not lookalikes. This screen used to preview
+            // `LpOfflineBanner` and `LpErrorCard` — a second, blander copy of
+            // the error voice that nothing else in the app rendered, so the
+            // design system showed one thing and users saw another.
             const SectionLabel('Error + retry'),
-            LpErrorCard(onRetry: () {}),
+            LpErrorState(
+              emoji: '📡',
+              title: l10n.errorFeedTitle,
+              body: l10n.errorFeedBody,
+              retryLabel: l10n.errorRetry,
+              onRetry: () {},
+            ),
+            const SizedBox(height: 20),
+            const SectionLabel('Loading'),
+            LpLoadingState(label: l10n.communityLoading),
+            const SizedBox(height: 20),
+            const SectionLabel('Empty'),
+            LpEmptyState(
+              emoji: '📈',
+              title: l10n.statsEmptyTitle,
+              body: l10n.statsEmptyBody,
+            ),
             const SizedBox(height: 20),
             SectionLabel(l10n.statsTitle),
             LpCard(

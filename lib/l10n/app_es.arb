@@ -7,15 +7,11 @@
   "commonCancel": "Cancelar",
   "commonDone": "Listo",
   "commonSave": "Guardar",
-  "commonRetry": "Reintentar",
   "commonUndo": "Deshacer",
   "commonEdit": "Editar",
   "commonClose": "Cerrar",
   "commonNotNow": "Ahora no",
   "commonMaybeLater": "Quizá luego",
-  "commonOfflineBanner": "Sin conexión — tus registros se guardan en el teléfono y se sincronizan al volver.",
-  "commonErrorTitle": "Algo falló un segundo.",
-  "commonErrorBody": "Tus datos están bien. Toca para reintentar.",
   "commonDayN": "día {day}",
   "authSignInTitle": "Vamos a proteger\ntu plan.",
   "authSignInSubtitle": "Anónimo por defecto — elegirás un alias para la comunidad.",
@@ -634,5 +630,10 @@
   "seedReplyGatorade": "cómprate un gatorade en su lugar. compra ceremonial. funciona sorprendentemente bien",
   "seedReplyUpdate": "actualización: compré el gatorade. caminando a casa. gracias, en serio 💙",
   "dangerReminderTitle": "Se acerca tu hora crítica",
-  "dangerReminderBody": "Suele ser ahora cuando aprieta. Tienes un plan, y 15 minutos lo superan."
+  "dangerReminderBody": "Suele ser ahora cuando aprieta. Tienes un plan, y 15 minutos lo superan.",
+  "communityLoading": "Cargando el feed…",
+  "memoriesLoading": "Viendo qué guardó Ember…",
+  "coachLoadingThread": "Recuperando tu conversación…",
+  "moderationLoading": "Cargando la cola…",
+  "authWorking": "Un segundo…"
 }

@@ -32,9 +32,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonSave => 'Guardar';
 
   @override
-  String get commonRetry => 'Reintentar';
-
-  @override
   String get commonUndo => 'Deshacer';
 
   @override
@@ -48,16 +45,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get commonMaybeLater => 'Quizá luego';
-
-  @override
-  String get commonOfflineBanner =>
-      'Sin conexión — tus registros se guardan en el teléfono y se sincronizan al volver.';
-
-  @override
-  String get commonErrorTitle => 'Algo falló un segundo.';
-
-  @override
-  String get commonErrorBody => 'Tus datos están bien. Toca para reintentar.';
 
   @override
   String commonDayN(int day) {
@@ -2232,4 +2219,19 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get dangerReminderBody =>
       'Suele ser ahora cuando aprieta. Tienes un plan, y 15 minutos lo superan.';
+
+  @override
+  String get communityLoading => 'Cargando el feed…';
+
+  @override
+  String get memoriesLoading => 'Viendo qué guardó Ember…';
+
+  @override
+  String get coachLoadingThread => 'Recuperando tu conversación…';
+
+  @override
+  String get moderationLoading => 'Cargando la cola…';
+
+  @override
+  String get authWorking => 'Un segundo…';
 }

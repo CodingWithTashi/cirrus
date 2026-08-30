@@ -7,15 +7,11 @@
   "commonCancel": "Cancelar",
   "commonDone": "Feito",
   "commonSave": "Guardar",
-  "commonRetry": "Tentar de novo",
   "commonUndo": "Desfazer",
   "commonEdit": "Editar",
   "commonClose": "Fechar",
   "commonNotNow": "Agora não",
   "commonMaybeLater": "Talvez depois",
-  "commonOfflineBanner": "Offline — os teus registos ficam no telemóvel e sincronizam quando voltares.",
-  "commonErrorTitle": "Houve um soluço.",
-  "commonErrorBody": "Os teus dados estão bem. Toca para tentar de novo.",
   "commonDayN": "dia {day}",
   "authSignInTitle": "Vamos pôr o teu plano\nem segurança.",
   "authSignInSubtitle": "Anónimo por defeito — vais escolher um alias para a comunidade.",
@@ -634,5 +630,10 @@
   "seedReplyGatorade": "compra antes um gatorade. compra cerimonial. funciona estranhamente bem",
   "seedReplyUpdate": "update: comprei o gatorade. a caminhar para casa. obrigado, a sério 💙",
   "dangerReminderTitle": "A tua hora crítica está a chegar",
-  "dangerReminderBody": "É normalmente agora que aperta. Tens um plano, e 15 minutos chegam."
+  "dangerReminderBody": "É normalmente agora que aperta. Tens um plano, e 15 minutos chegam.",
+  "communityLoading": "A carregar o feed…",
+  "memoriesLoading": "A ver o que o Ember guardou…",
+  "coachLoadingThread": "A recuperar a tua conversa…",
+  "moderationLoading": "A carregar a fila…",
+  "authWorking": "Um segundo…"
 }

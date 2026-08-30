@@ -8,6 +8,7 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
@@ -109,18 +110,18 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             ),
             const SizedBox(height: 10),
             Expanded(
+              // Post-shaped skeletons rather than a spinner: the feed keeps
+              // its layout, so nothing jumps when the real posts land.
               child: posts.isEmpty && community.status == FeedStatus.loading
-                  ? Center(
-                      child: SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            lp.textFaint,
-                          ),
-                        ),
-                      ),
+                  ? ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                      children: const [
+                        _FeedSkeleton(),
+                        SizedBox(height: 14),
+                        _FeedSkeleton(),
+                        SizedBox(height: 14),
+                        _FeedSkeleton(),
+                      ],
                     )
                   : posts.isEmpty && community.status == FeedStatus.failed
                   ? LpErrorState(
@@ -879,4 +880,28 @@ class _ReplyBubble extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// A post-shaped placeholder for the feed's first load.
+class _FeedSkeleton extends StatelessWidget {
+  const _FeedSkeleton();
+
+  @override
+  Widget build(BuildContext context) => LpCard(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Row(
+          children: [
+            LpSkeleton(height: 34, width: 34, radius: 17),
+            SizedBox(width: 10),
+            LpSkeleton(height: 12, width: 96, radius: 6),
+          ],
+        ),
+        SizedBox(height: 14),
+        LpSkeletonLines(count: 2),
+      ],
+    ),
+  );
 }

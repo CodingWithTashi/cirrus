@@ -32,9 +32,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonSave => 'Guardar';
 
   @override
-  String get commonRetry => 'Tentar de novo';
-
-  @override
   String get commonUndo => 'Desfazer';
 
   @override
@@ -48,17 +45,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commonMaybeLater => 'Talvez depois';
-
-  @override
-  String get commonOfflineBanner =>
-      'Offline — os teus registos ficam no telemóvel e sincronizam quando voltares.';
-
-  @override
-  String get commonErrorTitle => 'Houve um soluço.';
-
-  @override
-  String get commonErrorBody =>
-      'Os teus dados estão bem. Toca para tentar de novo.';
 
   @override
   String commonDayN(int day) {
@@ -2232,4 +2218,19 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get dangerReminderBody =>
       'É normalmente agora que aperta. Tens um plano, e 15 minutos chegam.';
+
+  @override
+  String get communityLoading => 'A carregar o feed…';
+
+  @override
+  String get memoriesLoading => 'A ver o que o Ember guardou…';
+
+  @override
+  String get coachLoadingThread => 'A recuperar a tua conversa…';
+
+  @override
+  String get moderationLoading => 'A carregar a fila…';
+
+  @override
+  String get authWorking => 'Um segundo…';
 }
