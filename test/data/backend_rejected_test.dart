@@ -27,11 +27,17 @@ class _Fx extends FirebaseFunctionsException {
 
 class _RejectingCoach implements CoachRepository {
   @override
-  Future<CoachReply> requestReply({
+  Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
-  }) async => throw const BackendRejectedException();
+    int? panicIntensity,
+  }) async* {
+    throw const BackendRejectedException();
+  }
+
+  @override
+  Future<List<CoachMessage>> history() async => const [];
 
   @override
   Future<List<CoachMemory>> memories() async => const [];

@@ -529,7 +529,8 @@ class _BreakLoopStep extends ConsumerWidget {
     // option stays on screen and routes to the paywall instead of
     // disappearing, because a door that vanishes mid-craving reads as the app
     // giving up on you.
-    final aiAvailable = ref.watch(panicProvider).availability.aiAvailable;
+    final session = ref.watch(panicProvider);
+    final aiAvailable = session.availability.aiAvailable;
 
     Widget option({
       required Widget icon,
@@ -631,8 +632,13 @@ class _BreakLoopStep extends ConsumerWidget {
             sub: aiAvailable
                 ? l10n.panicLoopCoachSub(hourLabel)
                 : l10n.panicLoopCoachLocked,
-            onTap: () =>
-                aiAvailable ? context.go(Routes.coach) : context.push(Routes.paywall),
+            // The intensity rides along: `aiCoachChat` switches to its short,
+            // directive PANIC MODE voice when it is present, and until now no
+            // client ever sent it — so Ember answered a 9/10 craving in the
+            // same open-question register it uses for a quiet Tuesday.
+            onTap: () => aiAvailable
+                ? context.go('${Routes.coach}?panic=${session.intensity}')
+                : context.push(Routes.paywall),
           ),
           const Spacer(),
           const Center(child: _CravingTimer(late: true)),

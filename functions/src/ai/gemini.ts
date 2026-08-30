@@ -8,6 +8,7 @@ import type {
   EmbeddingTask,
   GenerateRequest,
   GenerateResult,
+  StreamEvent,
   TextModel,
 } from './model';
 
@@ -101,7 +102,7 @@ export function geminiModel(apiKey: string): TextModel {
       }
     },
 
-    async *generateStream(request: GenerateRequest): AsyncIterable<string> {
+    async *generateStream(request: GenerateRequest): AsyncIterable<StreamEvent> {
       let stream;
       try {
         stream = await withTimeout(
@@ -114,12 +115,30 @@ export function geminiModel(apiKey: string): TextModel {
       } catch (error) {
         throw new ModelUnavailableError(error);
       }
-      // Errors mid-stream surface to the handler, which has already sent a
-      // typing indicator — it swaps in the fallback line.
-      for await (const chunk of stream) {
-        const text = chunk.text;
-        if (text) yield text;
+
+      // Mid-stream failures are wrapped like every other provider failure.
+      // Left raw, they escaped the handler's `instanceof ModelUnavailableError`
+      // check and surfaced as an unhandled `internal` — so a connection that
+      // dropped halfway through a sentence became a red error instead of
+      // Ember's warm fallback, and burned the user's message with it.
+      let usage: {inputTokens: number; outputTokens: number} | null = null;
+      try {
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) yield {type: 'text', text};
+          // Usage arrives on the final chunks; keep the last one we see.
+          const meta = chunk.usageMetadata;
+          if (meta) {
+            usage = {
+              inputTokens: meta.promptTokenCount ?? 0,
+              outputTokens: meta.candidatesTokenCount ?? 0,
+            };
+          }
+        }
+      } catch (error) {
+        throw new ModelUnavailableError(error);
       }
+      if (usage) yield {type: 'usage', ...usage};
     },
   };
 }

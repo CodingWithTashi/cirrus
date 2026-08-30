@@ -15,7 +15,10 @@ import '../../domain/models/models.dart';
 
 /// Frame 36 — Ember's chat. Cites the user's own data, never generic advice.
 class CoachScreen extends ConsumerStatefulWidget {
-  const CoachScreen({super.key});
+  const CoachScreen({super.key, this.panicIntensity});
+
+  /// 1–10 when the panic flow routed here, else null. See the coach route.
+  final int? panicIntensity;
 
   @override
   ConsumerState<CoachScreen> createState() => _CoachScreenState();
@@ -25,12 +28,27 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
+  /// Rides on the next message only: the craving that opened this screen is
+  /// context for what the user is about to say, not a permanent mode.
+  int? _panicIntensity;
+
   @override
   void initState() {
     super.initState();
+    _panicIntensity = widget.panicIntensity;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(coachStoreProvider.notifier).seedGreetingIfEmpty();
+      // Pull the stored transcript first; the greeting is what you get when
+      // there is genuinely nothing to continue. Seeding unconditionally is why
+      // reopening the app used to look like meeting Ember for the first time.
+      ref.read(coachStoreProvider.notifier).restoreHistory();
     });
+  }
+
+  @override
+  void didUpdateWidget(CoachScreen old) {
+    super.didUpdateWidget(old);
+    final next = widget.panicIntensity;
+    if (next != null && next != old.panicIntensity) _panicIntensity = next;
   }
 
   @override
@@ -125,8 +143,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final store = ref.read(coachStoreProvider.notifier);
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
-    final freeLeft = store.freeMessagesLeftToday;
-    final showCounter = !(journey?.profile.isPremium ?? true);
+    // The counter shows only what the server has actually told us it is
+    // enforcing. Before that it shows nothing — a number nobody stands behind
+    // is worse than no number.
+    final freeLeft = coach.messagesLeft ?? 0;
+    final showCounter = store.showsAllowance;
 
     ref.listen(coachStoreProvider, (_, _) => _scrollToEnd());
 
@@ -272,11 +293,6 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                         ),
                       ),
                     ),
-                    Icon(
-                      Icons.mic_none_rounded,
-                      color: lp.textSecondary,
-                      size: 20,
-                    ),
                     const SizedBox(width: 6),
                     PressScale(
                       onTap: _send,
@@ -317,7 +333,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     _input.clear();
-    setState(() {});
+    final panic = _panicIntensity;
+    setState(() => _panicIntensity = null);
     final store = ref.read(coachStoreProvider.notifier);
     // A prefilled chip sent unedited keeps its protocol routing in every
     // locale (the keyword matcher is a demo-only English heuristic).
@@ -325,8 +342,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       (chip) => _chipLabel(context, chip.index) == text,
     );
     chipIndex == -1
-        ? store.send(text)
-        : store.sendChip(CoachChip.values[chipIndex]);
+        ? store.send(text, panicIntensity: panic)
+        : store.sendChip(CoachChip.values[chipIndex], panicIntensity: panic);
   }
 }
 

@@ -86,11 +86,31 @@ abstract interface class PanicRepository {
 
 /// Ember — the backend decides *what* to say ([CoachReply]); views localize.
 abstract interface class CoachRepository {
-  Future<CoachReply> requestReply({
+  /// Ember's turn, streamed.
+  ///
+  /// A stream rather than a future because the answer exists progressively and
+  /// waiting for the last token before showing the first is a choice, not a
+  /// constraint. Implementations that cannot stream emit one [CoachChunk] and
+  /// then [CoachDone]; the store handles both without knowing which it got.
+  ///
+  /// [panicIntensity] (1–10) is set only from the panic flow. The server
+  /// switches to its short, directive PANIC MODE voice when it is present —
+  /// mid-craving is no time for Ember to ask an open question.
+  Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
+    int? panicIntensity,
   });
+
+  /// Everything already said in this thread, oldest first.
+  ///
+  /// The server has always kept the transcript — it feeds the model the last
+  /// turns of context — but the client never read it back, so closing the app
+  /// wiped the visible conversation while Ember carried on remembering it.
+  /// A coach that recalls what you said last week, in a thread that forgets
+  /// what you said five minutes ago, reads as broken rather than personal.
+  Future<List<CoachMessage>> history();
 
   /// Everything Ember remembers about this user, newest first.
   ///

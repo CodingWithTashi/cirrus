@@ -185,7 +185,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.coach,
-                builder: (_, _) => const CoachScreen(),
+                // `?panic=8` arrives from the panic flow and puts Ember in its
+                // short, directive PANIC MODE voice for the next message. Read
+                // here rather than in the widget so the screen has no router
+                // dependency — it is also built directly by the frame map and
+                // by widget tests.
+                builder: (_, state) => CoachScreen(
+                  panicIntensity: int.tryParse(
+                    state.uri.queryParameters['panic'] ?? '',
+                  ),
+                ),
               ),
             ],
           ),

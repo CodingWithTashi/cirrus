@@ -44,11 +44,11 @@ import {
   worthExtracting,
   type MemoryKind,
 } from '../lib/memories';
-import {coachMessages, db, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
+import {coachMessages, FieldValue, journeyDoc} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log, safeMeta} from '../lib/logger';
-import {claimCoachMessage, tierFor} from '../lib/usage';
-import {COACH_CHIPS, type CoachChip, type CoachTemplate} from '../domain/types';
+import {claimCoachMessage, refundCoachMessage, tierFor} from '../lib/usage';
+import {COACH_CHIPS, type CoachChip, type CoachTemplate, type SubscriptionTier} from '../domain/types';
 
 const MAX_MESSAGE_CHARS = 1000;
 
@@ -57,6 +57,18 @@ interface CoachReplyEnvelope {
   args: Record<string, string | number>;
   showWeekCard: boolean;
   text?: string;
+  /**
+   * Messages left today, and the tier that number belongs to.
+   *
+   * The client used to count this itself: an in-memory int, reset on every
+   * launch, with no midnight rollover, derived from a `profile.tier` the
+   * client wrote into its own journey doc. It could disagree with the server
+   * in both directions — greying the composer while the server would happily
+   * answer, or promising messages the server would refuse. The only side that
+   * knows is the side that enforces it.
+   */
+  messagesLeft?: number;
+  tier?: SubscriptionTier;
 }
 
 export const aiCoachChat = onCall(
@@ -97,8 +109,15 @@ export const aiCoachChat = onCall(
     const quota = await claimCoachMessage(caller.uid, card.todayKey, limit);
     if (!quota.allowed) {
       // docs/04 §7 — kind cap copy, and zero model spend.
-      return {template: 'capReached', args: {limit}, showWeekCard: false};
+      return {
+        template: 'capReached',
+        args: {limit},
+        showWeekCard: false,
+        messagesLeft: 0,
+        tier,
+      };
     }
+    const messagesLeft = Math.max(0, limit - quota.used);
 
     const history = await recentTurns(caller.uid);
     const userText = text ?? `[${chip ?? 'craving'}]`;
@@ -129,17 +148,27 @@ export const aiCoachChat = onCall(
 
     const turns: Turn[] = [...history, {role: 'user', text: userText}];
     let reply = '';
+    // Logged once, from whichever path ran. Cost telemetry that only works on
+    // the branch nobody takes is not telemetry.
+    let inputTokens = 0;
+    let outputTokens = 0;
+    const streaming = request.acceptsStreaming && response !== undefined;
 
     try {
-      if (request.acceptsStreaming && response) {
-        for await (const chunk of model.generateStream({
+      if (streaming && response) {
+        for await (const event of model.generateStream({
           model: modelName,
           systemInstruction,
           turns,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         })) {
-          reply += chunk;
-          await response.sendChunk(chunk);
+          if (event.type === 'text') {
+            reply += event.text;
+            await response.sendChunk(event.text);
+          } else {
+            inputTokens = event.inputTokens;
+            outputTokens = event.outputTokens;
+          }
         }
       } else {
         const result = await model.generate({
@@ -149,11 +178,13 @@ export const aiCoachChat = onCall(
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         });
         reply = result.text;
-        log.info('coach.turn', safeMeta({
-          uid: caller.uid, tier, model: modelName,
-          inputTokens: result.inputTokens, outputTokens: result.outputTokens,
-        }));
+        inputTokens = result.inputTokens;
+        outputTokens = result.outputTokens;
       }
+      log.info('coach.turn', safeMeta({
+        uid: caller.uid, tier, model: modelName,
+        streaming, inputTokens, outputTokens,
+      }));
     } catch (error) {
       if (error instanceof ModelUnavailableError) {
         // Log the CAUSE, not just the fact.
@@ -192,7 +223,14 @@ export const aiCoachChat = onCall(
         // already knows this template. The message was not delivered, so give
         // the quota unit back — nobody pays for our outage.
         await refundCoachMessage(caller.uid, card.todayKey);
-        return {template: 'connectionLost', args: {}, showWeekCard: false};
+        // Refunded, so the allowance is one higher than the claim left it.
+        return {
+          template: 'connectionLost',
+          args: {},
+          showWeekCard: false,
+          messagesLeft: messagesLeft + 1,
+          tier,
+        };
       }
       throw error;
     }
@@ -200,7 +238,13 @@ export const aiCoachChat = onCall(
     reply = reply.trim();
     if (reply.length === 0) {
       await refundCoachMessage(caller.uid, card.todayKey);
-      return {template: 'connectionLost', args: {}, showWeekCard: false};
+      return {
+        template: 'connectionLost',
+        args: {},
+        showWeekCard: false,
+        messagesLeft: messagesLeft + 1,
+        tier,
+      };
     }
 
     await persistTurns(caller.uid, userText, reply);
@@ -216,6 +260,8 @@ export const aiCoachChat = onCall(
       args: {day: card.streak},
       showWeekCard: chip === 'progress',
       text: reply,
+      messagesLeft,
+      tier,
     };
   },
 );
@@ -351,14 +397,3 @@ async function persistTurns(uid: string, userText: string, reply: string): Promi
   await batch.commit();
 }
 
-/** Mirrors the coach's "refund the free message on failure" rule (CLAUDE.md). */
-async function refundCoachMessage(uid: string, today: string): Promise<void> {
-  await db.runTransaction(async (tx) => {
-    const ref = userDoc(uid);
-    const snap = await tx.get(ref);
-    const usage = (snap.data() as {aiUsage?: {day: string; msgCount: number}} | undefined)
-      ?.aiUsage;
-    if (usage?.day !== today || usage.msgCount <= 0) return;
-    tx.set(ref, {aiUsage: {...usage, msgCount: usage.msgCount - 1}}, {merge: true});
-  });
-}

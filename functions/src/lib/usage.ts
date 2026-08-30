@@ -80,8 +80,8 @@ export async function claimCoachMessage(
  * Gives a coach message back after a failed turn. Nobody pays a quota unit
  * for our outage (docs/03's "the coach refunds the free message" rule).
  *
- * Exported for handlers that need it; `aiCoachChat` currently carries its own
- * copy — if you touch one, reconcile the other.
+ * The single implementation. `aiCoachChat` used to carry a private copy, so
+ * the tested one never ran in production; that duplication is gone.
  */
 export async function refundCoachMessage(
   uid: string,

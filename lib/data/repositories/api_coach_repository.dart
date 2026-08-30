@@ -9,18 +9,33 @@ class ApiCoachRepository implements CoachRepository {
 
   final CoachApi _api;
 
+  /// The demo backend's replies are scripted, so there is nothing to stream:
+  /// one chunk, then done. Deliberately NOT drip-fed word by word — a fake
+  /// typing effect over an instantly-known string is theatre, and this app's
+  /// rule is that nothing pretends to be more alive than it is.
   @override
-  Future<CoachReply> requestReply({
+  Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
-  }) async => CoachReplyCodec.decode(
-    await _api.requestReply({
-      'text': ?text,
-      'chip': ?chip?.name,
-      'capped': capped,
-    }),
-  );
+    int? panicIntensity,
+  }) async* {
+    final reply = CoachReplyCodec.decode(
+      await _api.requestReply({
+        'text': ?text,
+        'chip': ?chip?.name,
+        'capped': capped,
+      }),
+    );
+    final words = reply.text;
+    if (words != null && words.isNotEmpty) yield CoachChunk(words);
+    yield CoachDone(reply);
+  }
+
+  /// The fake backend keeps the thread in memory for the session only, so
+  /// there is no transcript to restore. Empty is the honest answer.
+  @override
+  Future<List<CoachMessage>> history() async => const [];
 
   /// The fake backend has no coach memory: `aiCoachChat` is what writes it,
   /// and the demo replies are scripted. An empty list is the honest answer —

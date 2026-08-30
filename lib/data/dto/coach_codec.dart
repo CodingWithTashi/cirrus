@@ -9,6 +9,8 @@ abstract final class CoachReplyCodec {
     'args': reply.args,
     'showWeekCard': reply.showWeekCard,
     if (reply.text != null) 'text': reply.text,
+    if (reply.messagesLeft != null) 'messagesLeft': reply.messagesLeft,
+    if (reply.isFreeTier != null) 'tier': reply.isFreeTier! ? 'free' : 'premium',
   };
 
   static CoachReply decode(Map<String, dynamic> json) => CoachReply(
@@ -24,6 +26,14 @@ abstract final class CoachReplyCodec {
     text: switch ((json['text'] as String?)?.trim()) {
       final String t when t.isNotEmpty => t,
       _ => null,
+    },
+    messagesLeft: (json['messagesLeft'] as num?)?.toInt(),
+    // Absent tier means an older backend; leaving it null hides the counter
+    // rather than guessing at an allowance.
+    isFreeTier: switch (json['tier'] as String?) {
+      'free' => true,
+      null => null,
+      _ => false,
     },
   );
 }

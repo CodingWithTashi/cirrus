@@ -359,6 +359,8 @@ class CoachReply {
     this.args = const {},
     this.showWeekCard = false,
     this.text,
+    this.messagesLeft,
+    this.isFreeTier,
   });
 
   final CoachTemplate template;
@@ -374,6 +376,44 @@ class CoachReply {
   /// [template] — the template is only a fallback for clients built before
   /// this field existed.
   final String? text;
+
+  /// Messages left today, straight from the side that enforces the cap.
+  ///
+  /// The client used to count this itself — an in-memory int with no midnight
+  /// rollover, derived from a tier the client wrote into its own journey doc.
+  /// It could grey the composer while the server would happily answer, or
+  /// promise messages the server would refuse. Null when the backend did not
+  /// say, in which case the counter is simply not shown: no number beats a
+  /// number nobody stands behind.
+  final int? messagesLeft;
+
+  /// Whether [messagesLeft] describes a capped free allowance worth showing.
+  final bool? isFreeTier;
+}
+
+/// One step of Ember answering.
+///
+/// The coach used to be a form submission: a spinner, a pause, a finished
+/// paragraph. The model has always produced its answer a token at a time and
+/// the server has always been able to stream it — the client simply asked for
+/// it all at once, so the most alive thing in the product arrived dead.
+sealed class CoachEvent {
+  const CoachEvent();
+}
+
+/// More of Ember's sentence. Append it to what is already on screen.
+final class CoachChunk extends CoachEvent {
+  const CoachChunk(this.text);
+
+  final String text;
+}
+
+/// The turn is finished. Carries the authoritative envelope — a stream that
+/// ends without one never really answered.
+final class CoachDone extends CoachEvent {
+  const CoachDone(this.reply);
+
+  final CoachReply reply;
 }
 
 /// A milestone badge definition + earned state.

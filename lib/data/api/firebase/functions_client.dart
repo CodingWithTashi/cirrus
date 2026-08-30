@@ -51,6 +51,47 @@ class LpFunctions {
     }
   }
 
+  /// Calls a callable that streams, yielding each chunk as it lands and the
+  /// final envelope last.
+  ///
+  /// Same three guarantees as [call] — timezone/locale injected, wire failures
+  /// mapped onto the domain taxonomy, payloads normalized to plain JSON. The
+  /// server only streams when the client asks, so this is what turns
+  /// `aiCoachChat`'s streaming branch from dead code into the primary path.
+  Stream<({String? chunk, Map<String, dynamic>? result})> stream(
+    String name, [
+    Map<String, Object?> data = const {},
+  ]) async* {
+    final payload = {
+      ...data,
+      'timeZone': await _timeZone(),
+      'locale': _locale(),
+    };
+    try {
+      final responses = _functions.httpsCallable(name).stream<Object?, Object?>(
+        payload,
+      );
+      await for (final response in responses) {
+        switch (response) {
+          case Chunk(:final partialData):
+            if (partialData is String && partialData.isNotEmpty) {
+              yield (chunk: partialData, result: null);
+            }
+          case Result(:final result):
+            final data = result.data;
+            yield (
+              chunk: null,
+              result: data == null
+                  ? const <String, dynamic>{}
+                  : jsonDecode(jsonEncode(data)) as Map<String, dynamic>,
+            );
+        }
+      }
+    } on FirebaseFunctionsException catch (error) {
+      throw mapCallableError(error, signedIn: _signedIn());
+    }
+  }
+
   /// Whether Firebase believes someone is signed in *right now*.
   ///
   /// Read at failure time rather than injected, so a token that expired

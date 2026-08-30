@@ -157,6 +157,37 @@ void main() {
       expect(decoded.showWeekCard, isTrue);
     });
 
+    test('the server allowance survives the round trip', () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        text: 'ok',
+        messagesLeft: 3,
+        isFreeTier: true,
+      );
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(CoachReplyCodec.encode(reply)))
+            as Map<String, dynamic>,
+      );
+
+      expect(decoded.messagesLeft, 3);
+      expect(decoded.isFreeTier, isTrue);
+    });
+
+    test('an older backend that omits the allowance hides the counter', () {
+      // Null, not zero: zero would grey the composer for everybody the moment
+      // a stale function version answered.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': const <String, Object>{},
+        'showWeekCard': false,
+        'text': 'hello',
+      });
+
+      expect(decoded.messagesLeft, isNull);
+      expect(decoded.isFreeTier, isNull);
+    });
+
     // The deterministic templates (capReached, connectionLost) carry no text.
     test('a template-only reply decodes with a null text', () {
       final decoded = CoachReplyCodec.decode({

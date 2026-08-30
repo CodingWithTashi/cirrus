@@ -18,11 +18,19 @@ class _SpeakingCoach implements CoachRepository {
   final CoachReply reply;
 
   @override
-  Future<CoachReply> requestReply({
+  Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
-  }) async => reply;
+    int? panicIntensity,
+  }) async* {
+    final spoken = reply.text;
+    if (spoken != null) yield CoachChunk(spoken);
+    yield CoachDone(reply);
+  }
+
+  @override
+  Future<List<CoachMessage>> history() async => const [];
 
   // This stub predates the memory layer and does not exercise it.
   @override

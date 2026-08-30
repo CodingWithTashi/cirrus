@@ -41,9 +41,22 @@ export interface GenerateResult {
   readonly outputTokens: number;
 }
 
+/**
+ * One event from a streaming generation.
+ *
+ * A stream yields prose in pieces and its cost exactly once, at the end, so it
+ * cannot be a bare string. It used to be, and the consequence was that the
+ * streaming branch logged NO token usage at all — the primary path, once the
+ * client actually streams, would have had zero cost telemetry on a product
+ * whose stated guardrail is AI spend per user.
+ */
+export type StreamEvent =
+  | {readonly type: 'text'; readonly text: string}
+  | {readonly type: 'usage'; readonly inputTokens: number; readonly outputTokens: number};
+
 export interface TextModel {
   generate(request: GenerateRequest): Promise<GenerateResult>;
-  generateStream(request: GenerateRequest): AsyncIterable<string>;
+  generateStream(request: GenerateRequest): AsyncIterable<StreamEvent>;
 
   /**
    * Embeds [texts] for semantic recall.

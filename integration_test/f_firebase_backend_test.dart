@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:last_puff/data/api/firebase/app_check_setup.dart';
 import 'package:last_puff/data/backend_mode.dart';
+import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/firebase_options.dart';
@@ -39,10 +40,11 @@ void main() {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: AndroidDebugProvider(),
-      providerApple: AppleDebugProvider(),
-    );
+    // Same path the app takes, so the pinned debug secret applies here too —
+    // this suite uninstalls the app when it finishes, which used to destroy a
+    // rotating secret and make the next run fail for a reason that looked
+    // like code.
+    await activateAppCheck();
     // The account is created ONCE here, not by the first test: every case
     // below has to stand on its own so a single failure does not cascade into
     // five misleading "wrong password" errors.
@@ -204,24 +206,64 @@ void main() {
     expect(cravings.docs.first.data()['outcome'], 'survived');
   });
 
+  /// Drains one streamed turn.
+  ///
+  /// Returns the envelope AND the chunks it arrived in, because "did Ember
+  /// answer" and "did the answer stream" are different questions and only one
+  /// of them was ever being asked.
+  Future<({CoachReply reply, List<String> chunks})> ask(
+    CoachRepository coach, {
+    String? text,
+    CoachChip? chip,
+    int? panicIntensity,
+  }) async {
+    final chunks = <String>[];
+    CoachReply? envelope;
+    await for (final event in coach.streamReply(
+      text: text,
+      chip: chip,
+      capped: false,
+      panicIntensity: panicIntensity,
+    )) {
+      switch (event) {
+        case CoachChunk(text: final piece):
+          chunks.add(piece);
+        case CoachDone(reply: final done):
+          envelope = done;
+      }
+    }
+    if (envelope == null) throw StateError('stream ended with no reply');
+    return (reply: envelope, chunks: chunks);
+  }
+
   testWidgets('Ember answers from the real model', (tester) async {
     final e2e = await session(tester);
 
     Object? failure;
-    CoachReply? reply;
+    ({CoachReply reply, List<String> chunks})? turn;
     try {
-      reply = await e2e.container
-          .read(coachRepositoryProvider)
-          .requestReply(chip: CoachChip.craving, capped: false);
+      turn = await ask(
+        e2e.container.read(coachRepositoryProvider),
+        chip: CoachChip.craving,
+      );
     } on Object catch (error) {
       failure = error;
     }
 
     expect(failure, isNull, reason: 'aiCoachChat threw: $failure');
+    final reply = turn!.reply;
+    // The reply must arrive in pieces. The server has always been able to
+    // stream; the client asked for it all at once, so the streaming branch was
+    // dead code and Ember read as a form submission.
+    expect(
+      turn.chunks,
+      isNotEmpty,
+      reason: 'the reply did not stream — client fell back to unary',
+    );
     // `connectionLost` is the server's own "I could not answer" template, so
     // it is a failure here even though the call succeeded.
     expect(
-      reply!.template,
+      reply.template,
       isNot(CoachTemplate.connectionLost),
       reason: 'the coach answered with connectionLost — reply.text='
           '${reply.text}, args=${reply.args}',
@@ -244,10 +286,10 @@ void main() {
     final e2e = await session(tester);
     final coach = e2e.container.read(coachRepositoryProvider);
 
-    await coach.requestReply(
-      text: "my sister Maya is getting married in March and I want to be "
-          "completely done with vaping before her wedding",
-      capped: false,
+    await ask(
+      coach,
+      text: 'my sister Maya is getting married in March and I want to be '
+          'completely done with vaping before her wedding',
     );
     // Extraction and its embedding are awaited inside the callable, so by the
     // time that returned the memory is written — but the vector index is
@@ -258,10 +300,10 @@ void main() {
     // this test asked "what am I working toward", which the user card answers
     // just as well from the savings goal — so a correct reply proved nothing
     // about recall.
-    final recalled = await coach.requestReply(
+    final recalled = (await ask(
+      coach,
       text: 'what did I tell you was happening in March?',
-      capped: false,
-    );
+    )).reply;
 
     final said = (recalled.text ?? '').toLowerCase();
     expect(said, isNotEmpty, reason: 'no reply: ${recalled.template}');
@@ -279,10 +321,10 @@ void main() {
     final e2e = await session(tester);
     final coach = e2e.container.read(coachRepositoryProvider);
 
-    await coach.requestReply(
+    await ask(
+      coach,
       text: 'I have a golden retriever called Rufus and walking him is the '
           'only thing that reliably gets me past an evening craving',
-      capped: false,
     );
     await e2e.waitFor(const Duration(seconds: 8));
 

@@ -137,9 +137,15 @@ class _StubCoach implements CoachRepository {
   }
 
   @override
-  Future<CoachReply> requestReply({
+  Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
-  }) async => const CoachReply(template: CoachTemplate.generic1);
+    int? panicIntensity,
+  }) async* {
+    yield const CoachDone(CoachReply(template: CoachTemplate.generic1));
+  }
+
+  @override
+  Future<List<CoachMessage>> history() async => const [];
 }
