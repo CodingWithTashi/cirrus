@@ -1,0 +1,15 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	// Cloudflare Pages project name. Must match the project created in the
+	// dashboard (Workers & Pages -> Create -> Pages -> Direct Upload), otherwise
+	// `wrangler pages deploy` prompts interactively and fails in CI.
+	"name": "cirrus-landing",
+	"compatibility_date": "2026-08-30",
+	// Static Astro output. Declaring it here means `wrangler pages deploy` needs
+	// no positional directory argument.
+	"pages_build_output_dir": "./dist"
+	//
+	// Production domain: cirrusquit.com is attached to this Pages project in the
+	// Cloudflare dashboard (Pages project -> Custom domains). It survives deploys;
+	// it is not managed from this file.
+}
