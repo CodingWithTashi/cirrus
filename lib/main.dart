@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app_errors.dart';
@@ -14,6 +15,14 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Portrait only. The design is 52 portrait frames and there is no landscape
+  // layout for any of them, so a rotated phone renders the app into a
+  // viewport nothing was drawn for. The Android manifest locks this too; this
+  // is the half that will still be true on iOS.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   if (resolveBackendMode() == BackendMode.firebase) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
