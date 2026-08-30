@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_TITLE, SITE_TAGLINE } from '../consts';
+import { getPublishedPosts, formatDate } from '../lib/posts';
+
+const recent = (await getPublishedPosts()).slice(0, 3);
+---
+
+<BaseLayout>
+  <h1>{SITE_TITLE}</h1>
+  <p class="lede">{SITE_TAGLINE}.</p>
+
+  <p>
+    A taper plan built around your actual habits — real numbers, no guesswork.
+    Coming soon to iOS and Android.
+  </p>
+
+  {
+    recent.length > 0 && (
+      <section style="margin-top:3rem">
+        <h2>Latest posts</h2>
+        <ul class="post-list">
+          {recent.map((post) => (
+            <li>
+              <h2><a href={`/blog/${post.id}`}>{post.data.title}</a></h2>
+              <p class="post-meta">
+                <time datetime={post.data.publishedAt.toISOString()}>
+                  {formatDate(post.data.publishedAt)}
+                </time>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</BaseLayout>
