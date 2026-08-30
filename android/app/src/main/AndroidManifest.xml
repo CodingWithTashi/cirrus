@@ -2,15 +2,29 @@
     <!-- Connectivity probe + the (future) real backend. Debug/profile builds
          inherit this from Flutter's tooling manifests; release needs it here. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ requires a runtime grant before any notification can be
+         shown. Asked from the onboarding D4 screen, never cold. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Danger-hour reminders are scheduled on-device at exact local times
+         (docs/03 SS8); without this they drift with Doze. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="LastPuff"
+        android:label="Cirrus"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Portrait only (android:screenOrientation below). Every one of the
+             52 design frames is portrait and nothing has a landscape layout,
+             so a rotated phone rendered the app into a viewport it was never
+             drawn for. Locked here AND in main.dart, because the manifest
+             cannot cover iOS later. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
+            android:screenOrientation="portrait"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"

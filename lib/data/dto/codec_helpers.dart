@@ -1,22 +1,14 @@
 /// Shared JSON encoding primitives for the DTO codecs. Pure Dart.
 library;
 
+import '../../domain/date_key.dart';
+
 /// Local calendar date → `'yyyy-MM-dd'`. The journey's day map is keyed by
 /// local midnight; epoch-day math would shift dates across timezones.
-String encodeDayKey(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
+String encodeDayKey(DateTime d) => LpDate.dayKey(d);
 
 /// `'yyyy-MM-dd'` → local midnight [DateTime].
-DateTime decodeDayKey(String key) {
-  final parts = key.split('-');
-  return DateTime(
-    int.parse(parts[0]),
-    int.parse(parts[1]),
-    int.parse(parts[2]),
-  );
-}
+DateTime decodeDayKey(String key) => LpDate.parseDayKey(key);
 
 String encodeTimestamp(DateTime t) => t.toIso8601String();
 

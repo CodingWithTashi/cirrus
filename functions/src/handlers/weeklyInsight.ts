@@ -15,6 +15,8 @@ import {insightPrompt} from '../ai/prompts';
 import {ModelUnavailableError} from '../ai/model';
 import {db, FieldValue, insightDoc, journeyDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
+import {sendToUser} from '../lib/push';
+import {ungated} from '../lib/usage';
 import {decodeJourney} from '../domain/journeyCodec';
 import {dayKeyIn} from '../domain/dateKey';
 import {dangerHours, trailingDays} from '../domain/streakEngine';
@@ -58,7 +60,11 @@ export const weeklyInsight = onSchedule(
 
       for (const doc of page.docs) {
         const data = doc.data() as UserDoc;
-        if (data.entitlement?.tier === 'free' || !data.entitlement) continue;
+        // Bypasses tierFor to avoid a second read per user, so it needs the
+        // ungated check explicitly.
+        if (!ungated() && (data.entitlement?.tier === 'free' || !data.entitlement)) {
+          continue;
+        }
         const tz = data.tz ?? 'UTC';
         const today = new Date();
         // Only fire on the user's local Sunday.
@@ -68,7 +74,9 @@ export const weeklyInsight = onSchedule(
         if (weekday !== 'Sun') continue;
 
         try {
-          if (await generateFor(doc.id, tz)) generated++;
+          // The server-owned name, already on the doc we just read — the
+          // report must not call itself Ember for someone who renamed it.
+          if (await generateFor(doc.id, tz, data.coachName)) generated++;
         } catch (error) {
           log.warn('weeklyInsight.user_failed', {uid: doc.id, error: String(error)});
         }
@@ -82,7 +90,11 @@ export const weeklyInsight = onSchedule(
   },
 );
 
-async function generateFor(uid: string, timeZone: string): Promise<boolean> {
+async function generateFor(
+  uid: string,
+  timeZone: string,
+  coachName?: string,
+): Promise<boolean> {
   const snap = await journeyDoc(uid).get();
   if (!snap.exists) return false;
 
@@ -107,7 +119,7 @@ async function generateFor(uid: string, timeZone: string): Promise<boolean> {
   try {
     const result = await model.generate({
       model: MODEL_PREMIUM.value(),
-      systemInstruction: insightPrompt(journey.profile.alias),
+      systemInstruction: insightPrompt(journey.profile.alias, coachName),
       turns: [{role: 'user', text: JSON.stringify(payload)}],
       maxOutputTokens: 400,
       temperature: 0.6,
@@ -126,6 +138,17 @@ async function generateFor(uid: string, timeZone: string): Promise<boolean> {
     ...insight,
     weekId,
     createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // A report the user never learns about is a report nobody reads. This is one
+  // of the few things worth a push: it happened on the server, on a schedule,
+  // and the device had no way to know.
+  // The report is generated in the user's own language, so its own headline
+  // is better push copy than anything a lookup table could hold.
+  await sendToUser(uid, {
+    title: insight.headline,
+    body: insight.win,
+    route: '/insight',
   });
   return true;
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import 'helpers.dart';
 
@@ -19,7 +20,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(overrides: overrides, child: const LastPuffApp()),
     );
-    expect(find.text('LastPuff'), findsWidgets);
+    // Read the wordmark from l10n rather than hardcoding it — the brand
+    // name is guarded centrally in brand_name_test.dart.
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(find.text(l10n.appName), findsWidgets);
 
     // Splash auto-advances after 1.5s.
     await tester.pump(const Duration(seconds: 2));

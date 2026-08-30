@@ -31,6 +31,12 @@ class ApiCommunityRepository implements CommunityRepository {
   @override
   Future<void> blockAuthor(String alias) => _api.blockAuthor(alias);
 
+  /// The demo backend has no reply moderation to reach — `reportReply` is a
+  /// callable, and there is no server here. Doing nothing is the honest
+  /// answer; the store still hides the reply for this reader.
   @override
-  Future<void> nudgeBuddy() => _api.nudgeBuddy();
+  Future<void> reportReply({
+    required String postId,
+    required String replyId,
+  }) async {}
 }

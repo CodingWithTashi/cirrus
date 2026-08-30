@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
+import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/journey_state.dart';
@@ -15,7 +17,10 @@ import '../../domain/models/models.dart';
 
 /// Frame 36 — Ember's chat. Cites the user's own data, never generic advice.
 class CoachScreen extends ConsumerStatefulWidget {
-  const CoachScreen({super.key});
+  const CoachScreen({super.key, this.panicIntensity});
+
+  /// 1–10 when the panic flow routed here, else null. See the coach route.
+  final int? panicIntensity;
 
   @override
   ConsumerState<CoachScreen> createState() => _CoachScreenState();
@@ -25,12 +30,27 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
+  /// Rides on the next message only: the craving that opened this screen is
+  /// context for what the user is about to say, not a permanent mode.
+  int? _panicIntensity;
+
   @override
   void initState() {
     super.initState();
+    _panicIntensity = widget.panicIntensity;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(coachStoreProvider.notifier).seedGreetingIfEmpty();
+      // Pull the stored transcript first; the greeting is what you get when
+      // there is genuinely nothing to continue. Seeding unconditionally is why
+      // reopening the app used to look like meeting Ember for the first time.
+      ref.read(coachStoreProvider.notifier).restoreHistory();
     });
+  }
+
+  @override
+  void didUpdateWidget(CoachScreen old) {
+    super.didUpdateWidget(old);
+    final next = widget.panicIntensity;
+    if (next != null && next != old.panicIntensity) _panicIntensity = next;
   }
 
   @override
@@ -60,7 +80,14 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         CoachChip.progress => context.l10n.coachChipProgress,
       };
 
-  String _resolve(BuildContext context, CoachMessage m) {
+  String _resolve(BuildContext context, CoachMessage m, String coachName) {
+    // A model-authored reply is already prose in the user's language (the
+    // server pins it from the caller's locale), so it renders verbatim. The
+    // template is the fallback for deterministic replies and for anything the
+    // backend could not answer.
+    final spoken = m.text;
+    if (spoken != null && spoken.isNotEmpty) return spoken;
+
     final l10n = context.l10n;
     final locale = context.localeTag;
     num n(String k) => (m.args[k] as num?) ?? 0;
@@ -69,18 +96,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
     return switch (m.template!) {
       CoachTemplate.greeting => l10n.coachGreeting(
+        coachName,
         i('puffs'),
         m.args['method'] == 'coldTurkey'
             ? l10n.planMethodCold
             : l10n.planMethodTaper,
-        LpFormat.shortDate(
-          DateTime(
-            i('freedomYmd') ~/ 10000,
-            (i('freedomYmd') % 10000) ~/ 100,
-            i('freedomYmd') % 100,
-          ),
-          locale,
-        ),
+        LpFormat.shortDate(LpDate.fromYmdInt(i('freedomYmd')), locale),
       ),
       CoachTemplate.craving1 => l10n.coachReplyCraving1,
       CoachTemplate.craving2 => l10n.coachReplyCraving2(i('count')),
@@ -105,6 +126,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       CoachTemplate.party => l10n.coachReplyParty(i('count')),
       CoachTemplate.capReached => l10n.coachCapReached,
       CoachTemplate.connectionLost => l10n.coachConnectionLost,
+      CoachTemplate.backendRejected => l10n.coachBackendRejected,
     };
   }
 
@@ -114,11 +136,15 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final l10n = context.l10n;
     final locale = context.localeTag;
     final coach = ref.watch(coachStoreProvider);
+    final coachName = ref.watch(coachNameProvider) ?? l10n.coachName;
     final store = ref.read(coachStoreProvider.notifier);
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
-    final freeLeft = store.freeMessagesLeftToday;
-    final showCounter = !(journey?.profile.isPremium ?? true);
+    // The counter shows only what the server has actually told us it is
+    // enforcing. Before that it shows nothing — a number nobody stands behind
+    // is worse than no number.
+    final freeLeft = coach.messagesLeft ?? 0;
+    final showCounter = store.showsAllowance;
 
     ref.listen(coachStoreProvider, (_, _) => _scrollToEnd());
 
@@ -174,7 +200,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             ),
             // Thread.
             Expanded(
-              child: ListView(
+              child: coach.isRestoring && coach.messages.isEmpty
+                  // Restoring the transcript is a different wait from Ember
+                  // thinking, and saying which one it is costs nothing.
+                  ? LpLoadingState(label: l10n.coachLoadingThread)
+                  : ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 children: [
@@ -183,7 +213,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       isUser: m.role == CoachRole.user,
                       text: m.role == CoachRole.user
                           ? (m.text ?? _chipLabel(context, m.chipEcho ?? 0))
-                          : _resolve(context, m),
+                          : _resolve(context, m, coachName),
                     ),
                     if (m.showWeekCard && journey != null) ...[
                       const SizedBox(height: 12),
@@ -191,7 +221,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                     ],
                     const SizedBox(height: 12),
                   ],
-                  if (coach.isTyping) const _TypingBubble(),
+                  if (coach.isTyping) _TypingBubble(coachName: coachName),
                 ],
               ),
             ),
@@ -264,11 +294,6 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                         ),
                       ),
                     ),
-                    Icon(
-                      Icons.mic_none_rounded,
-                      color: lp.textSecondary,
-                      size: 20,
-                    ),
                     const SizedBox(width: 6),
                     PressScale(
                       onTap: _send,
@@ -294,7 +319,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
               child: Text(
-                l10n.coachSafetyNote,
+                l10n.coachSafetyNote(coachName),
                 textAlign: TextAlign.center,
                 style: LpType.micro(lp.textFaint),
               ),
@@ -309,7 +334,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     _input.clear();
-    setState(() {});
+    final panic = _panicIntensity;
+    setState(() => _panicIntensity = null);
     final store = ref.read(coachStoreProvider.notifier);
     // A prefilled chip sent unedited keeps its protocol routing in every
     // locale (the keyword matcher is a demo-only English heuristic).
@@ -317,8 +343,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       (chip) => _chipLabel(context, chip.index) == text,
     );
     chipIndex == -1
-        ? store.send(text)
-        : store.sendChip(CoachChip.values[chipIndex]);
+        ? store.send(text, panicIntensity: panic)
+        : store.sendChip(CoachChip.values[chipIndex], panicIntensity: panic);
   }
 }
 
@@ -359,7 +385,11 @@ class _Bubble extends StatelessWidget {
 
 /// Ember's flame pulses while "typing" (docs/04 §8).
 class _TypingBubble extends StatefulWidget {
-  const _TypingBubble();
+  const _TypingBubble({required this.coachName});
+
+  /// Passed in rather than read here: this is a plain StatefulWidget, and the
+  /// screen reader label is the one place the name must not silently fall back.
+  final String coachName;
 
   @override
   State<_TypingBubble> createState() => _TypingBubbleState();
@@ -385,7 +415,7 @@ class _TypingBubbleState extends State<_TypingBubble>
       alignment: Alignment.centerLeft,
       // Screen readers hear "Ember is typing…" while the flame pulses.
       child: Semantics(
-        label: context.l10n.coachTyping,
+        label: context.l10n.coachTyping(widget.coachName),
         liveRegion: true,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),

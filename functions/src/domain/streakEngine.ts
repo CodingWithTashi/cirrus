@@ -18,24 +18,38 @@ export function flameFor(streakDays: number): FlameState {
 const isConfirmed = (log: DayLog): boolean =>
   log.puffs > 0 || log.vapeFreeConfirmed;
 
-const isClean = (log: DayLog): boolean =>
-  log.puffs <= log.limit && isConfirmed(log);
+/**
+ * Whether a day keeps the chain alive. Mirrors `StreakEngine` in
+ * `lib/domain/logic/streak_engine.dart`:
+ *
+ *   holds = isConfirmed && (!isOverLimit || repairTokenUsed)
+ *
+ * The repair-token clause is load-bearing (docs/03 §5) — a token absorbs one
+ * over-limit day so the flame dims rather than dying. Omitting it here made
+ * the server disagree with the app about the user's own streak.
+ */
+const holds = (log: DayLog): boolean =>
+  isConfirmed(log) && (log.puffs <= log.limit || log.repairTokenUsed);
 
 /**
- * Consecutive clean days ending today, or yesterday when today is still
- * unconfirmed — an in-progress day dims the flame instead of zeroing it
+ * Consecutive holding days ending today, or yesterday when today does not
+ * hold — an in-progress OR slipped today dims the flame instead of zeroing it
  * (pinned by the Dart unit test; don't "fix" it to include today).
+ *
+ * Anchoring on `holds` rather than `isConfirmed` matters: a confirmed but
+ * over-limit today would otherwise be counted, fail the check on the first
+ * iteration, and return 0 — erasing the whole streak over a single slip.
  */
 export function currentStreak(
   days: Readonly<Record<string, DayLog>>,
   todayKey: string,
 ): number {
   const today = days[todayKey];
-  let cursor = today && isConfirmed(today) ? todayKey : addDays(todayKey, -1);
+  let cursor = today && holds(today) ? todayKey : addDays(todayKey, -1);
   let streak = 0;
   for (;;) {
     const log = days[cursor];
-    if (!log || !isClean(log)) return streak;
+    if (!log || !holds(log)) return streak;
     streak++;
     cursor = addDays(cursor, -1);
   }

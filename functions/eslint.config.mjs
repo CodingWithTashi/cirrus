@@ -9,8 +9,16 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        // The config file itself lives outside tsconfig's include.
-        projectService: {allowDefaultProject: ['eslint.config.mjs']},
+        // Config files live outside tsconfig's include, so the type-aware
+        // parser needs them named explicitly.
+        projectService: {
+          allowDefaultProject: [
+            'eslint.config.mjs',
+            'vitest.config.ts',
+            'vitest.rules.config.ts',
+            'vitest.integration.config.ts',
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

@@ -20,5 +20,4 @@ abstract interface class CommunityApi {
 
   Future<void> blockAuthor(String alias);
 
-  Future<void> nudgeBuddy();
 }

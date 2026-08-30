@@ -40,7 +40,16 @@ class AppShell extends ConsumerWidget {
       final selected = shell.currentIndex == branch;
       return Expanded(
         child: PressScale(
-          onTap: () => shell.goBranch(branch, initialLocation: selected),
+          onTap: () {
+            // `goBranch` swaps the IndexedStack branch without pushing a
+            // route, so LpAnalyticsObserver never sees a tab change — these
+            // four are the only screens it cannot report for itself. The path
+            // is read back off the branch rather than listed here, so a
+            // reordered tab bar cannot start mislabelling screen views.
+            final path = shell.route.branches[branch].defaultRoute?.path;
+            if (path != null) ref.read(analyticsProvider).screenViewed(path);
+            shell.goBranch(branch, initialLocation: selected);
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(

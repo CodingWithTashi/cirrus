@@ -49,4 +49,11 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<void> deleteAccount() => _api.deleteAccount();
+
+  /// Always null, deliberately. The fake backend's only account identifier is
+  /// the email address the demo signs in with, and an email must never become
+  /// an analytics user id. Nothing is lost: `analyticsProvider` resolves to
+  /// `NoopAnalytics` on this backend anyway.
+  @override
+  Future<String?> currentUserId() async => null;
 }

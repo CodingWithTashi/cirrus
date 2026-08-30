@@ -22,26 +22,66 @@ import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
+import '../../domain/models/models.dart';
 
 /// Session state shared by the three panic steps (feature-local VM).
 class PanicSession {
-  const PanicSession({this.step = 0, this.intensity = 7, this.startedAt});
+  const PanicSession({
+    this.step = 0,
+    this.intensity = 7,
+    this.startedAt,
+    this.availability = PanicAvailability.unknown,
+  });
 
   final int step;
   final int intensity;
   final DateTime? startedAt;
 
-  PanicSession copyWith({int? step, int? intensity, DateTime? startedAt}) =>
-      PanicSession(
-        step: step ?? this.step,
-        intensity: intensity ?? this.intensity,
-        startedAt: startedAt ?? this.startedAt,
-      );
+  /// What the server said when this session opened. Starts optimistic and is
+  /// only ever narrowed by a reply that actually arrived.
+  final PanicAvailability availability;
+
+  PanicSession copyWith({
+    int? step,
+    int? intensity,
+    DateTime? startedAt,
+    PanicAvailability? availability,
+  }) => PanicSession(
+    step: step ?? this.step,
+    intensity: intensity ?? this.intensity,
+    startedAt: startedAt ?? this.startedAt,
+    availability: availability ?? this.availability,
+  );
 }
 
 class PanicViewModel extends Notifier<PanicSession> {
   @override
-  PanicSession build() => PanicSession(startedAt: DateTime.now());
+  PanicSession build() {
+    ref.onDispose(() => _disposed = true);
+    _openSession();
+    return PanicSession(startedAt: DateTime.now());
+  }
+
+  /// True once the session reached a recorded outcome, so an abandoned flow
+  /// can be told apart from a survived one.
+  bool _resolved = false;
+
+  /// The flow can close (or `survive()` can invalidate this notifier) while
+  /// the availability call is still in flight; writing `state` after that
+  /// throws.
+  bool _disposed = false;
+
+  /// Tells the server a craving started, and folds the answer in when it
+  /// arrives. Deliberately not awaited anywhere: the breathing screen is
+  /// already on screen before this resolves, which is the point — a craving
+  /// does not wait on a round-trip (docs/04 §7).
+  void _openSession() {
+    ref.read(panicRepositoryProvider).begin().then((availability) {
+      // The notifier may already be gone (flow closed mid-flight).
+      if (!_disposed) state = state.copyWith(availability: availability);
+    }).ignore();
+  }
 
   void next() => state = state.copyWith(step: state.step + 1);
 
@@ -57,8 +97,26 @@ class PanicViewModel extends Notifier<PanicSession> {
 
   /// Craving survived → celebrate, then reset for the next session.
   void survive() {
+    _resolved = true;
+    ref.read(analyticsProvider).cravingSurvived(survived: true);
+    ref
+        .read(panicRepositoryProvider)
+        .survived(intensity: state.intensity)
+        .ignore();
     ref.read(quitStoreProvider.notifier).recordCravingSurvived();
     ref.invalidateSelf();
+  }
+
+  /// The takeover closed without "it passed" being tapped.
+  ///
+  /// Reported to analytics only, never to the server: leaving the flow is not
+  /// the same claim as slipping, and `panicSession` records outcomes people
+  /// actually stated. The guardrail rate (docs/06 §1, craving-survived ≥ 70%)
+  /// reads sessions-opened as its denominator either way.
+  void abandon() {
+    if (_resolved) return;
+    _resolved = true;
+    ref.read(analyticsProvider).cravingSurvived(survived: false);
   }
 }
 
@@ -75,14 +133,33 @@ class PanicFlow extends ConsumerStatefulWidget {
 }
 
 class _PanicFlowState extends ConsumerState<PanicFlow> {
+  /// Captured in [initState], not read in [dispose].
+  ///
+  /// Riverpod throws "Cannot use ref after the widget was disposed" for a
+  /// `ref.read` inside `dispose`, so the reference has to be taken while the
+  /// element is still alive. Holding the instance is also what makes the
+  /// resolved check correct: `survive()` invalidates the provider, so a later
+  /// read would hand back a FRESH notifier with `_resolved == false` and every
+  /// survived craving would be reported abandoned as well.
+  late final PanicViewModel _session = ref.read(panicProvider.notifier);
+
   @override
   void initState() {
     super.initState();
+    _session; // resolve now, while ref is still usable
     // The takeover owns the whole screen — a lingering "Logged 1 puff"
     // undo snack must never cover the step controls.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
     });
+  }
+
+  @override
+  void dispose() {
+    // `survive()` marks the session resolved before this runs, so a survived
+    // craving is never double-counted as an abandoned one.
+    _session.abandon();
+    super.dispose();
   }
 
   @override
@@ -442,10 +519,14 @@ class _BreakLoopStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
-    final journey = ref.watch(quitStoreProvider);
-    final buddyName = journey?.buddy.name ?? 'Sam';
     final danger = ref.watch(todayProvider)?.dangerWindow;
     final hourLabel = LpFormat.hour(danger?.$1 ?? 22, context.localeTag);
+    // docs/04 §7: past the free allowance the AI layer drops away — the
+    // option stays on screen and routes to the paywall instead of
+    // disappearing, because a door that vanishes mid-craving reads as the app
+    // giving up on you.
+    final session = ref.watch(panicProvider);
+    final aiAvailable = session.availability.aiAvailable;
 
     Widget option({
       required Widget icon,
@@ -513,34 +594,73 @@ class _BreakLoopStep extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(l10n.panicLoopSubtitle, style: LpType.body14(lp.textSecondary)),
           const SizedBox(height: 26),
-          option(
-            icon: const Text('🎮', style: TextStyle(fontSize: 22)),
-            tint: lp.volt,
-            title: l10n.panicLoopGame,
-            sub: l10n.panicLoopGameSub,
-            onTap: () => context.push(Routes.game),
-          ),
-          option(
-            icon: const Text('🤝', style: TextStyle(fontSize: 22)),
-            tint: lp.ember,
-            title: l10n.panicLoopBuddy,
-            sub: l10n.panicLoopBuddySub(buddyName),
-            onTap: () {
-              LpHaptics.medium();
-              showLpSnack(context, l10n.panicBuddyPinged(buddyName));
-            },
-          ),
-          option(
-            icon: Text(
-              'AI',
-              style: LpType.displaySmall(lp.oxygenText, size: 16),
+          // The four loop-breakers scroll; the timer and the "it passed" CTA
+          // below stay pinned where a craving needs to find them.
+          //
+          // Found on a real device: a 26px overflow stripe on the third panic
+          // step. Four options with subtitles do not fit every viewport, and
+          // they grew when the buddy option became the longer SOS one.
+          //
+          // Deliberately NOT the `StepScrollView` idiom the auth forms use.
+          // That is min-height + `IntrinsicHeight`, and an intrinsic walk over
+          // the animating `_CravingTimer` below is the exact combination that
+          // took the Health screen down — it crashed this screen outright when
+          // tried here. `Expanded` takes the slack instead, so there is no
+          // intrinsic pass at all.
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  option(
+                    icon: const Text('🎮', style: TextStyle(fontSize: 22)),
+                    tint: lp.volt,
+                    title: l10n.panicLoopGame,
+                    sub: l10n.panicLoopGameSub,
+                    onTap: () => context.push(Routes.game),
+                  ),
+                  // The social loop-breaker (docs/03 §7). This used to be "ping your
+                  // buddy", which pinged nobody: Quit Buddies was descoped in Aug 2026
+                  // and the buddy it named was invented by the app. The stage it
+                  // occupies in the hook — someone else pulling you out — is real and
+                  // worth keeping, so it now opens the composer pre-tagged SOS. Live
+                  // SOS posts pin to the top of the feed for an hour and real quitters
+                  // answer them, which is what the fake ping was pretending to do.
+                  option(
+                    icon: const Text('🆘', style: TextStyle(fontSize: 22)),
+                    tint: lp.ember,
+                    title: l10n.panicLoopSos,
+                    sub: l10n.panicLoopSosSub,
+                    onTap: () {
+                      LpHaptics.medium();
+                      context.push('${Routes.compose}?tag=${PostTag.sos.name}');
+                    },
+                  ),
+                  option(
+                    icon: Text(
+                      'AI',
+                      style: LpType.displaySmall(lp.oxygenText, size: 16),
+                    ),
+                    tint: lp.oxygen,
+                    title: l10n.panicLoopCoach,
+                    sub: aiAvailable
+                        ? l10n.panicLoopCoachSub(hourLabel)
+                        : l10n.panicLoopCoachLocked,
+                    // The intensity rides along: `aiCoachChat` switches to its short,
+                    // directive PANIC MODE voice when it is present, and until now no
+                    // client ever sent it — so Ember answered a 9/10 craving in the
+                    // same open-question register it uses for a quiet Tuesday.
+                    onTap: () => aiAvailable
+                        ? context.go(
+                            '${Routes.coach}?panic=${session.intensity}',
+                          )
+                        : context.push(Routes.paywall),
+                  ),
+                ],
+              ),
             ),
-            tint: lp.oxygen,
-            title: l10n.panicLoopCoach,
-            sub: l10n.panicLoopCoachSub(hourLabel),
-            onTap: () => context.go(Routes.coach),
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           const Center(child: _CravingTimer(late: true)),
           const SizedBox(height: 14),
           LpTextButton(

@@ -1,0 +1,77 @@
+name: CI
+
+# Every gate that has caught a real bug in this repo, run on every push.
+# The emulator jobs matter most: the security-rules suite and the concurrency
+# tests both found live defects that unit tests could not have.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A newer push makes an in-flight run irrelevant; cancel it rather than
+  # queueing behind it.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Flutter — analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Regenerating l10n proves the ARB files and the committed generated
+      # code have not drifted apart.
+      - run: flutter gen-l10n
+      - name: Fail if generated l10n is stale
+        run: git diff --exit-code lib/l10n/gen
+      - run: flutter analyze
+      - run: flutter test
+
+  functions:
+    name: Functions — verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+      # typecheck + lint + the pure suite — the same gate the deploy
+      # predeploy hook runs, so a red CI means a blocked deploy.
+      - run: npm run verify
+
+  emulator:
+    name: Firestore emulator — rules & integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      # The Firestore emulator is a Java process.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm install -g firebase-tools
+      - run: npm run test:rules
+      - run: npm run test:integration

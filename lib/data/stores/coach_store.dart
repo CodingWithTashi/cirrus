@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/date_key.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import 'providers.dart';
@@ -9,20 +10,43 @@ class CoachState {
     this.messages = const [],
     this.isTyping = false,
     this.freeUsedToday = 0,
+    this.isRestoring = false,
+    this.messagesLeft,
+    this.isFreeTier,
   });
 
   final List<CoachMessage> messages;
+
+  /// Ember has been asked and has not started speaking yet. Once the first
+  /// chunk lands this drops and the bubble itself carries the progress.
   final bool isTyping;
   final int freeUsedToday;
+
+  /// The stored transcript is being fetched. Distinct from [isTyping]: one is
+  /// "Ember is thinking", the other is "we are finding what you already said".
+  final bool isRestoring;
+
+  /// The allowance as last reported by the side that enforces it. Null until
+  /// the backend has said, and the counter stays hidden while it is.
+  final int? messagesLeft;
+
+  /// Whether that allowance is a capped free one worth putting on screen.
+  final bool? isFreeTier;
 
   CoachState copyWith({
     List<CoachMessage>? messages,
     bool? isTyping,
     int? freeUsedToday,
+    bool? isRestoring,
+    int? messagesLeft,
+    bool? isFreeTier,
   }) => CoachState(
     messages: messages ?? this.messages,
     isTyping: isTyping ?? this.isTyping,
     freeUsedToday: freeUsedToday ?? this.freeUsedToday,
+    isRestoring: isRestoring ?? this.isRestoring,
+    messagesLeft: messagesLeft ?? this.messagesLeft,
+    isFreeTier: isFreeTier ?? this.isFreeTier,
   );
 }
 
@@ -45,12 +69,26 @@ class CoachStore extends Notifier<CoachState> {
 
   CoachRepository get _repo => ref.read(coachRepositoryProvider);
 
+  /// What the composer uses to decide whether the user is out of messages.
+  ///
+  /// Prefers the server's own number. The local count is only a first guess for
+  /// the very first message of a session: it lives in memory, resets on
+  /// launch, never rolls over at midnight, and is derived from a tier the
+  /// client wrote into its own document — so it is wrong in both directions
+  /// and is replaced by the truth as soon as one reply lands.
   int get freeMessagesLeftToday {
+    final reported = state.messagesLeft;
+    if (reported != null) return reported;
     final premium = ref.read(quitStoreProvider)?.profile.isPremium ?? true;
     if (premium) return 1 << 20;
     final left = freeDailyCap - state.freeUsedToday;
     return left < 0 ? 0 : left;
   }
+
+  /// Whether to show a remaining-messages count at all. Only when the backend
+  /// has told us it is enforcing a capped free allowance.
+  bool get showsAllowance =>
+      state.isFreeTier == true && state.messagesLeft != null;
 
   /// Local + synchronous on purpose: an async greeting would flash an empty
   /// thread every time the coach tab opens.
@@ -74,11 +112,37 @@ class CoachStore extends Notifier<CoachState> {
     );
   }
 
-  Future<void> send(String text) => _handle(userText: text);
+  /// Pulls the stored transcript in, so reopening the app continues the
+  /// conversation instead of starting a new one.
+  ///
+  /// Falls back to the greeting when there is nothing stored, and on failure —
+  /// a thread that will not load is not worth an error dialog, and the
+  /// greeting is a perfectly good place to start.
+  Future<void> restoreHistory() async {
+    if (state.messages.isNotEmpty || state.isRestoring) return;
+    state = state.copyWith(isRestoring: true);
+    List<CoachMessage> stored;
+    try {
+      stored = await _repo.history();
+    } on Exception {
+      stored = const [];
+    }
+    if (!_alive()) return;
+    state = state.copyWith(isRestoring: false, messages: stored);
+    if (stored.isEmpty) seedGreetingIfEmpty();
+  }
 
-  Future<void> sendChip(CoachChip chip) => _handle(chip: chip);
+  Future<void> send(String text, {int? panicIntensity}) =>
+      _handle(userText: text, panicIntensity: panicIntensity);
 
-  Future<void> _handle({String? userText, CoachChip? chip}) async {
+  Future<void> sendChip(CoachChip chip, {int? panicIntensity}) =>
+      _handle(chip: chip, panicIntensity: panicIntensity);
+
+  Future<void> _handle({
+    String? userText,
+    CoachChip? chip,
+    int? panicIntensity,
+  }) async {
     if (userText != null && userText.trim().isEmpty) return;
     final capped = freeMessagesLeftToday <= 0;
 
@@ -93,22 +157,71 @@ class CoachStore extends Notifier<CoachState> {
       freeUsedToday: state.freeUsedToday + 1,
     );
 
-    CoachReply reply;
+    // The bubble Ember writes into. It is added on the first chunk rather than
+    // up front, so a reply that never starts leaves no empty bubble behind.
+    final streamId = _nextId();
+    var streamed = '';
+    CoachReply? reply;
+
     try {
-      reply = await _repo.requestReply(
+      await for (final event in _repo.streamReply(
         text: userText,
         chip: chip,
         capped: capped,
-      );
-    } on Exception {
+        panicIntensity: panicIntensity,
+      )) {
+        if (!_alive()) return;
+        switch (event) {
+          case CoachChunk(:final text):
+            streamed += text;
+            state = state.copyWith(
+              isTyping: false,
+              messages: _withStreamed(streamId, streamed),
+            );
+          case CoachDone(reply: final done):
+            reply = done;
+        }
+      }
+    } on Exception catch (error) {
       // Offline or backend hiccup: Ember owns the miss in-thread, and the
       // attempt doesn't burn a free message.
+      //
+      // A refused build gets its own line. "Say that again once you're back
+      // online" is actively misleading when the connection is fine and the
+      // backend simply would not accept us — it sends the user to check a
+      // router over something only we can fix.
       if (!_alive()) return;
       state = state.copyWith(
         isTyping: false,
         freeUsedToday: (state.freeUsedToday - 1).clamp(0, 1 << 20),
         messages: [
-          ...state.messages,
+          // Drop the half-written bubble. A sentence that stopped mid-word is
+          // worse than no sentence: it reads as Ember losing its train of
+          // thought rather than as a failure that was nobody's fault.
+          ...state.messages.where((m) => m.id != streamId),
+          CoachMessage.ember(
+            id: _nextId(),
+            template: error is BackendRejectedException
+                ? CoachTemplate.backendRejected
+                : CoachTemplate.connectionLost,
+          ),
+        ],
+      );
+      return;
+    }
+
+    // Sign-out invalidates this store while Ember is "typing".
+    if (!_alive()) return;
+    final done = reply;
+    if (done == null) {
+      // Every implementation ends with CoachDone; reaching here means the
+      // stream closed without answering, which is a lost connection wearing a
+      // success costume.
+      state = state.copyWith(
+        isTyping: false,
+        freeUsedToday: (state.freeUsedToday - 1).clamp(0, 1 << 20),
+        messages: [
+          ...state.messages.where((m) => m.id != streamId),
           CoachMessage.ember(
             id: _nextId(),
             template: CoachTemplate.connectionLost,
@@ -118,24 +231,45 @@ class CoachStore extends Notifier<CoachState> {
       return;
     }
 
-    // Sign-out invalidates this store while Ember is "typing".
-    if (!_alive()) return;
+    // The envelope is authoritative — it carries the args, the week card, the
+    // final text, and the allowance. Replacing the streamed bubble rather than
+    // appending keeps one message per turn however the words arrived.
     state = state.copyWith(
       isTyping: false,
+      messagesLeft: done.messagesLeft,
+      isFreeTier: done.isFreeTier,
       messages: [
-        ...state.messages,
+        ...state.messages.where((m) => m.id != streamId),
         CoachMessage.ember(
-          id: _nextId(),
-          template: reply.template,
-          args: reply.args,
-          showWeekCard: reply.showWeekCard,
+          id: streamed.isEmpty ? _nextId() : streamId,
+          template: done.template,
+          args: done.args,
+          showWeekCard: done.showWeekCard,
+          // Ember's own words when the model answered; null keeps the
+          // template path for the deterministic replies. Prefer what actually
+          // streamed when the envelope omits it.
+          text: done.text ?? (streamed.isEmpty ? null : streamed),
         ),
       ],
     );
   }
 
-  static int _ymd(DateTime? d) =>
-      d == null ? 20260101 : d.year * 10000 + d.month * 100 + d.day;
+  /// The thread with Ember's in-progress bubble carrying [text].
+  List<CoachMessage> _withStreamed(String id, String text) {
+    final bubble = CoachMessage.ember(
+      id: id,
+      // Never rendered: `text` wins over the template whenever it is set.
+      template: CoachTemplate.generic1,
+      text: text,
+    );
+    final existing = state.messages.indexWhere((m) => m.id == id);
+    if (existing < 0) return [...state.messages, bubble];
+    final next = [...state.messages];
+    next[existing] = bubble;
+    return next;
+  }
+
+  static int _ymd(DateTime? d) => d == null ? 20260101 : LpDate.toYmdInt(d);
 
   String _nextId() => 'm${_idCounter++}';
 }

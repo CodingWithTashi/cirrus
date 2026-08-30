@@ -8,7 +8,9 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_card.dart';
+import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../onboarding/onboarding_view_model.dart';
@@ -87,32 +89,37 @@ class FrameMapScreen extends ConsumerWidget {
       (16, 'D1 · Plan reveal', () => _onboarding(ref, context, ObStep.reveal)),
       (
         17,
+        'D1b · Name your coach',
+        () => _onboarding(ref, context, ObStep.coachName),
+      ),
+      (
+        18,
         'D2 · Hold to commit',
         () => _onboarding(ref, context, ObStep.commit),
       ),
-      (18, 'D3 · Rating ask', () => _onboarding(ref, context, ObStep.rating)),
+      (19, 'D3 · Rating ask', () => _onboarding(ref, context, ObStep.rating)),
       (
-        19,
+        20,
         'D4 · Notifications',
         () => _onboarding(ref, context, ObStep.notifications),
       ),
-      (20, 'D5 · Paywall', () => _withJourney(ref, context, Routes.paywall)),
+      (21, 'D5 · Paywall', () => _withJourney(ref, context, Routes.paywall)),
       (
-        21,
+        22,
         'D5b · Free plan',
         () => _withJourney(ref, context, Routes.paywallFree),
       ),
       (
-        22,
+        23,
         'D5c · Win-back offer',
         () => _withJourney(ref, context, Routes.winback),
       ),
       (
-        23,
+        24,
         'D5d · Trial ending',
         () => _withJourney(ref, context, Routes.trialEnding),
       ),
-      (24, 'Day-1 checklist', () => _withJourney(ref, context, Routes.day1)),
+      (25, 'Day-1 checklist', () => _withJourney(ref, context, Routes.day1)),
     ];
 
     List<(int, String, void Function())> run2() => [
@@ -172,7 +179,6 @@ class FrameMapScreen extends ConsumerWidget {
         'SOS post + rally',
         () => _withJourney(ref, context, '/community/post/seed-sos'),
       ),
-      (46, 'Buddy / invite', () => _withJourney(ref, context, Routes.buddy)),
       (47, 'Milestones', () => _withJourney(ref, context, Routes.milestones)),
       (
         48,
@@ -303,11 +309,28 @@ class EdgeStatesPreviewScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
-            const SectionLabel('Offline'),
-            const LpOfflineBanner(),
-            const SizedBox(height: 20),
+            // The real surfaces, not lookalikes. This screen used to preview
+            // `LpOfflineBanner` and `LpErrorCard` — a second, blander copy of
+            // the error voice that nothing else in the app rendered, so the
+            // design system showed one thing and users saw another.
             const SectionLabel('Error + retry'),
-            LpErrorCard(onRetry: () {}),
+            LpErrorState(
+              emoji: '📡',
+              title: l10n.errorFeedTitle,
+              body: l10n.errorFeedBody,
+              retryLabel: l10n.errorRetry,
+              onRetry: () {},
+            ),
+            const SizedBox(height: 20),
+            const SectionLabel('Loading'),
+            LpLoadingState(label: l10n.communityLoading),
+            const SizedBox(height: 20),
+            const SectionLabel('Empty'),
+            LpEmptyState(
+              emoji: '📈',
+              title: l10n.statsEmptyTitle,
+              body: l10n.statsEmptyBody,
+            ),
             const SizedBox(height: 20),
             SectionLabel(l10n.statsTitle),
             LpCard(

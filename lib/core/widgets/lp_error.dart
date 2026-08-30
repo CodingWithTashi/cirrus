@@ -9,13 +9,26 @@ import '../utils/l10n_ext.dart';
 import 'lp_buttons.dart';
 
 /// Friendly (title, body) copy for a caught error — offline gets its own
-/// voice, everything else gets the kind generic one. Views use this instead
-/// of inventing per-screen phrasing.
+/// voice, a refused app gets its own, and everything else gets the kind
+/// generic one. Views use this instead of inventing per-screen phrasing.
+///
+/// [BackendRejectedException] is deliberately NOT folded into the offline copy.
+/// Telling someone to check their connection when the connection is fine sends
+/// them to reboot a router over a problem only we can fix, and it is exactly
+/// how a rotated App Check secret stayed invisible for days.
 ({String title, String body}) lpErrorCopy(BuildContext context, Object error) {
   final l10n = context.l10n;
-  return error is NoConnectionException
-      ? (title: l10n.errorOfflineTitle, body: l10n.errorOfflineBody)
-      : (title: l10n.errorGenericTitle, body: l10n.errorGenericBody);
+  return switch (error) {
+    NoConnectionException() => (
+      title: l10n.errorOfflineTitle,
+      body: l10n.errorOfflineBody,
+    ),
+    BackendRejectedException() => (
+      title: l10n.errorRejectedTitle,
+      body: l10n.errorRejectedBody,
+    ),
+    _ => (title: l10n.errorGenericTitle, body: l10n.errorGenericBody),
+  };
 }
 
 /// Content-area failure state: emoji + kind copy + optional "run it back".

@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/models/journey_state.dart';
 import '../../domain/repositories/repositories.dart';
+import '../api/firebase/functions_client.dart';
 import 'firebase_common.dart';
 
 /// [AuthRepository] over Firebase Auth + the journeys collection. Selected on
@@ -12,12 +13,17 @@ import 'firebase_common.dart';
 /// project setup notes (enabled providers, Android SHA fingerprints, iOS
 /// Apple-sign-in entitlement).
 class FirebaseAuthRepository implements AuthRepository {
-  FirebaseAuthRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _db = firestore ?? FirebaseFirestore.instance;
+  FirebaseAuthRepository({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    LpFunctions? functions,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _db = firestore ?? FirebaseFirestore.instance,
+       _functions = functions ?? LpFunctions();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
+  final LpFunctions _functions;
 
   /// The Firebase project's *web* OAuth client (client_type 3 in
   /// android/app/google-services.json) — google_sign_in v7 requires it as
@@ -76,8 +82,29 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> register({required String email, required String password}) =>
       guardAuth(() async {
-        // TODO(follow-up): link a guest (anonymous) session instead of
-        // creating a fresh account, so a Frame-Map journey survives sign-up.
+        // Upgrade the guest rather than replacing them.
+        //
+        // Guest onboarding runs on an anonymous account (`create()` mints one
+        // when there is no session), so registering with a fresh account left
+        // the anonymous uid — and the entire nineteen-step journey written
+        // under it — orphaned in Firestore, and dropped the user back on an
+        // empty app. `linkWithCredential` keeps the uid, so the journey, the
+        // coach transcript and everything under `users/{uid}` come with them.
+        final current = _auth.currentUser;
+        if (current != null && current.isAnonymous) {
+          try {
+            await current.linkWithCredential(
+              EmailAuthProvider.credential(email: email, password: password),
+            );
+            return;
+          } on FirebaseAuthException catch (error) {
+            // `credential-already-in-use` / `email-already-in-use` mean this
+            // address belongs to a real account already. That is not a link,
+            // it is a sign-in, and falling through would report "already in
+            // use" — which is the truth and what the view expects.
+            if (error.code != 'provider-already-linked') rethrow;
+          }
+        }
         await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
@@ -100,20 +127,32 @@ class FirebaseAuthRepository implements AuthRepository {
     await _auth.signOut();
   }
 
+  /// Full erasure, server-side (`deleteUserData`).
+  ///
+  /// The client CANNOT do this itself, and the previous local-only version
+  /// silently proved it: deleting `journeys/{uid}` and the auth record left
+  /// `users/{uid}` (entitlement, coach transcript, cravings, insights) and
+  /// every community post standing, with the uid↔post map still naming the
+  /// author. That is a broken erasure promise and an App Store 5.1.1(v)
+  /// failure, not a rough edge.
+  ///
+  /// The callable also sidesteps `requires-recent-login`: the Admin SDK
+  /// deletes the auth record regardless of how old the session is, so there
+  /// is no re-auth surface to build and no half-deleted state to explain.
   @override
   Future<void> deleteAccount() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    await journeyDoc(_db, user.uid).delete();
-    try {
-      await user.delete();
-    } on FirebaseAuthException catch (e) {
-      // Deleting is only allowed shortly after sign-in and the store fires
-      // this write-behind, so there is no re-auth surface: degrade to
-      // sign-out (journey doc already gone). docs/05's deleteUserData Cloud
-      // Function is the real erasure path later.
-      if (e.code != 'requires-recent-login') rethrow;
-      await _auth.signOut();
-    }
+    if (_auth.currentUser == null) return;
+    // No `guardAuth` here: LpFunctions is the mapper for callable failures,
+    // the way guardAuth is the mapper for the auth plugin's. Wrapping this in
+    // both would give one error two translators.
+    await _functions.call('deleteUserData');
+    // The account is gone server-side; this only drops the local session so
+    // the SDK stops trying to refresh a token for a user that no longer
+    // exists. It is deliberately after the callable — a failed erasure must
+    // leave the user signed in and able to retry.
+    await _auth.signOut();
   }
+
+  @override
+  Future<String?> currentUserId() async => _auth.currentUser?.uid;
 }

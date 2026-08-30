@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import 'community_prefs.dart';
 import 'providers.dart';
 
 /// Lifecycle of the feed's initial fetch. Mutations after `ready` stay
@@ -16,7 +17,6 @@ class CommunityState {
     this.status = FeedStatus.loading,
     this.blocked = const {},
     this.muted = const {},
-    this.nudgesToday = 0,
   });
 
   final List<Post> posts;
@@ -26,8 +26,6 @@ class CommunityState {
   /// Muted authors: their posts hide for you, without mutual invisibility.
   final Set<String> muted;
 
-  /// Buddy nudges sent today — capped at 2/day (Run 3 frame 46).
-  final int nudgesToday;
 
   /// Feed order: live SOS posts pinned first, then reverse-chron (docs/03 §9).
   List<Post> visible(DateTime now) {
@@ -58,20 +56,24 @@ class CommunityState {
     FeedStatus? status,
     Set<String>? blocked,
     Set<String>? muted,
-    int? nudgesToday,
   }) => CommunityState(
     posts: posts ?? this.posts,
     status: status ?? this.status,
     blocked: blocked ?? this.blocked,
     muted: muted ?? this.muted,
-    nudgesToday: nudgesToday ?? this.nudgesToday,
   );
 }
 
 /// View model of the community feed: fetched async from the backend, mutated
 /// optimistically with write-behind sync (the feed never blocks on the wire).
 class CommunityStore extends Notifier<CommunityState> {
-  int _reportCounts = 0;
+  /// Reports this session, **per post**.
+  ///
+  /// Was a single counter across the whole feed, which meant reporting three
+  /// DIFFERENT posts hid the third one: each had a single report, and the
+  /// threshold is supposed to be three reports on the same post. Found by the
+  /// on-device suite.
+  final Map<String, int> _reportsByPost = {};
 
   bool Function() _alive = () => false;
 
@@ -83,10 +85,26 @@ class CommunityStore extends Notifier<CommunityState> {
     ref.onDispose(() => alive = false);
     _alive = () => alive;
     unawaited(_load());
+    unawaited(_restorePrefs());
     return const CommunityState(posts: []);
   }
 
   CommunityRepository get _repo => ref.read(communityRepositoryProvider);
+
+  /// Brings back who this reader has blocked and muted.
+  ///
+  /// Merged into whatever is already in state rather than assigned over it: a
+  /// user who blocks somebody in the first second after launch must not have
+  /// that undone by a restore landing a moment later.
+  Future<void> _restorePrefs() async {
+    final stored = await CommunityPrefs.restore();
+    if (!_alive()) return;
+    if (stored.blocked.isEmpty && stored.muted.isEmpty) return;
+    state = state.copyWith(
+      blocked: {...stored.blocked, ...state.blocked},
+      muted: {...stored.muted, ...state.muted},
+    );
+  }
 
   Future<void> _load() async {
     try {
@@ -111,11 +129,16 @@ class CommunityStore extends Notifier<CommunityState> {
 
   List<Post> get posts => state.posts;
 
+  /// The router gates every community path behind a live journey, so these
+  /// fallbacks are unreachable. They are neutral rather than the seeded demo
+  /// identity ('@quietfox'/🦊) on purpose: if that gate ever slips, a post
+  /// should be obviously unattributed, not silently signed with a fixture's
+  /// name.
   String get _myAlias =>
-      ref.read(quitStoreProvider)?.profile.alias ?? '@quietfox';
+      ref.read(quitStoreProvider)?.profile.alias ?? '@quitter';
 
   String get _myAvatar =>
-      ref.read(quitStoreProvider)?.profile.avatarEmoji ?? '🦊';
+      ref.read(quitStoreProvider)?.profile.avatarEmoji ?? '🔥';
 
   int get _myDay {
     final j = ref.read(quitStoreProvider);
@@ -153,7 +176,6 @@ class CommunityStore extends Notifier<CommunityState> {
       text: text,
       createdAt: DateTime.now(),
       isMine: true,
-      replyingNow: tag == PostTag.sos ? 3 : 0,
       hidden: violatesCommunityRules(text),
     );
     state = state.copyWith(posts: [post, ...state.posts]);
@@ -187,6 +209,9 @@ class CommunityStore extends Notifier<CommunityState> {
 
   void addReply(String postId, String text) {
     final reply = Reply(
+      // Local id until the feed reloads with the server's. Distinct enough to
+      // key a list and to be recognised as not-yet-server-side.
+      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
       alias: _myAlias,
       avatarEmoji: _myAvatar,
       text: text,
@@ -205,10 +230,13 @@ class CommunityStore extends Notifier<CommunityState> {
     }
   }
 
+  /// 3 reports on the SAME post auto-hide it pending review (the App Store
+  /// UGC requirement). The count is local to this session and to this reader;
+  /// the authoritative tally is `posts/{id}.reportCount` server-side.
   void reportPost(String postId) {
-    // 3 reports auto-hide pending review (App Store UGC requirement).
-    _reportCounts++;
-    if (_reportCounts % 3 == 0) {
+    final count = (_reportsByPost[postId] ?? 0) + 1;
+    _reportsByPost[postId] = count;
+    if (count >= autoHideReports) {
       state = state.copyWith(
         posts: [
           for (final p in state.posts)
@@ -219,26 +247,46 @@ class CommunityStore extends Notifier<CommunityState> {
     _repo.reportPost(postId).ignore();
   }
 
+  /// Reports on one post before it hides for the reporter.
+  static const int autoHideReports = 3;
+
   void blockAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(blocked: {...state.blocked, post.alias});
     _repo.blockAuthor(post.alias).ignore();
+    _persist();
   }
 
   void muteAuthor(String postId) {
     final post = state.posts.firstWhere((p) => p.id == postId);
     state = state.copyWith(muted: {...state.muted, post.alias});
+    _persist();
   }
 
-  static const int nudgeDailyCap = 2;
+  /// Flags one reply, and hides it for this reader immediately.
+  ///
+  /// The button used to be `showLpSnack(context, 'Reported')` and nothing
+  /// else: the app said the report was filed and filed nothing. The hide is
+  /// local and immediate because the reader should not have to keep looking at
+  /// what they just reported while moderation catches up.
+  void reportReply({required String postId, required String replyId}) {
+    state = state.copyWith(
+      posts: [
+        for (final p in state.posts)
+          if (p.id == postId)
+            p.copyWith(
+              replies: p.replies.where((r) => r.id != replyId).toList(),
+            )
+          else
+            p,
+      ],
+    );
+    _repo.reportReply(postId: postId, replyId: replyId).ignore();
+  }
 
-  int get nudgesLeftToday =>
-      (nudgeDailyCap - state.nudgesToday).clamp(0, nudgeDailyCap);
-
-  void nudgeBuddy() {
-    if (nudgesLeftToday == 0) return;
-    state = state.copyWith(nudgesToday: state.nudgesToday + 1);
-    _repo.nudgeBuddy().ignore();
-    ref.read(quitStoreProvider.notifier).awardBadge('buddyBond');
+  void _persist() {
+    unawaited(
+      CommunityPrefs.save(blocked: state.blocked, muted: state.muted),
+    );
   }
 }

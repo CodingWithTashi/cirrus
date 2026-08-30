@@ -241,11 +241,12 @@ class _GoalCard extends StatelessWidget {
     final days = MoneyEngine.daysToGoal(goal, saved, runRate);
     final funded = fraction >= 1;
 
-    // Seeded goals resolve through l10n like community seed posts; the raw
-    // name is only ever user input.
+    // The two DEMO goals resolve through l10n like the community seed posts;
+    // every other name is the user's own words. ('onboarding-goal' used to be
+    // here too — an invented goal minted for every new account, now gone.)
     final name = switch (goal.id) {
       'g1' => l10n.seedGoalKicks,
-      'g2' || 'onboarding-goal' => l10n.seedGoalTokyo,
+      'g2' => l10n.seedGoalTokyo,
       _ => goal.name,
     };
 

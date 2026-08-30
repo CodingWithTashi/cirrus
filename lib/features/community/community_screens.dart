@@ -8,6 +8,7 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
@@ -88,12 +89,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                     l10n.communityTitle,
                     style: LpType.titleSm(lp.textPrimary),
                   ),
-                  PressScale(
-                    onTap: () => context.push(Routes.buddy),
-                    child: Text(
-                      l10n.communityYouAre(journey?.profile.alias ?? ''),
-                      style: LpType.caption(lp.textSecondary),
-                    ),
+                  Text(
+                    l10n.communityYouAre(journey?.profile.alias ?? ''),
+                    style: LpType.caption(lp.textSecondary),
                   ),
                 ],
               ),
@@ -112,18 +110,18 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             ),
             const SizedBox(height: 10),
             Expanded(
+              // Post-shaped skeletons rather than a spinner: the feed keeps
+              // its layout, so nothing jumps when the real posts land.
               child: posts.isEmpty && community.status == FeedStatus.loading
-                  ? Center(
-                      child: SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            lp.textFaint,
-                          ),
-                        ),
-                      ),
+                  ? ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                      children: const [
+                        _FeedSkeleton(),
+                        SizedBox(height: 14),
+                        _FeedSkeleton(),
+                        SizedBox(height: 14),
+                        _FeedSkeleton(),
+                      ],
                     )
                   : posts.isEmpty && community.status == FeedStatus.failed
                   ? LpErrorState(
@@ -305,11 +303,19 @@ class PostCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    l10n.communityReplyingNow(post.replyingNow),
-                    style: LpType.caption11(lp.textSecondary),
-                  ),
+                  if (post.replies.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    // The real count. `replyingNow` used to live here: a
+                    // fabricated 3 on your own SOS post and 12 in the demo
+                    // fixtures, and nothing on the real backend could ever
+                    // compute it — live presence needs a backend we do not
+                    // have. A number that is only ever invented is worse than
+                    // no number, especially one claiming people are with you.
+                    Text(
+                      l10n.communityRepliedCount(post.replies.length),
+                      style: LpType.caption11(lp.textSecondary),
+                    ),
+                  ],
                 ],
               )
             else
@@ -445,7 +451,11 @@ class _PostMenu extends ConsumerWidget {
 /// Frame 44 — composer: tag required, kindness line persistent, always
 /// anonymous, day count auto-attached.
 class ComposerScreen extends ConsumerStatefulWidget {
-  const ComposerScreen({super.key});
+  const ComposerScreen({super.key, this.initialTag});
+
+  /// Pre-selects a tag. The panic flow opens this pre-tagged `sos` so that
+  /// reaching for people mid-craving is one tap and not a form.
+  final PostTag? initialTag;
 
   @override
   ConsumerState<ComposerScreen> createState() => _ComposerScreenState();
@@ -453,7 +463,7 @@ class ComposerScreen extends ConsumerStatefulWidget {
 
 class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   final _text = TextEditingController();
-  PostTag? _tag;
+  late PostTag? _tag = widget.initialTag;
 
   @override
   void dispose() {
@@ -642,9 +652,15 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   }
 }
 
-/// Seeded "watching now" floor of the SOS rally banner — replies stack on
-/// top; live presence counts land with the backend.
-const _sosBackupBase = 17;
+/// How many people actually showed up for an SOS post.
+///
+/// Replies plus reactions: two things a real person did, both already stored.
+/// This used to be `17 + replies.length` — a constant floor invented so the
+/// banner would look busy, on a screen whose entire value is that someone
+/// really is there. Zero means zero, and the banner does not render.
+int _backupCount(Post post) =>
+    post.replies.length +
+    post.reactions.values.fold(0, (sum, n) => sum + n);
 
 /// Frame 45 — SOS rally: live backup banner, replies, poster's update.
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -688,7 +704,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
-                  if (isSos) ...[
+                  // Only once somebody has actually shown up. An empty rally
+                  // banner promising backup is the loneliest thing this screen
+                  // could show the person who just asked for help.
+                  if (isSos && _backupCount(post) > 0) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -714,9 +733,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              l10n.communitySosBanner(
-                                _sosBackupBase + post.replies.length,
-                              ),
+                              l10n.communitySosBanner(_backupCount(post)),
                               style: LpType.body13(
                                 lp.oxygenText,
                                 weight: FontWeight.w600,
@@ -731,7 +748,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   PostCard(post: post, expanded: true),
                   const SizedBox(height: 14),
                   for (final reply in post.replies) ...[
-                    _ReplyBubble(reply: reply),
+                    _ReplyBubble(reply: reply, postId: post.id),
                     const SizedBox(height: 10),
                   ],
                 ],
@@ -797,13 +814,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
-class _ReplyBubble extends StatelessWidget {
-  const _ReplyBubble({required this.reply});
+class _ReplyBubble extends ConsumerWidget {
+  const _ReplyBubble({required this.reply, required this.postId});
 
   final Reply reply;
+  final String postId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,11 +856,21 @@ class _ReplyBubble extends StatelessWidget {
             ),
           ),
         ),
-        if (!reply.isMine) ...[
+        // Only a reply the server knows about can be reported, so a local
+        // optimistic one has no flag until the feed reloads with its real id.
+        if (!reply.isMine && reply.id.isNotEmpty) ...[
           const SizedBox(width: 6),
-          // Frame 45: flagging a reply is one tap.
+          // Frame 45: flagging a reply is one tap. It used to be a snackbar
+          // and nothing else — the app said the report was filed and filed
+          // nothing, on the one surface Guideline 1.2 is actually about.
           PressScale(
-            onTap: () => showLpSnack(context, context.l10n.communityReported),
+            onTap: () {
+              LpHaptics.light();
+              ref
+                  .read(communityStoreProvider.notifier)
+                  .reportReply(postId: postId, replyId: reply.id);
+              showLpSnack(context, context.l10n.communityReported);
+            },
             child: Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Icon(Icons.flag_outlined, size: 14, color: lp.textFaint),
@@ -852,4 +880,28 @@ class _ReplyBubble extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A post-shaped placeholder for the feed's first load.
+class _FeedSkeleton extends StatelessWidget {
+  const _FeedSkeleton();
+
+  @override
+  Widget build(BuildContext context) => LpCard(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Row(
+          children: [
+            LpSkeleton(height: 34, width: 34, radius: 17),
+            SizedBox(width: 10),
+            LpSkeleton(height: 12, width: 96, radius: 6),
+          ],
+        ),
+        SizedBox(height: 14),
+        LpSkeletonLines(count: 2),
+      ],
+    ),
+  );
 }

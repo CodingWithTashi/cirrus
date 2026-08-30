@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/logic/money_engine.dart';
 import 'package:last_puff/domain/logic/streak_engine.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -72,6 +73,37 @@ void main() {
         day(0): log(day(0), puffs: 90, limit: 72),
       };
       expect(StreakEngine.currentStreak(slipped, today), 1);
+    });
+
+    test('a streak survives a DST change in both directions', () {
+      // Parity case with functions/test/streakEngine.test.ts.
+      //
+      // The day map is keyed by LOCAL midnight, so the walk backwards has to
+      // be calendar arithmetic. `cursor.subtract(const Duration(days: 1))`
+      // subtracts 24 ABSOLUTE hours, which on a transition day lands on 23:00
+      // or 01:00 of the previous date — not a key — so the lookup returned
+      // null and the streak silently reset to 0. It cost every user in a DST
+      // zone their Freedom Streak twice a year.
+      //
+      // EU falls back 2026-10-25 and the US 2026-11-01, ten and seventeen days
+      // after the Oct 15 2026 launch, so the first paying cohort walks into it.
+      for (final anchor in [
+        DateTime(2026, 11, 4), // US fall back, 2026-11-01
+        DateTime(2026, 10, 28), // EU fall back, 2026-10-25
+        DateTime(2026, 3, 11), // US spring forward, 2026-03-08
+        DateTime(2026, 4, 1), // EU spring forward, 2026-03-29
+      ]) {
+        final days = <DateTime, DayLog>{};
+        for (var back = 0; back < 10; back++) {
+          final d = LpDate.addDays(anchor, -back);
+          days[d] = log(d, puffs: 10, limit: 100);
+        }
+        expect(
+          StreakEngine.currentStreak(days, anchor),
+          10,
+          reason: 'streak broke across the DST change near $anchor',
+        );
+      }
     });
 
     test('flame states follow the docs thresholds', () {

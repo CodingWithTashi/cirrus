@@ -158,10 +158,20 @@ void showLpSnack(
   // lifetime regardless (docs/03 §5: a 5s undo window), so close whatever is
   // still showing ourselves. Cancelled as soon as the snack closes by any
   // other path (timeout, swipe, replacement), so it never double-fires.
-  final timer = Timer(
-    duration + const Duration(milliseconds: 250),
-    controller.close,
-  );
+  final timer = Timer(duration + const Duration(milliseconds: 250), () {
+    // Guarded because this is a backstop, not a control path. If the tree
+    // that owns the messenger was torn down while the snack was up — a
+    // crash screen replacing the app, the host disposing it — `close()`
+    // asserts on a disposed AnimationController, and a *backstop* taking the
+    // app down is strictly worse than a snack that outlives its window.
+    // `controller.closed` never completes in that case, so the cancel below
+    // never runs and this timer is the one thing left holding the reference.
+    try {
+      controller.close();
+    } on Object {
+      // Nothing to do: the snack is already gone with its messenger.
+    }
+  });
   unawaited(controller.closed.whenComplete(timer.cancel));
 }
 
@@ -268,100 +278,6 @@ class ShakeItState extends State<ShakeIt> with SingleTickerProviderStateMixin {
         return Transform.translate(offset: Offset(dx, 0), child: child);
       },
       child: widget.child,
-    );
-  }
-}
-
-/// Offline pill (design frame 52). Not surfaced in the in-memory build —
-/// faking an offline state would break the honesty rule — but ships as part
-/// of the design system for the Firestore phase.
-class LpOfflineBanner extends StatelessWidget {
-  const LpOfflineBanner({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-      decoration: BoxDecoration(
-        color: lp.surfaceSubtle,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: lp.border, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: lp.ember),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              context.l10n.commonOfflineBanner,
-              style: LpType.caption(lp.textSecondary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Error card with retry (design frame 52): warm voice, data never blamed
-/// on the user. For the backend phase, same as [LpOfflineBanner].
-class LpErrorCard extends StatelessWidget {
-  const LpErrorCard({super.key, required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    final l10n = context.l10n;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: lp.surface,
-        borderRadius: BorderRadius.circular(LpDimens.rInput),
-        border: Border.all(color: lp.border, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          const Text('🔌', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.commonErrorTitle,
-                  style: LpType.body13(lp.textPrimary, weight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.commonErrorBody,
-                  style: LpType.caption11(lp.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          PressScale(
-            onTap: onRetry,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-              decoration: BoxDecoration(
-                color: lp.volt,
-                borderRadius: BorderRadius.circular(LpDimens.rChip),
-              ),
-              child: Text(
-                l10n.commonRetry,
-                style: LpType.caption(lp.onVolt, weight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

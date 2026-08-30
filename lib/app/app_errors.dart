@@ -1,3 +1,4 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -15,15 +16,32 @@ import 'router/app_router.dart';
 ///     and views catch them and show the friendly surfaces in lp_error.dart.
 abstract final class LpErrors {
   static DateTime? _lastToastAt;
+  static bool _reportCrashes = false;
 
   /// Call once, before runApp.
-  static void install() {
-    FlutterError.onError = FlutterError.presentError;
+  ///
+  /// [reportCrashes] wires Crashlytics. Off for the fake backend, where
+  /// Firebase is never initialized — and off in debug, because the crash-free
+  /// rate is only meaningful over real sessions and dev noise would drown the
+  /// >= 99.5% launch gate (docs/06 §9).
+  static void install({bool reportCrashes = false}) {
+    _reportCrashes = reportCrashes;
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      if (_reportCrashes) {
+        FirebaseCrashlytics.instance.recordFlutterError(details);
+      }
+    };
     ErrorWidget.builder = crashScreen;
     PlatformDispatcher.instance.onError = (error, stack) {
-      debugPrint('LastPuff uncaught: $error\n$stack');
+      debugPrint('Cirrus uncaught: $error\n$stack');
+      if (_reportCrashes) {
+        // Non-fatal on purpose: the app deliberately survives a background
+        // hiccup, so reporting it as fatal would misstate the crash-free rate.
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: false);
+      }
       _toastQuietly();
-      return true; // handled — a Crashlytics forward slots in here later
+      return true; // handled — the app never hard-crashes for a background error
     };
   }
 

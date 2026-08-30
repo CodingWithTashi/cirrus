@@ -10,11 +10,3 @@ abstract final class LpPricing {
   /// Numeric monthly price for localized sentences (the win-back note).
   static const double monthlyUsd = 7.99;
 }
-
-/// Product links — never translated, never duplicated into ARB files.
-abstract final class LpLinks {
-  static String invite(String alias) =>
-      'lastpuff.app/j/${alias.replaceAll('@', '')}';
-
-  static String inviteUrl(String alias) => 'https://${invite(alias)}';
-}

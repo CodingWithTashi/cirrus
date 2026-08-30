@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,7 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
@@ -197,18 +198,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ),
               const Spacer(),
-              Text(
-                '${l10n.authTerms} · ${l10n.authPrivacy} · ${l10n.authRestorePurchase}',
-                textAlign: TextAlign.center,
-                style: LpType.caption(lp.textSecondary),
+              // "Restore Purchase" is gone: there is no billing SDK, so it
+              // named a control that could not exist — the same reason the two
+              // real Restore buttons were deleted rather than faked. It comes
+              // back with subscriptions, where it is a store requirement.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _LegalLink(label: l10n.authTerms, url: LpLinks.terms),
+                  Text(
+                    ' · ',
+                    style: LpType.caption(lp.textSecondary),
+                  ),
+                  _LegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
+                ],
               ),
-              const SizedBox(height: 6),
-              LpTextButton(
-                l10n.frameMapOpen,
-                size: 12,
-                color: lp.voltText,
-                onTap: () => context.push(Routes.frames),
-              ),
+              // Debug builds only — see the note in Settings. This entry
+              // point was the worse of the two: it is reachable before anyone
+              // has signed in, so the first thing a new user could do is give
+              // themselves somebody else's twelve-day streak.
+
             ],
           ),
         ),
@@ -710,6 +719,33 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// One of the two legal links in the sign-in footer.
+///
+/// Underlined rather than merely tinted: these have to be recognisable as
+/// links to a store reviewer looking for them, and colour alone is not enough
+/// for someone who cannot distinguish it.
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.url});
+
+  final String label;
+  final Uri url;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return GestureDetector(
+      onTap: () => LpLinks.open(url),
+      child: Text(
+        label,
+        style: LpType.caption(
+          lp.textSecondary,
+        ).copyWith(decoration: TextDecoration.underline),
       ),
     );
   }

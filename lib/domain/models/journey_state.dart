@@ -1,3 +1,4 @@
+import '../date_key.dart';
 import '../logic/danger_hours.dart';
 import '../logic/money_engine.dart';
 import '../logic/streak_engine.dart';
@@ -15,11 +16,11 @@ class JourneyState {
     required this.longestStreak,
     required this.goals,
     required this.earnedBadges,
-    required this.buddy,
     this.lastPuffAt,
     this.day1TasksDone = const {},
     this.pendingSlipCleanDays,
     this.moodCheckIns = 0,
+    this.planAdvice,
   });
 
   final UserProfile profile;
@@ -32,7 +33,6 @@ class JourneyState {
   final int longestStreak;
   final List<SavingsGoal> goals;
   final Set<String> earnedBadges;
-  final Buddy buddy;
   final DateTime? lastPuffAt;
 
   /// Day-1 checklist: which of tasks 1..3 are done.
@@ -43,9 +43,29 @@ class JourneyState {
   final int? pendingSlipCleanDays;
   final int moodCheckIns;
 
-  static DateTime dateKey(DateTime d) => DateTime(d.year, d.month, d.day);
+  /// The most recent nightly advice the client has accepted (docs/03 §3.3).
+  /// Null until `taperRecalc` has produced one, on the fake backend, and for
+  /// anyone whose plan has already finished.
+  final PlanAdvice? planAdvice;
+
+  /// Local midnight — the day map's key. Delegates to the one truncation in
+  /// the app; the name and its call sites stay put.
+  static DateTime dateKey(DateTime d) => LpDate.dayStart(d);
 
   DayLog? logFor(DateTime date) => days[dateKey(date)];
+
+  /// The limit in force on [date] — the single answer the whole app reads.
+  ///
+  /// The raw curve is the floor of this, not the whole of it: the nightly
+  /// adaptive layer may bend today's number up (a struggling stretch) or down
+  /// (crushing it), and `TodaySnapshot`, `logPuff`'s over-limit test and the
+  /// Plan screen must never disagree about which number is live.
+  int limitOn(DateTime date) {
+    final advice = planAdvice;
+    if (advice != null && advice.appliesTo(date)) return advice.limit;
+    final d = plan.dayNumber(date).clamp(1, 9999);
+    return d <= plan.totalDays ? TaperEngine.limitFor(plan, d) : 0;
+  }
 
   JourneyState copyWith({
     UserProfile? profile,
@@ -56,11 +76,11 @@ class JourneyState {
     int? longestStreak,
     List<SavingsGoal>? goals,
     Set<String>? earnedBadges,
-    Buddy? buddy,
     DateTime? lastPuffAt,
     Set<int>? day1TasksDone,
     int? Function()? pendingSlipCleanDays,
     int? moodCheckIns,
+    PlanAdvice? Function()? planAdvice,
   }) => JourneyState(
     profile: profile ?? this.profile,
     plan: plan ?? this.plan,
@@ -70,13 +90,13 @@ class JourneyState {
     longestStreak: longestStreak ?? this.longestStreak,
     goals: goals ?? this.goals,
     earnedBadges: earnedBadges ?? this.earnedBadges,
-    buddy: buddy ?? this.buddy,
     lastPuffAt: lastPuffAt ?? this.lastPuffAt,
     day1TasksDone: day1TasksDone ?? this.day1TasksDone,
     pendingSlipCleanDays: pendingSlipCleanDays != null
         ? pendingSlipCleanDays()
         : this.pendingSlipCleanDays,
     moodCheckIns: moodCheckIns ?? this.moodCheckIns,
+    planAdvice: planAdvice != null ? planAdvice() : this.planAdvice,
   );
 }
 
@@ -107,7 +127,7 @@ class TodaySnapshot {
     final plan = s.plan;
     final day = plan.dayNumber(now).clamp(1, 9999);
     final todayLog = s.logFor(now);
-    final limit = day <= plan.totalDays ? TaperEngine.limitFor(plan, day) : 0;
+    final limit = s.limitOn(now);
     final streak = StreakEngine.currentStreak(s.days, now);
     final logs = s.days.values.toList()
       ..sort((a, b) => a.date.compareTo(b.date));
@@ -169,9 +189,7 @@ class TodaySnapshot {
   int get puffsLeft => (limit - puffs).clamp(0, 999999);
 
   int get daysToFreedom {
-    final diff = JourneyState.dateKey(
-      freedomDate,
-    ).difference(JourneyState.dateKey(now)).inDays;
+    final diff = LpDate.daysBetween(now, freedomDate);
     return diff < 0 ? 0 : diff;
   }
 }

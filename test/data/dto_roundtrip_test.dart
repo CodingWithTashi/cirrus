@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_fixtures.dart';
+import 'package:last_puff/data/dto/coach_codec.dart';
 import 'package:last_puff/data/dto/community_codec.dart';
 import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
@@ -50,6 +51,68 @@ void main() {
       expect(day7.hourBuckets, isNotEmpty);
       expect(day7.moodNote, 'work party tonight, nervous');
     });
+
+    test('a renamed coach round-trips, and its absence stays absent', () {
+      // Null means "never chose", not "Ember" — the default is an ARB string,
+      // so existing Firestore journeys need no migration and nothing in the
+      // domain model hardcodes the brand word.
+      expect(journey.profile.coachName, isNull);
+      final encoded =
+          JourneyCodec.encode(journey)['profile'] as Map<String, dynamic>;
+      expect(
+        encoded['coachName'],
+        isNull,
+        reason: 'a journey nobody renamed must not claim a name',
+      );
+
+      final named = journey.copyWith(
+        profile: journey.profile.copyWith(coachName: 'Wren'),
+      );
+      final wire = jsonEncode(JourneyCodec.encode(named));
+      final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
+      expect(back.profile.coachName, 'Wren');
+      expect(jsonEncode(JourneyCodec.encode(back)), wire);
+    });
+
+    test('planAdvice round-trips, and its absence stays absent', () {
+      // The seed journey carries no advice — the nightly cron has never run
+      // for it — so the null case is the one the demo backend exercises daily.
+      expect(journey.planAdvice, isNull);
+      expect(
+        JourneyCodec.encode(journey)['planAdvice'],
+        isNull,
+        reason: 'a journey with no advice must not invent one',
+      );
+
+      final advised = journey.copyWith(
+        planAdvice: () => PlanAdvice(
+          forDay: DateTime(2026, 8, 18),
+          limit: 91,
+          adherence: PlanAdherence.struggling,
+          stretchDelta: 1,
+        ),
+      );
+      final wire = jsonEncode(JourneyCodec.encode(advised));
+      final decoded = JourneyCodec.decode(
+        jsonDecode(wire) as Map<String, dynamic>,
+      );
+      expect(jsonEncode(JourneyCodec.encode(decoded)), wire);
+      expect(decoded.planAdvice!.limit, 91);
+      expect(decoded.planAdvice!.adherence, PlanAdherence.struggling);
+      expect(decoded.planAdvice!.stretchDelta, 1);
+      // Local midnight, never an epoch shift.
+      expect(decoded.planAdvice!.forDay, DateTime(2026, 8, 18));
+    });
+
+    test('an unknown adherence decodes to onTrack, never a crash', () {
+      final advice = JourneyCodec.decodeAdvice(const {
+        'forDay': '2026-08-18',
+        'limit': 40,
+        'adherence': 'sandbagging',
+        'stretchDelta': 0,
+      });
+      expect(advice.adherence, PlanAdherence.onTrack);
+    });
   });
 
   group('PostCodec', () {
@@ -76,9 +139,13 @@ void main() {
         reactions: const {'💪': 3},
         myReactions: const {'💪'},
         replies: const [
-          Reply(alias: '@nightbee', avatarEmoji: '🐝', text: 'hold the line'),
+          Reply(
+            id: 'r1',
+            alias: '@nightbee',
+            avatarEmoji: '🐝',
+            text: 'hold the line',
+          ),
         ],
-        replyingNow: 2,
         isMine: true,
       );
       final wire = jsonEncode(PostCodec.encode(post));
@@ -88,6 +155,86 @@ void main() {
       expect(jsonEncode(PostCodec.encode(decoded)), wire);
       expect(decoded.replies.single.text, 'hold the line');
       expect(decoded.myReactions, {'💪'});
+    });
+  });
+
+  group('CoachReplyCodec', () {
+    // Ember's actual words travel in `text`. The server always sends a
+    // sensible `template` alongside so a client built before the field
+    // existed still renders something — but a client that DROPS text shows
+    // the canned template instead of what the model actually said, which is
+    // worse than either alone.
+    test('carries the model reply text across the wire', () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        args: {'day': 12},
+        showWeekCard: true,
+        text: 'That 10pm wave is brutal. Fifteen minutes and it breaks.',
+      );
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(CoachReplyCodec.encode(reply)))
+            as Map<String, dynamic>,
+      );
+
+      expect(decoded.text, reply.text);
+      expect(decoded.template, CoachTemplate.generic1);
+      expect(decoded.args['day'], 12);
+      expect(decoded.showWeekCard, isTrue);
+    });
+
+    test('the server allowance survives the round trip', () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        text: 'ok',
+        messagesLeft: 3,
+        isFreeTier: true,
+      );
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(CoachReplyCodec.encode(reply)))
+            as Map<String, dynamic>,
+      );
+
+      expect(decoded.messagesLeft, 3);
+      expect(decoded.isFreeTier, isTrue);
+    });
+
+    test('an older backend that omits the allowance hides the counter', () {
+      // Null, not zero: zero would grey the composer for everybody the moment
+      // a stale function version answered.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': const <String, Object>{},
+        'showWeekCard': false,
+        'text': 'hello',
+      });
+
+      expect(decoded.messagesLeft, isNull);
+      expect(decoded.isFreeTier, isNull);
+    });
+
+    // The deterministic templates (capReached, connectionLost) carry no text.
+    test('a template-only reply decodes with a null text', () {
+      final decoded = CoachReplyCodec.decode({
+        'template': 'capReached',
+        'args': {'limit': 5},
+        'showWeekCard': false,
+      });
+
+      expect(decoded.text, isNull);
+      expect(decoded.template, CoachTemplate.capReached);
+    });
+
+    test('an empty text is treated as absent, not as an empty bubble', () {
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': <String, Object>{},
+        'showWeekCard': false,
+        'text': '   ',
+      });
+
+      expect(decoded.text, isNull);
     });
   });
 }

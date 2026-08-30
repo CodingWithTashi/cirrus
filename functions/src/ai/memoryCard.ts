@@ -13,7 +13,7 @@ import {dayKeyIn} from '../domain/dateKey';
 import {decodeJourney} from '../domain/journeyCodec';
 import {currentStreak, dangerHours, flameFor, trailingDays} from '../domain/streakEngine';
 import {dayNumber, limitFor} from '../domain/taperEngine';
-import {totalDays, type Journey} from '../domain/types';
+import {totalDays, type DayLog, type Journey} from '../domain/types';
 
 export interface MemoryCard {
   readonly text: string;
@@ -54,15 +54,27 @@ export function buildMemoryCard(
     hour12: false,
   }).format(now);
 
+  const profile = journey.profile;
+  const age =
+    profile.birthYear === null ? null : now.getFullYear() - profile.birthYear;
+
   const lines = [
     'USER CARD',
-    `alias: ${journey.profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
-    `why: ${list(journey.profile.whys)} · fears: ${list(journey.profile.worries)}`,
+    `alias: ${profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
+    `why: ${list(profile.whys)} · fears: ${list(profile.worries)}`,
+    // The rest of the 19-step quiz. These are the answers that change what is
+    // worth SAYING rather than what the numbers are: someone on their sixth
+    // attempt needs a different opening than someone on their first, and an
+    // all-day vaper who reaches for it within five minutes of waking is a
+    // different person from a social one.
+    `about them: ${describeProfile(profile, age)}`,
+    `saving toward: ${goalsLine(journey, saved)}`,
     `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${journey.repairTokens}`,
     `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
     `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'} · local time now: ${localTime}`,
     `last 7 days: ${last7.length > 0 ? last7.map((d) => d.puffs).join(',') : 'no logs yet'}`,
     `recent events: ${recentEvents(journey, todayKey, streak).join('; ') || 'none'}`,
+    `in their own words: ${ownWords(window14) || 'nothing written yet'}`,
   ];
 
   return {text: lines.join('\n'), journey, todayKey, streak};
@@ -70,6 +82,87 @@ export function buildMemoryCard(
 
 function list(values: readonly string[]): string {
   return values.length > 0 ? values.join(', ') : 'not set';
+}
+
+/** The onboarding answers, as a sentence rather than a field dump. */
+function describeProfile(
+  profile: Journey['profile'],
+  age: number | null,
+): string {
+  const parts: string[] = [];
+  if (age !== null && age > 0 && age < 120) parts.push(`${age}yo`);
+  if (profile.gender !== null) parts.push(profile.gender);
+  if (profile.frequency !== null) parts.push(`vapes ${profile.frequency}`);
+  if (profile.firstPuff !== null) {
+    parts.push(`first puff ${firstPuffPhrase(profile.firstPuff)}`);
+  }
+  if (profile.attempts !== null) parts.push(attemptsPhrase(profile.attempts));
+  return parts.length > 0 ? parts.join(', ') : 'not much said yet';
+}
+
+function firstPuffPhrase(window: string): string {
+  switch (window) {
+    case 'withinFive':
+      return 'within 5 min of waking';
+    case 'fiveToThirty':
+      return '5-30 min after waking';
+    case 'thirtyToSixty':
+      return '30-60 min after waking';
+    default:
+      return 'over an hour after waking';
+  }
+}
+
+/**
+ * Prior attempts, phrased so the coach reads it as history rather than as a
+ * score. docs/04's voice rule: never imply someone has failed before.
+ */
+function attemptsPhrase(attempts: string): string {
+  switch (attempts) {
+    case 'never':
+      return 'first serious try';
+    case 'once':
+      return 'tried once before';
+    case 'twoToFive':
+      return 'tried 2-5 times before';
+    default:
+      return 'tried many times before';
+  }
+}
+
+/**
+ * What the money is FOR. "You're two thirds of the way to the Tokyo flight"
+ * lands; "you have saved $312" is a number.
+ */
+function goalsLine(journey: Journey, saved: number): string {
+  if (journey.goals.length === 0) return 'no goal set';
+  return journey.goals
+    .map((g) => {
+      const pct =
+        g.price > 0 ? Math.min(100, Math.round((saved / g.price) * 100)) : 0;
+      return `${g.name} (${pct}% of ${g.price.toFixed(0)})`;
+    })
+    .join(', ');
+}
+
+/**
+ * The user's own mood notes and slip triggers from the trailing window.
+ *
+ * The single most personal thing in the journey document, and the card used to
+ * drop it entirely — Ember could see that a day went badly but not that the
+ * user had written "work party tonight, nervous" next to it.
+ */
+function ownWords(window: readonly DayLog[]): string {
+  const notes = window
+    .filter((d) => d.moodNote !== null || d.slipTrigger !== null)
+    .slice(-3)
+    .map((d) => {
+      const bits = [d.moodNote, d.slipTrigger === null ? null : `blamed ${d.slipTrigger}`]
+        .filter((b): b is string => b !== null)
+        .join(' — ');
+      return `${d.date}: ${bits}`;
+    });
+  return notes.join(' | ');
 }
 
 /**

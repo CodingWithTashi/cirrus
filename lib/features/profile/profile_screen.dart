@@ -201,12 +201,6 @@ class ProfileScreen extends ConsumerWidget {
               l10n.insightLinkTitle,
               () => context.push(Routes.insight),
             ),
-            _linkRow(
-              context,
-              '🤝',
-              l10n.buddyTitle,
-              () => context.push(Routes.buddy),
-            ),
             const SizedBox(height: 10),
             LpButton(
               l10n.profileSettings,

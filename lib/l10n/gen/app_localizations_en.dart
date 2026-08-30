@@ -9,14 +9,14 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'LastPuff';
+  String get appName => 'Cirrus';
 
   @override
   String get appTagline => 'Your last puff is closer\nthan you think.';
 
   @override
   String appVersionFooter(String version) {
-    return 'LastPuff $version · made by people who quit';
+    return 'Cirrus $version · made by people who quit';
   }
 
   @override
@@ -30,15 +30,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonSave => 'Save';
-
-  @override
-  String get commonSkip => 'Skip';
-
-  @override
-  String get commonBack => 'Back';
-
-  @override
-  String get commonRetry => 'Retry';
 
   @override
   String get commonUndo => 'Undo';
@@ -56,73 +47,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonMaybeLater => 'Maybe later';
 
   @override
-  String get commonComingSoon => 'Coming soon';
-
-  @override
-  String get commonToday => 'Today';
-
-  @override
-  String get commonDay => 'Day';
-
-  @override
-  String get commonYou => 'you';
-
-  @override
-  String get commonPremium => 'Premium';
-
-  @override
-  String get commonFree => 'Free';
-
-  @override
-  String get commonUpgrade => 'Upgrade';
-
-  @override
-  String get commonSeeAll => 'See all';
-
-  @override
-  String get commonOfflineBanner =>
-      'Offline — logs saved on your phone, syncing when you\'re back.';
-
-  @override
-  String get commonErrorTitle => 'Something hiccuped.';
-
-  @override
-  String get commonErrorBody => 'Your data is fine. Tap to retry.';
-
-  @override
-  String commonDayOfDay(int day, int total) {
-    return 'Day $day of $total';
-  }
-
-  @override
   String commonDayN(int day) {
     return 'day $day';
   }
-
-  @override
-  String commonStreakDays(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count days',
-      one: '$count day',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String commonPuffsUnit(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count puffs',
-      one: '$count puff',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get authSplashAutoAdvance => 'Loading your plan…';
 
   @override
   String get authSignInTitle => 'Let\'s keep your\nplan safe.';
@@ -252,13 +179,21 @@ class AppLocalizationsEn extends AppLocalizations {
       '2-minute check-up. Brutally honest results. A plan built for you.';
 
   @override
-  String get obWelcomeFactLabel => 'Already checked up?';
-
-  @override
-  String get obWelcomeFactValue => '83% finish in under 2 min';
-
-  @override
   String get obWelcomeCta => 'Start my check-up';
+
+  @override
+  String get obResumeTitle => 'Pick up where you left off?';
+
+  @override
+  String obResumeBody(int answered, int total) {
+    return 'You\'d answered $answered of $total questions. Nothing\'s lost.';
+  }
+
+  @override
+  String get obResumeCta => 'Carry on';
+
+  @override
+  String get obResumeFresh => 'Start fresh';
 
   @override
   String get obGenderTitle => 'How do you identify?';
@@ -286,11 +221,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obBirthYearSubtitle => 'Your plan adapts to your age.';
 
   @override
+  String get obBirthYearHint => 'Year or age — either one works.';
+
+  @override
+  String obBirthYearAge(int age) {
+    return 'You\'re $age.';
+  }
+
+  @override
+  String obBirthYearAgeOffer(int age, int year) {
+    return '$age? That\'d be born $year.';
+  }
+
+  @override
+  String get obBirthYearAgeConfirm => 'That\'s me';
+
+  @override
+  String obBirthYearUnderConfirm(int year, int age) {
+    return 'Born $year? That makes you $age.';
+  }
+
+  @override
+  String obBirthYearUnderCta(int age) {
+    return 'Yes, I\'m $age';
+  }
+
+  @override
+  String get obBirthYearFix => 'Let me fix that';
+
+  @override
+  String get obBirthYearErrorFuture =>
+      'That year hasn\'t happened yet. Want another go?';
+
+  @override
+  String get obBirthYearErrorTooOld =>
+      'The oldest person ever verified made it to 122. Let\'s try that again.';
+
+  @override
+  String get obBirthYearErrorUnknown =>
+      'That\'s not a year — and not an age either. One more go.';
+
+  @override
   String get obUnder18Title => 'We can\'t help you here — but this can.';
 
   @override
   String get obUnder18Subtitle =>
-      'LastPuff is built for 18+. These two are free, private, and made for people your age. They work.';
+      'Cirrus is built for 18+. These two are free, private, and made for people your age. They work.';
 
   @override
   String get obUnder18TiqTitle => 'This is Quitting';
@@ -454,15 +430,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get obSpendKickerSmall => 'That\'s a new phone. Every year.';
-
-  @override
-  String get obSpendKickerMid => 'That\'s a flight to Tokyo. Every year.';
-
-  @override
-  String get obSpendKickerBig => 'That\'s rent money. Every single year.';
-
-  @override
   String obSpendPerMonthChip(String amount) {
     return '$amount / month';
   }
@@ -474,6 +441,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obSpendYourMath => 'your math, not ours';
+
+  @override
+  String obSpendComparisonOne(String item) {
+    return 'That\'s $item. Every year.';
+  }
+
+  @override
+  String obSpendComparisonTwo(String item) {
+    return 'That\'s $item — twice over. Every year.';
+  }
+
+  @override
+  String obSpendComparisonMany(String item, int count) {
+    return 'That\'s $item, $count times over. Every year.';
+  }
+
+  @override
+  String get obSpendItemGymMonth => 'a month at the gym';
+
+  @override
+  String get obSpendItemConcertTicket => 'a concert ticket, good seats';
+
+  @override
+  String get obSpendItemRunningShoes => 'a proper pair of running shoes';
+
+  @override
+  String get obSpendItemDentalCleaning => 'a dental cleaning';
+
+  @override
+  String get obSpendItemWinterCoat => 'a winter coat that actually works';
+
+  @override
+  String get obSpendItemFestivalTicket => 'a festival ticket, camping and all';
+
+  @override
+  String get obSpendItemWeekendAway => 'a weekend away';
+
+  @override
+  String get obSpendItemBike => 'a bike worth riding';
+
+  @override
+  String get obSpendItemDrivingLessons => 'a full set of driving lessons';
+
+  @override
+  String get obSpendItemNewPhone => 'a new phone';
+
+  @override
+  String get obSpendItemLaptop => 'a laptop that isn\'t dying';
+
+  @override
+  String get obSpendItemEmergencyFund => 'a real emergency fund';
+
+  @override
+  String get obSpendItemYogaYear => 'a year of unlimited yoga';
+
+  @override
+  String get obSpendItemMonthOfRent => 'a month of rent';
+
+  @override
+  String get obSpendItemFamilyHoliday => 'a family holiday';
+
+  @override
+  String get obSpendItemUsedCar => 'a car that gets you there';
 
   @override
   String get obFirstPuffTitle => 'First puff after waking up?';
@@ -491,11 +521,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obFirstPuffHourPlus => 'An hour or more';
 
   @override
-  String get obFirstPuffScienceLabel => 'THE SCIENCE';
-
-  @override
   String get obFirstPuffScience =>
       'Time-to-first-puff is the strongest single predictor of dependence. 76% of young vapers reach for it within 30 min of waking.';
+
+  @override
+  String get obFactLabelScience => 'THE SCIENCE';
+
+  @override
+  String get obFactLabelYourNumbers => 'YOUR NUMBERS';
+
+  @override
+  String get obFactTried =>
+      'Among daily young users, failed quit attempts went from 28% to 53% between 2020 and 2024. The devices got better at their job. That isn\'t you getting weaker — it\'s an arms race nobody asked you to enter.';
+
+  @override
+  String obFactStrength(int mg) {
+    return 'That\'s ≈$mg mg of nicotine a day. Your numbers, our multiplying. Your vape, meanwhile, has never once suggested a portion size.';
+  }
+
+  @override
+  String get obFactWorryCravings =>
+      'Most cravings peak and pass inside 15–20 minutes. Shorter than waiting for a table. The panic button is built around exactly that window.';
+
+  @override
+  String get obFactWorrySocial =>
+      'Peer support raises quit success by around 40%. Yes — strangers on the internet. We were surprised too.';
 
   @override
   String get obWhyTitle => 'Why do you want out?';
@@ -663,6 +713,21 @@ class AppLocalizationsEn extends AppLocalizations {
       '24% quit with a structured program vs 19% alone — randomized trial of 2,588 young adults. Not magic. Better odds.';
 
   @override
+  String obRevealComparisonOne(String item) {
+    return 'By Freedom Day, that\'s $item.';
+  }
+
+  @override
+  String obRevealComparisonTwo(String item) {
+    return 'By Freedom Day, that\'s $item — twice over.';
+  }
+
+  @override
+  String obRevealComparisonMany(String item, int count) {
+    return 'By Freedom Day, that\'s $item, $count times over.';
+  }
+
+  @override
   String get obRevealCta => 'I\'m ready';
 
   @override
@@ -705,10 +770,70 @@ class AppLocalizationsEn extends AppLocalizations {
       '\"First app that didn\'t talk to me like a doctor or my mom.\"';
 
   @override
-  String get obRatingCardTitle => 'Enjoying LastPuff?';
+  String get obRatingCta => 'Rate Cirrus';
 
   @override
-  String get obRatingCardSubtitle => 'Tap a star to rate it on the App Store.';
+  String obCoachNameTitle(String name) {
+    return 'Meet $name.';
+  }
+
+  @override
+  String get obCoachNameSubtitle =>
+      'Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.';
+
+  @override
+  String obCoachNameAsk(String name) {
+    return '$name is the name we gave it. But a friend you name yourself is more yours — call it whatever you\'d actually text at 2am.';
+  }
+
+  @override
+  String get obCoachNameFieldLabel => 'Coach\'s name';
+
+  @override
+  String get obCoachNameSuggestions => 'Or borrow one:';
+
+  @override
+  String obCoachNameKeep(String name) {
+    return 'Keep $name';
+  }
+
+  @override
+  String get obCoachNameCta => 'That\'s the one';
+
+  @override
+  String get obCoachNameLater => 'You can change it any time in Settings.';
+
+  @override
+  String get obCoachNameErrorEmpty => 'Give them something to be called.';
+
+  @override
+  String get obCoachNameErrorLong => 'Keep it to 20 characters or fewer.';
+
+  @override
+  String get obCoachNameErrorChars => 'Letters, numbers, spaces and - \' only.';
+
+  @override
+  String get obCoachNameErrorRejected => 'Let\'s pick a different one.';
+
+  @override
+  String get settingsCoachName => 'Your coach\'s name';
+
+  @override
+  String coachRenamed(String name) {
+    return 'Alright — $name from now on.';
+  }
+
+  @override
+  String get obCoachNameSuggestion1 => 'Pip';
+
+  @override
+  String get obCoachNameSuggestion2 => 'Fin';
+
+  @override
+  String get obCoachNameSuggestion3 => 'Koda';
+
+  @override
+  String get obCoachNameSuggestion4 => 'Wren';
 
   @override
   String get obNotifTitle => 'Backup, exactly when you cave.';
@@ -923,9 +1048,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeOverLine => 'Over today\'s line. Breathe — tomorrow adjusts.';
-
-  @override
   String homeVsDay1(String percent) {
     return '$percent vs day 1';
   }
@@ -964,14 +1086,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeLoggedSnack => 'Logged 1 puff';
-
-  @override
-  String get homeLogPlusOne => '+1 logged';
-
-  @override
-  String homeLogRingNote(int count) {
-    return 'ring ticks with a bounce · $count left today';
-  }
 
   @override
   String get homeOverLimitTitle => 'Over today\'s line';
@@ -1081,12 +1195,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'occupies the exact itch — thumbs busy, brain busy';
 
   @override
-  String get panicLoopBuddy => 'Text my buddy';
+  String get panicLoopSos => 'Ask the community';
 
   @override
-  String panicLoopBuddySub(String name) {
-    return '$name gets a ping: \"craving — talk me down\"';
-  }
+  String get panicLoopSosSub => 'post an SOS — it pins to the top for an hour';
 
   @override
   String get panicLoopCoach => 'Talk to coach';
@@ -1097,9 +1209,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String panicBuddyPinged(String name) {
-    return 'Ping sent. $name has your back.';
-  }
+  String get panicLoopCoachLocked => 'you\'ve used today\'s free AI session';
 
   @override
   String get gameTitle => 'Tap every spark';
@@ -1108,15 +1218,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameSubtitle => '60 seconds. Thumbs busy, brain busy.';
 
   @override
-  String get gameScore => 'sparks';
-
-  @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
-
-  @override
-  String get gameDone => 'Time. Look at that — the wave broke.';
 
   @override
   String get survivedPlusOne => '+1 craving beaten';
@@ -1181,7 +1285,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachInputHint => 'Message your coach…';
 
   @override
-  String get coachTyping => 'Ember is typing…';
+  String coachTyping(String name) {
+    return '$name is typing…';
+  }
 
   @override
   String coachFreeCounter(num count) {
@@ -1203,6 +1309,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Signal dropped mid-thought 😅 I\'m still right here — say that again once you\'re back online?';
 
   @override
+  String get coachBackendRejected =>
+      'Okay, that\'s on our end — the server didn\'t recognise this app, so I never got your message. Not your connection, not you. We\'re on it.';
+
+  @override
   String get errorOfflineBanner =>
       'offline — logs still count, we\'ll sync later';
 
@@ -1219,6 +1329,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'That one\'s on us, not you. Give it another shot in a sec.';
+
+  @override
+  String get errorRejectedTitle => 'This build got bounced';
+
+  @override
+  String get errorRejectedBody =>
+      'Your connection is fine — our end just didn\'t recognise this app. Nothing you can fix, and nothing you logged is lost.';
 
   @override
   String get errorRetry => 'Run it back';
@@ -1256,8 +1373,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String coachGreeting(int puffs, String method, String date) {
-    return 'Hey. I\'m Ember — I quit two years ago and I remember exactly how it felt. I\'ve read your plan: $puffs a day, $method, Freedom Day $date. No lectures from me, ever. What\'s going on right now?';
+  String coachGreeting(String name, int puffs, String method, String date) {
+    return 'Hey. I\'m $name — I quit two years ago and I remember exactly how it felt. I\'ve read your plan: $puffs a day, $method, Freedom Day $date. No lectures from me, ever. What\'s going on right now?';
   }
 
   @override
@@ -1325,8 +1442,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachSafetyNote =>
-      'Ember is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.';
+  String coachSafetyNote(String name) {
+    return '$name is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.';
+  }
 
   @override
   String get planTitle => 'Your plan';
@@ -1384,6 +1502,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planAdjustNote =>
       'pace + method editable · no reset, no lost history';
+
+  @override
+  String get planAdaptiveLabel => 'TONIGHT\'S ADJUSTMENT';
+
+  @override
+  String planAdaptiveCrushing(int limit) {
+    return 'You came in under your line three days running, so today\'s target drops to $limit. Momentum, not punishment.';
+  }
+
+  @override
+  String planAdaptiveOnTrack(int limit) {
+    return 'You\'re holding the line. Today\'s target stays at $limit.';
+  }
+
+  @override
+  String planAdaptiveStruggling(int limit) {
+    return 'The last two days ran over, so today\'s target bends to $limit. A line you can actually hold beats a line you can\'t.';
+  }
+
+  @override
+  String get planAdaptiveStretched => 'Freedom Day moved back a day to match.';
 
   @override
   String get planAdjustSheetTitle => 'Adjust your plan';
@@ -1510,8 +1649,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityIGotYou => 'I got you 💬';
 
   @override
-  String communityReplyingNow(int count) {
-    return '$count replying now…';
+  String communityRepliedCount(int count) {
+    return '$count already replied';
   }
 
   @override
@@ -1564,21 +1703,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communitySosBanner(int count) {
-    return '🛡️ $count people have your back right now';
+    return '🛡️ $count people had your back';
   }
 
   @override
   String get communityAddVoice => 'Add your voice…';
-
-  @override
-  String communityPostAge(int minutes) {
-    return '${minutes}m';
-  }
-
-  @override
-  String communityPostAgeHours(int hours) {
-    return '${hours}h';
-  }
 
   @override
   String communityDayTag(int day) {
@@ -1596,48 +1725,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPosted => 'Posted. Someone needed to read that.';
 
   @override
-  String get buddyTitle => 'Your buddy';
-
-  @override
-  String get buddyCombinedStreak => 'combined streak';
-
-  @override
-  String get buddyNeitherCaves => 'neither of you caves alone';
-
-  @override
-  String buddyNudge(String name) {
-    return '👊 Nudge $name';
-  }
-
-  @override
-  String get buddyMessage => '💬 Message';
-
-  @override
-  String buddyPrivacyNote(String name) {
-    return '$name sees your SOS pings and gets one nudge if you go quiet for 2 days. That\'s it — no puff counts shared unless you opt in.';
-  }
-
-  @override
-  String get buddyPairsLabel => 'QUITTING IS EASIER IN PAIRS';
-
-  @override
-  String get buddyInviteTitle => 'Invite another friend';
-
-  @override
-  String get buddyCopyLink => 'Copy link';
-
-  @override
   String get buddyLinkCopied =>
       'Link copied — quitting hits different with backup.';
-
-  @override
-  String buddyNudged(String name) {
-    return 'Nudge sent. $name will feel it.';
-  }
-
-  @override
-  String get buddyNudgeCap =>
-      'Two nudges a day keeps it friendly. More tomorrow.';
 
   @override
   String get moneyTitle => 'Money back';
@@ -1870,9 +1959,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mFiveHundredSaved => '\$500 saved';
 
   @override
-  String get mBuddyBond => 'Buddy bond';
-
-  @override
   String get mComeback => 'Comeback';
 
   @override
@@ -1928,66 +2014,32 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String insightCounter(int index, int total) {
-    return 'INSIGHT $index OF $total';
+  String get insightWinLabel => 'Your win';
+
+  @override
+  String get insightWatchoutLabel => 'Watch out';
+
+  @override
+  String get insightWeekChartLabel => 'PUFFS, LAST 7 DAYS';
+
+  @override
+  String get insightCravingsChartLabel => 'CRAVINGS SURVIVED, LAST 7 DAYS';
+
+  @override
+  String get insightHoursChartLabel => 'PUFFS BY HOUR, LAST 14 DAYS';
+
+  @override
+  String get insightPendingTitle => 'No report yet';
+
+  @override
+  String insightPendingBody(String name) {
+    return '$name writes one every Sunday from the week you actually logged — your hours, your moods, your wins. Nothing to show until there\'s a week to read.';
   }
 
   @override
-  String get insight1Headline => 'You vape 3× more after 10 p.m. on weekends.';
-
-  @override
-  String get insight1Body =>
-      'Friday and Saturday nights account for 41% of your weekly puffs. That\'s a social trigger, not a nicotine one — different playbook.';
-
-  @override
-  String get insight1ChartLabel => 'PUFFS BY HOUR · WEEKEND';
-
-  @override
-  String get insight1Action =>
-      'Coach suggestion: pre-set a Friday 9:45 p.m. nudge + keep your hands busy at the party (game link ready).';
-
-  @override
-  String get insight2Headline => 'Your mornings are already free.';
-
-  @override
-  String get insight2Body =>
-      'You didn\'t log a single puff before 11 a.m. for five straight days. The nicotine clock that owned your wake-up? Broken.';
-
-  @override
-  String get insight2ChartLabel => 'FIRST PUFF OF THE DAY';
-
-  @override
-  String get insight2Action =>
-      'Coach suggestion: protect it — keep the vape out of the bedroom and the first hour stays yours.';
-
-  @override
-  String get insight3Headline =>
-      'Cravings beaten: 9. Cravings that beat you: 2.';
-
-  @override
-  String get insight3Body =>
-      'An 82% win rate. Both losses were within an hour of skipped meals — hunger wears nicotine\'s jacket.';
-
-  @override
-  String get insight3ChartLabel => 'CRAVING OUTCOMES';
-
-  @override
-  String get insight3Action =>
-      'Coach suggestion: snack before your 9 p.m. window. Boring advice, measurable difference.';
-
-  @override
-  String get insight4Headline => 'Next week: the halfway bend.';
-
-  @override
-  String get insight4Body =>
-      'Your line drops to 100/day Tuesday. The curve gets steeper here — this is the week the Panic Button earns its keep.';
-
-  @override
-  String get insight4ChartLabel => 'THE WEEK AHEAD';
-
-  @override
-  String get insight4Action =>
-      'Coach suggestion: pre-book one thing you love for Saturday. Reward the bend, don\'t white-knuckle it.';
+  String insightCounter(int index, int total) {
+    return 'INSIGHT $index OF $total';
+  }
 
   @override
   String get slipTitle => 'A slip is data, not defeat.';
@@ -2093,6 +2145,101 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAliasHint => 'anonymous — this is all anyone sees';
 
   @override
+  String memoriesTitle(String name) {
+    return 'What $name remembers';
+  }
+
+  @override
+  String memoriesIntro(String name) {
+    return 'Things you\'ve told $name, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn\'t say.';
+  }
+
+  @override
+  String memoriesEmpty(String name) {
+    return 'Nothing yet. $name starts remembering once you tell it something about your life.';
+  }
+
+  @override
+  String get memoriesFailed => 'Couldn\'t load these right now.';
+
+  @override
+  String get memoriesForget => 'Forget this';
+
+  @override
+  String memoriesForgotten(String name) {
+    return 'Forgotten. $name won\'t bring it up again.';
+  }
+
+  @override
+  String get memoriesForgetFailed =>
+      'That didn\'t go through — it\'s still remembered.';
+
+  @override
+  String get memoriesKindPerson => 'Someone in your life';
+
+  @override
+  String get memoriesKindTrigger => 'A trigger';
+
+  @override
+  String get memoriesKindMotivation => 'Why you\'re doing this';
+
+  @override
+  String get memoriesKindMilestone => 'Something you\'re working toward';
+
+  @override
+  String get memoriesKindPreference => 'How you like to be talked to';
+
+  @override
+  String get memoriesKindContext => 'About you';
+
+  @override
+  String settingsMemories(String name) {
+    return 'What $name remembers';
+  }
+
+  @override
+  String get moderationTitle => 'Review queue';
+
+  @override
+  String get moderationEmpty => 'Nothing waiting. Every flag is reviewed.';
+
+  @override
+  String get moderationFailed => 'Couldn\'t open the queue.';
+
+  @override
+  String get moderationRetry => 'Try again';
+
+  @override
+  String get moderationShowReviewed => 'Show reviewed';
+
+  @override
+  String moderationPendingCount(int count) {
+    return '$count waiting';
+  }
+
+  @override
+  String get moderationSubjectGone =>
+      'The post is gone; only the flag is left.';
+
+  @override
+  String get moderationAllow => 'Allow';
+
+  @override
+  String get moderationBlock => 'Block';
+
+  @override
+  String get moderationDismiss => 'Looks fine';
+
+  @override
+  String get moderationResolveFailed =>
+      'That didn\'t go through. The post is unchanged.';
+
+  @override
+  String moderationFlaggedAs(String action, String reason) {
+    return '$action · $reason';
+  }
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
@@ -2126,9 +2273,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'We never sell your data. No ad trackers. Ever.';
 
   @override
-  String get settingsExportData => 'Export my data';
-
-  @override
   String get settingsDeleteEverything => 'Delete everything';
 
   @override
@@ -2140,10 +2284,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteConfirmCta => 'Yes, delete it all';
-
-  @override
-  String get settingsExported =>
-      'Data package ready — it\'s yours, always was.';
 
   @override
   String get settingsAppearance => 'Appearance';
@@ -2162,15 +2302,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageSystem => 'Match system';
-
-  @override
-  String get settingsSupport => 'Support & FAQ';
-
-  @override
-  String get settingsRestorePurchases => 'Restore purchases';
-
-  @override
-  String get settingsRestored => 'Purchases restored — welcome back.';
 
   @override
   String get settingsSignOut => 'Sign out';
@@ -2281,4 +2412,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get seedReplyUpdate =>
       'update: bought the gatorade. walking home. thank you, i mean it 💙';
+
+  @override
+  String get dangerReminderTitle => 'Your danger hour is coming up';
+
+  @override
+  String get dangerReminderBody =>
+      'This is usually when it hits. You\'ve got a plan — and 15 minutes beats it.';
+
+  @override
+  String get communityLoading => 'Pulling in the feed…';
+
+  @override
+  String memoriesLoading(String name) {
+    return 'Checking what $name kept…';
+  }
+
+  @override
+  String get coachLoadingThread => 'Catching up on your chat…';
+
+  @override
+  String get moderationLoading => 'Loading the queue…';
+
+  @override
+  String get authWorking => 'One sec…';
 }

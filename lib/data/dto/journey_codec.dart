@@ -18,11 +18,11 @@ abstract final class JourneyCodec {
     'longestStreak': s.longestStreak,
     'goals': [for (final g in s.goals) _encodeGoal(g)],
     'earnedBadges': s.earnedBadges.toList(),
-    'buddy': _encodeBuddy(s.buddy),
     'lastPuffAt': s.lastPuffAt == null ? null : encodeTimestamp(s.lastPuffAt!),
     'day1TasksDone': s.day1TasksDone.toList(),
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
     'moodCheckIns': s.moodCheckIns,
+    'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
   };
 
   static JourneyState decode(Map<String, dynamic> json) => JourneyState(
@@ -43,13 +43,15 @@ abstract final class JourneyCodec {
         _decodeGoal(g as Map<String, dynamic>),
     ],
     earnedBadges: (json['earnedBadges'] as List).cast<String>().toSet(),
-    buddy: _decodeBuddy(json['buddy'] as Map<String, dynamic>),
     lastPuffAt: json['lastPuffAt'] == null
         ? null
         : decodeTimestamp(json['lastPuffAt'] as String),
     day1TasksDone: (json['day1TasksDone'] as List).cast<int>().toSet(),
     pendingSlipCleanDays: json['pendingSlipCleanDays'] as int?,
     moodCheckIns: json['moodCheckIns'] as int,
+    planAdvice: json['planAdvice'] == null
+        ? null
+        : decodeAdvice(json['planAdvice'] as Map<String, dynamic>),
   );
 
   static Map<String, dynamic> encodeProfile(UserProfile p) => {
@@ -64,6 +66,7 @@ abstract final class JourneyCodec {
     'attempts': p.attempts?.name,
     'frequency': p.frequency?.name,
     'firstPuff': p.firstPuff?.name,
+    'coachName': p.coachName,
   };
 
   static UserProfile decodeProfile(Map<String, dynamic> json) => UserProfile(
@@ -88,6 +91,7 @@ abstract final class JourneyCodec {
     attempts: enumByNameOrNull(QuitAttempts.values, json['attempts']),
     frequency: enumByNameOrNull(VapeFrequency.values, json['frequency']),
     firstPuff: enumByNameOrNull(FirstPuffWindow.values, json['firstPuff']),
+    coachName: json['coachName'] as String?,
   );
 
   static Map<String, dynamic> encodePlan(QuitPlan p) => {
@@ -146,6 +150,27 @@ abstract final class JourneyCodec {
         repairTokenUsed: json['repairTokenUsed'] as bool? ?? false,
       );
 
+  static Map<String, dynamic> _encodeAdvice(PlanAdvice a) => {
+    'forDay': encodeDayKey(a.forDay),
+    'limit': a.limit,
+    'adherence': a.adherence.name,
+    'stretchDelta': a.stretchDelta,
+  };
+
+  /// Public because the same shape arrives from two places: this journey
+  /// document (the client's accepted copy) and the server-owned `users/{uid}`
+  /// document `taperRecalc` writes. One decoder means they cannot drift.
+  static PlanAdvice decodeAdvice(Map<String, dynamic> json) => PlanAdvice(
+    forDay: decodeDayKey(json['forDay'] as String),
+    limit: json['limit'] as int,
+    adherence: enumByName(
+      PlanAdherence.values,
+      json['adherence'],
+      PlanAdherence.onTrack,
+    ),
+    stretchDelta: json['stretchDelta'] as int? ?? 0,
+  );
+
   static Map<String, dynamic> _encodeGoal(SavingsGoal g) => {
     'id': g.id,
     'emoji': g.emoji,
@@ -162,17 +187,4 @@ abstract final class JourneyCodec {
     fromOnboarding: json['fromOnboarding'] as bool? ?? false,
   );
 
-  static Map<String, dynamic> _encodeBuddy(Buddy b) => {
-    'alias': b.alias,
-    'avatarEmoji': b.avatarEmoji,
-    'name': b.name,
-    'streakDays': b.streakDays,
-  };
-
-  static Buddy _decodeBuddy(Map<String, dynamic> json) => Buddy(
-    alias: json['alias'] as String,
-    avatarEmoji: json['avatarEmoji'] as String,
-    name: json['name'] as String,
-    streakDays: json['streakDays'] as int,
-  );
 }

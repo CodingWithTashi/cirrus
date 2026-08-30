@@ -35,25 +35,28 @@ abstract final class FakeFixtures {
       tag: PostTag.sos,
       seedTextId: 'sosGasStation',
       createdAt: now.subtract(const Duration(minutes: 22)),
-      replyingNow: 12,
       replies: const [
         Reply(
+          id: 'seed-sosReplyWalk',
           alias: '@quietfox',
           avatarEmoji: '🦊',
           seedTextId: 'sosReplyWalk',
           isMine: true,
         ),
         Reply(
+          id: 'seed-sosReplyScience',
           alias: '@nightbee',
           avatarEmoji: '🐝',
           seedTextId: 'sosReplyScience',
         ),
         Reply(
+          id: 'seed-sosReplyGatorade',
           alias: '@owlish',
           avatarEmoji: '🦉',
           seedTextId: 'sosReplyGatorade',
         ),
         Reply(
+          id: 'seed-sosReplyUpdate',
           alias: '@slowturtle',
           avatarEmoji: '🐢',
           seedTextId: 'sosReplyUpdate',

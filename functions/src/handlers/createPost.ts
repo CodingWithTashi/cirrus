@@ -14,8 +14,10 @@
 import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
+import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
+import {claimDailyPost} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
 
 /** docs/03 §9: text <= 500 chars, one tag required, 3 posts/day. */
@@ -34,14 +36,16 @@ export const createPost = onCall(
       throw new HttpsError('invalid-argument', 'A post tag is required.');
     }
 
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recent = await db
-      .collection('postAuthors')
-      .where('uid', '==', caller.uid)
-      .where('createdAt', '>', since)
-      .count()
-      .get();
-    if (recent.data().count >= DAILY_POST_CAP) {
+    // Transactional, not count-then-write. The aggregate-query version let
+    // five concurrent requests all observe "0 posted" and all proceed, which
+    // made the cap decorative exactly when it mattered — pinned by
+    // test/integration/createPost.test.ts.
+    const claim = await claimDailyPost(
+      caller.uid,
+      dayKeyIn(new Date(), caller.timeZone),
+      DAILY_POST_CAP,
+    );
+    if (!claim.allowed) {
       throw new HttpsError('resource-exhausted', 'Daily post limit reached.');
     }
 

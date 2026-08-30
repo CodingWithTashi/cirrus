@@ -128,7 +128,10 @@ void main() {
     expect(journey.profile.alias, '@bravewolf42');
     expect(journey.days, hasLength(1));
     expect(journey.days.values.single.puffs, 0);
-    expect(journey.goals.single.id, 'onboarding-goal');
+    // A day-1 journey holds ONLY what the user gave us. It used to arrive
+    // with a savings goal ("Tokyo flight, \$1300") nobody chose, rendered
+    // everywhere as the user's own — the same failure as an invented stat.
+    expect(journey.goals, isEmpty);
     expect(journey.earnedBadges, isEmpty);
 
     // And it persists: restoreSession in a new session finds it.

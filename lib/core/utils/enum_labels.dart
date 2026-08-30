@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../domain/logic/spend_comparisons.dart';
 import '../../domain/models/enums.dart';
 import 'l10n_ext.dart';
 
@@ -51,5 +52,29 @@ extension PostTagLabel on PostTag {
     PostTag.day1 => context.l10n.communityTagDay1,
     PostTag.milestone => context.l10n.communityTagMilestone,
     PostTag.vent => context.l10n.communityTagVent,
+  };
+}
+
+/// The comparison catalogue's nouns. An exhaustive switch, so adding a
+/// [SpendItem] does not compile until it has been localized — the same
+/// guarantee [WhyChipLabel] gives.
+extension SpendItemLabel on SpendItem {
+  String label(BuildContext context) => switch (this) {
+    SpendItem.gymMonth => context.l10n.obSpendItemGymMonth,
+    SpendItem.concertTicket => context.l10n.obSpendItemConcertTicket,
+    SpendItem.runningShoes => context.l10n.obSpendItemRunningShoes,
+    SpendItem.dentalCleaning => context.l10n.obSpendItemDentalCleaning,
+    SpendItem.winterCoat => context.l10n.obSpendItemWinterCoat,
+    SpendItem.festivalTicket => context.l10n.obSpendItemFestivalTicket,
+    SpendItem.weekendAway => context.l10n.obSpendItemWeekendAway,
+    SpendItem.bike => context.l10n.obSpendItemBike,
+    SpendItem.drivingLessons => context.l10n.obSpendItemDrivingLessons,
+    SpendItem.newPhone => context.l10n.obSpendItemNewPhone,
+    SpendItem.laptop => context.l10n.obSpendItemLaptop,
+    SpendItem.emergencyFund => context.l10n.obSpendItemEmergencyFund,
+    SpendItem.yogaYear => context.l10n.obSpendItemYogaYear,
+    SpendItem.monthOfRent => context.l10n.obSpendItemMonthOfRent,
+    SpendItem.familyHoliday => context.l10n.obSpendItemFamilyHoliday,
+    SpendItem.usedCar => context.l10n.obSpendItemUsedCar,
   };
 }

@@ -17,7 +17,6 @@ abstract final class PostCodec {
     'reactions': p.reactions,
     'myReactions': p.myReactions.toList(),
     'replies': [for (final r in p.replies) encodeReply(r)],
-    'replyingNow': p.replyingNow,
     'isMine': p.isMine,
     'hidden': p.hidden,
   };
@@ -43,12 +42,12 @@ abstract final class PostCodec {
       for (final r in json['replies'] as List? ?? const [])
         decodeReply(r as Map<String, dynamic>),
     ],
-    replyingNow: json['replyingNow'] as int? ?? 0,
     isMine: json['isMine'] as bool? ?? false,
     hidden: json['hidden'] as bool? ?? false,
   );
 
   static Map<String, dynamic> encodeReply(Reply r) => {
+    'id': r.id,
     'alias': r.alias,
     'avatarEmoji': r.avatarEmoji,
     'text': r.text,
@@ -58,6 +57,7 @@ abstract final class PostCodec {
   };
 
   static Reply decodeReply(Map<String, dynamic> json) => Reply(
+    id: json['id'] as String? ?? '',
     alias: json['alias'] as String,
     avatarEmoji: json['avatarEmoji'] as String,
     text: json['text'] as String?,

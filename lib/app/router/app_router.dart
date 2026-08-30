@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../data/stores/providers.dart';
+import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
-import '../../features/buddy/buddy_screen.dart';
+import '../../domain/models/models.dart';
 import '../../features/coach/coach_screen.dart';
+import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
 import '../../features/day1/day1_screen.dart';
 import '../../features/frame_map/frame_map_screen.dart';
@@ -18,6 +20,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/insight/insight_screen.dart';
 import '../../features/milestones/milestones_screen.dart';
 import '../../features/money/money_screen.dart';
+import '../../features/moderation/moderation_screen.dart';
 import '../../features/onboarding/onboarding_flow.dart';
 import '../../features/panic/panic_screens.dart';
 import '../../features/paywall/paywall_screens.dart';
@@ -53,9 +56,16 @@ abstract final class Routes {
   static const health = '/health';
   static const milestones = '/milestones';
   static const insight = '/insight';
-  static const buddy = '/buddy';
   static const profile = '/profile';
   static const settings = '/settings';
+
+  /// Founder-only review queue. Gated by an `admin` custom claim on the auth
+  /// token, checked by the callables themselves — the route is simply hidden
+  /// from everyone else's Settings.
+  static const moderation = '/moderation';
+
+  /// What Ember remembers, and the button that takes it back.
+  static const memories = '/coach/memories';
   static const slip = '/slip';
   static const frames = '/frames';
   static const framesEdge = '/frames/edge';
@@ -97,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: lpRootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
+    // `read`, not `watch`: rebuilding a GoRouter resets navigation, and the
+    // analytics seam is a plain Provider that never changes anyway. This read
+    // is also what constructs the sink, on the first frame — early enough for
+    // Amplitude's session and app-lifecycle autocapture to see the app open.
+    observers: [LpAnalyticsObserver(ref.read(analyticsProvider))],
     debugLogDiagnostics: kDebugMode,
     errorBuilder: (_, _) => const RouteNotFoundScreen(),
     redirect: (context, state) {
@@ -113,9 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.health) ||
           path.startsWith(Routes.milestones) ||
           path.startsWith(Routes.insight) ||
-          path.startsWith(Routes.buddy) ||
           path.startsWith(Routes.profile) ||
           path.startsWith(Routes.settings) ||
+          path.startsWith(Routes.moderation) ||
+          path.startsWith(Routes.memories) ||
           path.startsWith(Routes.slip) ||
           path.startsWith(Routes.day1);
       if (!authed && needsJourney) return Routes.auth;
@@ -175,13 +191,32 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.coach,
-                builder: (_, _) => const CoachScreen(),
+                // `?panic=8` arrives from the panic flow and puts Ember in its
+                // short, directive PANIC MODE voice for the next message. Read
+                // here rather than in the widget so the screen has no router
+                // dependency — it is also built directly by the frame map and
+                // by widget tests.
+                builder: (_, state) => CoachScreen(
+                  panicIntensity: int.tryParse(
+                    state.uri.queryParameters['panic'] ?? '',
+                  ),
+                ),
               ),
             ],
           ),
         ],
       ),
-      GoRoute(path: Routes.compose, builder: (_, _) => const ComposerScreen()),
+      GoRoute(
+        path: Routes.compose,
+        // `?tag=sos` pre-selects a tag — the panic flow's route into the
+        // community. A query parameter rather than `extra` so the deep link
+        // survives a restart and can be opened from a push.
+        builder: (_, state) => ComposerScreen(
+          initialTag: PostTag.values
+              .where((t) => t.name == state.uri.queryParameters['tag'])
+              .firstOrNull,
+        ),
+      ),
       GoRoute(
         path: '/community/post/:id',
         builder: (_, state) =>
@@ -215,9 +250,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const MilestonesScreen(),
       ),
       GoRoute(path: Routes.insight, builder: (_, _) => const InsightScreen()),
-      GoRoute(path: Routes.buddy, builder: (_, _) => const BuddyScreen()),
       GoRoute(path: Routes.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: Routes.memories,
+        builder: (_, _) => const CoachMemoriesScreen(),
+      ),
+      GoRoute(
+        path: Routes.moderation,
+        builder: (_, _) => const ModerationScreen(),
+      ),
       GoRoute(path: Routes.slip, builder: (_, _) => const SlipFlow()),
       GoRoute(path: Routes.frames, builder: (_, _) => const FrameMapScreen()),
       GoRoute(
