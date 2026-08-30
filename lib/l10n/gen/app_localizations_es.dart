@@ -1128,6 +1128,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se cortó la señal a mitad de idea 😅 Sigo aquí — ¿me lo repites cuando vuelvas a estar en línea?';
 
   @override
+  String get coachBackendRejected =>
+      'Vale, esto es cosa nuestra — el servidor no reconoció esta app, así que no me llegó tu mensaje. No es tu conexión ni tú. Estamos en ello.';
+
+  @override
   String get errorOfflineBanner =>
       'sin conexión — todo cuenta, sincronizamos luego';
 
@@ -1144,6 +1148,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'Es cosa nuestra, no tuya. Inténtalo otra vez en un momento.';
+
+  @override
+  String get errorRejectedTitle => 'Rechazaron esta versión';
+
+  @override
+  String get errorRejectedBody =>
+      'Tu conexión va bien — lo nuestro no reconoció esta app. No es cosa tuya, y no se pierde nada de lo que registraste.';
 
   @override
   String get errorRetry => 'Otra vez';

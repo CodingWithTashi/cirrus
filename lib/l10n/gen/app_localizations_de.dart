@@ -1133,6 +1133,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Verbindung ist mitten im Gedanken abgerissen 😅 Ich bin noch da — sag\'s nochmal, wenn du wieder online bist?';
 
   @override
+  String get coachBackendRejected =>
+      'Okay, das liegt an uns — der Server hat die App nicht erkannt, deine Nachricht kam nie an. Nicht deine Verbindung, nicht du. Wir kümmern uns.';
+
+  @override
   String get errorOfflineBanner =>
       'offline — deine Logs zählen, wir syncen später';
 
@@ -1149,6 +1153,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'Liegt an uns, nicht an dir. Probier\'s gleich nochmal.';
+
+  @override
+  String get errorRejectedTitle => 'Dieser Build wurde abgelehnt';
+
+  @override
+  String get errorRejectedBody =>
+      'Deine Verbindung ist okay — unsere Seite hat die App nur nicht erkannt. Kannst du nicht beheben, und nichts Protokolliertes geht verloren.';
 
   @override
   String get errorRetry => 'Nochmal';

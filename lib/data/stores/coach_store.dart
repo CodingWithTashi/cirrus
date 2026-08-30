@@ -100,9 +100,14 @@ class CoachStore extends Notifier<CoachState> {
         chip: chip,
         capped: capped,
       );
-    } on Exception {
+    } on Exception catch (error) {
       // Offline or backend hiccup: Ember owns the miss in-thread, and the
       // attempt doesn't burn a free message.
+      //
+      // A refused build gets its own line. "Say that again once you're back
+      // online" is actively misleading when the connection is fine and the
+      // backend simply would not accept us — it sends the user to check a
+      // router over something only we can fix.
       if (!_alive()) return;
       state = state.copyWith(
         isTyping: false,
@@ -111,7 +116,9 @@ class CoachStore extends Notifier<CoachState> {
           ...state.messages,
           CoachMessage.ember(
             id: _nextId(),
-            template: CoachTemplate.connectionLost,
+            template: error is BackendRejectedException
+                ? CoachTemplate.backendRejected
+                : CoachTemplate.connectionLost,
           ),
         ],
       );

@@ -170,6 +170,21 @@ final class NoConnectionException implements Exception {
   const NoConnectionException();
 }
 
+/// The backend reached us fine and refused the *app* — App Check attestation
+/// failed, or the caller lacks permission for the resource.
+///
+/// This exists because it used to be indistinguishable from being offline, and
+/// that cost days. A rotated App Check debug secret made every callable answer
+/// `unauthenticated`; the client mapped it onto the offline surfaces, so the
+/// coach said "say that again once you're back online" to users who were
+/// online, the panic and community writes died silently, and the one true
+/// cause — a token the backend had never seen — was never once named on
+/// screen. An outage the user can fix by walking outside and a rejection only
+/// we can fix must never share a surface again.
+final class BackendRejectedException implements Exception {
+  const BackendRejectedException();
+}
+
 /// Pushes the device facts the server cannot infer into the server-owned
 /// `users/{uid}` document: timezone, locale, and the push token.
 ///

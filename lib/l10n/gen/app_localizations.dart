@@ -2066,6 +2066,12 @@ abstract class AppLocalizations {
   /// **'Signal dropped mid-thought 😅 I\'m still right here — say that again once you\'re back online?'**
   String get coachConnectionLost;
 
+  /// No description provided for @coachBackendRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, that\'s on our end — the server didn\'t recognise this app, so I never got your message. Not your connection, not you. We\'re on it.'**
+  String get coachBackendRejected;
+
   /// No description provided for @errorOfflineBanner.
   ///
   /// In en, this message translates to:
@@ -2095,6 +2101,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That one\'s on us, not you. Give it another shot in a sec.'**
   String get errorGenericBody;
+
+  /// No description provided for @errorRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This build got bounced'**
+  String get errorRejectedTitle;
+
+  /// No description provided for @errorRejectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your connection is fine — our end just didn\'t recognise this app. Nothing you can fix, and nothing you logged is lost.'**
+  String get errorRejectedBody;
 
   /// No description provided for @errorRetry.
   ///

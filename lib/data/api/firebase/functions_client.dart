@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../../../domain/repositories/repositories.dart';
@@ -46,7 +47,21 @@ class LpFunctions {
       if (payload == null) return const {};
       return jsonDecode(jsonEncode(payload)) as Map<String, dynamic>;
     } on FirebaseFunctionsException catch (error) {
-      throw _mapError(error);
+      throw mapCallableError(error, signedIn: _signedIn());
+    }
+  }
+
+  /// Whether Firebase believes someone is signed in *right now*.
+  ///
+  /// Read at failure time rather than injected, so a token that expired
+  /// mid-flight still classifies correctly. Guarded because a caller may reach
+  /// here before `Firebase.initializeApp`, and a diagnostic must never become
+  /// the thing that throws.
+  bool _signedIn() {
+    try {
+      return FirebaseAuth.instance.currentUser != null;
+    } on Object {
+      return false;
     }
   }
 
@@ -75,8 +90,22 @@ class LpFunctions {
 /// Only genuinely-offline codes become [NoConnectionException] — that is the
 /// one the UI turns into "no wifi, no worries", and labelling a server bug as
 /// an outage would send users to check their router.
-Object _mapError(FirebaseFunctionsException error) => switch (error.code) {
+///
+/// [signedIn] disambiguates the one code that carries two meanings. A gen-2
+/// callable answers a failed **App Check** with the very same `unauthenticated`
+/// it uses for a missing **user**, so the code alone cannot tell "we don't know
+/// who you are" from "we don't trust this build". A caller who is demonstrably
+/// signed in and still hears `unauthenticated` was refused as an app, not as a
+/// person — that is App Check, and it becomes [BackendRejectedException].
+Object mapCallableError(
+  FirebaseFunctionsException error, {
+  required bool signedIn,
+}) => switch (error.code) {
   'unavailable' || 'deadline-exceeded' => const NoConnectionException(),
-  'unauthenticated' => const InvalidCredentialsException(),
+  'unauthenticated' =>
+    signedIn
+        ? const BackendRejectedException()
+        : const InvalidCredentialsException(),
+  'permission-denied' => const BackendRejectedException(),
   _ => error,
 };

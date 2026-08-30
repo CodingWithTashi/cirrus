@@ -1128,6 +1128,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'La connexion a lâché en pleine phrase 😅 Je suis toujours là — redis-moi ça quand tu repasses en ligne ?';
 
   @override
+  String get coachBackendRejected =>
+      'Ok, ça vient de chez nous — le serveur n\'a pas reconnu l\'appli, donc ton message ne m\'est jamais parvenu. Ni ta connexion, ni toi. On s\'en occupe.';
+
+  @override
   String get errorOfflineBanner =>
       'hors ligne — tes logs comptent, on synchronise après';
 
@@ -1144,6 +1148,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'C\'est nous, pas toi. Réessaie dans un instant.';
+
+  @override
+  String get errorRejectedTitle => 'Cette version a été refusée';
+
+  @override
+  String get errorRejectedBody =>
+      'Ta connexion va bien — c\'est notre côté qui n\'a pas reconnu l\'appli. Rien à faire de ton côté, et rien n\'est perdu.';
 
   @override
   String get errorRetry => 'On retente';

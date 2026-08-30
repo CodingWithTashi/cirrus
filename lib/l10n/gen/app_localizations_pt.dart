@@ -1129,6 +1129,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'A ligação caiu a meio da ideia 😅 Continuo aqui — repetes isso quando voltares a estar online?';
 
   @override
+  String get coachBackendRejected =>
+      'Ok, isto é do nosso lado — o servidor não reconheceu a app, por isso a tua mensagem nunca me chegou. Não é a tua ligação nem és tu. Já estamos a tratar.';
+
+  @override
   String get errorOfflineBanner =>
       'offline — os registos contam, sincronizamos depois';
 
@@ -1145,6 +1149,13 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'A culpa é nossa, não tua. Tenta outra vez daqui a nada.';
+
+  @override
+  String get errorRejectedTitle => 'Esta versão foi recusada';
+
+  @override
+  String get errorRejectedBody =>
+      'A tua ligação está boa — o nosso lado é que não reconheceu a app. Não é nada teu, e não se perde nada do que registaste.';
 
   @override
   String get errorRetry => 'Tenta de novo';

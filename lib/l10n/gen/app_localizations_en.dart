@@ -1122,6 +1122,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Signal dropped mid-thought 😅 I\'m still right here — say that again once you\'re back online?';
 
   @override
+  String get coachBackendRejected =>
+      'Okay, that\'s on our end — the server didn\'t recognise this app, so I never got your message. Not your connection, not you. We\'re on it.';
+
+  @override
   String get errorOfflineBanner =>
       'offline — logs still count, we\'ll sync later';
 
@@ -1138,6 +1142,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'That one\'s on us, not you. Give it another shot in a sec.';
+
+  @override
+  String get errorRejectedTitle => 'This build got bounced';
+
+  @override
+  String get errorRejectedBody =>
+      'Your connection is fine — our end just didn\'t recognise this app. Nothing you can fix, and nothing you logged is lost.';
 
   @override
   String get errorRetry => 'Run it back';

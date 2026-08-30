@@ -44,3 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /functions/alastpuff-firebase-adminsdk-fbsvc-edb2852a4d.json
+
+# App Check debug secret (see lib/data/api/firebase/app_check_setup.dart).
+# A registered debug token bypasses attestation for the whole project, so it
+# is a credential: local only, never committed.
+.appcheck_token

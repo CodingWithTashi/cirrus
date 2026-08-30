@@ -293,9 +293,15 @@ enum CoachTemplate {
   party,
   capReached,
 
-  /// Client-side fallback when the coach backend is unreachable — the only
-  /// template a store may fabricate without a backend reply.
+  /// Client-side fallback when the coach backend is unreachable.
   connectionLost,
+
+  /// Client-side fallback when the backend answered and refused this build
+  /// (App Check). Separate from [connectionLost] because they need opposite
+  /// advice: one resolves itself when the signal returns, the other never
+  /// does, and telling someone to reconnect while they are online is how this
+  /// failure hid for days.
+  backendRejected,
 }
 
 class CoachMessage {
