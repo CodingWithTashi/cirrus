@@ -3,7 +3,7 @@ title: How many puffs a day is a lot?
 description: There is no clinical cut-off, and anyone quoting one is guessing. Here is the honest answer, the conversion that helps, and the question that tells you more.
 standfirst: There is no clinical cut-off, and every site quoting you a number is guessing. Here is what the evidence actually supports.
 publishedAt: 2026-08-10
-tags: ['puff count', 'research']
+tags: ['puff count', 'research', '#puffcount', '#vapingfacts', '#quitvaping', '#cirrusquit']
 draft: false
 medical: true
 author: Gurmey
@@ -134,3 +134,7 @@ whole reason [Cirrus counts your real puffs rather than asking you to estimate](
 
 One last thing. Most cravings last **15 to 20 minutes**. Not all day. The window you have to
 sit through is much shorter than it feels at the time.
+
+And once you have your real number, the next move is a plan: we've laid out
+[the easiest way to quit vaping in ten simple steps](/blog/easiest-way-to-quit-vaping),
+habits included.

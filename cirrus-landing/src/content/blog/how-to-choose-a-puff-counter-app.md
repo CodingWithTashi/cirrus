@@ -3,7 +3,7 @@ title: How to choose a puff counter app
 description: Most vape trackers count puffs and stop there. Five things worth checking before you install one, and an honest look at what is available on each platform.
 standfirst: Most vape trackers count puffs and stop there. Five things worth checking before you install one.
 publishedAt: 2026-07-24
-tags: ['puff count', 'quitting vaping']
+tags: ['puff count', 'quitting vaping', '#puffcounter', '#quitvapingapp', '#lastpuff', '#cirrusquit']
 draft: false
 medical: true
 author: Gurmey
@@ -138,4 +138,6 @@ National Cancer Institute.
 
 We'd rather you quit with someone else's app than not quit at all. But if you're on Android
 and you want a counter that starts from your real number and cites what it tells you,
-[that's what Cirrus is for](/).
+[that's what Cirrus is for](/). And whichever app you pick, pair it with
+[a real quit plan](/blog/easiest-way-to-quit-vaping): the app is one layer, not the whole
+thing.

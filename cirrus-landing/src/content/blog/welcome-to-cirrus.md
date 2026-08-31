@@ -2,7 +2,7 @@
 title: Welcome to the Cirrus blog
 description: A sample post that proves the blog pipeline works end to end — delete it and write your own once you are ready to publish.
 publishedAt: 2026-08-30
-tags: ['meta']
+tags: ['meta', '#cirrusquit', '#lastpuff']
 draft: true
 ---
 

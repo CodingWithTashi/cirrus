@@ -3,7 +3,7 @@ title: The 5 most dangerous vapes in 2026, ranked by science
 description: We ranked five vape categories worst to least-bad using peer-reviewed data on heavy metals, lung injury and nicotine dose. Your device is on this list.
 standfirst: Five categories, ranked worst to least-bad on peer-reviewed data. Plus the part that matters more than where your device lands.
 publishedAt: 2026-07-05
-tags: ['vape safety', 'research']
+tags: ['vape safety', 'research', '#vapesafety', '#vapedangers', '#quitvaping', '#cirrusquit']
 draft: false
 medical: true
 author: Gurmey
@@ -265,4 +265,6 @@ instead of asking you to stop dead. It isn't a substitute for asking a doctor ab
 so do both. Free options exist too: **This is
 Quitting** from Truth Initiative, and **quitSTART** from the National Cancer Institute.
 
-We'd rather you quit with someone else than not quit at all.
+We'd rather you quit with someone else than not quit at all. Whichever route you take,
+[our ten step guide to quitting vaping](/blog/easiest-way-to-quit-vaping) is the place
+to start.

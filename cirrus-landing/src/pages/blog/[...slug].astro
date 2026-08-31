@@ -1,5 +1,6 @@
 ---
 import { render } from 'astro:content';
+import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import WaitlistForm from '../../components/WaitlistForm.astro';
 import { SITE_TITLE } from '../../consts';
@@ -27,6 +28,9 @@ const {
   reviewedByTitle,
   reviewedOn,
   medical,
+  heroImage,
+  heroImageAlt,
+  heroImageCaption,
 } = post.data;
 
 // Onward links. Posts sharing a tag first, then the most recent, capped at three.
@@ -76,6 +80,24 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
     </p>
 
     {standfirst && <p class="standfirst">{standfirst}</p>}
+
+    {
+      /* Article hero. Above the fold, so eager rather than the lazy default
+         body images get — this is the page's LCP candidate. */
+      heroImage && (
+        <figure>
+          <Image
+            src={heroImage}
+            alt={heroImageAlt ?? ''}
+            widths={[640, 960, 1280]}
+            sizes="(min-width: 1024px) 1024px, 100vw"
+            loading="eager"
+            fetchpriority="high"
+          />
+          {heroImageCaption && <figcaption set:html={heroImageCaption} />}
+        </figure>
+      )
+    }
 
     {
       /* Byline. Rendered only when a real person is named — see the E-E-A-T note

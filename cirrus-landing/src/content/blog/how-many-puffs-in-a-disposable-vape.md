@@ -3,7 +3,7 @@ title: How many puffs are in a disposable vape?
 description: The number on the box is a lab figure, not a promise. Here is what actually determines how long a disposable lasts, and the number worth tracking instead.
 standfirst: The number on the box is a laboratory figure, not a promise. Here is what actually decides how long one lasts.
 publishedAt: 2026-08-01
-tags: ['puff count', 'vape safety']
+tags: ['puff count', 'vape safety', '#disposablevape', '#puffcount', '#vapesafety', '#cirrusquit']
 draft: false
 medical: true
 author: Gurmey
@@ -124,4 +124,5 @@ why the time of your first puff tells you more than the total.
 
 And if counting by hand sounds like something you'll do for two days and abandon, that's
 roughly why [Cirrus counts them for you and tapers from your real number](/) rather than
-one you'd have to estimate.
+one you'd have to estimate. When you're ready to put the disposable down for good, start
+with [ten simple steps that actually help you quit vaping](/blog/easiest-way-to-quit-vaping).
