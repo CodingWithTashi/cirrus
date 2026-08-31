@@ -13,6 +13,7 @@ import {dayKeyIn} from '../domain/dateKey';
 import {decodeJourney} from '../domain/journeyCodec';
 import {currentStreak, dangerHours, flameFor, trailingDays} from '../domain/streakEngine';
 import {dayNumber, limitFor} from '../domain/taperEngine';
+import {weekStats, type WeekStat} from '../domain/weekStats';
 import {
   totalDays,
   type DayLog,
@@ -63,9 +64,14 @@ export function buildMemoryCard(
   const age =
     profile.birthYear === null ? null : now.getFullYear() - profile.birthYear;
 
+  const weeks = weekLines(weekStats(journey.days, plan.startDate, todayKey));
+
   const lines = [
     'USER CARD',
     `alias: ${profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
+    // "How long have I been at this?" — answerable without arithmetic. The
+    // start date is absolute so the model never has to derive a calendar.
+    tenureLine(plan, day),
     `why: ${list(profile.whys)} · fears: ${list(profile.worries)}`,
     // The chips above say "health, money". This is what they meant by it, in
     // the one sentence of the whole funnel they wrote themselves — and the
@@ -83,6 +89,12 @@ export function buildMemoryCard(
     `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
     `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'} · local time now: ${localTime}`,
     `last 7 days: ${last7.length > 0 ? last7.map((d) => d.puffs).join(',') : 'no logs yet'}`,
+    // The whole journey, one line per week, from the same `holds` the flame
+    // reads — so "compare my week 2 to my week 5" gets exact numbers instead
+    // of a paraphrase of the last seven days.
+    ...(weeks.length > 0
+      ? ['weekly history (w1 = first week of plan; today not counted):', ...weeks]
+      : []),
     `recent events: ${recentEvents(journey, todayKey, streak).join('; ') || 'none'}`,
     `in their own words: ${ownWords(window14) || 'nothing written yet'}`,
   ];
@@ -219,4 +231,66 @@ function recentEvents(journey: Journey, todayKey: string, streak: number): strin
   }
   if (yesterday?.mood != null) events.push(`logged mood "${yesterday.mood}"`);
   return events;
+}
+
+/**
+ * When they started and where that puts them — the line that makes "how long
+ * have I been trying?" answerable with a date rather than a shrug. Past the
+ * plan's end it switches to maintenance phrasing: tenure keeps counting, and
+ * "week 17" of a finished 30-day plan is an achievement, not an error.
+ */
+function tenureLine(plan: Journey['plan'], day: number): string {
+  const total = totalDays(plan);
+  const weekIn = Math.floor((day - 1) / 7) + 1;
+  if (day > total) {
+    const since = day - total;
+    return (
+      `started: ${plan.startDate} · week ${weekIn} · finished the ` +
+      `${total}-day plan ${since} day${since === 1 ? '' : 's'} ago (maintenance)`
+    );
+  }
+  const weekOf = Math.ceil(total / 7);
+  const left = total - day;
+  const leftPhrase =
+    left === 0 ? 'last day of the plan' : `${left} day${left === 1 ? '' : 's'} left in plan`;
+  return `started: ${plan.startDate} · week ${weekIn} of ${weekOf} · ${leftPhrase}`;
+}
+
+/**
+ * One compact line per week (~15-20 tokens each), capped so a long tenure
+ * cannot blow the card's budget: past 12 weeks the card keeps w1 (the
+ * baseline anchor every "how far have I come" comparison needs), marks the
+ * omission, and carries the latest 10 in full.
+ */
+function weekLines(stats: readonly WeekStat[]): string[] {
+  // A current week with nothing elapsed yet has nothing to say — the card's
+  // `today:` line already covers the live day.
+  const visible = stats.filter((s) => !(s.current && s.elapsed === 0));
+  const lines = visible.map(weekLine);
+  if (lines.length > 12) {
+    const omittedFrom = visible[1]!.week;
+    const omittedTo = visible[visible.length - 11]!.week;
+    return [
+      lines[0]!,
+      `… (w${omittedFrom}–w${omittedTo} omitted)`,
+      ...lines.slice(-10),
+    ];
+  }
+  return lines;
+}
+
+function weekLine(s: WeekStat): string {
+  const label = s.current
+    ? `w${s.week} (current, ${s.elapsed} day${s.elapsed === 1 ? '' : 's'} so far)`
+    : `w${s.week}`;
+  if (s.logged === 0) return `${label}: no days logged`;
+  const parts = [
+    `avg ${s.avgPuffs} puffs/day`,
+    `${s.onTarget}/${s.elapsed} on target`,
+  ];
+  if (s.slips > 0) parts.push(`${s.slips} slip${s.slips === 1 ? '' : 's'}`);
+  const unlogged = s.elapsed - s.logged;
+  if (unlogged > 0) parts.push(`${unlogged} unlogged`);
+  if (s.best !== null) parts.push(`best day ${s.best.puffs}`);
+  return `${label}: ${parts.join(' · ')}`;
 }

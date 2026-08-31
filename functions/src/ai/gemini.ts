@@ -2,7 +2,7 @@
  * `TextModel` over the Google GenAI SDK. The ONLY file that imports a vendor
  * SDK — see `model.ts` for why.
  */
-import {GoogleGenAI} from '@google/genai';
+import {GoogleGenAI, ThinkingLevel} from '@google/genai';
 import {ModelUnavailableError} from './model';
 import type {
   EmbeddingTask,
@@ -25,6 +25,32 @@ const TIMEOUT_MS = 20_000;
  */
 const EMBEDDING_MODEL = 'gemini-embedding-001';
 
+/**
+ * Turn thinking OFF wherever the model accepts the knob. Nothing this seam
+ * serves needs reasoning — 80-word coach replies, strict-JSON extraction,
+ * moderation, insight — and mid-craving, a silent thinking pass before the
+ * first streamed token is a product failure.
+ *
+ * The capability matrix, probed LIVE against the real API (Aug 30 2026),
+ * because none of it is in the docs you'd want it in:
+ *
+ * - gemini-3.5-flash / gemini-3.6-flash: `thinkingLevel: MINIMAL` → zero
+ *   thought tokens, full replies. This is why MODEL_PREMIUM pins 3.6-flash.
+ * - gemini-3.7-flash: CANNOT stop thinking. `thinkingBudget: 0` is accepted
+ *   and ignored, `MINIMAL` is "not supported for this model", the floor is
+ *   LOW at a VARIABLE 400-2000 thought tokens — spent INSIDE
+ *   `maxOutputTokens`, which cut premium replies off mid-word ("15 to 2")
+ *   until the first automated eval run caught it. Unfit for this seam.
+ * - gemini-3.5-flash-lite: rejects `thinkingConfig` outright
+ *   (INVALID_ARGUMENT on every call) — the lite tier does not think and
+ *   will not take the knob, hence the gate below.
+ *
+ * A wrong pairing for a future id is loud — `npm run eval:coach` 400s or
+ * truncates immediately — one more reason `.env.alastpuff` says to re-run
+ * the evals whenever a MODEL_* id moves.
+ */
+const wantsThinkingToggle = (model: string): boolean => !model.includes('-lite');
+
 export function geminiModel(apiKey: string): TextModel {
   const ai = new GoogleGenAI({apiKey});
 
@@ -32,6 +58,9 @@ export function geminiModel(apiKey: string): TextModel {
     systemInstruction: request.systemInstruction,
     maxOutputTokens: request.maxOutputTokens,
     temperature: request.temperature ?? 0.8,
+    ...(wantsThinkingToggle(request.model)
+      ? {thinkingConfig: {thinkingLevel: ThinkingLevel.MINIMAL}}
+      : {}),
     ...(request.json ? {responseMimeType: 'application/json'} : {}),
   });
 

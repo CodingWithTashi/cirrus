@@ -395,6 +395,48 @@ void main() {
     );
   });
 
+  testWidgets('a rolling summary builds within four exchanges', (tester) async {
+    // The long-range layer beyond the 10-turn verbatim window: every fourth
+    // successful exchange folds the conversation into the server-owned
+    // `users/{uid}.coachSummary`, which later turns inject as background
+    // context. Only this harness can watch the whole loop run against the
+    // deployed backend. Four exchanges cross the rebuild threshold from ANY
+    // starting phase — the account is shared across this file's tests, so the
+    // counter's phase here depends on how many coach turns ran before.
+    final e2e = await session(tester);
+    final coach = e2e.container.read(coachRepositoryProvider);
+
+    const turns = [
+      'evenings after work are the hardest part of my day',
+      'I think it is the stress of the commute more than anything',
+      'I am going to try leaving the vape in the car boot tonight',
+      'anyway. how do I get through tonight?',
+    ];
+    for (final text in turns) {
+      await ask(coach, text: text);
+    }
+    await e2e.waitFor(const Duration(seconds: 4));
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final summary = userDoc.data()?['coachSummary'] as Map<String, dynamic>?;
+    expect(summary, isNotNull, reason: 'no coachSummary was ever written');
+    final text = summary!['text'] as String?;
+    expect(
+      text != null && text.isNotEmpty,
+      isTrue,
+      reason: 'four exchanges passed and the summary is still empty: $summary',
+    );
+    // The code-enforced clamp (COACH_SUMMARY_MAX_CHARS server-side).
+    expect(text!.length, lessThanOrEqualTo(1200));
+    expect(
+      summary['turnsSince'],
+      inInclusiveRange(0, 3),
+      reason: 'the exchange counter is out of range: $summary',
+    );
+  });
+
   testWidgets('matchedTestimonials returns the seeded quotes, tailored', (
     tester,
   ) async {

@@ -25,7 +25,7 @@ vi.mock('../../src/ai/gemini', () => ({
 import type {CallableRequest, CallableResponse} from 'firebase-functions/v2/https';
 import {aiCoachChat} from '../../src/handlers/aiCoachChat';
 import {ModelUnavailableError} from '../../src/ai/model';
-import {MEMORY_EXTRACTION_PROMPT} from '../../src/ai/prompts';
+import {COACH_SUMMARY_PROMPT, MEMORY_EXTRACTION_PROMPT} from '../../src/ai/prompts';
 import {
   FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
@@ -302,6 +302,120 @@ describe('streaming', () => {
 
     expect(reply.template).toBe('connectionLost');
     expect(await usedToday()).toBe(0);
+  });
+});
+
+describe('the rolling summary', () => {
+  const instructionOf = (call: unknown[]): string =>
+    (call[0] as {systemInstruction: string}).systemInstruction;
+
+  it('counts a successful exchange without rebuilding yet', async () => {
+    await run(caller());
+    const stored = (await userDoc('alice').get()).get('coachSummary') as
+      | {text?: string; turnsSince?: number}
+      | undefined;
+    expect(stored?.turnsSince).toBe(1);
+    // No rebuild yet — merge must not have invented a text either.
+    expect(stored?.text).toBeUndefined();
+    for (const call of generate.mock.calls) {
+      expect(instructionOf(call)).not.toBe(COACH_SUMMARY_PROMPT);
+    }
+  });
+
+  it('rebuilds on the fourth exchange and resets the counter', async () => {
+    await userDoc('alice').set(
+      {coachSummary: {text: '', turnsSince: 3}},
+      {merge: true},
+    );
+    await run(caller());
+
+    const rebuilds = generate.mock.calls.filter(
+      (call) => instructionOf(call) === COACH_SUMMARY_PROMPT,
+    );
+    expect(rebuilds.length).toBe(1);
+    const stored = (await userDoc('alice').get()).get('coachSummary') as {
+      text: string;
+      turnsSince: number;
+    };
+    expect(stored.turnsSince).toBe(0);
+    // The stub answers every generate the same way; what matters is that the
+    // summarizer's output — not the old text — is what got stored.
+    expect(stored.text).toContain('Fifteen minutes');
+  });
+
+  it('hands the coach the stored summary as fenced background context', async () => {
+    await userDoc('alice').set(
+      {coachSummary: {text: 'They walk Rufus in the evenings.', turnsSince: 0}},
+      {merge: true},
+    );
+    await run(caller());
+    // The first generate of a non-streaming turn is the coach reply itself.
+    const instruction = instructionOf(generate.mock.calls[0]!);
+    expect(instruction).toContain('EARLIER CONVERSATIONS');
+    expect(instruction).toContain('They walk Rufus in the evenings.');
+  });
+
+  it('keeps the reply when the summarizer fails, and leaves the retry armed', async () => {
+    await userDoc('alice').set(
+      {coachSummary: {text: 'old summary', turnsSince: 3}},
+      {merge: true},
+    );
+    generate.mockImplementation((request: {systemInstruction: string}) =>
+      request.systemInstruction === COACH_SUMMARY_PROMPT
+        ? Promise.reject(new Error('summarizer down'))
+        : Promise.resolve({
+            text: 'That wave is brutal. Fifteen minutes and it breaks.',
+            inputTokens: 900,
+            outputTokens: 20,
+          }),
+    );
+
+    const reply = await run(caller());
+    expect(reply.template).toBe('generic1');
+    expect(reply.text).toContain('Fifteen minutes');
+
+    const stored = (await userDoc('alice').get()).get('coachSummary') as {
+      text: string;
+      turnsSince: number;
+    };
+    // Deliberately unmoved: sitting at the threshold means the very next
+    // successful turn retries the rebuild.
+    expect(stored.turnsSince).toBe(3);
+    expect(stored.text).toBe('old summary');
+  });
+
+  it('does not move the counter on a refunded turn', async () => {
+    generate.mockRejectedValue(new ModelUnavailableError(new Error('503')));
+    await run(caller());
+    expect((await userDoc('alice').get()).get('coachSummary')).toBeUndefined();
+  });
+
+  it('does not move the counter on a capped turn', async () => {
+    vi.spyOn(FREE_DAILY_COACH_MESSAGES, 'value').mockReturnValue(1);
+    await userDoc('alice').set({entitlement: {tier: 'free'}}, {merge: true});
+
+    await run(caller()); // spends the one message, counter → 1
+    const second = await run(caller());
+    expect(second.template).toBe('capReached');
+
+    const stored = (await userDoc('alice').get()).get('coachSummary') as {
+      turnsSince: number;
+    };
+    expect(stored.turnsSince).toBe(1);
+  });
+
+  it('anchors memory extraction to the calendar', async () => {
+    await run(caller());
+    const extractions = generate.mock.calls.filter(
+      (call) => instructionOf(call) === MEMORY_EXTRACTION_PROMPT,
+    );
+    expect(extractions.length).toBe(1);
+    const turnText = (
+      extractions[0]![0] as {turns: {text: string}[]}
+    ).turns[0]!.text;
+    // "next Friday" stored as-is means nothing months later; the DATE line is
+    // what the extraction prompt anchors absolute dates to.
+    expect(turnText).toMatch(/^DATE: \d{4}-\d{2}-\d{2}\n/);
   });
 });
 

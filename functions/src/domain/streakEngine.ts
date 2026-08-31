@@ -15,7 +15,7 @@ export function flameFor(streakDays: number): FlameState {
   return 'spark';
 }
 
-const isConfirmed = (log: DayLog): boolean =>
+export const isConfirmed = (log: DayLog): boolean =>
   log.puffs > 0 || log.vapeFreeConfirmed;
 
 /**
@@ -27,8 +27,11 @@ const isConfirmed = (log: DayLog): boolean =>
  * The repair-token clause is load-bearing (docs/03 §5) — a token absorbs one
  * over-limit day so the flame dims rather than dying. Omitting it here made
  * the server disagree with the app about the user's own streak.
+ *
+ * Exported for `weekStats.ts` — week aggregates must count a token-saved day
+ * as on-target exactly the way the flame does.
  */
-const holds = (log: DayLog): boolean =>
+export const holds = (log: DayLog): boolean =>
   isConfirmed(log) && (log.puffs <= log.limit || log.repairTokenUsed);
 
 /**

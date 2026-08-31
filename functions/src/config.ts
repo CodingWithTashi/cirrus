@@ -57,7 +57,12 @@ export const MODEL_FREE = defineString('MODEL_FREE', {
   default: 'gemini-3.5-flash-lite',
 });
 export const MODEL_PREMIUM = defineString('MODEL_PREMIUM', {
-  default: 'gemini-3.7-flash',
+  // 3.6, not 3.7: gemini-3.7-flash cannot stop thinking (floor is LOW, a
+  // variable 400-2000 thought tokens spent inside the output cap), which
+  // truncated premium replies mid-word and delays the first streamed token
+  // mid-craving. gemini-3.6-flash at thinkingLevel MINIMAL answers with zero
+  // thought tokens — see ai/gemini.ts for the probed capability matrix.
+  default: 'gemini-3.6-flash',
 });
 export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
   default: 'gemini-3.5-flash-lite',
@@ -83,8 +88,31 @@ export const ENTITLEMENT_MODE = defineString('ENTITLEMENT_MODE', {
 /** Kill-switch: flip to "true" to route all AI traffic to the cheap model. */
 export const AI_COST_PANIC = defineString('AI_COST_PANIC', {default: 'false'});
 
-/** Hard ceiling on a coach reply. docs/04's length law is ~80 words. */
-export const MAX_OUTPUT_TOKENS = 500;
+/**
+ * Token ceiling on a coach turn — NOT the reply-length law. The ~80-word law
+ * (docs/04) lives in the prompt; this cap exists so a runaway turn has a
+ * hard stop. It must hold thoughts + text: the premium model cannot stop
+ * thinking (see `ai/gemini.ts`) and spends its thought tokens inside this
+ * budget — at docs/04 §3's original 500, every premium reply arrived cut off
+ * mid-word, which the first automated eval run caught. docs/08 records the
+ * change.
+ */
+export const MAX_OUTPUT_TOKENS = 2000;
 
 /** Conversation turns kept in context (docs/04 §3). Never the full history. */
 export const COACH_CONTEXT_TURNS = 10;
+
+/**
+ * Rolling-summary cadence: `users/{uid}.coachSummary` is rebuilt every N
+ * successful exchanges. 4 keeps every message inside a rebuild window — four
+ * exchanges are 8 message docs and the verbatim window above holds 10, so no
+ * turn can scroll out of context before a summary has folded it in.
+ */
+export const COACH_SUMMARY_EVERY = 4;
+
+/**
+ * Hard cap on the stored rolling summary (~250 tokens at four chars each).
+ * The summarizer prompt asks for 120 words; this is the code guarantee
+ * standing behind that request.
+ */
+export const COACH_SUMMARY_MAX_CHARS = 1200;

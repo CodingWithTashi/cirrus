@@ -10,6 +10,9 @@ ui-debug.log
 firebase-debug.log
 firestore-debug.log
 
+# Local eval transcripts (`npm run eval:coach`).
+evals/
+
 # Founder-supplied terms for the coach-name guard (`src/lib/nameGuard.ts`).
 # Deliberately out of git: a maintained list of slurs sitting in a repo is a
 # liability of its own, and the guard works without it — impersonation is

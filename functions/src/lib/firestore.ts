@@ -131,6 +131,19 @@ export interface UserDoc {
   readonly aiUsage?: {readonly day: string; readonly msgCount: number};
   /** One-shot flag: the onboarding answer has been embedded into `memories`. */
   readonly coachMemoriesSeeded?: boolean;
+  /**
+   * Rolling conversation summary for the coach. Written only by `aiCoachChat`
+   * and injected each turn as background context, so Ember stays continuous
+   * beyond the 10-turn verbatim window. Lives HERE and never in
+   * `coachMessages` — the app renders every non-user doc of that collection
+   * as a visible chat bubble.
+   */
+  readonly coachSummary?: {
+    readonly text: string;
+    /** Successful exchanges since the summary was last rebuilt. */
+    readonly turnsSince: number;
+    readonly updatedAt?: Timestamp;
+  };
   readonly panicUsage?: DailyCounter;
   /** docs/03 §9 community post cap. Same shape, same rollover rule. */
   readonly postUsage?: DailyCounter;

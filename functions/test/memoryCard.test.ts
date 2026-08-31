@@ -13,6 +13,7 @@
  */
 import {describe, expect, it} from 'vitest';
 import {buildMemoryCard} from '../src/ai/memoryCard';
+import {addDays} from '../src/domain/dateKey';
 
 const NOW = new Date('2026-08-15T22:14:00.000Z');
 const TZ = 'UTC';
@@ -268,5 +269,90 @@ describe('the user card', () => {
     // noticed here rather than on the bill.
     const card = buildMemoryCard(journey(), NOW, TZ);
     expect(card.text.length).toBeLessThan(2000);
+  });
+});
+
+describe('the whole journey on the card', () => {
+  it('states when they started and where that puts them', () => {
+    // "How long have I been trying?" must be answerable with a date, not a
+    // shrug — day 12 of a 30-day plan started 2026-08-04.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).toContain(
+      'started: 2026-08-04 · week 2 of 5 · 18 days left in plan',
+    );
+  });
+
+  it('carries one exact line per week, current week included', () => {
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).toContain(
+      'weekly history (w1 = first week of plan; today not counted):',
+    );
+    // Nothing was logged in week one — say so rather than skipping the week,
+    // or "compare my week 1 to now" silently loses its baseline.
+    expect(card.text).toContain('w1: no days logged');
+    // Week 2 is in progress: Aug 13 (120/140) and Aug 14 (130/138) hold, the
+    // 11th and 12th were never logged, and today (the 15th) is excluded.
+    expect(card.text).toContain(
+      'w2 (current, 4 days so far): avg 125 puffs/day · 2/4 on target · 2 unlogged · best day 120',
+    );
+  });
+
+  it('flags a slip week with the slip counted, not hidden in the average', () => {
+    const card = buildMemoryCard(
+      journey({
+        days: {
+          '2026-08-11': day({puffs: 170, limit: 142}), // over, no token
+          '2026-08-12': day({puffs: 120, limit: 141}),
+        },
+      }),
+      NOW,
+      TZ,
+    );
+    expect(card.text).toContain('1 slip');
+  });
+
+  it('switches to maintenance phrasing once the plan is finished', () => {
+    const longAgo = journey({
+      plan: {
+        method: 'taper', paceDays: 30, startDate: '2026-03-02',
+        baselinePuffsPerDay: 200, weeklySpend: 70.0, strength: 'mg50',
+        stretchDays: 0,
+      },
+    });
+    const card = buildMemoryCard(longAgo, NOW, TZ);
+    // Day 167: 137 days past the 30-day plan, week 24 of tenure.
+    expect(card.text).toContain(
+      'started: 2026-03-02 · week 24 · finished the 30-day plan 137 days ago (maintenance)',
+    );
+  });
+
+  it('caps a long tenure at twelve week lines and says what was skipped', () => {
+    // 24 weeks of fully-logged history: the card keeps w1 (the baseline every
+    // "how far have I come" needs), marks the omission, and carries the last
+    // ten in full — the budget survives a loyal user.
+    const days: Record<string, unknown> = {};
+    for (let i = 0; i < 167; i++) {
+      const key = addDays('2026-03-02', i);
+      days[key] = day({puffs: 60 + (i % 40), limit: 150, hourBuckets: {'21': 30}});
+    }
+    const card = buildMemoryCard(
+      journey({
+        plan: {
+          method: 'taper', paceDays: 30, startDate: '2026-03-02',
+          baselinePuffsPerDay: 200, weeklySpend: 70.0, strength: 'mg50',
+          stretchDays: 0,
+        },
+        days,
+      }),
+      NOW,
+      TZ,
+    );
+    const weekLines = card.text.match(/^w\d+/gm) ?? [];
+    expect(weekLines.length).toBe(11); // w1 + the last 10
+    expect(card.text).toContain('omitted');
+    expect(card.text).toContain('w24');
+    // The budget alarm for the worst realistic case: ~2K tokens at four
+    // characters each. The short-fixture test above keeps the tight bound.
+    expect(card.text.length).toBeLessThan(8000);
   });
 });

@@ -121,7 +121,11 @@ async function generateFor(
       model: MODEL_PREMIUM.value(),
       systemInstruction: insightPrompt(journey.profile.alias, coachName),
       turns: [{role: 'user', text: JSON.stringify(payload)}],
-      maxOutputTokens: 400,
+      // Must hold thoughts + the ~150-token JSON: the premium model cannot
+      // stop thinking and spends thought tokens inside this cap (see
+      // ai/gemini.ts, proven on the coach path where 500 cut every reply
+      // mid-word). 400 would truncate the JSON the same way.
+      maxOutputTokens: 1500,
       temperature: 0.6,
       json: true,
     });

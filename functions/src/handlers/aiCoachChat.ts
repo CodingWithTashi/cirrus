@@ -18,6 +18,8 @@ import {
   AI_COST_PANIC,
   COACH_CONTEXT_TURNS,
   COACH_MIN_INSTANCES,
+  COACH_SUMMARY_EVERY,
+  COACH_SUMMARY_MAX_CHARS,
   FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
   MAX_OUTPUT_TOKENS,
@@ -30,12 +32,9 @@ import {geminiModel} from '../ai/gemini';
 import {buildMemoryCard} from '../ai/memoryCard';
 import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
 import {
-  EMBER_SYSTEM_PROMPT,
+  COACH_SUMMARY_PROMPT,
   MEMORY_EXTRACTION_PROMPT,
-  coachNameInstruction,
-  localeInstruction,
-  memorySection,
-  panicAddendum,
+  buildCoachInstruction,
 } from '../ai/prompts';
 import {
   EMBEDDING_DIMENSIONS,
@@ -104,6 +103,10 @@ export const aiCoachChat = onCall(
       typeof storedName === 'string' && storedName.trim().length > 0
         ? storedName.trim()
         : null;
+    // The rolling summary rides the read we already paid for. It lives on
+    // `users/{uid}` and NOT in `coachMessages`, because the app renders every
+    // non-user doc of that collection as a visible chat bubble.
+    const summary = parseCoachSummary(userSnap.get('coachSummary'));
     const journeySnap = await journeyDoc(caller.uid).get();
     if (!journeySnap.exists) {
       // No journey yet = not onboarded. Greet rather than burn a model call.
@@ -144,16 +147,19 @@ export const aiCoachChat = onCall(
     const memories =
       queryVector === null ? [] : await recallRelevant(caller.uid, queryVector);
 
-    const systemInstruction =
-      EMBER_SYSTEM_PROMPT +
-      localeInstruction(caller.locale) +
-      // From the SERVER-owned document, never from the journey: that one is
-      // client-written, so a name taken from it would be unvalidated text
-      // going straight into a system prompt.
-      (coachName !== null ? coachNameInstruction(coachName) : '') +
-      (panicIntensity !== null ? panicAddendum(panicIntensity) : '') +
-      `\n\n${card.text}` +
-      memorySection(memories);
+    // Assembled by the ONE shared function the eval harness also calls, so
+    // what the evals grade can never drift from what production sends. The
+    // coach name comes from the SERVER-owned document, never from the journey:
+    // that one is client-written, so a name taken from it would be unvalidated
+    // text going straight into a system prompt.
+    const systemInstruction = buildCoachInstruction({
+      locale: caller.locale,
+      coachName,
+      panicIntensity,
+      cardText: card.text,
+      summary: summary.text,
+      memories,
+    });
 
     const modelName =
       AI_COST_PANIC.value() === 'true' || tier === 'free'
@@ -263,9 +269,19 @@ export const aiCoachChat = onCall(
 
     await persistTurns(caller.uid, userText, reply);
 
-    // Learn from the turn. After the reply is built — and, on the streaming
-    // path, after the user already has it — so nothing here delays an answer.
-    await learnFrom(model, caller.uid, userText, reply);
+    // Learn from the turn and keep the rolling summary fresh — after the
+    // reply is built and, on the streaming path, after the user already has
+    // it, so neither delays an answer. Both swallow their own failures; a
+    // lost memory or a stale summary must never turn a delivered reply into
+    // an error.
+    await Promise.all([
+      learnFrom(model, caller.uid, userText, reply, card.todayKey),
+      maybeUpdateSummary(model, caller.uid, summary, [
+        ...history,
+        {role: 'user', text: userText},
+        {role: 'model', text: reply},
+      ]),
+    ]);
 
     return {
       // `generic1` is the graceful degradation for a client that predates the
@@ -318,13 +334,18 @@ async function learnFrom(
   uid: string,
   userText: string,
   reply: string,
+  todayKey: string,
 ): Promise<void> {
   if (!worthExtracting(userText)) return;
   try {
     const result = await model.generate({
       model: MODEL_FREE.value(),
       systemInstruction: MEMORY_EXTRACTION_PROMPT,
-      turns: [{role: 'user', text: `USER: ${userText}\nCOACH: ${reply}`}],
+      // The DATE line lets the extractor anchor "next Friday" to an absolute
+      // date — a relative phrase stored as-is means nothing months later.
+      turns: [
+        {role: 'user', text: `DATE: ${todayKey}\nUSER: ${userText}\nCOACH: ${reply}`},
+      ],
       maxOutputTokens: 200,
       temperature: 0,
       json: true,
@@ -384,6 +405,100 @@ export function parseMemories(raw: string): {text: string; kind: MemoryKind}[] {
     out.push({text, kind});
   }
   return out;
+}
+
+/** What `users/{uid}.coachSummary` decodes to. */
+export interface CoachSummary {
+  text: string;
+  /** Successful exchanges since the summary was last rebuilt. */
+  turnsSince: number;
+}
+
+/**
+ * Shape-guards the stored rolling summary. Anything missing or malformed
+ * reads as "no summary yet" — the coach degrades to the verbatim window, it
+ * never fails a turn over its own bookkeeping.
+ */
+export function parseCoachSummary(raw: unknown): CoachSummary {
+  if (raw === null || typeof raw !== 'object') return {text: '', turnsSince: 0};
+  const m = raw as Record<string, unknown>;
+  const turns = m['turnsSince'];
+  return {
+    text: typeof m['text'] === 'string' ? m['text'] : '',
+    turnsSince:
+      typeof turns === 'number' && Number.isFinite(turns)
+        ? Math.max(0, Math.floor(turns))
+        : 0,
+  };
+}
+
+/**
+ * Keeps the rolling summary current: counts successful exchanges, and every
+ * `COACH_SUMMARY_EVERY`th folds the previous summary plus the recent turns
+ * into a replacement (`COACH_SUMMARY_PROMPT`, cheap model — distilling a few
+ * turns is a structured task the premium model buys nothing on).
+ *
+ * The cadence is what makes this cover the long range: a rebuild sees the
+ * last `COACH_CONTEXT_TURNS` (10) message docs plus the current exchange,
+ * and rebuilds land every 4 exchanges (8 docs), so no message can scroll out
+ * of the verbatim window before a summary has folded it in.
+ *
+ * Failure discipline mirrors [learnFrom]: everything is swallowed, and on a
+ * failed or empty rebuild the counter deliberately does NOT move — it sits at
+ * the threshold so the next successful turn retries the rebuild.
+ */
+async function maybeUpdateSummary(
+  model: TextModel,
+  uid: string,
+  previous: CoachSummary,
+  turns: readonly Turn[],
+): Promise<void> {
+  try {
+    if (previous.turnsSince < COACH_SUMMARY_EVERY - 1) {
+      // Not due yet — just count the exchange. `set` + merge deep-merges, so
+      // `text`/`updatedAt` are untouched, and increment-on-missing starts a
+      // brand-new user at 1.
+      await userDoc(uid).set(
+        {coachSummary: {turnsSince: FieldValue.increment(1)}},
+        {merge: true},
+      );
+      return;
+    }
+
+    const transcript = turns
+      .map((t) => `${t.role === 'user' ? 'USER' : 'COACH'}: ${t.text}`)
+      .join('\n');
+    const result = await model.generate({
+      model: MODEL_FREE.value(),
+      systemInstruction: COACH_SUMMARY_PROMPT,
+      turns: [
+        {
+          role: 'user',
+          text:
+            `PREVIOUS SUMMARY:\n${previous.text || '(none)'}\n\n` +
+            `MOST RECENT TURNS:\n${transcript}`,
+        },
+      ],
+      maxOutputTokens: 300,
+      temperature: 0.2,
+    });
+    const text = result.text.trim().slice(0, COACH_SUMMARY_MAX_CHARS);
+    if (text.length === 0) return;
+
+    await userDoc(uid).set(
+      {
+        coachSummary: {
+          text,
+          turnsSince: 0,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      },
+      {merge: true},
+    );
+    log.info('coach.summarized', {uid, chars: text.length});
+  } catch (error) {
+    log.warn('coach.summary_failed', {uid, error: String(error)});
+  }
 }
 
 /** Last N turns, oldest → newest. Never the full history (docs/05 §8). */

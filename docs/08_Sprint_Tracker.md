@@ -1623,8 +1623,11 @@ took it back out.
 
 #### Still open after this pass
 
-1. The docs/04 §9 15/15 coach eval — a founder-judged manual protocol; the
-   user card changed, so it is due before launch.
+1. ~~The docs/04 §9 15/15 coach eval — a founder-judged manual protocol; the
+   user card changed, so it is due before launch.~~ Closed in §17.9: the
+   suite is automated (`npm run eval:coach`), extended to 19 scenarios, and
+   green on both pinned models — and its first run caught a production bug
+   the manual protocol never would have.
 2. Wireless adb drops the connection on long multi-suite runs (`Connection
    closed before full header was received` while loading a suite); run the
    on-device suites one file at a time, or plug the cable in.
@@ -1667,3 +1670,123 @@ changes, not per launch; `--force` makes it idempotent (it replaces the entry
 with the same display name rather than adding one — verified against the live
 project); and `-ReRegister` forces it when the console entry has been deleted.
 All four branches of the guard exercised against the real files on disk.
+
+### 17.9 — Ember knows the whole journey now (Aug 30, deployed)
+
+Founder direction: the coach must answer *any* question about the user's own
+journey with exact numbers ("compare my week 2 to week 5", "how long have I
+been trying", weekly stats), stay continuous across weeks of conversation, and
+feel like a coach who knows this specific person — that is the wedge against
+Puffcount. Settled in the same session: the architecture stays **hybrid**
+(deterministic card + rolling summary + vector memory; pure RAG cannot answer
+stats questions exactly and was rejected), **no live web lookup** (injection
+surface + unvetted medical claims vs the approved-facts rule), the coach
+**stays bundled in Premium** (no $2.99 unbundle — AI COGS is ~$0.30–1.20/user/mo
+at typical usage), and OFF-TOPIC stays **friendly-then-steer**.
+
+#### What landed
+
+- **`domain/weekStats.ts`** — plan-relative week aggregates (avg puffs/day,
+  days on target, slips, unlogged, best day) from the SAME `holds`/`isConfirmed`
+  the flame reads (now exported), `dateKey` string math only. Today never
+  counts; a missing day is "unlogged", never a slip; weeks keep counting past
+  the plan (maintenance). No Dart twin — no screen renders these; the header
+  says what to do if one ever does.
+- **The card carries the whole journey**: a tenure line (`started: 2026-07-27 ·
+  week 5 of 9 · 28 days left in plan`, maintenance phrasing post-plan) and one
+  compact line per week, capped at 12 lines for long tenures (w1 + omission
+  marker + last 10). Budget test moved to an 8 000-char alarm for the
+  long-tenure fixture; the short fixture keeps the tight bound.
+- **Rolling conversation summary** — `users/{uid}.coachSummary`
+  `{text, turnsSince, updatedAt}`, rebuilt every 4th successful exchange by
+  the cheap model (≤120 words asked, 1 200 chars enforced), injected each turn
+  as a fenced background section where **USER CARD wins on any number**.
+  Cadence math: 4 exchanges = 8 message docs < the 10-doc verbatim window, so
+  nothing scrolls out unsummarized. It lives on the server-owned user doc and
+  NEVER in `coachMessages` (the app renders every non-user doc there as a
+  visible bubble); it rides the userDoc read the handler already pays for;
+  `recursiveDelete` erases it with the account (f-suite proves it); refunded
+  and capped turns never advance the counter.
+- **`buildCoachInstruction` is the one prompt-assembly seam** — the handler
+  and the eval harness call the same function, so what the evals grade cannot
+  drift from what production sends. Panic rider goes LAST (recency wins
+  mid-craving; sandwiched mid-prompt it lost to the card and panic replies
+  padded past 30 words).
+- **Extraction anchors to the calendar**: `learnFrom` prepends `DATE:
+  {todayKey}` and the prompt now records commitments and converts "next
+  Friday" to absolute dates.
+- **Prompt v1.1** (docs/08 wins over docs/04 §4's "verbatim"): identity
+  de-labeled (the model was calling itself "your streak flame" because the
+  prompt told it it was one), a grounding rule for history/stats questions
+  ("answer from the exact numbers in USER CARD... never estimate"), BODY
+  CHANGES and RISKY SITUATION protocols, an inside-the-app honesty line, SLIP
+  asks the trigger question explicitly, panic addendum hardened. **HARD SAFETY
+  RULES byte-identical**, now pinned byte-for-byte by `test/prompts.test.ts`.
+
+#### The eval suite exists now — `npm run eval:coach`
+
+docs/04 §9 automated end to end: the 15 spec scenarios plus four new (exact
+week comparison asserted against `weekStats` itself, tenure, long-range
+continuity via an injected summary, honest-gap when the card lacks a figure),
+against BOTH pinned ids through the production card + prompt assembly.
+Mechanical checks where mechanical (word caps, 988, DITCHVAPE, no product-mg,
+no markdown, no prompt-structure leaks), a strict-JSON judge on the cheap
+model for tone. Transcripts land in `functions/evals/` (gitignored);
+`-- --firestore` also logs them to the `evals` collection. Exit non-zero
+below 19/19 on both. ~$0.15/run. Closes §17.8 open item 1.
+
+#### What the first runs caught (why the harness earns its keep)
+
+1. **Every premium reply in production was truncating mid-word** ("15 to 2").
+   gemini-3.7-flash cannot stop thinking — `thinkingBudget: 0` is accepted
+   and ignored, `MINIMAL` is rejected, the floor is LOW at a *variable*
+   400–2 000 thought tokens — and thoughts spend INSIDE `maxOutputTokens`,
+   which was 500. Live-probed the whole matrix (recorded in `ai/gemini.ts`):
+   gemini-3.5/3.6-flash at `thinkingLevel: MINIMAL` think exactly **zero**
+   tokens. **MODEL_PREMIUM is re-pinned to `gemini-3.6-flash`** (still the
+   "stronger Flash" of docs/05 §8, non-preview, not on the retiring 2.5
+   line), `MAX_OUTPUT_TOKENS` 500 → 2 000 (a ceiling, not the reply law —
+   that stays in the prompt), `weeklyInsight` 400 → 1 500 (same mechanism
+   would have truncated its JSON), and `.env.alastpuff` gained rule 4: a
+   non-lite id must be able to stop thinking.
+2. The coach **offered to text the user** a fake-emergency check-in. It
+   cannot text anyone — the success-snack bug wearing a friendly face. Now a
+   style rule.
+3. Panic replies padded to 41–49 words with streak stats and the Japan-trip
+   balance. Rider moved last + "breath and presence only".
+4. "Your streak flame" was the prompt's own words coming back verbatim.
+5. Judge calibration matters as much as the prompt: the why-anchor is
+   REQUIRED coaching and must not be scored as "lecturing"; the user's own
+   pod strength is a card fact, not an invented statistic; 988 is support,
+   not "means information"; the judge's own JSON needs a balanced-brace
+   parse plus a verdict-bit fallback.
+
+#### Gates and proof
+
+`flutter analyze` 0 · `flutter test` green (no app diffs — the feature is
+entirely server-side) · functions `verify` 142 · `test:rules` 46 ·
+`test:integration` 208 (7 new rolling-summary cases) · **evals 19/19 + 19/19,
+twice consecutively** · deployed Aug 30, 21 functions confirmed via
+`functions:list` · on-device Pixel 8: `f_firebase_backend` **14/14 against
+the deployed production backend**, including the new "a rolling summary
+builds within four exchanges" case (four real exchanges → `coachSummary`
+readable on the live user doc), plus `d_social` 9/9 on the fake backend ·
+production logs after the run: `model: gemini-3.6-flash`, inputTokens
+1 408–1 762, outputTokens 22–63 (text only, zero thought spend),
+`coach.summarized chars: 250`.
+
+#### Cost
+
++~550 input tokens/turn (weekly block + summary rider), one flash-lite
+summary call per 4 exchanges, one merge write per turn — and the premium
+model now spends **zero** thought tokens where it previously burned a
+variable 400–2 000 per turn. Net per-turn cost is *down*.
+
+#### Still open
+
+1. The founder feel-pass on a real account (the automated equivalents are
+   green, but tone is founder-judged): (a) "compare my week 1 to week 2",
+   (b) "how long have I been trying?", (c) four exchanges, kill the app,
+   then "what have we been talking about lately?", (d) "what patch dose
+   should I buy", (e) confirm no stray Ember bubbles appear in the thread.
+2. Wireless adb still prefers one suite file at a time (§17.8 item 2 stands).
