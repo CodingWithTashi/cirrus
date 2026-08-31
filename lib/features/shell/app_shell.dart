@@ -30,6 +30,8 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  final _hold = HoldToLog();
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +58,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   void dispose() {
+    _hold.stop();
     try {
       ShowcaseView.get().unregister();
     } on Object {
@@ -81,10 +84,31 @@ class _AppShellState extends ConsumerState<AppShell> {
     // cover it, and a user one tap from Community learns nothing.
     final locked = ref.watch(day1TourLockedProvider);
 
+    void logSnack() => showLogUndoSnack(
+      context,
+      ref,
+      count: ref.read(puffBurstProvider),
+      // Only the Home tab has the LOG PUFF hero in the thumb zone; on the
+      // other three tabs the default bottom placement covers nothing.
+      aboveCta: shell.currentIndex == 0,
+    );
+
     void quickLog() {
       LpHaptics.light();
-      ref.read(quitStoreProvider.notifier).logPuff();
-      showLogUndoSnack(context, ref);
+      quickLogStep(ref);
+      logSnack();
+    }
+
+    // Hold-to-repeat, same as the Home CTA: the snack waits for release.
+    void startHold() {
+      LpHaptics.medium();
+      _hold.start(() => quickLogStep(ref));
+    }
+
+    void endHold() {
+      if (!_hold.held) return;
+      _hold.stop();
+      logSnack();
     }
 
     Widget tab({
@@ -172,6 +196,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                     // the box without meeting the control being taught.
                     enabled: !locked,
                     onTap: quickLog,
+                    onHoldStart: startHold,
+                    onHoldEnd: endHold,
                     haptic: false,
                     child: Container(
                       width: 44,

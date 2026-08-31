@@ -1145,7 +1145,15 @@ class AppLocalizationsEs extends AppLocalizations {
       'Día sin vapear confirmado. Eso es todo el juego. 🔥';
 
   @override
-  String get homeLoggedSnack => '1 calada registrada';
+  String homeLoggedSnackCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count caladas registradas',
+      one: '1 calada registrada',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get homeOverLimitTitle => 'Por encima de tu línea';

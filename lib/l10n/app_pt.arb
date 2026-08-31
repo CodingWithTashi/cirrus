@@ -327,7 +327,7 @@
   "homeVapeFreeTitle": "Hoje sem passas?",
   "homeVapeFreeCta": "Confirmar dia sem vape ✓",
   "homeVapeFreeDone": "Dia sem vape garantido. É este o jogo todo. 🔥",
-  "homeLoggedSnack": "1 passa registada",
+  "homeLoggedSnackCount": "{count, plural, one{1 passa registada} other{{count} passas registadas}}",
   "homeOverLimitTitle": "Acima da tua linha",
   "homeOverLimitBody": "Respira — a linha de amanhã ajusta-se. Sem vergonha.",
   "homeOverLimitBreathe": "Respirar 60s",

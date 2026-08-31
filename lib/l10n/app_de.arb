@@ -327,7 +327,7 @@
   "homeVapeFreeTitle": "Heute keine Züge?",
   "homeVapeFreeCta": "Dampffreien Tag bestätigen ✓",
   "homeVapeFreeDone": "Dampffreier Tag gesichert. Das ist das ganze Spiel. 🔥",
-  "homeLoggedSnack": "1 Zug geloggt",
+  "homeLoggedSnackCount": "{count, plural, one{1 Zug geloggt} other{{count} Züge geloggt}}",
   "homeOverLimitTitle": "Über deiner Linie",
   "homeOverLimitBody": "Atme — die Linie von morgen passt sich an. Keine Scham.",
   "homeOverLimitBreathe": "60s atmen",

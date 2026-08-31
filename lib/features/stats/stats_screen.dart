@@ -6,7 +6,6 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
-import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_selectables.dart';
@@ -15,6 +14,7 @@ import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
 import '../settings/danger_hours_sheet.dart';
+import 'edit_day_sheet.dart';
 import '../../domain/logic/danger_hours.dart';
 import '../../domain/logic/dependence_engine.dart';
 import '../../domain/models/journey_state.dart';
@@ -400,7 +400,7 @@ class _EditableBars extends ConsumerWidget {
               child: GestureDetector(
                 onLongPress: () {
                   LpHaptics.medium();
-                  _showEditSheet(context, ref, log);
+                  showEditDaySheet(context, ref, log);
                 },
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -464,113 +464,6 @@ class _EditableBars extends ConsumerWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  void _showEditSheet(BuildContext context, WidgetRef ref, DayLog log) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) {
-        var value = log.puffs;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final lp = context.lp;
-            final l10n = context.l10n;
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.statsEditDayTitle(
-                      LpFormat.mediumDate(log.date, context.localeTag),
-                    ),
-                    style: LpType.titleSm(lp.textPrimary),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.statsEditDayNote,
-                    style: LpType.caption(lp.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _stepBtn(context, Icons.remove_rounded, () {
-                        if (value > 0) setState(() => value -= 5);
-                      }),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
-                        child: Text(
-                          '$value',
-                          style: LpType.number(lp.textPrimary, size: 44),
-                        ),
-                      ),
-                      _stepBtn(
-                        context,
-                        Icons.add_rounded,
-                        () => setState(() => value += 5),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  LpButton(
-                    l10n.commonSave,
-                    onTap: () {
-                      ref
-                          .read(quitStoreProvider.notifier)
-                          .editPastDay(log.date, value);
-                      Navigator.of(sheetContext).pop();
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _stepBtn(BuildContext context, IconData icon, VoidCallback onTap) {
-    final lp = context.lp;
-    return PressScaleIcon(icon: icon, onTap: onTap, color: lp.textPrimary);
-  }
-}
-
-/// Small circular stepper button.
-class PressScaleIcon extends StatelessWidget {
-  const PressScaleIcon({
-    super.key,
-    required this.icon,
-    required this.onTap,
-    required this.color,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    return GestureDetector(
-      onTap: () {
-        LpHaptics.tick();
-        onTap();
-      },
-      child: Container(
-        width: 48,
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: lp.surface,
-          border: Border.all(color: lp.border, width: 1.5),
-        ),
-        child: Icon(icon, color: color),
       ),
     );
   }

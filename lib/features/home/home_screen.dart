@@ -17,6 +17,7 @@ import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
+import '../stats/edit_day_sheet.dart';
 import '../../domain/models/models.dart';
 import 'widgets/log_feedback.dart';
 import 'widgets/mood_sheet.dart';
@@ -33,6 +34,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _nudgeDismissed = false;
   bool _ringPulse = false;
+  final _hold = HoldToLog();
+  bool _holdTokenBefore = false;
+
+  @override
+  void dispose() {
+    _hold.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,37 +64,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         DateTime.now().hour >= 20;
     final showMoodPrompt = todayLog?.mood == null && DateTime.now().hour >= 18;
 
-    void logPuff() {
-      final onTourStep =
-          ref.read(day1TourStepProvider) == Day1TourStep.logPuff;
-      LpHaptics.light();
-      ref.read(quitStoreProvider.notifier).logPuff();
-      // Day-1 step one: `logPuff` above already ticked task 0 in the store;
-      // this is the half nothing else does — ending the step and returning
-      // to the checklist. Without it the step flipped to `meetCoach` with the
-      // user still on a fully locked Home, and the only way out was killing
-      // the app. No snack on this path: the route changes underneath it, and
-      // the ticking box IS the feedback.
-      if (onTourStep) {
-        ref
-            .read(day1TourProvider.notifier)
-            .complete(Day1TourStep.logPuff);
-        return;
-      }
-      // Frame 31: "+1 = ring tick + 1.02 bounce + light haptic".
+    bool onTourStep() =>
+        ref.read(day1TourStepProvider) == Day1TourStep.logPuff;
+
+    bool tokenUsedToday() =>
+        ref.read(quitStoreProvider)?.logFor(DateTime.now())?.repairTokenUsed ??
+        false;
+
+    // Frame 31: "+1 = ring tick + 1.02 bounce + light haptic".
+    void pulse() {
       setState(() => _ringPulse = true);
       Future<void>.delayed(const Duration(milliseconds: 140), () {
         if (mounted) setState(() => _ringPulse = false);
       });
-      final updated = ref.read(quitStoreProvider)?.logFor(DateTime.now());
-      if (updated != null &&
-          updated.repairTokenUsed &&
-          updated.puffs == updated.limit + 1) {
-        // The exact tap that burned a repair token: flame dims, doesn't die.
+    }
+
+    void showFeedback({required bool tokenBefore}) {
+      if (!tokenBefore && tokenUsedToday()) {
+        // The exact tap (or hold) that burned a repair token: flame dims,
+        // doesn't die. Before/after, not `puffs == limit + 1` — a burst can
+        // jump past the line by more than one and still deserves the note.
         showLpSnack(context, l10n.homeTokenUsedNote);
       } else {
-        showLogUndoSnack(context, ref);
+        showLogUndoSnack(
+          context,
+          ref,
+          count: ref.read(puffBurstProvider),
+          aboveCta: true,
+        );
       }
+    }
+
+    void logPuff() {
+      LpHaptics.light();
+      if (onTourStep()) {
+        // Day-1 step one: `logPuff` already ticks task 0 in the store; this
+        // is the half nothing else does — ending the step and returning to
+        // the checklist. Without it the step flipped to `meetCoach` with the
+        // user still on a fully locked Home, and the only way out was
+        // killing the app. No snack and no burst on this path: the route
+        // changes underneath it, and the ticking box IS the feedback.
+        ref.read(quitStoreProvider.notifier).logPuff();
+        ref.read(day1TourProvider.notifier).complete(Day1TourStep.logPuff);
+        return;
+      }
+      final tokenBefore = tokenUsedToday();
+      quickLogStep(ref);
+      pulse();
+      showFeedback(tokenBefore: tokenBefore);
+    }
+
+    // Press-and-hold auto-repeat: the ring's rolling number is the live
+    // feedback while held; the undo snack (with the whole burst's total)
+    // waits for release so it isn't re-animating every 180ms.
+    void startHold() {
+      // The tour teaches ONE deliberate tap; a hold would blow through the
+      // lesson and log a pile of puffs the user didn't mean.
+      if (onTourStep()) return;
+      LpHaptics.medium();
+      _holdTokenBefore = tokenUsedToday();
+      _hold.start(() {
+        quickLogStep(ref);
+        pulse();
+      });
+    }
+
+    void endHold() {
+      if (!_hold.held) return;
+      _hold.stop();
+      showFeedback(tokenBefore: _holdTokenBefore);
     }
 
     final settings = ref.watch(settingsStoreProvider);
@@ -151,12 +198,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 14),
-                        // Bento: ring + status.
+                        // Bento: ring + status. Tapping it opens the adjust
+                        // sheet — the way back when the undo snack is gone
+                        // and the count is wrong (a hold overshoots easily).
                         AnimatedScale(
                           scale: _ringPulse ? 1.02 : 1,
                           duration: const Duration(milliseconds: 130),
                           curve: Curves.easeOut,
-                          child: LpCard(
+                          child: PressScale(
+                            onTap: () => showEditDaySheet(
+                              context,
+                              ref,
+                              todayLog ??
+                                  DayLog(
+                                    date: DateTime.now(),
+                                    puffs: 0,
+                                    limit: snap.limit,
+                                  ),
+                            ),
+                            child: LpCard(
                             radius: LpDimens.rBento,
                             borderColor: over
                                 ? lp.danger.withValues(alpha: 0.5)
@@ -260,6 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                 ),
                               ],
+                            ),
                             ),
                           ),
                         ),
@@ -582,6 +643,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 description: l10n.day1TourLogBody,
                 child: PressScale(
                   onTap: logPuff,
+                  onHoldStart: startHold,
+                  onHoldEnd: endHold,
                   haptic: false,
                   child: Container(
                     height: LpDimens.ctaHeightHero,

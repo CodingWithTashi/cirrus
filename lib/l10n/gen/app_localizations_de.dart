@@ -1147,7 +1147,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dampffreier Tag gesichert. Das ist das ganze Spiel. 🔥';
 
   @override
-  String get homeLoggedSnack => '1 Zug geloggt';
+  String homeLoggedSnackCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Züge geloggt',
+      one: '1 Zug geloggt',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get homeOverLimitTitle => 'Über deiner Linie';

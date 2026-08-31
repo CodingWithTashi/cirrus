@@ -1142,7 +1142,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'Dia sem vape garantido. É este o jogo todo. 🔥';
 
   @override
-  String get homeLoggedSnack => '1 passa registada';
+  String homeLoggedSnackCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count passas registadas',
+      one: '1 passa registada',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get homeOverLimitTitle => 'Acima da tua linha';

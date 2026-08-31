@@ -2066,11 +2066,11 @@ abstract class AppLocalizations {
   /// **'Vape-free day locked in. That\'s the whole game. 🔥'**
   String get homeVapeFreeDone;
 
-  /// No description provided for @homeLoggedSnack.
+  /// No description provided for @homeLoggedSnackCount.
   ///
   /// In en, this message translates to:
-  /// **'Logged 1 puff'**
-  String get homeLoggedSnack;
+  /// **'{count, plural, one{Logged 1 puff} other{Logged {count} puffs}}'**
+  String homeLoggedSnackCount(num count);
 
   /// No description provided for @homeOverLimitTitle.
   ///

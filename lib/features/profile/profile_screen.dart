@@ -247,87 +247,108 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showEditSheet(BuildContext context, WidgetRef ref) {
-    final journey = ref.read(quitStoreProvider);
-    if (journey == null) return;
-    final alias = TextEditingController(text: journey.profile.alias);
-    var emoji = journey.profile.avatarEmoji;
-    const options = ['🦊', '🦦', '🦅', '🐺', '🐢', '🐝', '🦉', '🦋'];
-
+    if (ref.read(quitStoreProvider) == null) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setState) {
-          final lp = context.lp;
-          final l10n = context.l10n;
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.viewInsetsOf(context).bottom + 28,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.profileEditAlias,
-                  style: LpType.titleSm(lp.textPrimary),
-                ),
-                const SizedBox(height: 16),
-                LpField(
-                  label: l10n.profileEditAlias,
-                  controller: alias,
-                  hint: l10n.profileAliasHint,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.profileEditAvatar,
-                  style: LpType.body13(lp.textSecondary),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    for (final option in options)
-                      PressScale(
-                        onTap: () => setState(() => emoji = option),
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: emoji == option
-                                  ? context.lp.voltFocus
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: EmojiAvatar(option, size: 44),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                LpButton(
-                  l10n.commonSave,
-                  onTap: () {
-                    final text = alias.text.trim();
-                    ref
-                        .read(quitStoreProvider.notifier)
-                        .updateAlias(
-                          text.startsWith('@') ? text : '@$text',
-                          emoji,
-                        );
-                    Navigator.of(sheetContext).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+      builder: (_) => const _EditProfileSheet(),
+    );
+  }
+}
+
+/// Owns its controller so it dies in [dispose] — AFTER the sheet's exit
+/// animation. `whenComplete(alias.dispose)` fired the moment the pop
+/// started, leaving the still-animating field wired to a dead controller
+/// (the same crash the money goal sheet had).
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet();
+
+  static const _options = ['🦊', '🦦', '🦅', '🐺', '🐢', '🐝', '🦉', '🦋'];
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  late final TextEditingController _alias = TextEditingController(
+    text: ref.read(quitStoreProvider)?.profile.alias ?? '',
+  );
+  late String _emoji =
+      ref.read(quitStoreProvider)?.profile.avatarEmoji ??
+      _EditProfileSheet._options.first;
+
+  @override
+  void dispose() {
+    _alias.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 28,
       ),
-    ).whenComplete(alias.dispose);
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.profileEditAlias,
+            style: LpType.titleSm(lp.textPrimary),
+          ),
+          const SizedBox(height: 16),
+          LpField(
+            label: l10n.profileEditAlias,
+            controller: _alias,
+            hint: l10n.profileAliasHint,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.profileEditAvatar,
+            style: LpType.body13(lp.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final option in _EditProfileSheet._options)
+                PressScale(
+                  onTap: () => setState(() => _emoji = option),
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _emoji == option
+                            ? lp.voltFocus
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: EmojiAvatar(option, size: 44),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          LpButton(
+            l10n.commonSave,
+            onTap: () {
+              final text = _alias.text.trim();
+              ref
+                  .read(quitStoreProvider.notifier)
+                  .updateAlias(text.startsWith('@') ? text : '@$text', _emoji);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }

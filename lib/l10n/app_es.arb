@@ -327,7 +327,7 @@
   "homeVapeFreeTitle": "¿Hoy sin caladas?",
   "homeVapeFreeCta": "Confirmar día sin vapear ✓",
   "homeVapeFreeDone": "Día sin vapear confirmado. Eso es todo el juego. 🔥",
-  "homeLoggedSnack": "1 calada registrada",
+  "homeLoggedSnackCount": "{count, plural, one{1 calada registrada} other{{count} caladas registradas}}",
   "homeOverLimitTitle": "Por encima de tu línea",
   "homeOverLimitBody": "Respira — la línea de mañana se ajusta. Sin culpas.",
   "homeOverLimitBreathe": "Respira 60s",

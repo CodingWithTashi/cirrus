@@ -90,7 +90,7 @@ class MoneyScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                 ],
                 PressScale(
-                  onTap: () => _showGoalSheet(context, ref),
+                  onTap: () => _showGoalSheet(context),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -152,70 +152,92 @@ class MoneyScreen extends ConsumerWidget {
     );
   }
 
-  void _showGoalSheet(BuildContext context, WidgetRef ref) {
-    final name = TextEditingController();
-    final price = TextEditingController();
+  void _showGoalSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) {
-        final lp = sheetContext.lp;
-        final l10n = sheetContext.l10n;
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 28,
+      builder: (_) => const _GoalSheet(),
+    );
+  }
+}
+
+/// Owns its controllers so they die in [dispose] — AFTER the sheet's exit
+/// animation. Disposing them in `whenComplete` (which fires the moment the
+/// pop starts) left the still-animating fields listening to dead
+/// controllers; the first rebuild mid-exit then threw, and the failure
+/// cascaded into a full-screen crash on the way back out of this screen.
+class _GoalSheet extends ConsumerStatefulWidget {
+  const _GoalSheet();
+
+  @override
+  ConsumerState<_GoalSheet> createState() => _GoalSheetState();
+}
+
+class _GoalSheetState extends ConsumerState<_GoalSheet> {
+  final _name = TextEditingController();
+  final _price = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _price.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 28,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.moneyGoalSheetTitle,
+            style: LpType.titleSm(lp.textPrimary),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.moneyGoalSheetTitle,
-                style: LpType.titleSm(lp.textPrimary),
-              ),
-              const SizedBox(height: 16),
-              LpField(
-                label: l10n.moneySetGoal,
-                controller: name,
-                hint: l10n.moneyGoalNameHint,
-                autofocus: true,
-              ),
-              const SizedBox(height: 10),
-              LpField(
-                label: l10n.moneyGoalPriceHint,
-                controller: price,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 18),
-              LpButton(
-                l10n.moneyGoalCreate,
-                onTap: () {
-                  final p = double.tryParse(price.text) ?? 0;
-                  if (name.text.trim().isEmpty || p <= 0) return;
-                  LpHaptics.medium();
-                  ref
-                      .read(quitStoreProvider.notifier)
-                      .addGoal(
-                        SavingsGoal(
-                          id: 'g${DateTime.now().microsecondsSinceEpoch}',
-                          emoji: '🎯',
-                          name: name.text.trim(),
-                          price: p,
-                        ),
-                      );
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-            ],
+          const SizedBox(height: 16),
+          LpField(
+            label: l10n.moneySetGoal,
+            controller: _name,
+            hint: l10n.moneyGoalNameHint,
+            autofocus: true,
           ),
-        );
-      },
-    ).whenComplete(() {
-      name.dispose();
-      price.dispose();
-    });
+          const SizedBox(height: 10),
+          LpField(
+            label: l10n.moneyGoalPriceHint,
+            controller: _price,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 18),
+          LpButton(
+            l10n.moneyGoalCreate,
+            onTap: () {
+              final p = double.tryParse(_price.text) ?? 0;
+              if (_name.text.trim().isEmpty || p <= 0) return;
+              LpHaptics.medium();
+              ref
+                  .read(quitStoreProvider.notifier)
+                  .addGoal(
+                    SavingsGoal(
+                      id: 'g${DateTime.now().microsecondsSinceEpoch}',
+                      emoji: '🎯',
+                      name: _name.text.trim(),
+                      price: p,
+                    ),
+                  );
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 

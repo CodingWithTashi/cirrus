@@ -133,12 +133,18 @@ class BackChevron extends StatelessWidget {
 }
 
 /// Themed floating snackbar with optional action (undo pattern).
+///
+/// [margin] repositions the snack away from its default bottom-edge spot —
+/// the log-puff snack passes one so it never covers the control that was just
+/// tapped (a toast squatting on the button it confirms blocks the next tap
+/// for its whole lifetime).
 void showLpSnack(
   BuildContext context,
   String message, {
   String? actionLabel,
   VoidCallback? onAction,
   Duration duration = const Duration(seconds: 4),
+  EdgeInsetsGeometry? margin,
 }) {
   final messenger = ScaffoldMessenger.of(context);
   // Replace, never queue — rapid logging must not stack minutes of snacks.
@@ -147,6 +153,7 @@ void showLpSnack(
     SnackBar(
       content: Text(message),
       duration: duration,
+      margin: margin,
       action: actionLabel == null
           ? null
           : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),

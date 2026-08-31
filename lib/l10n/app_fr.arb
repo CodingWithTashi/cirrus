@@ -327,7 +327,7 @@
   "homeVapeFreeTitle": "Zéro taffe aujourd'hui ?",
   "homeVapeFreeCta": "Confirmer le jour sans vape ✓",
   "homeVapeFreeDone": "Jour sans vape validé. C'est tout le jeu. 🔥",
-  "homeLoggedSnack": "1 taffe enregistrée",
+  "homeLoggedSnackCount": "{count, plural, one{1 taffe enregistrée} other{{count} taffes enregistrées}}",
   "homeOverLimitTitle": "Au-dessus de ta ligne",
   "homeOverLimitBody": "Respire — la ligne de demain s'ajuste. Zéro honte.",
   "homeOverLimitBreathe": "Respirer 60s",

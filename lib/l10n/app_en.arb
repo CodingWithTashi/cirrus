@@ -696,7 +696,14 @@
   "homeVapeFreeTitle": "No puffs today?",
   "homeVapeFreeCta": "Confirm vape-free day ✓",
   "homeVapeFreeDone": "Vape-free day locked in. That's the whole game. 🔥",
-  "homeLoggedSnack": "Logged 1 puff",
+  "homeLoggedSnackCount": "{count, plural, one{Logged 1 puff} other{Logged {count} puffs}}",
+  "@homeLoggedSnackCount": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "homeOverLimitTitle": "Over today's line",
   "homeOverLimitBody": "Breathe — tomorrow's line adjusts. No shame.",
   "homeOverLimitBreathe": "Breathe 60s",

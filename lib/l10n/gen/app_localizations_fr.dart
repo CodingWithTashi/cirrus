@@ -1145,7 +1145,15 @@ class AppLocalizationsFr extends AppLocalizations {
       'Jour sans vape validé. C\'est tout le jeu. 🔥';
 
   @override
-  String get homeLoggedSnack => '1 taffe enregistrée';
+  String homeLoggedSnackCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count taffes enregistrées',
+      one: '1 taffe enregistrée',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get homeOverLimitTitle => 'Au-dessus de ta ligne';

@@ -257,40 +257,50 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   // ---- daily log ------------------------------------------------------------
 
-  void logPuff({DateTime? at}) {
+  /// [count] > 1 is one tap of the accelerating quick-log worth several
+  /// puffs. The over-limit transition below is applied puff by puff, so a
+  /// burst that crosses the line mid-count burns the repair token (or arms
+  /// the slip flow) on exactly the puff that crossed, same as [count] calls.
+  void logPuff({DateTime? at, int count = 1}) {
     final s = state;
     if (s == null) return;
     // The north star is Weekly Active Quitters — people who log on 4+ days a
     // week — so this is the one habit-loop event the metric cannot be
     // computed without. Emitted from the store, not the four views that call
-    // logPuff, so a new entry point can't ship unmeasured.
+    // logPuff, so a new entry point can't ship unmeasured. Once per tap, not
+    // per puff: the metric counts logging behaviour, not inventory.
     ref.read(analyticsProvider).puffLogged();
     final when = at ?? _now;
     final key = JourneyState.dateKey(when);
-    final log =
+    var updated =
         s.days[key] ??
         DayLog(date: key, puffs: 0, limit: s.limitOn(when));
 
-    final wasOver = log.puffs > log.limit;
-    final buckets = Map<int, int>.from(log.hourBuckets);
-    buckets[LpDate.hour(when)] = (buckets[LpDate.hour(when)] ?? 0) + 1;
-    var updated = log.copyWith(puffs: log.puffs + 1, hourBuckets: buckets);
-
     var tokens = s.repairTokens;
     int? pendingSlip = s.pendingSlipCleanDays;
-    final nowOver = updated.puffs > updated.limit;
-    if (!wasOver && nowOver) {
-      // First over-limit puff today: a repair token absorbs it silently
-      // (docs/03 §5); with no token the recovery flow arms.
-      final streakBefore = StreakEngine.currentStreak(
-        s.days,
-        LpDate.addDays(when, -1),
+    for (var i = 0; i < count; i++) {
+      final wasOver = updated.puffs > updated.limit;
+      final buckets = Map<int, int>.from(updated.hourBuckets);
+      buckets[LpDate.hour(when)] = (buckets[LpDate.hour(when)] ?? 0) + 1;
+      updated = updated.copyWith(
+        puffs: updated.puffs + 1,
+        hourBuckets: buckets,
       );
-      if (tokens > 0) {
-        tokens -= 1;
-        updated = updated.copyWith(repairTokenUsed: true);
-      } else {
-        pendingSlip = streakBefore;
+
+      final nowOver = updated.puffs > updated.limit;
+      if (!wasOver && nowOver) {
+        // First over-limit puff today: a repair token absorbs it silently
+        // (docs/03 §5); with no token the recovery flow arms.
+        final streakBefore = StreakEngine.currentStreak(
+          s.days,
+          LpDate.addDays(when, -1),
+        );
+        if (tokens > 0) {
+          tokens -= 1;
+          updated = updated.copyWith(repairTokenUsed: true);
+        } else {
+          pendingSlip = streakBefore;
+        }
       }
     }
     // Big relapse (docs/03 §5): over 2× the line always offers a plan reflow.
@@ -314,25 +324,39 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
-  void undoLastPuff() {
+  void undoLastPuff() => undoPuffs(1);
+
+  /// Takes back the last [count] puffs of today — the undo for a quick-log
+  /// burst, so the snack's single Undo reverses everything the burst logged.
+  /// Clamped to what today actually holds; buckets drain newest-hour-first,
+  /// mirroring how logPuff filled them.
+  void undoPuffs(int count) {
     final s = state;
     if (s == null) return;
     final log = s.days[_todayKey];
     if (log == null || log.puffs == 0) return;
     final buckets = Map<int, int>.from(log.hourBuckets);
-    final lastHour = buckets.keys.isEmpty
-        ? _now.hour
-        : buckets.keys.reduce((a, b) => a > b ? a : b);
-    if ((buckets[lastHour] ?? 0) > 1) {
-      buckets[lastHour] = buckets[lastHour]! - 1;
-    } else {
-      buckets.remove(lastHour);
+    var remaining = count.clamp(0, log.puffs);
+    final removed = remaining;
+    while (remaining > 0) {
+      final lastHour = buckets.keys.isEmpty
+          ? _now.hour
+          : buckets.keys.reduce((a, b) => a > b ? a : b);
+      if ((buckets[lastHour] ?? 0) > 1) {
+        buckets[lastHour] = buckets[lastHour]! - 1;
+      } else {
+        buckets.remove(lastHour);
+      }
+      remaining--;
     }
     _commit(
       s.copyWith(
         days: {
           ...s.days,
-          _todayKey: log.copyWith(puffs: log.puffs - 1, hourBuckets: buckets),
+          _todayKey: log.copyWith(
+            puffs: log.puffs - removed,
+            hourBuckets: buckets,
+          ),
         },
       ),
     );
@@ -351,6 +375,23 @@ class JourneyStore extends Notifier<JourneyState?> {
         ),
       ),
     );
+  }
+
+  /// Sets today's count to [target] — the correction path for "I logged too
+  /// many" after the undo snack is gone. Decreases go through [undoPuffs] so
+  /// the hour buckets drain honestly; increases go through [logPuff] so a
+  /// late catch-up still moves lastPuffAt and hits the over-limit
+  /// transitions, exactly as the missed taps would have. Past days use
+  /// [editPastDay]; today's log is live data, not history.
+  void adjustToday(int target) {
+    final s = state;
+    if (s == null || target < 0) return;
+    final current = s.days[_todayKey]?.puffs ?? 0;
+    if (target > current) {
+      logPuff(count: target - current);
+    } else if (target < current) {
+      undoPuffs(current - target);
+    }
   }
 
   void editPastDay(DateTime date, int puffs) {
