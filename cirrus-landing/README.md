@@ -206,6 +206,31 @@ Verified live: `http`→`https` 301, `/page.html` and `/page/` both 308 to the
 clean URL, Googlebot and Bingbot unblocked, Brotli active, sitemap carries
 `<lastmod>` for posts.
 
+### Post layout
+
+A blog post is a two-column grid (`.post-layout`): the article at the reading
+measure, and a **sticky sidebar** of related posts beside it. Below 58rem it
+collapses to one column and the sidebar stacks under the article — the same
+element either way, because rendering it twice would put every link on the page
+twice.
+
+`.prose` owns the 42rem measure so any page can use it standalone (the legal
+pages do). Inside a post that is a no-op, since `.post-main` is the same width.
+
+### Legal pages
+
+`/privacy` and `/terms` are real pages here (`src/pages/*.astro`), not links to
+another host. The copy was transferred **verbatim** from the versions previously
+on Firebase Hosting — it is legal text, so it gets moved, never paraphrased.
+`LEGAL_LAST_UPDATED` in `consts.ts` dates both; bump it when either changes.
+
+`PRIVACY_URL` / `TERMS_URL` are now site-relative, so the footer, the JSON-LD
+and anything else pointing at them follows automatically.
+
+**The Firebase copies still exist** at `alastpuff.web.app/privacy` and `/terms`.
+Two live copies of the same text on two domains is duplicate content: redirect
+those to the apex, or delete them, once the Flutter app stops linking to them.
+
 ### Structured data
 
 One `@graph` per page, built in `BaseLayout.astro`. Three things in it are load-bearing

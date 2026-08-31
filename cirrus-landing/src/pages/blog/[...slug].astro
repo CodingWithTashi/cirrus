@@ -35,7 +35,7 @@ const {
 const related = await (async () => {
   const others = (await getPublishedPosts()).filter((p) => p.id !== post.id);
   const shared = others.filter((p) => p.data.tags.some((t) => post.data.tags.includes(t)));
-  return [...new Set([...shared, ...others])].slice(0, 3);
+  return [...new Set([...shared, ...others])].slice(0, 4);
 })();
 
 const toc = headings.filter((h) => h.depth === 2);
@@ -63,7 +63,8 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
       readable without it, so it is hidden from assistive tech. */}
   <div class="progress" aria-hidden="true"><div class="progress__bar" id="progress-bar"></div></div>
 
-  <div class="wrap page">
+  <div class="wrap page post-layout">
+  <div class="post-main">
   <article class="prose">
     <h1>{post.data.title}</h1>
     <p class="post-meta">
@@ -225,26 +226,35 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
     <WaitlistForm source={`blog-${post.id}`} id="waitlist-post" cta="Join the waitlist" label="Get early access" showCount />
   </section>
 
-  {
-    related.length > 0 && (
-      <aside class="related" aria-labelledby="related-h">
-        <h2 id="related-h">Keep reading</h2>
-        <ul class="post-list">
-          {related.map((r) => (
-            <li>
-              <h3><a href={`/blog/${r.id}`}>{r.data.title}</a></h3>
-              <p>{r.data.description}</p>
-            </li>
-          ))}
-        </ul>
-      </aside>
-    )
-  }
-
   <nav class="post-footer-nav" aria-label="Post navigation">
     <a href="/blog">All posts on quitting vaping</a>
     <a href="/">How the Cirrus taper works</a>
   </nav>
+  </div>
+
+  {/* Sits beside the article on a wide screen and stacks under it on a narrow
+      one. One element either way — duplicating it would put every link on the
+      page twice. */}
+  {
+    related.length > 0 && (
+      <aside class="post-side" aria-labelledby="related-h">
+        <div class="related">
+          <h2 id="related-h">Keep reading</h2>
+          <ul class="related__list">
+            {related.map((r) => (
+              <li>
+                <a href={`/blog/${r.id}`}>
+                  <span class="related__title">{r.data.title}</span>
+                  <span class="related__desc">{r.data.description}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a class="related__all" href="/blog">All posts on quitting vaping</a>
+        </div>
+      </aside>
+    )
+  }
   </div>
 </BaseLayout>
 

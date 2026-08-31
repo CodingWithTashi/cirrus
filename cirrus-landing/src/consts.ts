@@ -35,6 +35,15 @@ export const PLAY_STORE_URL = '';
 // sameAs pointing at a profile that does not exist is worse than no sameAs.
 export const SOCIAL_PROFILES: string[] = [];
 
-// Legal pages currently live on Firebase Hosting, not this domain.
-export const PRIVACY_URL = 'https://alastpuff.web.app/privacy';
-export const TERMS_URL = 'https://alastpuff.web.app/terms';
+// Legal pages now live on this domain (src/pages/privacy.astro, terms.astro).
+// They used to be on Firebase Hosting; same copy, moved so the policy sits on
+// the apex domain and appears in the sitemap.
+export const PRIVACY_URL = '/privacy';
+export const TERMS_URL = '/terms';
+
+// The address on both legal pages, and the one data-rights requests arrive at.
+// Defined once so the two policies can never disagree about where to write.
+export const LEGAL_CONTACT_EMAIL = 'developer.kharag@gmail.com';
+
+// Shown on both legal pages. Bump it whenever either policy changes materially.
+export const LEGAL_LAST_UPDATED = '2026-08-30';

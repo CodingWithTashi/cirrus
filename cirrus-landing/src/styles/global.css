@@ -682,23 +682,26 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 
 /* ---------- the article ---------- */
 
-/* The article column is the shell; the READING measure is applied to each child
-   instead, left-aligned, so anything that ever needs to be wider than the
-   measure can opt out with `max-width: none` rather than reaching for vw units
-   (vw includes the scrollbar, so a vw-sized element overflows and gets clipped). */
+/* The reading measure now comes from the grid column (.post-main), so .prose
+   just fills it. Left-aligned, never centred: the site header, the breadcrumb
+   and the article all start on the same axis, and a centred column sits ~200px
+   right of the breadcrumb above it and reads as unmoored from the page. */
 .prose {
-  max-width: var(--shell);
-  margin-inline: auto;
+  /* The measure lives here so any page can use .prose on its own. On a blog
+     post .post-main is the same width, so this is a no-op there. */
+  max-width: 42rem;
   font-size: 1.1875rem;
   line-height: 1.65;
 }
-/* Left-aligned, NOT centred. The site header, the breadcrumb and the article
-   all start on the same axis — a column centred inside the shell sits ~200px
-   right of the breadcrumb above it and reads as unmoored from the page. */
-.prose > * {
-  max-width: 42rem;
-  margin-inline: 0;
-}
+
+/* Legal copy is reference material, not a read-through — slightly smaller and
+   tighter than an article so the whole policy is scannable. */
+.legal { font-size: 1.0625rem; }
+.legal h2 { font-size: 1.25rem; margin-top: 2.25rem; }
+.legal h3 { font-size: 1.0625rem; margin-top: 1.5rem; }
+.legal .lede { font-size: 1.1875rem; color: var(--muted); max-width: none; }
+.legal ul { margin-block: 1rem; }
+.legal li { margin-block: 0.5rem; }
 
 .prose h1 { font-size: clamp(2.1rem, 5.5vw, 3.1rem); line-height: 1.06; }
 
@@ -1020,6 +1023,34 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .post-cta > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
 .post-cta .waitlist { margin-top: 1.2rem; }
 
+/* ---------- post layout: article + sidebar ----------
+   One column on a phone, two once there is genuinely room. The breakpoint is
+   the measure (42rem) plus the sidebar plus a gap — below that the sidebar
+   would squeeze the article's line length, which is the one thing on this page
+   that must not move. */
+
+.post-layout { display: grid; }
+.post-main { min-width: 0; max-width: 42rem; }
+
+/* 58rem is the narrowest the two columns fit without crushing either: the
+   article can flex down from 42rem a little, and the sidebar stays wide enough
+   for a two-line title. Below this it stacks. */
+@media (min-width: 58rem) {
+  .post-layout {
+    grid-template-columns: minmax(0, 42rem) minmax(13rem, 18rem);
+    gap: 0 clamp(1.75rem, 3.5vw, 3.5rem);
+    align-items: start;
+  }
+  /* Follows the reader down a long article instead of scrolling away in the
+     first screenful, which is the whole point of putting it here. */
+  .post-side {
+    position: sticky;
+    top: 2rem;
+    margin-top: clamp(40px, 7vw, 72px);
+  }
+  .post-side .related { border-top: 0; padding-top: 0; margin-top: 0; }
+}
+
 /* ---------- related posts ---------- */
 
 .related {
@@ -1032,12 +1063,43 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.025em;
-  font-size: 1.375rem;
+  font-size: 1.125rem;
   margin: 0;
 }
-.related .post-list { margin-top: 1.5rem; }
-.related .post-list li { padding: 1.25rem 0; }
-.related .post-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.related__list { list-style: none; margin: 1.25rem 0 0; padding: 0; }
+.related__list li + li { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+
+.related__list a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.related__title {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.related__list a:hover .related__title { color: var(--volt); }
+.related__desc {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.related__all {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  font-size: 0.875rem;
+}
 
 /* ---------- footer nav ---------- */
 

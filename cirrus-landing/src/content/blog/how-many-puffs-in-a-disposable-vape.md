@@ -2,7 +2,7 @@
 title: How many puffs are in a disposable vape?
 description: The number on the box is a lab figure, not a promise. Here is what actually determines how long a disposable lasts, and the number worth tracking instead.
 standfirst: The number on the box is a laboratory figure, not a promise. Here is what actually decides how long one lasts.
-publishedAt: 2026-08-30
+publishedAt: 2026-08-01
 tags: ['puff count', 'vape safety']
 draft: false
 medical: true

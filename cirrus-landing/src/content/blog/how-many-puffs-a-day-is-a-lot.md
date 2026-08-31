@@ -2,7 +2,7 @@
 title: How many puffs a day is a lot?
 description: There is no clinical cut-off, and anyone quoting one is guessing. Here is the honest answer, the conversion that helps, and the question that tells you more.
 standfirst: There is no clinical cut-off, and every site quoting you a number is guessing. Here is what the evidence actually supports.
-publishedAt: 2026-08-30
+publishedAt: 2026-08-10
 tags: ['puff count', 'research']
 draft: false
 medical: true

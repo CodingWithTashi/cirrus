@@ -2,7 +2,7 @@
 title: How to choose a puff counter app
 description: Most vape trackers count puffs and stop there. Five things worth checking before you install one, and an honest look at what is available on each platform.
 standfirst: Most vape trackers count puffs and stop there. Five things worth checking before you install one.
-publishedAt: 2026-08-30
+publishedAt: 2026-07-24
 tags: ['puff count', 'quitting vaping']
 draft: false
 medical: true

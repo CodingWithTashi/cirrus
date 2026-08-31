@@ -2,7 +2,7 @@
 title: How long does vaping withdrawal last?
 description: Symptoms start within a day, peak around day two or three, and mostly fade inside a month. Here is the honest timeline and why tapering changes it.
 standfirst: Symptoms start within a day, peak sooner than most people expect, and mostly fade inside a month. Here is the timeline.
-publishedAt: 2026-08-30
+publishedAt: 2026-08-25
 tags: ['quitting vaping', 'research']
 draft: false
 medical: true

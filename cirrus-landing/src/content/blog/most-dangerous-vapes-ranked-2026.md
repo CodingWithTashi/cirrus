@@ -2,7 +2,7 @@
 title: The 5 most dangerous vapes in 2026, ranked by science
 description: We ranked five vape categories worst to least-bad using peer-reviewed data on heavy metals, lung injury and nicotine dose. Your device is on this list.
 standfirst: Five categories, ranked worst to least-bad on peer-reviewed data. Plus the part that matters more than where your device lands.
-publishedAt: 2026-08-30
+publishedAt: 2026-07-05
 tags: ['vape safety', 'research']
 draft: false
 medical: true
