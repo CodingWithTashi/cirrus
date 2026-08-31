@@ -2432,6 +2432,12 @@ abstract class AppLocalizations {
   /// **'{name} is typing…'**
   String coachTyping(String name);
 
+  /// No description provided for @coachTimeYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday · {time}'**
+  String coachTimeYesterday(String time);
+
   /// No description provided for @coachFreeCounter.
   ///
   /// In en, this message translates to:
@@ -3101,7 +3107,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityPosted.
   ///
   /// In en, this message translates to:
-  /// **'Posted. Someone needed to read that.'**
+  /// **'Posted. A quick safety check runs before others can see it.'**
   String get communityPosted;
 
   /// No description provided for @buddyLinkCopied.
@@ -3839,14 +3845,122 @@ abstract class AppLocalizations {
   /// No description provided for @memoriesIntro.
   ///
   /// In en, this message translates to:
-  /// **'Things you\'ve told {name}, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn\'t say.'**
+  /// **'What {name} knows about you: your setup and live numbers from the app, plus the things you\'ve told it in chat — those you can make it forget, any time.'**
   String memoriesIntro(String name);
 
   /// No description provided for @memoriesEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Nothing yet. {name} starts remembering once you tell it something about your life.'**
+  /// **'Nothing here yet. This part fills up as you tell {name} things about your life in chat.'**
   String memoriesEmpty(String name);
+
+  /// No description provided for @memoriesSectionKnows.
+  ///
+  /// In en, this message translates to:
+  /// **'What {name} always knows'**
+  String memoriesSectionKnows(String name);
+
+  /// No description provided for @memoriesSectionTold.
+  ///
+  /// In en, this message translates to:
+  /// **'Things you\'ve told {name}'**
+  String memoriesSectionTold(String name);
+
+  /// No description provided for @memoriesFactPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get memoriesFactPlan;
+
+  /// No description provided for @memoriesFactPlanValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{method} · {days} days'**
+  String memoriesFactPlanValue(String method, int days);
+
+  /// No description provided for @memoriesFactStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get memoriesFactStarted;
+
+  /// No description provided for @memoriesFactBaseline.
+  ///
+  /// In en, this message translates to:
+  /// **'Baseline'**
+  String get memoriesFactBaseline;
+
+  /// No description provided for @memoriesFactBaselineValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} puffs a day'**
+  String memoriesFactBaselineValue(int count);
+
+  /// No description provided for @memoriesFactWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Your why'**
+  String get memoriesFactWhy;
+
+  /// No description provided for @memoriesFactWorries.
+  ///
+  /// In en, this message translates to:
+  /// **'Worried about'**
+  String get memoriesFactWorries;
+
+  /// No description provided for @memoriesFactWhyWords.
+  ///
+  /// In en, this message translates to:
+  /// **'In your words'**
+  String get memoriesFactWhyWords;
+
+  /// No description provided for @memoriesFactFirstPuff.
+  ///
+  /// In en, this message translates to:
+  /// **'First puff after waking'**
+  String get memoriesFactFirstPuff;
+
+  /// No description provided for @memoriesFactFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'How often'**
+  String get memoriesFactFrequency;
+
+  /// No description provided for @memoriesFactDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Where you are'**
+  String get memoriesFactDay;
+
+  /// No description provided for @memoriesFactDayValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day} of {total}'**
+  String memoriesFactDayValue(int day, int total);
+
+  /// No description provided for @memoriesFactToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get memoriesFactToday;
+
+  /// No description provided for @memoriesFactTodayValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{puffs} of {limit} puffs'**
+  String memoriesFactTodayValue(int puffs, int limit);
+
+  /// No description provided for @memoriesFactStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get memoriesFactStreak;
+
+  /// No description provided for @memoriesFactSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Money saved'**
+  String get memoriesFactSaved;
 
   /// No description provided for @memoriesFailed.
   ///

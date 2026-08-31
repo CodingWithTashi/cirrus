@@ -84,6 +84,36 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         CoachChip.progress => context.l10n.coachChipProgress,
       };
 
+  /// A divider renders when the calendar day turns or the thread went quiet
+  /// for a while. Un-stamped messages (legacy turns, the seeded greeting)
+  /// never force one — they group with whatever came before.
+  static bool _needsSeparator(DateTime? prev, DateTime? cur) {
+    if (cur == null) return false;
+    if (prev == null) return true;
+    if (LpDate.dayStart(prev) != LpDate.dayStart(cur)) return true;
+    return cur.difference(prev) > const Duration(minutes: 15);
+  }
+
+  /// Local wall-clock label: "3:07 PM" today, "Yesterday · 9:12 PM", then
+  /// "Sat, Aug 15 · 9:12 PM". Always the device's own timezone — the server's
+  /// clock never reaches this screen.
+  ///
+  /// [now] comes from the watched minute clock, never `DateTime.now()` in
+  /// build: this tab lives in the keep-alive IndexedStack, so a raw read
+  /// would freeze "today" at whenever the tab was first built and label last
+  /// night's messages as today's after midnight — the same frozen-clock bug
+  /// PostCard had.
+  String _timeLabel(BuildContext context, DateTime t, DateTime now, String locale) {
+    final today = LpDate.dayStart(now);
+    final day = LpDate.dayStart(t);
+    final time = LpFormat.clockTime(t, locale);
+    if (day == today) return time;
+    if (day == LpDate.addDays(today, -1)) {
+      return context.l10n.coachTimeYesterday(time);
+    }
+    return '${LpFormat.weekdayShortDate(t, locale)} · $time';
+  }
+
   String _resolve(BuildContext context, CoachMessage m, String coachName) {
     // A model-authored reply is already prose in the user's language (the
     // server pins it from the caller's locale), so it renders verbatim. The
@@ -144,6 +174,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final store = ref.read(coachStoreProvider.notifier);
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
+    // Watched so the separators re-derive "today"/"yesterday" as time passes
+    // in this keep-alive tab.
+    final now = ref.watch(minuteClockProvider);
     // The counter shows only what the server has actually told us it is
     // enforcing. Before that it shows nothing — a number nobody stands behind
     // is worse than no number.
@@ -222,7 +255,18 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                       children: [
-                        for (final m in coach.messages) ...[
+                        for (final (i, m) in coach.messages.indexed) ...[
+                          // Day/time separators make the thread honest about
+                          // when things were said — restored history used to
+                          // render last night's messages indistinguishable
+                          // from this morning's.
+                          if (_needsSeparator(
+                            i == 0 ? null : coach.messages[i - 1].sentAt,
+                            m.sentAt,
+                          ))
+                            _TimeDivider(
+                              label: _timeLabel(context, m.sentAt!, now, locale),
+                            ),
                           _Bubble(
                             isUser: m.role == CoachRole.user,
                             text: m.role == CoachRole.user
@@ -413,6 +457,24 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   }
 }
 
+/// Centered "3:07 PM" / "Yesterday · 9:12 PM" pill between message groups.
+class _TimeDivider extends StatelessWidget {
+  const _TimeDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: Center(
+        child: Text(label, style: LpType.caption11(lp.textFaint)),
+      ),
+    );
+  }
+}
+
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.isUser, required this.text});
 
@@ -476,12 +538,15 @@ class _TypingBubbleState extends State<_TypingBubble>
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
+    final label = context.l10n.coachTyping(widget.coachName);
     return Align(
       alignment: Alignment.centerLeft,
-      // Screen readers hear "Ember is typing…" while the flame pulses.
+      // One spoken label; the visible copy below is excluded so screen
+      // readers don't hear it twice.
       child: Semantics(
-        label: context.l10n.coachTyping(widget.coachName),
+        label: label,
         liveRegion: true,
+        excludeSemantics: true,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           decoration: BoxDecoration(
@@ -494,9 +559,25 @@ class _TypingBubbleState extends State<_TypingBubble>
             ),
             border: Border.all(color: lp.border, width: 1.5),
           ),
-          child: FadeTransition(
-            opacity: Tween(begin: 0.35, end: 1.0).animate(_pulse),
-            child: Text('🔥', style: TextStyle(fontSize: 14, color: lp.ember)),
+          // The pulsing flame is the docs/04 §8 indicator; the words are for
+          // everyone who is not using a screen reader — the field test showed
+          // a lone emoji does not read as "the coach is typing".
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FadeTransition(
+                opacity: Tween(begin: 0.35, end: 1.0).animate(_pulse),
+                child: Text(
+                  '🔥',
+                  style: TextStyle(fontSize: 14, color: lp.ember),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FadeTransition(
+                opacity: Tween(begin: 0.55, end: 1.0).animate(_pulse),
+                child: Text(label, style: LpType.caption(lp.textSecondary)),
+              ),
+            ],
           ),
         ),
       ),

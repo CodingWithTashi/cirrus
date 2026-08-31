@@ -287,7 +287,9 @@ export const aiCoachChat = onCall(
       // `generic1` is the graceful degradation for a client that predates the
       // `text` field — never send a template that contradicts the words.
       template: 'generic1',
-      args: {day: card.streak},
+      // The plan day, not the streak: a fallback client renders this as
+      // "you're on day {day}", and it must match the Home header.
+      args: {day: card.day},
       showWeekCard: chip === 'progress',
       text: reply,
       messagesLeft,
@@ -386,11 +388,21 @@ export function parseMemories(raw: string): {text: string; kind: MemoryKind}[] {
   try {
     parsed = JSON.parse(cleaned);
   } catch {
+    // A malformed answer must be distinguishable in the logs from an honest
+    // `{"memories":[]}` — without this, "extraction is broken" and "nothing
+    // durable was said" produce identical silence.
+    log.warn('coach.extract_dropped', {reason: 'not json', sample: cleaned.slice(0, 120)});
     return [];
   }
-  if (parsed === null || typeof parsed !== 'object') return [];
+  if (parsed === null || typeof parsed !== 'object') {
+    log.warn('coach.extract_dropped', {reason: 'not an object', sample: cleaned.slice(0, 120)});
+    return [];
+  }
   const list = (parsed as Record<string, unknown>)['memories'];
-  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(list)) {
+    log.warn('coach.extract_dropped', {reason: 'memories not an array', sample: cleaned.slice(0, 120)});
+    return [];
+  }
 
   const out: {text: string; kind: MemoryKind}[] = [];
   for (const item of list.slice(0, 2)) {

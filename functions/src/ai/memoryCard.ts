@@ -25,6 +25,8 @@ export interface MemoryCard {
   readonly text: string;
   readonly journey: Journey;
   readonly todayKey: string;
+  /** 1-based plan day — the same number the Home header renders. */
+  readonly day: number;
   readonly streak: number;
 }
 
@@ -59,6 +61,10 @@ export function buildMemoryCard(
     minute: '2-digit',
     hour12: false,
   }).format(now);
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'long',
+  }).format(now);
 
   const profile = journey.profile;
   const age =
@@ -68,6 +74,11 @@ export function buildMemoryCard(
 
   const lines = [
     'USER CARD',
+    // The model once congratulated a day-1 user on "making it to day two"
+    // because a "good morning" greeting after older messages read like a new
+    // day. Date and clock in their zone, stated outright, so the day number
+    // never has to be inferred from conversation shape.
+    `today's date: ${todayKey} (${weekday}) · their local time: ${localTime}`,
     `alias: ${profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
     // "How long have I been at this?" — answerable without arithmetic. The
     // start date is absolute so the model never has to derive a calendar.
@@ -87,7 +98,7 @@ export function buildMemoryCard(
     `saving toward: ${goalsLine(journey, saved)}`,
     `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${journey.repairTokens}`,
     `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
-    `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'} · local time now: ${localTime}`,
+    `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'}`,
     `last 7 days: ${last7.length > 0 ? last7.map((d) => d.puffs).join(',') : 'no logs yet'}`,
     // The whole journey, one line per week, from the same `holds` the flame
     // reads — so "compare my week 2 to my week 5" gets exact numbers instead
@@ -99,7 +110,7 @@ export function buildMemoryCard(
     `in their own words: ${ownWords(window14) || 'nothing written yet'}`,
   ];
 
-  return {text: lines.join('\n'), journey, todayKey, streak};
+  return {text: lines.join('\n'), journey, todayKey, day, streak};
 }
 
 function list(values: readonly string[]): string {

@@ -14,6 +14,7 @@ import {beforeEach, describe, expect, it} from 'vitest';
 import type {CallableRequest} from 'firebase-functions/v2/https';
 import {panicSession} from '../../src/handlers/panicSession';
 import {syncUserContext} from '../../src/handlers/syncUserContext';
+import {reportPost} from '../../src/handlers/reportPost';
 import {reportReply} from '../../src/handlers/reportReply';
 import {matchedTestimonials} from '../../src/handlers/testimonials';
 import {
@@ -298,6 +299,109 @@ describe('reportReply', () => {
       .doc('p1').collection('replies').doc('r9').get();
     expect(reply.get('text')).toBe('just buy the 50mg ones');
     expect(reply.get('alias')).toBe('nightbee');
+  });
+});
+
+describe('reportPost', () => {
+  // The mirror of `reportReply`, and it closes the same bug (S3-10): the
+  // client used to write a raw increment nobody read — reporting a post
+  // raised a counter with no auto-hide and no queue row behind it.
+  async function seedPost(): Promise<void> {
+    await postsCol().doc('p1').set({
+      alias: 'a',
+      text: 'this app is a scam, dm me for real pods',
+      status: 'live',
+      tag: 'win',
+      reportCount: 0,
+    });
+  }
+
+  it('raises the count and files a flag the queue can read', async () => {
+    await seedPost();
+    await reportPost.run(caller({postId: 'p1'}));
+
+    expect((await postsCol().doc('p1').get()).get('reportCount')).toBe(1);
+
+    const flag = await db.collection('moderation').doc('p1').get();
+    expect(flag.exists).toBe(true);
+    expect(flag.get('kind')).toBe('post');
+    expect(flag.get('postId')).toBe('p1');
+    expect(flag.get('reason')).toBe('user_report');
+    expect(flag.get('reviewed')).toBe(false);
+  });
+
+  it('counts one reporter once, however many times they tap', async () => {
+    await seedPost();
+    await reportPost.run(caller({postId: 'p1'}));
+    await reportPost.run(caller({postId: 'p1'}));
+    await reportPost.run(caller({postId: 'p1'}));
+
+    const post = await postsCol().doc('p1').get();
+    expect(post.get('reportCount')).toBe(1);
+    expect(post.get('status')).toBe('live');
+  });
+
+  it('hides a post pending review once three different readers report it', async () => {
+    await seedPost();
+    for (const uid of ['alice', 'bob', 'carol']) {
+      await reportPost.run(caller({postId: 'p1'}, uid));
+    }
+
+    const post = await postsCol().doc('p1').get();
+    expect(post.get('reportCount')).toBe(3);
+    // Pending, never deleted: the founder still has to be able to read it
+    // and disagree.
+    expect(post.get('status')).toBe('pending');
+  });
+
+  it('refuses a post that does not exist', async () => {
+    await expect(reportPost.run(caller({postId: 'ghost'}))).rejects.toThrow();
+  });
+
+  it('refuses an unauthenticated caller', async () => {
+    await seedPost();
+    await expect(
+      reportPost.run({
+        data: {postId: 'p1'},
+        auth: undefined,
+        rawRequest: {},
+      } as unknown as CallableRequest<unknown>),
+    ).rejects.toThrow();
+  });
+
+  it('never touches the post text, tag or author', async () => {
+    await seedPost();
+    await reportPost.run(caller({postId: 'p1'}));
+
+    const post = await postsCol().doc('p1').get();
+    expect(post.get('text')).toBe('this app is a scam, dm me for real pods');
+    expect(post.get('alias')).toBe('a');
+    expect(post.get('tag')).toBe('win');
+  });
+
+  it("re-opens an existing queue row without clobbering the classifier's verdict", async () => {
+    // The model's `action`/`reason` are the evidence the founder reads, and
+    // `createdAt` is the oldest-first queue position. A report re-opens the
+    // row; it must not rewrite the verdict or send the row to the back.
+    await seedPost();
+    const verdictTime = new Date('2026-08-30T10:00:00Z');
+    await db.collection('moderation').doc('p1').set({
+      postId: 'p1',
+      kind: 'post',
+      action: 'hold',
+      reason: 'prefilter: slur',
+      reviewed: true,
+      createdAt: verdictTime,
+    });
+
+    await reportPost.run(caller({postId: 'p1'}));
+
+    const row = await db.collection('moderation').doc('p1').get();
+    expect(row.get('action')).toBe('hold');
+    expect(row.get('reason')).toBe('prefilter: slur');
+    expect((row.get('createdAt') as {toDate(): Date}).toDate()).toEqual(verdictTime);
+    // Re-opened for review — the one field a fresh report may change.
+    expect(row.get('reviewed')).toBe(false);
   });
 });
 

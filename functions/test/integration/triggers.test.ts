@@ -17,7 +17,12 @@ vi.mock('../../src/ai/moderation', () => ({
   parseVerdict: vi.fn(),
 }));
 
+vi.mock('../../src/lib/push', () => ({
+  sendLocalized: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {classify} from '../../src/ai/moderation';
+import {sendLocalized} from '../../src/lib/push';
 import {moderatePost} from '../../src/handlers/moderatePost';
 import {moderateReply} from '../../src/handlers/moderateReply';
 import {onReaction} from '../../src/handlers/onReaction';
@@ -109,6 +114,33 @@ describe('moderatePost', () => {
     expect(vi.mocked(classify)).not.toHaveBeenCalled();
   });
 
+  it('holds an undecidable post: stays pending, but always queued', async () => {
+    // Fail-closed (S3-8): `hold` covers hostile rants AND every model
+    // failure. The post stays invisible, and the queue row is what keeps it
+    // from stranding — a pending post with no row is reviewable by nobody.
+    verdict('hold', 'moderation unavailable — held for human review');
+    const ref = await seed('fuck this app');
+    await moderatePost.run(await created(ref, {postId: 'p1'}));
+
+    expect((await ref.get()).get('status')).toBe('pending');
+    const flag = await db.collection('moderation').doc('p1').get();
+    expect(flag.exists).toBe(true);
+    expect(flag.get('action')).toBe('hold');
+    expect(flag.get('reviewed')).toBe(false);
+  });
+
+  it('hands the classifier the tag alongside the text', async () => {
+    // A celebratory WIN tag on a hostile rant is itself a signal — the field
+    // test's "fuck this app" wore one. The tag is a server-validated enum.
+    verdict('allow');
+    const ref = await seed('made it through the morning');
+    await moderatePost.run(await created(ref, {postId: 'p1'}));
+    expect(vi.mocked(classify)).toHaveBeenCalledWith(
+      'made it through the morning',
+      'day1',
+    );
+  });
+
   it('stamps when it looked, so an unmoderated post is identifiable', async () => {
     verdict('allow');
     const ref = await seed();
@@ -175,6 +207,33 @@ describe('moderateReply', () => {
     );
     expect((await ref.get()).get('status')).toBe('blocked');
     expect(vi.mocked(classify)).not.toHaveBeenCalled();
+  });
+
+  it('holds an undecidable reply and never announces it to the author', async () => {
+    // Pushing "someone answered your SOS" for a reply that is invisible
+    // until a human clears it would promise support that may never appear.
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    verdict('hold', 'hostile');
+    const ref = await seed('give up already');
+    await moderateReply.run(
+      await created(ref, {postId: 'p1', replyId: 'r9'}),
+    );
+
+    expect((await ref.get()).get('status')).toBe('pending');
+    expect((await db.collection('moderation').doc('r9').get()).get('action')).toBe('hold');
+    expect(vi.mocked(sendLocalized)).not.toHaveBeenCalled();
+  });
+
+  it('still announces a flagged (visible) reply on an SOS post', async () => {
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    verdict('flag', 'mild aggression');
+    const ref = await seed('tough love incoming');
+    await moderateReply.run(
+      await created(ref, {postId: 'p1', replyId: 'r9'}),
+    );
+
+    expect((await ref.get()).get('status')).toBe('live');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith('author1', 'sosReply', '/community');
   });
 });
 

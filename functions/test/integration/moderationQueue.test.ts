@@ -11,12 +11,18 @@
  * users no matter how the request is shaped.
  */
 import type {CallableRequest} from 'firebase-functions/v2/https';
-import {beforeEach, describe, expect, it} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+
+vi.mock('../../src/lib/push', () => ({
+  sendLocalized: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {
   moderationQueue,
   resolveModeration,
 } from '../../src/handlers/moderationQueue';
 import {db} from '../../src/lib/firestore';
+import {sendLocalized} from '../../src/lib/push';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -66,6 +72,7 @@ async function seedFlag(id: string, reviewed = false): Promise<void> {
 
 beforeEach(async () => {
   await clearFirestore();
+  vi.clearAllMocks();
 });
 
 describe('moderationQueue — who may open it', () => {
@@ -223,6 +230,63 @@ describe('resolveModeration', () => {
       .toBe(true);
     expect((await db.collection('moderation').doc('p1').get()).get('reviewed'))
       .toBe(false);
+  });
+
+  it('refuses to dismiss a held (pending) item without a decision', async () => {
+    // Dismiss on invisible content = invisible forever with nothing left
+    // pointing at it. The widget hides the button; this is the server-side
+    // guarantee behind that UX.
+    await seedFlag('h1');
+    await db.collection('posts').doc('h1').update({status: 'pending'});
+
+    await expect(resolveModeration.run(admin({flagId: 'h1'}))).rejects.toThrow();
+    // The row stays unreviewed — still in tomorrow's queue.
+    expect(
+      (await db.collection('moderation').doc('h1').get()).get('reviewed'),
+    ).toBe(false);
+  });
+
+  it('publishing a held reply notifies the SOS author it answered', async () => {
+    // The trigger rightly skips the "someone answered" push for a held reply;
+    // the founder's Allow is when the support actually becomes visible, so
+    // that is when the person mid-craving gets told.
+    await db.collection('posts').doc('p1').set({
+      alias: 'a', text: 'sitting outside a gas station', status: 'live', tag: 'sos',
+    });
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    await db.collection('posts').doc('p1').collection('replies').doc('r9').set({
+      alias: 'nightbee', text: 'hang in there, drink water', status: 'pending',
+    });
+    await db.collection('moderation').doc('r9').set({
+      postId: 'p1', replyId: 'r9', kind: 'reply', action: 'hold',
+      reason: 'hostile', reviewed: false, createdAt: new Date(),
+    });
+
+    await resolveModeration.run(admin({flagId: 'r9', action: 'allow'}));
+
+    const reply = await db
+      .collection('posts').doc('p1')
+      .collection('replies').doc('r9').get();
+    expect(reply.get('status')).toBe('live');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith('author1', 'sosReply', '/community');
+  });
+
+  it('allowing an already-visible reply does not push a second time', async () => {
+    // A `flag` reply was live from the start and the trigger already pushed.
+    await db.collection('posts').doc('p1').set({
+      alias: 'a', text: 'post', status: 'live', tag: 'sos',
+    });
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    await db.collection('posts').doc('p1').collection('replies').doc('r9').set({
+      alias: 'nightbee', text: 'mild aggression', status: 'live',
+    });
+    await db.collection('moderation').doc('r9').set({
+      postId: 'p1', replyId: 'r9', kind: 'reply', action: 'flag',
+      reason: 'borderline', reviewed: false, createdAt: new Date(),
+    });
+
+    await resolveModeration.run(admin({flagId: 'r9', action: 'allow'}));
+    expect(vi.mocked(sendLocalized)).not.toHaveBeenCalled();
   });
 
   it('refuses to resolve a flag that does not exist', async () => {

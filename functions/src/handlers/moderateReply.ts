@@ -12,6 +12,7 @@ import {classify} from '../ai/moderation';
 import {db, FieldValue, moderationDoc, postsCol} from '../lib/firestore';
 import {log} from '../lib/logger';
 import {sendLocalized} from '../lib/push';
+import {VERDICT_STATUS} from './moderatePost';
 
 export const moderateReply = onDocumentCreated(
   {
@@ -37,13 +38,9 @@ export const moderateReply = onDocumentCreated(
 
     const verdict = await classify(text);
 
-    await snap.ref.update({
-      status: verdict.action === 'block' ? 'blocked' : 'live',
-      moderatedAt: FieldValue.serverTimestamp(),
-    });
-
-    // Flagged content stays visible but joins the founder's daily queue.
-    // Keyed by replyId so a flagged reply cannot overwrite its parent's row.
+    // Queue row BEFORE the status flip — same retry:false reasoning as
+    // moderatePost. Keyed by replyId so a flagged reply cannot overwrite its
+    // parent's row.
     if (verdict.action !== 'allow') {
       await moderationDoc(replyId).set({
         postId,
@@ -56,6 +53,11 @@ export const moderateReply = onDocumentCreated(
       });
     }
 
+    await snap.ref.update({
+      status: VERDICT_STATUS[verdict.action],
+      moderatedAt: FieldValue.serverTimestamp(),
+    });
+
     log.info('moderation.verdict', {
       postId,
       replyId,
@@ -63,10 +65,10 @@ export const moderateReply = onDocumentCreated(
       action: verdict.action,
     });
 
-    // Only once the reply has actually cleared moderation — telling someone
-    // they have support and then blocking the message would be worse than
+    // Only once the reply is actually visible — telling someone they have
+    // support and then blocking OR holding the message would be worse than
     // silence.
-    if (verdict.action !== 'block') {
+    if (verdict.action === 'allow' || verdict.action === 'flag') {
       await notifyPostAuthor(postId);
     }
   },
@@ -84,8 +86,12 @@ export const moderateReply = onDocumentCreated(
  * The author's uid lives in `postAuthors/{postId}` rather than on the post,
  * which is exactly what keeps the feed anonymous — so the lookup is a separate
  * read by design, not an oversight.
+ *
+ * Exported for `resolveModeration`: a held reply the founder later approves
+ * still owes the SOS author this push — the trigger rightly skipped it while
+ * the reply was invisible.
  */
-async function notifyPostAuthor(postId: string): Promise<void> {
+export async function notifyPostAuthor(postId: string): Promise<void> {
   try {
     const post = await postsCol().doc(postId).get();
     if (post.get('tag') !== 'sos') return;

@@ -216,7 +216,10 @@ class PostCard extends ConsumerWidget {
     final l10n = context.l10n;
     final isSos = post.tag == PostTag.sos;
     final accent = tagColor(context, post.tag);
-    final age = DateTime.now().difference(post.createdAt);
+    // Watched, not read: the IndexedStack keeps this tab alive, so an age
+    // computed once in build froze at whatever it was when the tab was first
+    // built ("8h", all day). The minute tick keeps it honest.
+    final age = ref.watch(minuteClockProvider).difference(post.createdAt);
 
     return PressScale(
       onTap: onOpen,

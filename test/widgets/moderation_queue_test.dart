@@ -116,6 +116,33 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('a held (pending) item offers no Dismiss — only Allow/Block', (
+    tester,
+  ) async {
+    // Dismiss only marks the row reviewed. On a held/auto-hidden item that
+    // would strand invisible content with nothing left pointing at it: the
+    // founder must publish it or block it, never shrug at it.
+    repo.items = [
+      flagged, // status: 'pending'
+      const ModerationItem(
+        flagId: 'p3',
+        postId: 'p3',
+        action: 'flag',
+        reason: 'medical claim',
+        kind: 'post',
+        text: 'patches fixed me honestly',
+        status: 'live',
+        alias: 'quietfox',
+      ),
+    ];
+    await pump(tester);
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    // One Dismiss — the live row's. The pending row renders without one.
+    expect(find.text(l10n.moderationDismiss), findsOneWidget);
+    expect(find.text(l10n.moderationAllow), findsNWidgets(2));
+  });
+
   testWidgets('a flag whose post is gone still shows, and is resolvable', (
     tester,
   ) async {

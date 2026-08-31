@@ -135,7 +135,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | `rcWebhook` uses non-constant-time token compare; no replay/ordering protection | `rcWebhook.ts:37` | S1 |
 | `moderation` queue has **no reader** — no admin UI, no admin claim, nothing surfaces it | `moderatePost.ts` writes only | S3 |
 | `aiCoachChat` streaming path logs no token usage → primary path has zero cost telemetry | `aiCoachChat.ts:111-132` | S2 |
-| `moderatePost` sets `live` + `flag` on model outage, contradicting its fail-closed docstring | `moderatePost.ts` | S3 |
+| ~~`moderatePost` sets `live` + `flag` on model outage, contradicting its fail-closed docstring~~ ✅ **FIXED Aug 31** — `hold` action, fail-closed on every failure path, slur prefilter; see S3-8 | `moderatePost.ts`, `ai/moderation.ts`, `ai/prefilter.ts` | S3 |
 | Journey persists as one whole-document `set()` per mutation — no merge semantics, so multi-device writes clobber; Doc 3 §2's 2s write-coalescing is unimplemented | `firebase_journey_repository.dart:38`, `journey_store.dart:37` | S4 |
 
 ---
@@ -253,9 +253,9 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S3-5` Tighten reply read rule with a `status == 'live'` filter (today any signed-in user reads unmoderated replies)
 - [ ] `S3-6` Validate `alias`/`avatarEmoji`/`dayN` server-side against the real journey; make the 3-post cap **transactional**
 - [x] `S3-7` Done Aug 29. `reportCount` increment-only, replies gated on status, and reaction counts moved server-side: clients write only `posts/{id}/reactors/{uid}` and `onReaction` derives the aggregate. **Not** `reactions{uid: emoji}` as docs/05 suggests — that would have made every reactor's uid public on a world-readable post
-- [ ] `S3-8` `moderatePost` fail-closed on model outage — hold as `pending`, not `live`
+- [x] `S3-8` Done Aug 31 (day-1 field-test round). Moderation is genuinely fail-closed now: a 4th action `hold` keeps content `pending` + always writes a queue row, and **every** failure — model outage, unparseable verdict, unknown action, any throw (the old rethrow stranded posts pending with no row) — maps to it. `MODERATION_PROMPT` rewritten for the founder's contextual policy (slurs/hate BLOCK; hostile/profane rants HOLD; crisis stays FLAG = visible; self-directed venting ALLOW), the trigger passes the post `tag` so a WIN tag on a rant is itself a signal, and a deterministic `ai/prefilter.ts` slur wordlist blocks before the model so the hard guarantee survives outages (`PROFANITY_ACTION` knob = null per founder choice). Eval gate re-run after the prompt change: 19/19 both models (the suite is noisy — expect re-rolls).
 - [x] `S3-9` **Moderation queue readable end to end.** Callables built Aug 29; the **client** (contract, repository, store, screen, Settings entry gated on the `admin` claim) landed the same day. The store is deliberately non-optimistic — a refused decision keeps its row, and a failed load never renders as an empty queue. `test/widgets/moderation_queue_test.dart`. **Still founder-side: granting your account the claim.**
-- [ ] `S3-10` Real report / block / delete-own-content paths
+- [ ] `S3-10` Real report / block / delete-own-content paths. **Report is done Aug 31**: new `reportPost` callable mirrors `reportReply` (per-reporter dedupe via `posts/{id}/reporters/{uid}`, auto-hide at 3 → `pending`, always a `moderation` row) — the old client-side raw `reportCount` increment fed a counter no server code read. Client switched to the callable; the rules carve-out is deleted in the repo and **deploys only after the tester is on the new build** (the old build's report button raw-writes and would get PERMISSION_DENIED). Block (viewer-local only) and delete-own-content remain open.
 - [ ] `S3-11` SOS: the 60-min pin is **done** and the panic flow now routes into it (composer pre-tagged `sos`). Still open: notifying the last-5 responders and the "23 people had your back" count (Doc 3 §9). The buddy half of this line is dropped with the buddy system
 - [ ] `S3-12` Seed the feed — founder posts + beta testers, via `seedTextId` ids so l10n still resolves
 
@@ -1790,3 +1790,65 @@ variable 400–2 000 per turn. Net per-turn cost is *down*.
    then "what have we been talking about lately?", (d) "what patch dose
    should I buy", (e) confirm no stray Ember bubbles appear in the thread.
 2. Wireless adb still prefers one suite file at a time (§17.8 item 2 stands).
+
+---
+
+## 20. THE DAY-1 FIELD TEST (Aug 31) — five issues from one real day
+
+The founder ran the app as a user for one day and filed six screenshots.
+Every issue traced to a real defect; none was the defect it looked like.
+
+### 20.1 What the screenshots actually were
+
+1. **"Day 1" on Home vs "congrats on making it to day two" in chat.** Client
+   and server day math are identical; the card said day 1 (its own
+   `[progress]` reply quotes it) and the **model invented "day two"** from a
+   "good morning" greeting over untimestamped history. Fixes: the USER CARD
+   now opens with `today's date: yyyy-MM-dd (Weekday) · their local time:
+   HH:mm`; a `DAY_ANCHOR_INSTRUCTION` (appended, never edited into the
+   founder-locked prompt; omitted in panic mode after it cost eval #15 on
+   lite) forbids inferring the day from conversation shape; and
+   `aiCoachChat`'s envelope bug `args: {day: card.streak}` now sends the real
+   day. Eval gate re-rolled to 19/19 on both models — note the suite is
+   **noisy** (judge-flips on identical replies; the founder's own green run
+   this morning also took ~6 attempts).
+2. **"fuck this app" published live under a WIN tag** → the S3-8/S3-10 work
+   above (hold action, fail-closed, prefilter, tag-aware prompt,
+   `reportPost` callable). Founder policy decision recorded: **contextual**
+   moderation — slurs/hate never publish, hostile rants hold for review,
+   self-directed venting profanity stays allowed.
+3. **Chat felt dead**: no timestamps, the typing indicator was a lone pulsing
+   🔥, and restored history printed literal `[progress]`. `CoachMessage` now
+   carries `sentAt` (server `ts` on restore, device clock live); the thread
+   renders day/time separator pills (local timezone always, new
+   `coachTimeYesterday` key ×5 locales); `_TypingBubble` shows
+   "{name} is typing…" beside the flame; `_decodeHistory` maps the four
+   bracket chip tokens back to localized chip labels.
+4. **"What Nick remembers" showed nothing** after a day of "okay"-grade
+   messages — extraction worked as designed, the screen just had nothing else
+   to show. Founder decision: memory is not only chat. The screen now has a
+   "What {name} always knows" facts section (onboarding answers + live
+   engine numbers, client-computed — same sources as the USER CARD) above
+   "Things you've told {name}" (still the only forgettable part).
+   `parseMemories` drops now log `coach.extract_dropped` so a malformed
+   model answer is distinguishable from an honest empty.
+5. **Home nudge said "Your 3 PM spike is due — I noticed" to a day-1 user**
+   — `dangerWindow == null` fell back to a hardcoded hour 15. The nudge now
+   renders only when a real window exists. Also: post ages froze in the
+   keep-alive tab and "72h" had no day bucket — `minuteClockProvider` (pinned
+   off in tests like DayClock) + a `d` bucket in `compactAgo`.
+
+### 20.2 Deploy state
+
+Functions deployed Aug 31 (22 live, `reportPost` **created**). Client build
+is next; **`firestore.rules` (reportCount carve-out deletion) deploys LAST,
+only after the tester device runs the new build** — the old build's report
+button raw-writes reportCount and would silently PERMISSION_DENIED.
+One-time chore after rules deploy: console sweep for posts stuck
+`status:'pending'` with no moderation row (strandees of the old rethrow
+path).
+
+### 20.3 Gates for this round
+
+`flutter analyze` 0 · `flutter test` 544 · functions `verify` 154 ·
+`test:rules` 47 · `test:integration` 218 · `eval:coach` 19/19 both models.

@@ -470,19 +470,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           _MoodPromptCard(
                             onTap: () => showMoodSheet(context, ref),
                           )
-                        else if (!_nudgeDismissed)
+                        // Only once a real danger window exists. "I noticed"
+                        // with a hardcoded 3 PM told every day-1 user about a
+                        // spike nobody observed — an invented number wearing
+                        // the coach's voice.
+                        else if (!_nudgeDismissed && snap.dangerWindow != null)
                           Dismissible(
                             key: const ValueKey('nudge'),
                             onDismissed: (_) =>
                                 setState(() => _nudgeDismissed = true),
                             child: _CoachNudgeCard(
                               weekday: LpFormat.weekday(snap.now, locale),
-                              hour: snap.dangerWindow == null
-                                  ? LpFormat.hour(15, locale)
-                                  : LpFormat.hour(
-                                      snap.dangerWindow!.$1,
-                                      locale,
-                                    ),
+                              hour: LpFormat.hour(
+                                snap.dangerWindow!.$1,
+                                locale,
+                              ),
                               onTap: () => context.go(Routes.coach),
                             ),
                           ),

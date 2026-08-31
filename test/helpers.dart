@@ -32,8 +32,9 @@ List<Override> fastBackendOverrides({
   // Same reason as settings: assert against the documented defaults, not
   // against whatever draft the host machine's shared_preferences last held.
   onboardingProvider.overrideWith(() => OnboardingViewModel(restore: false)),
-  // Without this every widget test fails on a pending timer.
+  // Without these every widget test fails on a pending timer.
   dayClockProvider.overrideWith(() => DayClock(tick: false)),
+  minuteClockProvider.overrideWith(() => MinuteClock(tick: false)),
   if (now != null) nowProvider.overrideWithValue(() => now),
   if (!online) connectivityProvider.overrideWith(ToggleConnectivity.new),
 ];

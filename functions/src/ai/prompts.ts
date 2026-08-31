@@ -135,14 +135,56 @@ export function panicAddendum(intensity: number): string {
   return `\n\n${PANIC_MODE_ADDENDUM.replace('{n}', String(clamped))}`;
 }
 
-/** docs/04 §6 — community moderation. Returns strict JSON. */
+/**
+ * Pins the day number to the card. NOT in docs/04 — added after a day-1 field
+ * test where "good morning coach" following an overnight-looking thread made
+ * the model announce "congrats on making it to day two" while its own card
+ * said day 1 (and the Home header agreed with the card). The model was doing
+ * its own calendar arithmetic from conversation shape; this forbids it.
+ *
+ * APPENDED after the card, never substituted into [EMBER_SYSTEM_PROMPT] — the
+ * same shape as [localeInstruction], for the same eval-pinning reason.
+ *
+ * OMITTED in panic mode: the panic rider is breath-and-presence only (no
+ * stats, no day talk), and eval #15 showed the lite model lecturing about
+ * data when this sat between the card and the rider. Mid-craving, the fewer
+ * competing directives the better.
+ */
+export const DAY_ANCHOR_INSTRUCTION = `
+
+DAY & DATE: Today's date and their day number come only from the USER CARD
+above, recomputed this turn in their timezone. The visible history may span
+several days, so never infer what day it is from a greeting, elapsed
+conversation, or older messages — when their day or date comes up, answer
+with the card's numbers exactly.`;
+
+/**
+ * docs/04 §6 — community moderation. Returns strict JSON.
+ *
+ * Four actions since the Aug 31 2026 field test ("fuck this app" published
+ * live under a WIN tag, and the founder's queue never saw it because `allow`
+ * writes no row). The founder's policy: this community exists to encourage
+ * people quitting — slurs and hostility never publish; honest venting about
+ * the quit itself, mild self-directed profanity included, stays welcome.
+ *
+ * `hold` hides until a human decides; `flag` publishes but queues. Crisis
+ * mentions are `flag`, never `hold` — hiding a person in crisis harms them.
+ */
 export const MODERATION_PROMPT = `Classify this quit-vaping community post. Return ONLY JSON:
-{"action":"allow"|"flag"|"block","reason":"..."}
-BLOCK: sourcing/selling/praising vape products; content sexualizing or involving
-minors; encouraging self-harm or substance abuse; harassment/hate; spam/links.
-FLAG: medical claims; mentions of self-harm or crisis (allow + app auto-replies with
-988 resources and support); borderline aggression; off-topic promotion.
-ALLOW: everything else, including venting, slips, dark humor about quitting.`;
+{"action":"allow"|"flag"|"hold"|"block","reason":"..."}
+This community exists to encourage people quitting vaping. Judge by that goal.
+BLOCK (never publish): slurs; hate; harassment or attacks on a person or group;
+sourcing/selling/praising vape products; content sexualizing or involving
+minors; encouraging self-harm, vaping, or substance abuse; spam/links.
+HOLD (hide until a human reviews): hostile or profanity-laden rants aimed at
+people, the app, or the community; mocking or discouraging someone's quit
+attempt; aggressive negativity with no support value.
+FLAG (publish, but queue for human review): medical claims; mentions of
+self-harm or crisis (publish — hiding someone in crisis harms them); mild
+borderline aggression; off-topic promotion; a celebratory tag (win/milestone)
+on hostile or negative text.
+ALLOW: everything else — honest venting about quitting, slips, dark humor,
+mild self-directed profanity about one's own struggle.`;
 
 /** docs/04 §5 — Sunday weekly insight. Returns strict JSON. */
 export function insightPrompt(alias: string, coachName?: string): string {
@@ -321,6 +363,7 @@ export function buildCoachInstruction(inputs: CoachPromptInputs): string {
     localeInstruction(inputs.locale) +
     (inputs.coachName !== null ? coachNameInstruction(inputs.coachName) : '') +
     `\n\n${inputs.cardText}` +
+    (inputs.panicIntensity === null ? DAY_ANCHOR_INSTRUCTION : '') +
     summarySection(inputs.summary) +
     memorySection(inputs.memories) +
     (inputs.panicIntensity !== null ? panicAddendum(inputs.panicIntensity) : '')

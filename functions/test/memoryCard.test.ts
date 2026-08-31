@@ -248,8 +248,23 @@ describe('the user card', () => {
     // gives advice about the wrong part of the day.
     const utc = buildMemoryCard(journey(), NOW, 'UTC');
     const toronto = buildMemoryCard(journey(), NOW, 'America/Toronto');
-    expect(utc.text).toContain('local time now: 22:14');
-    expect(toronto.text).toContain('local time now: 18:14');
+    expect(utc.text).toContain('their local time: 22:14');
+    expect(toronto.text).toContain('their local time: 18:14');
+  });
+
+  it("states today's date and weekday outright", () => {
+    // The model once congratulated a day-1 user on "day two" because a
+    // "good morning" after older messages read like a new day. The date is
+    // stated so the day never has to be inferred from conversation shape.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).toContain("today's date: 2026-08-15 (Saturday)");
+  });
+
+  it('exposes the plan day for the reply envelope', () => {
+    // `aiCoachChat` once sent `args: {day: card.streak}` — a fallback client
+    // would have rendered the streak as the day number.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.day).toBe(12);
   });
 
   it('derives the day key from the caller timezone', () => {

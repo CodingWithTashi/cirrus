@@ -282,6 +282,38 @@ class DayClock extends Notifier<DateTime> {
 
 final dayClockProvider = NotifierProvider<DayClock, DateTime>(DayClock.new);
 
+/// Ticks once a minute, for relative ages ("8h", "38m") that must not freeze.
+///
+/// Exists because the shell's `IndexedStack` keeps tab branches alive: a
+/// PostCard computed its age once in `build` and then showed it forever — a
+/// feed opened in the morning still said "8h" at night. Watching this makes
+/// the age line re-derive on a cadence a relative timestamp can be wrong by.
+///
+/// Same test discipline as [DayClock]: a live periodic timer fails every
+/// widget test with a pending timer, so `fastBackendOverrides()` pins
+/// `tick: false`.
+class MinuteClock extends Notifier<DateTime> {
+  MinuteClock({bool tick = true}) : _tick = tick;
+
+  final bool _tick;
+  Timer? _timer;
+
+  @override
+  DateTime build() {
+    ref.onDispose(() => _timer?.cancel());
+    if (_tick) {
+      _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+        state = ref.read(nowProvider)();
+      });
+    }
+    return ref.read(nowProvider)();
+  }
+}
+
+final minuteClockProvider = NotifierProvider<MinuteClock, DateTime>(
+  MinuteClock.new,
+);
+
 /// Derived, recomputed on every journey mutation AND when the day turns.
 final todayProvider = Provider<TodaySnapshot?>((ref) {
   final journey = ref.watch(quitStoreProvider);

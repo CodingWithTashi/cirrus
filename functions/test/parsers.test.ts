@@ -14,12 +14,19 @@ describe('parseVerdict', () => {
     expect(parseVerdict(raw).action).toBe('allow');
   });
 
-  it('FLAGS rather than allows when the response is unparseable', () => {
-    // Fail-closed: an unreadable verdict is not consent. Allowing here would
-    // publish unmoderated UGC on every model hiccup.
-    expect(parseVerdict('I think this is fine!').action).toBe('flag');
-    expect(parseVerdict('{"action":"approve"}').action).toBe('flag');
-    expect(parseVerdict('').action).toBe('flag');
+  it('reads the hold verdict', () => {
+    expect(parseVerdict('{"action":"hold","reason":"hostile rant"}')).toEqual({
+      action: 'hold', reason: 'hostile rant',
+    });
+  });
+
+  it('HOLDS rather than allows when the response is unparseable', () => {
+    // Fail-closed: an unreadable verdict is not consent — and since the
+    // triggers map `flag` to live, it must not be `flag` either. `hold`
+    // keeps the content pending and queues it for a human.
+    expect(parseVerdict('I think this is fine!').action).toBe('hold');
+    expect(parseVerdict('{"action":"approve"}').action).toBe('hold');
+    expect(parseVerdict('').action).toBe('hold');
   });
 });
 

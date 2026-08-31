@@ -823,6 +823,14 @@
       }
     }
   },
+  "coachTimeYesterday": "Yesterday · {time}",
+  "@coachTimeYesterday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "coachFreeCounter": "{count, plural, one{{count} free message left today} other{{count} free messages left today}}",
   "@coachFreeCounter": {
     "placeholders": {
@@ -1199,7 +1207,7 @@
   },
   "communityEmptyTitle": "No posts yet — say hi.",
   "communityEmptyBody": "Your Day 1 post is the one someone on Day 0 needs to read.",
-  "communityPosted": "Posted. Someone needed to read that.",
+  "communityPosted": "Posted. A quick safety check runs before others can see it.",
   "buddyLinkCopied": "Link copied — quitting hits different with backup.",
   "moneyTitle": "Money back",
   "moneySavedSince": "saved since {date} · {perDay} rolling in daily",
@@ -1502,7 +1510,7 @@
       }
     }
   },
-  "memoriesIntro": "Things you've told {name}, kept so it can be useful weeks from now instead of starting over every time. Only what you typed — never your numbers, and never anything you didn't say.",
+  "memoriesIntro": "What {name} knows about you: your setup and live numbers from the app, plus the things you've told it in chat — those you can make it forget, any time.",
   "@memoriesIntro": {
     "placeholders": {
       "name": {
@@ -1510,7 +1518,7 @@
       }
     }
   },
-  "memoriesEmpty": "Nothing yet. {name} starts remembering once you tell it something about your life.",
+  "memoriesEmpty": "Nothing here yet. This part fills up as you tell {name} things about your life in chat.",
   "@memoriesEmpty": {
     "placeholders": {
       "name": {
@@ -1518,6 +1526,75 @@
       }
     }
   },
+  "memoriesSectionKnows": "What {name} always knows",
+  "@memoriesSectionKnows": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoriesSectionTold": "Things you've told {name}",
+  "@memoriesSectionTold": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoriesFactPlan": "Plan",
+  "memoriesFactPlanValue": "{method} · {days} days",
+  "@memoriesFactPlanValue": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "memoriesFactStarted": "Started",
+  "memoriesFactBaseline": "Baseline",
+  "memoriesFactBaselineValue": "{count} puffs a day",
+  "@memoriesFactBaselineValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoriesFactWhy": "Your why",
+  "memoriesFactWorries": "Worried about",
+  "memoriesFactWhyWords": "In your words",
+  "memoriesFactFirstPuff": "First puff after waking",
+  "memoriesFactFrequency": "How often",
+  "memoriesFactDay": "Where you are",
+  "memoriesFactDayValue": "Day {day} of {total}",
+  "@memoriesFactDayValue": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "memoriesFactToday": "Today",
+  "memoriesFactTodayValue": "{puffs} of {limit} puffs",
+  "@memoriesFactTodayValue": {
+    "placeholders": {
+      "puffs": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "memoriesFactStreak": "Streak",
+  "memoriesFactSaved": "Money saved",
   "memoriesFailed": "Couldn't load these right now.",
   "memoriesForget": "Forget this",
   "memoriesForgotten": "Forgotten. {name} won't bring it up again.",

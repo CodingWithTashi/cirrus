@@ -13,6 +13,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   COACH_SUMMARY_PROMPT,
+  DAY_ANCHOR_INSTRUCTION,
   EMBER_SYSTEM_PROMPT,
   buildCoachInstruction,
   coachNameInstruction,
@@ -108,6 +109,8 @@ describe('buildCoachInstruction', () => {
   it('is byte-identical to the documented concatenation', () => {
     // Panic rider LAST — mid-craving the winning directive must be the most
     // recent thing the model reads (eval #15 caught it losing to the card).
+    // No day anchor here: these inputs are panic-mode, and mid-craving the
+    // rider must not compete with data directives (eval #15 again, on lite).
     expect(buildCoachInstruction(inputs)).toBe(
       EMBER_SYSTEM_PROMPT +
         localeInstruction('en') +
@@ -117,6 +120,16 @@ describe('buildCoachInstruction', () => {
         memorySection(memories) +
         panicAddendum(7),
     );
+  });
+
+  it('carries the day anchor outside panic mode, and drops it inside', () => {
+    // The model once announced "day two" to a day-1 user off a "good
+    // morning" greeting; the anchor forbids deriving the day from anything
+    // but the card. Panic mode omits it — breath and presence only.
+    expect(
+      buildCoachInstruction({...inputs, panicIntensity: null}),
+    ).toContain(DAY_ANCHOR_INSTRUCTION);
+    expect(buildCoachInstruction(inputs)).not.toContain('DAY & DATE');
   });
 
   it('orders the data sections card → summary → memories', () => {

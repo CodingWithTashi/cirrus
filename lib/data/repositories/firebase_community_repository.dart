@@ -147,9 +147,11 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> reportPost(String postId) async {
-    // The rules accept a report only as an exact +1 — never an assignment —
-    // so this must be an increment, not a read-modify-write.
-    await _posts.doc(postId).update({'reportCount': FieldValue.increment(1)});
+    // A callable, mirroring reportReply. The raw reportCount increment this
+    // used to do fed a counter no server code read — no dedupe, no auto-hide,
+    // no moderation-queue row — so the report button did nothing anyone could
+    // act on. The server keys reports by reporter and hides at 3.
+    await _functions.call('reportPost', {'postId': postId});
   }
 
   @override

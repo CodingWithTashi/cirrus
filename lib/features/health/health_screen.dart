@@ -62,7 +62,12 @@ class HealthScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           children: [
             Text(
-              l10n.healthAnchor(LpFormat.compactAgo(sinceLastPuff)),
+              // Hours past 24 on purpose: the timeline below is denominated
+              // in 24h/48h/72h milestones, and "71h" says how close the next
+              // node is where "2d" would hide it.
+              l10n.healthAnchor(
+                LpFormat.compactAgo(sinceLastPuff, dayBucket: false),
+              ),
               style: LpType.body13(lp.textSecondary),
             ),
             const SizedBox(height: 22),

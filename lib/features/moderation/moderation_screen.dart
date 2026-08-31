@@ -193,13 +193,19 @@ class _FlagCard extends ConsumerWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              _Action(
-                label: l10n.moderationDismiss,
-                tint: lp.textSecondary,
-                busy: busy,
-                onTap: () => _resolve(context, ref, null),
-              ),
-              const SizedBox(width: 8),
+              // A held/auto-hidden item is `pending` — invisible until a real
+              // decision. Dismiss only marks the row reviewed, which would
+              // strand the content hidden forever with nothing left pointing
+              // at it, so held rows offer Allow/Block only.
+              if (item.status != 'pending') ...[
+                _Action(
+                  label: l10n.moderationDismiss,
+                  tint: lp.textSecondary,
+                  busy: busy,
+                  onTap: () => _resolve(context, ref, null),
+                ),
+                const SizedBox(width: 8),
+              ],
               _Action(
                 label: l10n.moderationAllow,
                 tint: lp.voltText,

@@ -107,6 +107,7 @@ class CoachStore extends Notifier<CoachState> {
             // across timezones.
             'freedomYmd': _ymd(j?.plan.freedomDate),
           },
+          sentAt: DateTime.now(),
         ),
       ],
     );
@@ -146,12 +147,14 @@ class CoachStore extends Notifier<CoachState> {
     if (userText != null && userText.trim().isEmpty) return;
     final capped = freeMessagesLeftToday <= 0;
 
+    final sentAt = DateTime.now();
     state = state.copyWith(
       messages: [
         ...state.messages,
-        if (userText != null) CoachMessage.user(id: _nextId(), text: userText),
+        if (userText != null)
+          CoachMessage.user(id: _nextId(), text: userText, sentAt: sentAt),
         if (chip != null)
-          CoachMessage.chip(id: _nextId(), chipEcho: chip.index),
+          CoachMessage.chip(id: _nextId(), chipEcho: chip.index, sentAt: sentAt),
       ],
       isTyping: true,
       freeUsedToday: state.freeUsedToday + 1,
@@ -204,6 +207,9 @@ class CoachStore extends Notifier<CoachState> {
             template: error is BackendRejectedException
                 ? CoachTemplate.backendRejected
                 : CoachTemplate.connectionLost,
+            // Stamped like every live message: an un-stamped bubble
+            // mid-thread makes the NEXT message render a spurious time pill.
+            sentAt: DateTime.now(),
           ),
         ],
       );
@@ -225,6 +231,7 @@ class CoachStore extends Notifier<CoachState> {
           CoachMessage.ember(
             id: _nextId(),
             template: CoachTemplate.connectionLost,
+            sentAt: DateTime.now(),
           ),
         ],
       );
@@ -249,6 +256,7 @@ class CoachStore extends Notifier<CoachState> {
           // template path for the deterministic replies. Prefer what actually
           // streamed when the envelope omits it.
           text: done.text ?? (streamed.isEmpty ? null : streamed),
+          sentAt: DateTime.now(),
         ),
       ],
     );

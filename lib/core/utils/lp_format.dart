@@ -34,6 +34,14 @@ abstract final class LpFormat {
   static String hour(int hour24, String locale) =>
       DateFormat.j(locale).format(DateTime(2026, 1, 1, hour24));
 
+  /// "3:07 PM" style clock time.
+  static String clockTime(DateTime t, String locale) =>
+      DateFormat.jm(locale).format(t);
+
+  /// "Sat, Aug 15" style weekday + short date.
+  static String weekdayShortDate(DateTime t, String locale) =>
+      DateFormat.MMMEd(locale).format(t);
+
   /// "2:41" mm:ss timer.
   static String timer(Duration d) {
     final m = d.inMinutes;
@@ -41,9 +49,18 @@ abstract final class LpFormat {
     return '$m:$s';
   }
 
-  /// "14h" / "38m" compact elapsed time.
-  static String compactAgo(Duration d) =>
-      d.inHours >= 1 ? '${d.inHours}h' : '${d.inMinutes}m';
+  /// "3d" / "14h" / "38m" compact elapsed time. The day bucket matters for
+  /// feed ages: a three-day-old post used to read "72h", which nobody says.
+  ///
+  /// `dayBucket: false` keeps hours past 24 — the Health timeline's
+  /// milestones are hour-denominated (24h/48h/72h), and "2d" would hide that
+  /// someone is one hour short of the 72h node.
+  static String compactAgo(Duration d, {bool dayBucket = true}) =>
+      dayBucket && d.inDays >= 1
+      ? '${d.inDays}d'
+      : d.inHours >= 1
+      ? '${d.inHours}h'
+      : '${d.inMinutes}m';
 
   /// Signed percent like "-38%".
   static String signedPercent(int percent) =>

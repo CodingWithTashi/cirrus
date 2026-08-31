@@ -18,6 +18,7 @@ import {REGION} from '../config';
 import {db, FieldValue, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
+import {notifyPostAuthor} from './moderateReply';
 
 /** How many flags one page returns. The queue is a daily chore, not a feed. */
 const PAGE_SIZE = 50;
@@ -131,7 +132,9 @@ export const moderationQueue = onCall(
  * Marks a flag reviewed, optionally changing the post's fate.
  *
  * Resolving without an action means "I looked, it is fine as it is" — the
- * common case, and the reason `action` is optional.
+ * common case, and the reason `action` is optional. The one exception: a
+ * `pending` (held/auto-hidden) target refuses a no-action resolve, because
+ * "fine as it is" on invisible content means invisible forever.
  */
 export const resolveModeration = onCall(
   {region: REGION, enforceAppCheck: true, memory: '256MiB'},
@@ -147,6 +150,41 @@ export const resolveModeration = onCall(
     const flag = await flagRef.get();
     if (!flag.exists) throw new HttpsError('not-found', 'Not found.');
 
+    const postId = (flag.get('postId') as string | undefined) ?? flagId;
+    const replyId = (flag.get('replyId') as string | undefined) ?? null;
+    const kind = (flag.get('kind') as string | undefined) ?? 'post';
+    const target =
+      kind === 'reply' && replyId !== null
+        ? postsCol().doc(postId).collection('replies').doc(replyId)
+        : postsCol().doc(postId);
+    const targetSnap = await target.get();
+    const wasPending = targetSnap.exists && targetSnap.get('status') === 'pending';
+
+    // Held content cannot be shrugged at. Dismiss only marks the row
+    // reviewed, and on a `pending` target that strands it invisible with
+    // nothing left pointing at it. The client hides Dismiss for held rows;
+    // this is the server-side guarantee behind that UX.
+    if (action === null && wasPending) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Held content needs a decision — allow or block it.',
+      );
+    }
+
+    // Content fate FIRST, review mark second: if the second write fails the
+    // row stays in the queue and the founder retries — the reverse order
+    // dropped the row from the queue with the content's status unchanged.
+    if (action !== null && targetSnap.exists) {
+      await target.update({status: action === 'block' ? 'blocked' : 'live'});
+      // A held reply the founder just published: the SOS author is owed the
+      // "someone answered" push the trigger rightly skipped while the reply
+      // was invisible. Only on a pending→live transition — a `flag` reply
+      // was already live and already pushed.
+      if (action === 'allow' && kind === 'reply' && wasPending) {
+        await notifyPostAuthor(postId);
+      }
+    }
+
     await flagRef.set(
       {
         reviewed: true,
@@ -156,19 +194,6 @@ export const resolveModeration = onCall(
       },
       {merge: true},
     );
-
-    if (action !== null) {
-      const postId = (flag.get('postId') as string | undefined) ?? flagId;
-      const replyId = (flag.get('replyId') as string | undefined) ?? null;
-      const kind = (flag.get('kind') as string | undefined) ?? 'post';
-      const target =
-        kind === 'reply' && replyId !== null
-          ? postsCol().doc(postId).collection('replies').doc(replyId)
-          : postsCol().doc(postId);
-      if ((await target.get()).exists) {
-        await target.update({status: action === 'block' ? 'blocked' : 'live'});
-      }
-    }
 
     log.info('moderation.resolved', {reviewer: uid, flagId, action});
     return {ok: true};

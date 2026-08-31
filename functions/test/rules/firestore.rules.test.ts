@@ -208,9 +208,26 @@ describe('posts — the community feed', () => {
     );
   });
 
-  it('lets a reader report once', async () => {
-    await assertSucceeds(
+  it('does NOT let a client raise reportCount directly any more', async () => {
+    // Reporting moved to the `reportPost` callable: the raw increment fed a
+    // counter no server code read (no dedupe, no auto-hide, no queue row).
+    await assertFails(
       updateDoc(doc(bob(), 'posts', 'livePost'), {reportCount: 1}),
+    );
+  });
+
+  it('keeps the reporters subcollection server-only, owner included', async () => {
+    // `reportPost` dedupes via posts/{id}/reporters/{uid}; only the nested
+    // reactors/replies matches open anything under a post, so this falls to
+    // the default deny — pinned here so a future rules edit cannot quietly
+    // expose who reported whom.
+    await assertFails(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reporters', 'bob'), {
+        reportedAt: 1,
+      }),
+    );
+    await assertFails(
+      getDoc(doc(bob(), 'posts', 'livePost', 'reporters', 'bob')),
     );
   });
 
@@ -225,6 +242,8 @@ describe('posts — the community feed', () => {
   });
 
   // --- the two holes this suite exists to close ---------------------------
+  // (both now denied by the blanket `allow update: if false`, but kept: they
+  // are the attacks that must stay impossible whatever the rule's shape)
 
   it('does NOT let a client erase accumulated reports', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {

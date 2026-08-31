@@ -46,12 +46,13 @@ export const reportReply = onCall(
     // mirror of this bug on the client — a single counter across the whole
     // feed — and the lesson is the same: a counter that gates a decision has
     // to be keyed by the thing it counts.
+    //
+    // The dedupe read happens INSIDE the transaction — a pre-check alone
+    // loses the race to three rapid taps, each in flight before any commits.
     const reporter = ref.collection('reporters').doc(caller.uid);
-    if ((await reporter.get()).exists) return {ok: true};
-
-    await db.runTransaction(async (tx) => {
-      const fresh = await tx.get(ref);
-      if (!fresh.exists) return;
+    const applied = await db.runTransaction(async (tx) => {
+      const [fresh, rep] = await Promise.all([tx.get(ref), tx.get(reporter)]);
+      if (!fresh.exists || rep.exists) return false;
       const count = ((fresh.get('reportCount') as number | undefined) ?? 0) + 1;
       tx.set(reporter, {reportedAt: FieldValue.serverTimestamp()});
       tx.update(ref, {
@@ -60,12 +61,19 @@ export const reportReply = onCall(
         // able to read it and disagree.
         ...(count >= AUTO_HIDE_AT ? {status: 'pending'} : {}),
       });
+      return true;
     });
+    if (!applied) return {ok: true};
 
     // Keyed by replyId, and carrying postId as a field, so the queue can
-    // hydrate the reply itself rather than its parent.
-    await moderationDoc(replyId).set(
-      {
+    // hydrate the reply itself rather than its parent. A report re-opens an
+    // existing row but never rewrites the classifier's `action`/`reason`
+    // evidence or bumps `createdAt` (the oldest-first queue position).
+    const rowRef = moderationDoc(replyId);
+    if ((await rowRef.get()).exists) {
+      await rowRef.set({reviewed: false}, {merge: true});
+    } else {
+      await rowRef.set({
         postId,
         replyId,
         kind: 'reply',
@@ -73,9 +81,8 @@ export const reportReply = onCall(
         reason: 'user_report',
         reviewed: false,
         createdAt: FieldValue.serverTimestamp(),
-      },
-      {merge: true},
-    );
+      });
+    }
 
     log.info('moderation.reply_reported', {postId, replyId});
     return {ok: true};

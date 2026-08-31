@@ -24,17 +24,6 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    /** Keys changed by this update, whatever their values. */
-    function changed() {
-      return request.resource.data.diff(resource.data).affectedKeys();
-    }
-
-    /** A report is a +1 or nothing — never an arbitrary assignment. */
-    function reportCountOnlyIncrements() {
-      return !changed().hasAny(['reportCount'])
-             || request.resource.data.reportCount == resource.data.reportCount + 1;
-    }
-
     // --- The quit journey: private, client-owned -------------------------
     match /journeys/{uid} {
       allow read, write: if isOwner(uid);
@@ -64,19 +53,13 @@ service cloud.firestore {
       allow create: if false;
       allow delete: if false;
 
-      // reportCount is now the ONLY client-writable field. Reaction counts
-      // moved to being derived server-side from the reactors subcollection
-      // below, because a client that can write the count can invent any
-      // popularity it likes.
-      //
-      // hasOnly() constrains WHICH keys move, not how far. Without the
-      // increment rule below, a client could write reportCount: 0 to erase
-      // accumulated reports, or reportCount: 9999 to fake a pile-on and
-      // auto-hide someone else's post. Reporting is a +1, never an assignment.
-      allow update: if signedIn()
-                    && changed().hasOnly(['reportCount'])
-                    && request.resource.data.status == resource.data.status
-                    && reportCountOnlyIncrements();
+      // No client writes at all. Reporting moved to the `reportPost` callable
+      // (mirroring `reportReply`): the old raw reportCount increment fed a
+      // counter no server code ever read — no dedupe, no auto-hide, no queue
+      // row — so the carve-out that allowed it is gone. A reader raises a
+      // count through the server, which is also what keys reports by reporter
+      // and hides at the threshold.
+      allow update: if false;
 
       // One document per person, keyed by their uid, readable and writable
       // ONLY by them.

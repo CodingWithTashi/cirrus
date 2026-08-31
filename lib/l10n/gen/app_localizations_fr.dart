@@ -1360,6 +1360,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String coachTimeYesterday(String time) {
+    return 'Hier · $time';
+  }
+
+  @override
   String coachFreeCounter(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1793,7 +1798,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton post du Jour 1, c\'est celui que quelqu\'un au Jour 0 a besoin de lire.';
 
   @override
-  String get communityPosted => 'Publié. Quelqu\'un avait besoin de lire ça.';
+  String get communityPosted =>
+      'Publié. Une rapide vérification passe avant que les autres le voient.';
 
   @override
   String get buddyLinkCopied =>
@@ -2226,13 +2232,79 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String memoriesIntro(String name) {
-    return 'Ce que tu as confié à $name, gardé pour que $name te soit utile dans des semaines au lieu de repartir de zéro à chaque fois. Uniquement ce que tu as écrit : jamais tes chiffres, jamais ce que tu n\'as pas dit.';
+    return 'Ce que $name sait de toi : ta configuration et tes chiffres en direct de l\'app, plus ce que tu as confié dans le chat — ça, tu peux le faire oublier quand tu veux.';
   }
 
   @override
   String memoriesEmpty(String name) {
-    return 'Rien pour l\'instant. $name commence à retenir dès que tu lui parles de ta vie.';
+    return 'Rien ici pour l\'instant. Cette partie se remplit quand tu racontes à $name des choses de ta vie dans le chat.';
   }
+
+  @override
+  String memoriesSectionKnows(String name) {
+    return 'Ce que $name sait toujours';
+  }
+
+  @override
+  String memoriesSectionTold(String name) {
+    return 'Ce que tu as confié à $name';
+  }
+
+  @override
+  String get memoriesFactPlan => 'Plan';
+
+  @override
+  String memoriesFactPlanValue(String method, int days) {
+    return '$method · $days jours';
+  }
+
+  @override
+  String get memoriesFactStarted => 'Début';
+
+  @override
+  String get memoriesFactBaseline => 'Point de départ';
+
+  @override
+  String memoriesFactBaselineValue(int count) {
+    return '$count taffes par jour';
+  }
+
+  @override
+  String get memoriesFactWhy => 'Ton pourquoi';
+
+  @override
+  String get memoriesFactWorries => 'Tes craintes';
+
+  @override
+  String get memoriesFactWhyWords => 'Avec tes mots';
+
+  @override
+  String get memoriesFactFirstPuff => 'Première taffe au réveil';
+
+  @override
+  String get memoriesFactFrequency => 'À quelle fréquence';
+
+  @override
+  String get memoriesFactDay => 'Où tu en es';
+
+  @override
+  String memoriesFactDayValue(int day, int total) {
+    return 'Jour $day sur $total';
+  }
+
+  @override
+  String get memoriesFactToday => 'Aujourd\'hui';
+
+  @override
+  String memoriesFactTodayValue(int puffs, int limit) {
+    return '$puffs sur $limit taffes';
+  }
+
+  @override
+  String get memoriesFactStreak => 'Série';
+
+  @override
+  String get memoriesFactSaved => 'Économies';
 
   @override
   String get memoriesFailed => 'Impossible de charger pour le moment.';

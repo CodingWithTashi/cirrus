@@ -341,20 +341,26 @@ enum CoachTemplate {
 }
 
 class CoachMessage {
-  const CoachMessage.user({required this.id, required String this.text})
-    : role = CoachRole.user,
-      template = null,
-      chipEcho = null,
-      args = const {},
-      showWeekCard = false;
+  const CoachMessage.user({
+    required this.id,
+    required String this.text,
+    this.sentAt,
+  }) : role = CoachRole.user,
+       template = null,
+       chipEcho = null,
+       args = const {},
+       showWeekCard = false;
 
   /// A quick-chip tap echoed into the thread as the user's message.
-  const CoachMessage.chip({required this.id, required int this.chipEcho})
-    : role = CoachRole.user,
-      template = null,
-      text = null,
-      args = const {},
-      showWeekCard = false;
+  const CoachMessage.chip({
+    required this.id,
+    required int this.chipEcho,
+    this.sentAt,
+  }) : role = CoachRole.user,
+       template = null,
+       text = null,
+       args = const {},
+       showWeekCard = false;
 
   const CoachMessage.ember({
     required this.id,
@@ -362,11 +368,18 @@ class CoachMessage {
     this.args = const {},
     this.showWeekCard = false,
     this.text,
+    this.sentAt,
   }) : role = CoachRole.ember,
        chipEcho = null;
 
   final String id;
   final CoachRole role;
+
+  /// When this message was sent, in the device's local time. Null on legacy
+  /// messages and mid-stream placeholders; views must render without it.
+  /// Drives the chat's day/time separators — never persisted by any codec
+  /// (the server stamps its own `ts`).
+  final DateTime? sentAt;
 
   /// Raw text: what the user typed, or — for an Ember message — the model's
   /// own words. When set on an Ember message it replaces the template.

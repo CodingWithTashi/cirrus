@@ -1365,6 +1365,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String coachTimeYesterday(String time) {
+    return 'Gestern · $time';
+  }
+
+  @override
   String coachFreeCounter(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1800,7 +1805,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Tag-1-Post ist genau der, den jemand an Tag 0 lesen muss.';
 
   @override
-  String get communityPosted => 'Gepostet. Jemand musste genau das lesen.';
+  String get communityPosted =>
+      'Gepostet. Ein kurzer Sicherheitscheck läuft, bevor andere es sehen.';
 
   @override
   String get buddyLinkCopied =>
@@ -2232,13 +2238,79 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String memoriesIntro(String name) {
-    return 'Was du $name erzählt hast — aufbewahrt, damit es in Wochen noch nützlich ist, statt jedes Mal von vorn zu beginnen. Nur was du geschrieben hast: nie deine Zahlen, nie etwas Ungesagtes.';
+    return 'Was $name über dich weiß: dein Setup und deine Live-Zahlen aus der App, plus die Dinge, die du im Chat erzählt hast — die kannst du jederzeit vergessen lassen.';
   }
 
   @override
   String memoriesEmpty(String name) {
-    return 'Noch nichts. $name merkt sich etwas, sobald du von deinem Leben erzählst.';
+    return 'Hier ist noch nichts. Dieser Teil füllt sich, wenn du $name im Chat aus deinem Leben erzählst.';
   }
+
+  @override
+  String memoriesSectionKnows(String name) {
+    return 'Was $name immer weiß';
+  }
+
+  @override
+  String memoriesSectionTold(String name) {
+    return 'Was du $name erzählt hast';
+  }
+
+  @override
+  String get memoriesFactPlan => 'Plan';
+
+  @override
+  String memoriesFactPlanValue(String method, int days) {
+    return '$method · $days Tage';
+  }
+
+  @override
+  String get memoriesFactStarted => 'Start';
+
+  @override
+  String get memoriesFactBaseline => 'Ausgangswert';
+
+  @override
+  String memoriesFactBaselineValue(int count) {
+    return '$count Züge pro Tag';
+  }
+
+  @override
+  String get memoriesFactWhy => 'Dein Warum';
+
+  @override
+  String get memoriesFactWorries => 'Deine Sorgen';
+
+  @override
+  String get memoriesFactWhyWords => 'In deinen Worten';
+
+  @override
+  String get memoriesFactFirstPuff => 'Erster Zug nach dem Aufwachen';
+
+  @override
+  String get memoriesFactFrequency => 'Wie oft';
+
+  @override
+  String get memoriesFactDay => 'Wo du stehst';
+
+  @override
+  String memoriesFactDayValue(int day, int total) {
+    return 'Tag $day von $total';
+  }
+
+  @override
+  String get memoriesFactToday => 'Heute';
+
+  @override
+  String memoriesFactTodayValue(int puffs, int limit) {
+    return '$puffs von $limit Zügen';
+  }
+
+  @override
+  String get memoriesFactStreak => 'Serie';
+
+  @override
+  String get memoriesFactSaved => 'Gespartes Geld';
 
   @override
   String get memoriesFailed => 'Konnte gerade nicht geladen werden.';

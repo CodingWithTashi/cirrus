@@ -90,15 +90,37 @@ class FirebaseCoachRepository implements CoachRepository {
   static CoachMessage? _decodeHistory(String id, Map<String, dynamic> json) {
     final text = json['text'] as String? ?? '';
     if (text.isEmpty) return null;
-    return json['role'] == 'user'
-        ? CoachMessage.user(id: 'h_$id', text: text)
-        : CoachMessage.ember(
-            id: 'h_$id',
-            // History carries Ember's own words, so the template is only the
-            // never-rendered fallback slot `text` overrides.
-            template: CoachTemplate.generic1,
-            text: text,
-          );
+    // The server timestamp, as a local-flagged DateTime of the right instant.
+    // Nullable: a turn written moments ago can come back with its
+    // serverTimestamp still unresolved.
+    final sentAt = (json['ts'] as Timestamp?)?.toDate();
+    if (json['role'] == 'user') {
+      // A chip tap is stored as its bracket token ("[progress]") — the server
+      // synthesizes that when no text is sent. Restore it as a chip echo so
+      // the view renders the localized label; a raw `CoachMessage.user` here
+      // once printed "[progress]" verbatim into the thread.
+      final chip = _chipFromToken(text);
+      return chip != null
+          ? CoachMessage.chip(id: 'h_$id', chipEcho: chip, sentAt: sentAt)
+          : CoachMessage.user(id: 'h_$id', text: text, sentAt: sentAt);
+    }
+    return CoachMessage.ember(
+      id: 'h_$id',
+      // History carries Ember's own words, so the template is only the
+      // never-rendered fallback slot `text` overrides.
+      template: CoachTemplate.generic1,
+      text: text,
+      sentAt: sentAt,
+    );
+  }
+
+  /// "[craving]" → `CoachChip.craving.index`, or null for ordinary text.
+  /// Token names mirror `COACH_CHIPS` in `functions/src/domain/types.ts`.
+  static int? _chipFromToken(String text) {
+    if (!text.startsWith('[') || !text.endsWith(']')) return null;
+    final inner = text.substring(1, text.length - 1);
+    final i = CoachChip.values.indexWhere((c) => c.name == inner);
+    return i == -1 ? null : i;
   }
 
   @override
