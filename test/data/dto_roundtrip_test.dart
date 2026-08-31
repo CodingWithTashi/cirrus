@@ -74,6 +74,53 @@ void main() {
       expect(jsonEncode(JourneyCodec.encode(back)), wire);
     });
 
+    test('the words they used round-trip, and their absence stays absent', () {
+      // The one free-text answer onboarding collects, and the only one that
+      // seeds Ember's vector memory. A journey where it silently stopped
+      // persisting would not fail anywhere — the coach would just quietly
+      // stop knowing why this person is doing it.
+      expect(journey.profile.whyWords, isNull);
+      final encoded =
+          JourneyCodec.encode(journey)['profile'] as Map<String, dynamic>;
+      expect(encoded['whyWords'], isNull);
+
+      const said = 'being there when my daughter graduates';
+      final answered = journey.copyWith(
+        profile: journey.profile.copyWith(whyWords: said),
+      );
+      final wire = jsonEncode(JourneyCodec.encode(answered));
+      final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
+      expect(back.profile.whyWords, said);
+      expect(jsonEncode(JourneyCodec.encode(back)), wire);
+    });
+
+    test('a journey written before the question existed still decodes', () {
+      // Every live journey document predates this field. Decoding must treat
+      // a missing key as "never asked", not throw — `day1TasksDone` decodes
+      // unguarded right above, and that is the shape to avoid repeating.
+      final json = JourneyCodec.encode(journey);
+      (json['profile']! as Map<String, dynamic>).remove('whyWords');
+      expect(JourneyCodec.decode(json).profile.whyWords, isNull);
+    });
+
+    test('a skipped Day-1 walkthrough round-trips', () {
+      expect(journey.day1TourSkipped, isFalse);
+
+      final skipped = journey.copyWith(day1TourSkipped: true);
+      final wire = jsonEncode(JourneyCodec.encode(skipped));
+      final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
+      expect(back.day1TourSkipped, isTrue);
+      expect(jsonEncode(JourneyCodec.encode(back)), wire);
+    });
+
+    test('a journey written before the walkthrough existed still decodes', () {
+      // `day1TasksDone` right beside it decodes UNGUARDED, so a missing key
+      // there throws. Every live journey document predates this field, and a
+      // decode that threw would take the account down on the next launch.
+      final json = JourneyCodec.encode(journey)..remove('day1TourSkipped');
+      expect(JourneyCodec.decode(json).day1TourSkipped, isFalse);
+    });
+
     test('planAdvice round-trips, and its absence stays absent', () {
       // The seed journey carries no advice — the nightly cron has never run
       // for it — so the null case is the one the demo backend exercises daily.

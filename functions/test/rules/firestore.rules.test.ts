@@ -85,6 +85,10 @@ beforeEach(async () => {
       emoji: 'fire',
       uid: ALICE,
     });
+    await setDoc(doc(db, 'users', ALICE, 'devices', 'seeded'), {
+      token: 'device-1',
+      platform: 'android',
+    });
     await setDoc(doc(db, 'postAuthors', 'livePost'), {uid: ALICE});
     await setDoc(doc(db, 'moderation', 'blockedPost'), {action: 'block', reviewed: false});
   });
@@ -133,6 +137,36 @@ describe('users/{uid} — server-owned', () => {
 
   it('hides server state from another user', async () => {
     await assertFails(getDoc(doc(bob(), 'users', ALICE)));
+  });
+
+  // The push registry. A client that could write here would register a token
+  // it does not own onto someone else's account, or delete every device of
+  // its own to make itself unreachable. Both go through `syncUserContext`.
+  it('does NOT let the owner register a device directly', async () => {
+    await assertFails(
+      setDoc(doc(alice(), 'users', ALICE, 'devices', 'somehash'), {
+        token: 'device-1',
+      }),
+    );
+  });
+
+  it('does NOT let anyone write a device onto another account', async () => {
+    await assertFails(
+      setDoc(doc(bob(), 'users', ALICE, 'devices', 'somehash'), {
+        token: 'device-1',
+      }),
+    );
+  });
+
+  it('does NOT let another user read the devices someone registered', async () => {
+    await assertFails(getDoc(doc(bob(), 'users', ALICE, 'devices', 'seeded')));
+  });
+
+  it('does NOT let the owner delete their own device row', async () => {
+    // Not a privacy hole so much as a correctness one: releasing a device is
+    // `syncUserContext`'s job, and a client that could do it itself could
+    // also do it to a device it does not hold.
+    await assertFails(deleteDoc(doc(alice(), 'users', ALICE, 'devices', 'seeded')));
   });
 });
 

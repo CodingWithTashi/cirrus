@@ -18,6 +18,7 @@ class JourneyState {
     required this.earnedBadges,
     this.lastPuffAt,
     this.day1TasksDone = const {},
+    this.day1TourSkipped = false,
     this.pendingSlipCleanDays,
     this.moodCheckIns = 0,
     this.planAdvice,
@@ -36,7 +37,19 @@ class JourneyState {
   final DateTime? lastPuffAt;
 
   /// Day-1 checklist: which of tasks 1..3 are done.
+  ///
+  /// Only ever set by the real move — a logged puff, a coach reply that
+  /// arrived, a danger hour saved. Never by tapping the row that describes it.
   final Set<int> day1TasksDone;
+
+  /// They chose not to be walked through setup.
+  ///
+  /// Deliberately separate from [day1TasksDone], and deliberately does NOT
+  /// tick anything: skipping means the three moves are still undone and still
+  /// available, which is the honest record of what happened. Lives on the
+  /// journey rather than in settings so it survives a reinstall the same way
+  /// the checklist does.
+  final bool day1TourSkipped;
 
   /// Set when an over-limit day awaits the recovery flow; value = clean days
   /// before the slip (for the "after N clean days" copy).
@@ -78,6 +91,7 @@ class JourneyState {
     Set<String>? earnedBadges,
     DateTime? lastPuffAt,
     Set<int>? day1TasksDone,
+    bool? day1TourSkipped,
     int? Function()? pendingSlipCleanDays,
     int? moodCheckIns,
     PlanAdvice? Function()? planAdvice,
@@ -92,6 +106,7 @@ class JourneyState {
     earnedBadges: earnedBadges ?? this.earnedBadges,
     lastPuffAt: lastPuffAt ?? this.lastPuffAt,
     day1TasksDone: day1TasksDone ?? this.day1TasksDone,
+    day1TourSkipped: day1TourSkipped ?? this.day1TourSkipped,
     pendingSlipCleanDays: pendingSlipCleanDays != null
         ? pendingSlipCleanDays()
         : this.pendingSlipCleanDays,

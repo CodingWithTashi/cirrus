@@ -52,3 +52,5 @@ app.*.map.json
 
 # Firebase CLI deploy cache — local build state, not source.
 .firebase/
+.appcheck_token.registered
+.dart_defines.json

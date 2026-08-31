@@ -25,6 +25,7 @@ vi.mock('../../src/ai/gemini', () => ({
 import type {CallableRequest, CallableResponse} from 'firebase-functions/v2/https';
 import {aiCoachChat} from '../../src/handlers/aiCoachChat';
 import {ModelUnavailableError} from '../../src/ai/model';
+import {MEMORY_EXTRACTION_PROMPT} from '../../src/ai/prompts';
 import {
   FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
@@ -195,11 +196,15 @@ describe('the cap', () => {
 
     await run(caller());
     await run(caller());
+    // Snapshot rather than a fixed count: `generate` also backs the memory
+    // extraction pass, so a total would be measuring two things at once. What
+    // the cap has to guarantee is that the refused call costs NOTHING MORE.
+    const spentBefore = generate.mock.calls.length;
     const third = await run(caller());
 
     expect(third.template).toBe('capReached');
     expect(third.messagesLeft).toBe(0);
-    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls.length).toBe(spentBefore);
   });
 });
 
@@ -271,7 +276,16 @@ describe('streaming', () => {
 
     expect(chunks).toEqual(['That wave ', 'is brutal.']);
     expect(reply.text).toBe('That wave is brutal.');
-    expect(generate).not.toHaveBeenCalled();
+    // The REPLY came from the stream and nothing fell back to a blocking
+    // generate. Asserting `generate` was never called at all would also be
+    // asserting that nothing was learned from the turn, which is a different
+    // feature that happens to share the method.
+    expect(generateStream).toHaveBeenCalledTimes(1);
+    for (const [request] of generate.mock.calls) {
+      expect((request as {systemInstruction: string}).systemInstruction).toBe(
+        MEMORY_EXTRACTION_PROMPT,
+      );
+    }
   });
 
   it('falls back warmly when the stream dies mid-sentence', async () => {

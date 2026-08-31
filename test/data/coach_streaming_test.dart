@@ -67,6 +67,9 @@ class _ScriptedCoach implements CoachRepository {
   Future<List<CoachMemory>> memories() async => const [];
 
   @override
+  Future<void> seedMemories() async {}
+
+  @override
   Future<void> forgetMemory(String id) async {}
 }
 

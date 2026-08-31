@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @obCoachNameTitle.
   ///
   /// In en, this message translates to:
-  /// **'Meet {name}.'**
+  /// **'We call it {name}.'**
   String obCoachNameTitle(String name);
 
   /// No description provided for @obCoachNameSubtitle.
@@ -1451,7 +1451,7 @@ abstract class AppLocalizations {
   /// No description provided for @obCoachNameAsk.
   ///
   /// In en, this message translates to:
-  /// **'{name} is the name we gave it. But a friend you name yourself is more yours — call it whatever you\'d actually text at 2am.'**
+  /// **'We went with {name} because it needed one. Nobody remembers a name someone else picked, though — so if you have a better idea, use it. Whatever you\'d actually text at 2am, mid-argument with yourself in the kitchen.'**
   String obCoachNameAsk(String name);
 
   /// No description provided for @obCoachNameFieldLabel.
@@ -1543,6 +1543,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Wren'**
   String get obCoachNameSuggestion4;
+
+  /// No description provided for @obWhyWordsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell {name} one thing.'**
+  String obWhyWordsTitle(String name);
+
+  /// No description provided for @obWhyWordsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why now? Not the health-class answer — the real one.'**
+  String get obWhyWordsSubtitle;
+
+  /// No description provided for @obWhyWordsFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'In your own words'**
+  String get obWhyWordsFieldLabel;
+
+  /// No description provided for @obWhyWordsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'so I can run with her without stopping'**
+  String get obWhyWordsHint;
+
+  /// No description provided for @obWhyWordsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} will remember this.'**
+  String obWhyWordsNote(String name);
+
+  /// No description provided for @obWhyWordsErrorLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it to 200 characters or fewer.'**
+  String get obWhyWordsErrorLong;
+
+  /// No description provided for @obWhyWordsCta.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s why'**
+  String get obWhyWordsCta;
+
+  /// No description provided for @obWhyWordsSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this'**
+  String get obWhyWordsSkip;
 
   /// No description provided for @obNotifTitle.
   ///
@@ -1855,6 +1903,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'when do you cave? we\'ll show up early'**
   String get day1Task3Sub;
+
+  /// No description provided for @day1Skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip setup for now'**
+  String get day1Skip;
+
+  /// No description provided for @day1TourLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the whole app.'**
+  String get day1TourLogTitle;
+
+  /// No description provided for @day1TourLogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every puff, tapped here. Honest counts are the only thing that makes the plan real — go on, log one now.'**
+  String get day1TourLogBody;
+
+  /// No description provided for @day1TourCoachTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Say anything.'**
+  String get day1TourCoachTitle;
+
+  /// No description provided for @day1TourCoachBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has already read your plan — your numbers, your triggers, the hours you struggle. Type a hello and see.'**
+  String day1TourCoachBody(String name);
+
+  /// No description provided for @day1TourHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When do you cave?'**
+  String get day1TourHoursTitle;
+
+  /// No description provided for @day1TourHoursBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the window you struggle in. We show up ten minutes before it, on your phone, without you asking.'**
+  String get day1TourHoursBody;
 
   /// No description provided for @day1FreedomNote.
   ///

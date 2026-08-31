@@ -99,6 +99,10 @@ abstract final class ObTailoring {
       ObStep.building ||
       ObStep.reveal ||
       ObStep.coachName ||
+      // Deliberately nothing: the screen asks for the user's own sentence,
+      // and putting one of our facts under it would answer the question for
+      // them.
+      ObStep.whyWords ||
       ObStep.commit ||
       ObStep.rating ||
       ObStep.notifications => null,

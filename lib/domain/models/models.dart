@@ -20,6 +20,7 @@ class UserProfile {
     this.frequency,
     this.firstPuff,
     this.coachName,
+    this.whyWords,
   });
 
   final String alias;
@@ -48,6 +49,19 @@ class UserProfile {
   /// system prompt would be a live injection surface.
   final String? coachName;
 
+  /// Why they are doing this, in their own words. Null when they skipped —
+  /// the question is optional and declining it is an answer.
+  ///
+  /// The ONLY free text onboarding collects. Nineteen screens of chips and
+  /// enums already reach Ember exactly and for free through the deterministic
+  /// user card; this is the one answer that also belongs in the vector memory,
+  /// because that layer is for the things a person actually said.
+  ///
+  /// Client-owned text bound for a system prompt, so it is sanitized twice:
+  /// `WhyWords` on the way in here, and `journeyCodec.ts` again on the server,
+  /// which is the copy that counts.
+  final String? whyWords;
+
   bool get isPremium => tier != SubscriptionTier.free;
 
   UserProfile copyWith({
@@ -58,6 +72,7 @@ class UserProfile {
     Set<WhyChip>? whys,
     Set<WorryChip>? worries,
     String? coachName,
+    String? whyWords,
   }) => UserProfile(
     alias: alias ?? this.alias,
     avatarEmoji: avatarEmoji ?? this.avatarEmoji,
@@ -71,6 +86,7 @@ class UserProfile {
     frequency: frequency,
     firstPuff: firstPuff,
     coachName: coachName ?? this.coachName,
+    whyWords: whyWords ?? this.whyWords,
   );
 }
 

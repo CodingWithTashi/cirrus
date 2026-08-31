@@ -95,11 +95,49 @@ const memoriesCol = (uid: string): FirebaseFirestore.CollectionReference =>
  * chip tap would roughly double the coach's per-turn cost for nothing. Chips
  * arrive as `[craving]`; those carry no new information by construction.
  */
+/**
+ * Phrases that are a whole message and never carry a fact. Matched against the
+ * entire normalized text, never as a substring — "ok" must not disqualify
+ * "ok so my mum found out".
+ */
+const ACKNOWLEDGEMENTS = new Set([
+  'k', 'ok', 'okay', 'kk', 'yeah', 'yep', 'yes', 'no', 'nope', 'nah', 'sure',
+  'lol', 'haha', 'thanks', 'thank you', 'ty', 'cool', 'nice', 'got it',
+  'ok thanks', 'okay thanks', 'thanks!', 'yeah ok', 'yeah okay', 'ok cool',
+  'ok cool thanks', 'thank you so much', 'sounds good', 'will do', 'same',
+  'i guess', 'idk', 'maybe', 'hi', 'hey', 'hello',
+  // Generic celebration. Real, and worth a warm reply — but the streak it
+  // refers to is already in the user card, so there is nothing here the
+  // extraction model could find that the app does not already know.
+  'i did it', 'we did it', 'did it', 'done',
+]);
+
+/** Below this there is not a sentence, whatever the words are. */
+const MIN_MEANINGFUL_CHARS = 8;
+
 export function worthExtracting(userText: string): boolean {
   const trimmed = userText.trim();
+  if (trimmed.length === 0) return false;
+  // Chips arrive as `[craving]`; those carry no new information by
+  // construction, whatever whitespace surrounds them.
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) return false;
-  // Under ~5 words there is rarely a durable fact ("ok", "thanks", "yeah").
-  return trimmed.split(/\s+/).length >= 5;
+
+  // Normalized only for the acknowledgement check: case and trailing
+  // punctuation are the two things that make the same "ok thanks" look like
+  // ten different strings.
+  const plain = trimmed
+    .toLowerCase()
+    .replace(/[.!?,]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (ACKNOWLEDGEMENTS.has(plain)) return false;
+
+  // A character floor rather than a word count. The old gate wanted five
+  // words, which is a reasonable proxy for "is there a fact in here" and a
+  // terrible one for the specific sentences this feature exists to catch:
+  // "my dad died" and "I got the job" are three and four words, and they are
+  // the two most worth remembering anybody will type all month.
+  return plain.length >= MIN_MEANINGFUL_CHARS;
 }
 
 /**

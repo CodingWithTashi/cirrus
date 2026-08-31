@@ -60,6 +60,19 @@ export const coachMessages = (uid: string): CollectionReference =>
 export const cravingsCol = (uid: string): CollectionReference =>
   userDoc(uid).collection('cravings');
 
+/**
+ * Push registrations, one document per device, keyed by the SHA-256 of the
+ * token (see `lib/push.ts`).
+ *
+ * A document rather than an array entry so a device can carry its platform and
+ * a `lastSeenAt` the prune cron can judge, and so sign-out can release exactly
+ * one device. The flat `fcmTokens` array this replaces could only ever be
+ * added to — which is how a signed-out phone kept receiving the previous
+ * account's pushes.
+ */
+export const devicesCol = (uid: string): CollectionReference =>
+  userDoc(uid).collection('devices');
+
 /** Weekly AI report, keyed by the user's local Sunday. */
 export const insightDoc = (uid: string, weekId: string): DocumentReference =>
   userDoc(uid).collection('insights').doc(weekId);
@@ -106,10 +119,18 @@ export interface UserDoc {
   readonly locale?: string;
   /** UTC hour matching 01:00 local — see taperRecalc.recalcHourUtcFor. */
   readonly recalcHourUtc?: number;
+  /**
+   * LEGACY. Superseded by the `devices` subcollection; still read on the send
+   * path so a user who has not reopened the app since the migration keeps
+   * receiving push. Written by nothing any more — entries only ever leave,
+   * on a failed send or on sign-out.
+   */
   readonly fcmTokens?: readonly string[];
   readonly entitlement?: Entitlement;
   /** docs/04 §7 coach quota. `day` is a local `yyyy-MM-dd` key. */
   readonly aiUsage?: {readonly day: string; readonly msgCount: number};
+  /** One-shot flag: the onboarding answer has been embedded into `memories`. */
+  readonly coachMemoriesSeeded?: boolean;
   readonly panicUsage?: DailyCounter;
   /** docs/03 §9 community post cap. Same shape, same rollover rule. */
   readonly postUsage?: DailyCounter;

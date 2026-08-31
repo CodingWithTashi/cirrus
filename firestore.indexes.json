@@ -90,6 +90,21 @@
           "queryScope": "COLLECTION_GROUP"
         }
       ]
+    },
+    {
+      "_comment": "pruneDevices sweeps stale push registrations across every user in one collection-group query rather than paging the whole userbase. Without the COLLECTION_GROUP scope here the query throws FAILED_PRECONDITION at runtime and the cron quietly prunes nothing.",
+      "collectionGroup": "devices",
+      "fieldPath": "lastSeenAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
     }
   ]
 }

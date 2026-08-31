@@ -9,13 +9,15 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_misc.dart';
 import 'onboarding_view_model.dart';
 import 'steps/coach_name_step.dart';
+import 'steps/why_words_step.dart';
 import 'steps/habit_steps.dart';
 import 'steps/identity_steps.dart';
 import 'steps/payoff_steps.dart';
 import 'steps/plan_steps.dart';
 import 'steps/welcome_step.dart';
 
-/// The 19-screen first-session flow (docs/02). One question per screen,
+/// The 20-screen first-session flow (docs/02 + Phase D). One question per
+/// screen,
 /// progress always visible, back always works, every tap reacts.
 class OnboardingFlow extends ConsumerWidget {
   const OnboardingFlow({super.key});
@@ -46,6 +48,7 @@ class OnboardingFlow extends ConsumerWidget {
       ObStep.building => const BuildingStep(),
       ObStep.reveal => const RevealStep(),
       ObStep.coachName => const CoachNameStep(),
+      ObStep.whyWords => const WhyWordsStep(),
       ObStep.commit => const CommitStep(),
       ObStep.rating => const RatingStep(),
       ObStep.notifications => const NotificationsStep(),

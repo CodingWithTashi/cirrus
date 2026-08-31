@@ -370,6 +370,8 @@ class LpField extends StatelessWidget {
     this.autofocus = false,
     this.hint,
     this.onChanged,
+    this.maxLines = 1,
+    this.maxLength,
   });
 
   final String label;
@@ -381,6 +383,15 @@ class LpField extends StatelessWidget {
   final bool autofocus;
   final String? hint;
   final ValueChanged<String>? onChanged;
+
+  /// Above 1 the field grows into a small prose box. Every existing caller is
+  /// a single-line credential or a name, so the default keeps them unchanged.
+  final int maxLines;
+
+  /// Shows the counter and stops accepting characters past the limit. A field
+  /// that silently refuses input reads as a broken keyboard, which is why the
+  /// counter comes with it rather than a bare cap.
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -428,6 +439,9 @@ class LpField extends StatelessWidget {
                       autofocus: autofocus,
                       keyboardType: keyboardType,
                       onChanged: onChanged,
+                      maxLines: maxLines,
+                      minLines: 1,
+                      maxLength: maxLength,
                       style: LpType.body15(lp.textPrimary),
                       decoration: InputDecoration(
                         isDense: true,
@@ -435,6 +449,7 @@ class LpField extends StatelessWidget {
                         hintText: hint,
                         hintStyle: LpType.body15(lp.textFaint),
                         contentPadding: const EdgeInsets.only(top: 4),
+                        counterStyle: LpType.caption11(lp.textFaint),
                       ),
                     ),
                   ),

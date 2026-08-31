@@ -9,6 +9,7 @@ import 'package:last_puff/features/coach/memories_screen.dart';
 import 'package:last_puff/features/community/community_screens.dart';
 import 'package:last_puff/features/frame_map/frame_map_screen.dart';
 import 'package:last_puff/features/health/health_screen.dart';
+import 'package:last_puff/features/day1/day1_screen.dart';
 import 'package:last_puff/features/home/home_screen.dart';
 import 'package:last_puff/features/insight/insight_screen.dart';
 import 'package:last_puff/features/milestones/milestones_screen.dart';
@@ -72,6 +73,8 @@ void main() {
       'ObWorries',
       'ObReveal',
       'ObCoachName',
+      'ObWhyWords',
+      'ObCommit',
       'ObRating',
     ])
       name: const OnboardingFlow(),
@@ -79,6 +82,9 @@ void main() {
     'EdgeStates': const EdgeStatesPreviewScreen(),
     'Moderation': const ModerationScreen(),
     'CoachMemories': const CoachMemoriesScreen(),
+    // The screen every new account lands on straight out of the paywall, and
+    // it was the one screen this sweep never opened.
+    'Day1': const Day1Screen(),
   };
 
   /// Onboarding steps worth a layout pass of their own.
@@ -93,6 +99,8 @@ void main() {
     'ObWorries': ObStep.worries,
     'ObReveal': ObStep.reveal,
     'ObCoachName': ObStep.coachName,
+    'ObWhyWords': ObStep.whyWords,
+    'ObCommit': ObStep.commit,
     'ObRating': ObStep.rating,
   };
 

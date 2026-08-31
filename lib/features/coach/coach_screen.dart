@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +13,9 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../day1/day1_spotlight.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -146,7 +150,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final freeLeft = coach.messagesLeft ?? 0;
     final showCounter = store.showsAllowance;
 
-    ref.listen(coachStoreProvider, (_, _) => _scrollToEnd());
+    // Day-1 step two used to complete from a listener here, which counted
+    // the seeded greeting — an ember message that appears without a word
+    // being typed — and ticked "Meet your coach" on arrival. Completion now
+    // rides the send future in [_finishTourStepAfter], where "the user sent
+    // something and Ember answered it" is a fact rather than an inference.
+    ref.listen(coachStoreProvider, (previous, next) => _scrollToEnd());
 
     return Scaffold(
       body: SafeArea(
@@ -180,7 +189,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.coachName,
+                          // The resolved name, never `l10n.coachName` (the
+                          // brand default): this header was the one surface
+                          // still showing "Ember" to a user who had renamed
+                          // their coach — on the very screen where every
+                          // bubble already used the chosen name.
+                          coachName,
                           style: LpType.emphasis(lp.textPrimary),
                         ),
                         Text(
@@ -205,25 +219,26 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   // thinking, and saying which one it is costs nothing.
                   ? LpLoadingState(label: l10n.coachLoadingThread)
                   : ListView(
-                controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                children: [
-                  for (final m in coach.messages) ...[
-                    _Bubble(
-                      isUser: m.role == CoachRole.user,
-                      text: m.role == CoachRole.user
-                          ? (m.text ?? _chipLabel(context, m.chipEcho ?? 0))
-                          : _resolve(context, m, coachName),
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                      children: [
+                        for (final m in coach.messages) ...[
+                          _Bubble(
+                            isUser: m.role == CoachRole.user,
+                            text: m.role == CoachRole.user
+                                ? (m.text ??
+                                      _chipLabel(context, m.chipEcho ?? 0))
+                                : _resolve(context, m, coachName),
+                          ),
+                          if (m.showWeekCard && journey != null) ...[
+                            const SizedBox(height: 12),
+                            _WeekCard(journey: journey, locale: locale),
+                          ],
+                          const SizedBox(height: 12),
+                        ],
+                        if (coach.isTyping) _TypingBubble(coachName: coachName),
+                      ],
                     ),
-                    if (m.showWeekCard && journey != null) ...[
-                      const SizedBox(height: 12),
-                      _WeekCard(journey: journey, locale: locale),
-                    ],
-                    const SizedBox(height: 12),
-                  ],
-                  if (coach.isTyping) _TypingBubble(coachName: coachName),
-                ],
-              ),
             ),
             // Quick chips.
             SizedBox(
@@ -272,47 +287,55 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             // Input row.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
-                decoration: BoxDecoration(
-                  color: lp.surface,
-                  borderRadius: BorderRadius.circular(LpDimens.rChip),
-                  border: Border.all(color: lp.border, width: 1.5),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _input,
-                        style: LpType.body14(lp.textPrimary),
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: l10n.coachInputHint,
-                          hintStyle: LpType.body14(lp.textFaint),
+              child: Day1Spotlight(
+                step: Day1TourStep.meetCoach,
+                title: l10n.day1TourCoachTitle,
+                // The user's own name for their coach — this is the step that
+                // introduces it, and a hardcoded "Ember" here told everyone
+                // who renamed theirs that the rename didn't take.
+                description: l10n.day1TourCoachBody(coachName),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
+                  decoration: BoxDecoration(
+                    color: lp.surface,
+                    borderRadius: BorderRadius.circular(LpDimens.rChip),
+                    border: Border.all(color: lp.border, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _input,
+                          style: LpType.body14(lp.textPrimary),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: l10n.coachInputHint,
+                            hintStyle: LpType.body14(lp.textFaint),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    PressScale(
-                      onTap: _send,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: lp.volt,
-                        ),
-                        child: Icon(
-                          Icons.arrow_upward_rounded,
-                          size: 18,
-                          color: lp.onVolt,
+                      const SizedBox(width: 6),
+                      PressScale(
+                        onTap: _send,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: lp.volt,
+                          ),
+                          child: Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: lp.onVolt,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -342,9 +365,51 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final chipIndex = CoachChip.values.indexWhere(
       (chip) => _chipLabel(context, chip.index) == text,
     );
-    chipIndex == -1
+    final sent = chipIndex == -1
         ? store.send(text, panicIntensity: panic)
         : store.sendChip(CoachChip.values[chipIndex], panicIntensity: panic);
+    if (ref.read(day1TourStepProvider) == Day1TourStep.meetCoach) {
+      // The lesson's tap happened; the highlight comes down so the reply is
+      // watched on a normal screen, not through the barrier's 88% wash. The
+      // tour's locks stay until the reply completes the step.
+      Day1Spotlight.dismissOverlay();
+      unawaited(_finishTourStepAfter(sent));
+    } else {
+      unawaited(sent);
+    }
+  }
+
+  /// Day-1 step two ends on a reply that ACTUALLY ANSWERED THE USER.
+  ///
+  /// Anchored on the send future, not on watching messages arrive: the future
+  /// completes only once the whole reply has streamed in (or failed), so this
+  /// cannot fire on the seeded greeting, on a restored transcript, or halfway
+  /// through a sentence — every one of which is a box ticked for someone who
+  /// never heard back from Ember, the exact class of claim the walkthrough
+  /// exists to remove. The failure templates the client mints for a dead wire
+  /// don't count either.
+  ///
+  /// The pause before returning to the checklist is so the user sees Ember
+  /// answer — yanking the screen away on the reply's last byte reads as the
+  /// app interrupting the conversation it just asked them to start. The full
+  /// reply keeps: the transcript is stored, and the coach tab stays one tap
+  /// away for the rest of their quit.
+  Future<void> _finishTourStepAfter(Future<void> sent) async {
+    await sent;
+    if (!mounted) return;
+    final messages = ref.read(coachStoreProvider).messages;
+    if (messages.isEmpty) return;
+    final last = messages.last;
+    if (last.role != CoachRole.ember) return;
+    if (last.template == CoachTemplate.greeting ||
+        last.template == CoachTemplate.connectionLost ||
+        last.template == CoachTemplate.backendRejected) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 2500));
+    if (!mounted) return;
+    if (ref.read(day1TourStepProvider) != Day1TourStep.meetCoach) return;
+    ref.read(day1TourProvider.notifier).complete(Day1TourStep.meetCoach);
   }
 }
 

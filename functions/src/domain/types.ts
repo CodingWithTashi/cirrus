@@ -111,6 +111,14 @@ export interface UserProfile {
    * server-owned `users/{uid}.coachName`, written only by `setCoachName`.
    */
   readonly coachName: string | null;
+  /**
+   * Why they are doing this, in their own words. Null when they skipped.
+   *
+   * The only free text onboarding collects, and the only onboarding answer
+   * that belongs in the vector memory — everything else is a chip or an enum
+   * and reaches the model exactly, and for free, through the user card.
+   */
+  readonly whyWords: string | null;
   // The rest of the 19-step quiz. The server used to drop these, so the coach
   // could not tell a first-time quitter from someone on their sixth attempt,
   // or an all-day vaper from a social one — the two facts that most change

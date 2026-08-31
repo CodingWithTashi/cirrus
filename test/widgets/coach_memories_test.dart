@@ -130,6 +130,9 @@ class _StubCoach implements CoachRepository {
   }
 
   @override
+  Future<void> seedMemories() async {}
+
+  @override
   Future<void> forgetMemory(String id) async {
     if (failure != null) throw failure!;
     forgotten.add(id);

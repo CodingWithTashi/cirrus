@@ -13,7 +13,12 @@ import {dayKeyIn} from '../domain/dateKey';
 import {decodeJourney} from '../domain/journeyCodec';
 import {currentStreak, dangerHours, flameFor, trailingDays} from '../domain/streakEngine';
 import {dayNumber, limitFor} from '../domain/taperEngine';
-import {totalDays, type DayLog, type Journey} from '../domain/types';
+import {
+  totalDays,
+  type DayLog,
+  type Journey,
+  type NicStrength,
+} from '../domain/types';
 
 export interface MemoryCard {
   readonly text: string;
@@ -62,12 +67,17 @@ export function buildMemoryCard(
     'USER CARD',
     `alias: ${profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
     `why: ${list(profile.whys)} · fears: ${list(profile.worries)}`,
+    // The chips above say "health, money". This is what they meant by it, in
+    // the one sentence of the whole funnel they wrote themselves — and the
+    // single most useful line in the card when it is there.
+    `their reason, in their words: ${profile.whyWords ?? 'not given'}`,
     // The rest of the 19-step quiz. These are the answers that change what is
     // worth SAYING rather than what the numbers are: someone on their sixth
     // attempt needs a different opening than someone on their first, and an
     // all-day vaper who reaches for it within five minutes of waking is a
     // different person from a social one.
     `about them: ${describeProfile(profile, age)}`,
+    `vaping: ${strengthPhrase(plan.strength)}`,
     `saving toward: ${goalsLine(journey, saved)}`,
     `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${journey.repairTokens}`,
     `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
@@ -98,6 +108,34 @@ function describeProfile(
   }
   if (profile.attempts !== null) parts.push(attemptsPhrase(profile.attempts));
   return parts.length > 0 ? parts.join(', ') : 'not much said yet';
+}
+
+/**
+ * What they are actually vaping, as device context.
+ *
+ * Deliberately NOT milligrams per day. `MG_PER_PUFF` would make that figure
+ * trivial to compute, and it is the wrong number to hand this model: docs/04
+ * §4's HARD SAFETY RULES forbid dosing guidance of any kind, and a per-day
+ * milligram total is a dose whatever we call it. The strength of the pod is a
+ * fact about their hardware — it separates someone stepping down from 50mg
+ * salts from someone on 20mg, which is a genuinely different withdrawal, and
+ * it says nothing about how much they should take.
+ *
+ * "notSure" passes through as unknown rather than defaulting: the engines
+ * treat it as 50mg for arithmetic (docs/03 §2), but stating that back to
+ * someone who told us they did not know would be inventing their answer.
+ */
+function strengthPhrase(strength: NicStrength): string {
+  switch (strength) {
+    case 'mg20':
+      return '20mg pods';
+    case 'mg35':
+      return '35mg pods';
+    case 'mg50':
+      return '50mg pods';
+    default:
+      return 'strength unknown';
+  }
 }
 
 function firstPuffPhrase(window: string): string {

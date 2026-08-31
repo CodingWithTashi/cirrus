@@ -1157,3 +1157,513 @@ the script otherwise hangs *after* committing, which reads as a failure.
 rows, ranked, with `beta-panic-week-one` leading for a cravings worry). An empty
 list is asserted against explicitly — the app treats it as "keep the bundled
 quotes", so a silently empty collection would otherwise look like success.
+
+---
+
+## 17. UX + DATA REVIEW — five items raised Aug 30, 2026
+
+Founder review of the live build. None of these are fixed yet; this section is
+the record so they do not get lost. Each carries the evidence path that proves
+the current state.
+
+### 17.1 — FCM token: registered and consumed, but never *un*registered
+
+**Status: mostly done, one real leak.** The path exists end to end —
+`PushService.tokenOrNull()` -> `FirebaseUserContextRepository.sync()` ->
+`syncUserContext` -> `users/{uid}.fcmTokens` (`arrayUnion`, server-owned, client
+writes denied by `firestore.rules`) -> read by `sendToUser`
+(`functions/src/lib/push.ts`), which prunes dead tokens with `arrayRemove`.
+`deleteUserData`'s `recursiveDelete` erases it with the account.
+
+Three gaps, in order of severity:
+
+1. **`signOut()` orphans the token on the device** (`journey_store.dart:194`).
+   It calls neither `FirebaseMessaging.deleteToken()` nor anything that removes
+   the token from the departing user's `fcmTokens`. On a shared or re-signed
+   phone, user A's pushes keep landing on a device now signed in as user B —
+   a privacy leak, not untidiness. Needs a `deleteToken()` on the client plus
+   an `unregisterFcmToken` callable (or a `removeFcmToken` field on
+   `syncUserContext`, since it is already the only write door).
+2. **No re-sync on resume.** `syncUserContext`'s own docstring says "call it on
+   sign-in, on resume, and whenever the device timezone changes", but
+   `_ServerStateSyncState.onResume` (`last_puff_app.dart:115`) only calls
+   `pullPlanAdvice()` and `dayClock.refresh()`. So someone who grants
+   notifications later from OS Settings, or flies across timezones, is not
+   re-registered until the next cold session. Cheap fix, one line.
+3. **Flat array, no metadata, no age.** `fcmTokens: string[]` carries no
+   `platform`, no `updatedAt`, no cap; entries are only ever removed when a
+   send fails. Firebase's own guidance is to timestamp tokens and drop ones
+   untouched for ~2 months. Target shape: `users/{uid}/devices/{tokenHash}`
+   documents holding `{token, platform, appVersion, createdAt, lastSeenAt}` —
+   same ownership under the existing `users/{uid}/{document=**}` rule, prunable
+   by cron, removable one-device-at-a-time on sign-out, and it keeps the token
+   list out of the user doc that `planAdvice` reads on every resume.
+
+### 17.2 — Coach naming: reframe the ask, keep the 2am joke
+
+`obCoachNameAsk` already carries the 2am line, but the screen still frames
+Ember as *the* name: title "Meet {name}.", body "{name} is the name we gave
+it", CTA "Keep {name}". Founder direction: lead with "we call it Ember, but
+people find that hard to remember — what would you call it?", and make the 2am
+part actually funny. The point is ownership, not branding.
+
+Constraints on the rewrite (`lib/l10n/app_{en,es,fr,de,pt}.arb`):
+
+- `{name}` must stay grammatically indeclinable — no article, no elision, no
+  gendered agreement. `test/coach_name_test.dart` renders all 14 name-bearing
+  keys x 5 locales x 3 probe names and will catch a violation.
+- `test/l10n_parity_test.dart` pins that every locale interpolates exactly the
+  placeholders English does.
+- Consider softening `obCoachNameTitle` off "Meet {name}." for the same reason
+  the body is being rewritten — a title that announces the name undercuts a
+  body that offers to change it.
+
+### 17.3 — "Make it real." — the only control is in the top third
+
+`CommitStep` (`features/onboarding/steps/payoff_steps.dart:305`) lays out
+title -> subtitle -> 34px -> 170px hold ring -> 34px -> Freedom Day card ->
+`Spacer()` -> privacy caption. The ring's centre lands around 28% of screen
+height; the bottom ~45% of the screen is empty. The one interactive element on
+the screen sits in the worst thumb zone on a 6.7" phone, and it demands a
+**three-second** hold there.
+
+Fix directions:
+
+- Reorder: title/subtitle -> Freedom Day card -> `Spacer()` -> ring -> privacy
+  caption. The payoff sits in the read zone, the control sits under the thumb.
+- Swap `GestureDetector`'s `onTapDown`/`onTapUp` for a `Listener`
+  (`onPointerDown`/`onPointerUp`/`onPointerCancel`). The tap recognizer cancels
+  once the finger drifts past touch slop, so a thumb that shifts at 2.8s of a
+  3s hold loses the whole hold and the user does not know why.
+- Shorten the hold to ~1.5-2s. The haptic ramp reads the same and fails less.
+- Add a `Semantics(button: true, onTap: ...)` completion path. A hold-only
+  gesture is unreachable with switch access or a motor impairment, and it is
+  the one gate that cannot be skipped.
+
+### 17.4 — Onboarding answers: stored correctly, and deliberately not vectorised
+
+**Verified: nothing is being dropped.** Every answer in `OnboardingState` lands
+in the journey document — `UserProfile` takes email, gender, birthYear, whys,
+worries, attempts, frequency, firstPuff, coachName; `QuitPlan` takes method,
+paceDays, baselinePuffsPerDay, weeklySpend, strength
+(`onboarding_view_model.dart:399`). The server reads them back in
+`buildMemoryCard` (`functions/src/ai/memoryCard.ts`) as the `why:`, `fears:`
+and `about them:` lines of the user card, so Ember does see them on every turn.
+
+They are **not** in `users/{uid}/memories`, and that is the intended design
+(section 12): anything derivable from the journey belongs in the deterministic
+card, which is exact and costs nothing, and the vector layer is only for things
+a user said out loud. Embedding the quiz answers would pay for a fuzzy copy of
+data we already hold precisely.
+
+Two genuine gaps:
+
+1. **`plan.strength` never reaches the coach.** It is stored and it is in the
+   TS types (`functions/src/domain/types.ts:92`), but `describeProfile()` does
+   not print it. A 50mg salt user and a 3mg freebase user need different
+   withdrawal expectations — this is the cheapest tailoring win available.
+2. **Onboarding collects no free text at all.** Every answer is a chip or an
+   enum, so the vector layer starts empty and stays empty until the user talks
+   to Ember. One optional open field ("what does quitting get you?") at the
+   whys step would be the only onboarding answer that legitimately belongs in
+   `memories` — and it would need `journeyCodec.ts` sanitisation on decode,
+   the same treatment `coachName` and `moodNote` already get, before it can
+   enter a prompt.
+
+### 17.5 — Day-1: three forced showcases, and the checklist that lies
+
+`showcaseview: ^5.1.0` has been a declared dependency in `pubspec.yaml` with
+**zero imports** — the same dead-dependency shape `firebase_messaging` had
+before push was wired.
+
+The current `Day1Screen` (`features/day1/day1_screen.dart:130`) is worse than
+missing coach marks; two of its three checkboxes claim work the user did not do:
+
+| Task | What tapping it does today | Honest? |
+|---|---|---|
+| Log your first puff | calls `logPuff()` **for** the user, then ticks | No — logs a puff they did not take, and they never see the Home control |
+| Meet your coach | ticks, *then* pushes `/coach` | No — done before a word is typed |
+| Set your danger hours | ticks, *then* pushes `/settings` | No — done before an hour is set, and it lands on all of Settings, not the danger-hours sheet |
+
+`logPuff()` already sets task 0 itself (`journey_store.dart:273`), so the real
+Home gesture ticks the first box correctly — the checklist shortcut is a
+duplicate that fires without the user learning anything.
+
+**The design (founder, Aug 30):** teach the three moves in place, one at a
+time, immediately after onboarding, with no back-and-forth. Each step
+spotlights the real control and refuses everything else until the real action
+happens:
+
+1. Home -> the log button. Nothing else tappable until a puff is logged.
+2. Coach -> the composer. Nothing else tappable until a message actually sends.
+3. Danger hours -> the sheet. Nothing else tappable until an hour is saved.
+
+Then the checklist unlocks and "go for today" hands the app over.
+
+Implementation notes for whoever builds it:
+
+- Completion must be driven by the **real event** (a `logPuff`, a successful
+  coach send, a saved danger hour), never by the tooltip's own "Next" button.
+  That is the entire difference from what is there now.
+- The three steps span three routes, so `ShowCaseWidget.startShowCase([keys])`
+  cannot sequence them — it sequences within one tree. Drive it from a
+  provider holding the current `Day1Step` and let each screen start its own
+  single-key showcase when that step is active.
+- showcaseview's barrier absorbs stray taps, but it does **not** block the
+  system back gesture or the shell's tab bar (the tab bar is outside whichever
+  screen owns the showcase). Needs `PopScope(canPop: false)` plus disabling
+  the `StatefulShellRoute` tab bar while a step is live.
+- Route back to `/day1` after each step so the box visibly ticks — the tick is
+  the reward and it is why the flow does not feel like a hostage situation.
+- Persistence: `day1TasksDone` already lives on the journey and syncs, so the
+  tour resumes correctly and cannot replay after a reinstall+restore. A
+  separate "tour seen" flag is needed only if the tour must never re-run for
+  someone who skipped it.
+- Keep a "skip setup" that marks the tour **skipped** without ticking the
+  tasks. A forced tour with no exit is both a churn risk and a store-review
+  risk, and ticking boxes on a skip would reintroduce the exact lie above.
+- Verification is the on-device `integration_test` suite. A widget test cannot
+  meaningfully assert that an overlay barrier blocked a tap.
+
+### 17.6 — All five landed, Aug 30 2026
+
+> **Superseded in part by §17.8.** This section's "landed" claims were true of
+> the code and false of the product: nothing below had been deployed, and the
+> walkthrough carried four dead ends only a device could show. §17.8 is the
+> pass that closed the gap; the open-items list at the bottom of this section
+> is annotated with where each one went.
+
+Test-first throughout: each item opened with a test that failed on `main`.
+
+| # | Item | State |
+|---|---|---|
+| 17.1 | FCM device registry | ✅ `users/{uid}/devices/{tokenHash}`, sign-out release, resume re-sync, 60-day prune cron |
+| 17.2 | Coach naming copy | ✅ rewritten in all five locales |
+| 17.3 | "Make it real." reachability | ✅ ring in the lower third, `Listener`, 1.8s, semantic action |
+| 17.4 | Ember tailoring | ✅ strength in the card, a free-text step, vector seeding, a wider extraction gate |
+| 17.5 | Day-1 walkthrough | ✅ three forced showcases, and a checklist that stopped lying |
+
+**Gates:** `flutter analyze` clean · `flutter test` 502 · `functions`
+`npm run verify` 111 · `test:rules` 46 · `test:integration` 200.
+
+#### What changed, in one line each
+
+**17.1** — `deviceIdFor`/`registerDevice`/`unregisterDevice`/`listDeviceTokens`
+in `lib/push.ts`; `syncUserContext` gained `platform` and `removeFcmToken`;
+`pruneDevices` sweeps `collectionGroup('devices')` daily past 60 unseen days
+(needs the new `devices.lastSeenAt` COLLECTION_GROUP override in
+`firestore.indexes.json` — **deploy the indexes or the cron silently prunes
+nothing**). `sendToUser` reads the subcollection AND the legacy `fcmTokens`
+array, de-duplicated, so nobody loses push in the migration; dead tokens are
+pruned from whichever side they came from. Client: `PushService.deleteToken()`
+runs first and unconditionally on sign-out — it is the half that cannot fail
+for want of a network or a session — then the server row is released, bounded
+at 4s, before `_auth.signOut()`. New: `test/data/user_context_sync_test.dart`,
+`functions/test/integration/devices.test.ts`, four rules cases.
+
+**17.3** — `CommitStep` reordered to title → payoff card → `Spacer(flex: 2)` →
+ring → `Spacer()` → privacy line; ring centre moved from ~28% to ~68% of screen
+height. `GestureDetector` → `Listener`, so a thumb drifting past `kTouchSlop`
+mid-hold no longer silently throws the hold away. Hold 3s → 1.8s. A
+`Semantics(onTap:)` completes the commit, so the one un-skippable gate in the
+funnel is reachable with switch access. `Day1Screen` and `ObStep.commit` joined
+the layout sweep, which had never opened either.
+
+**17.4** — `strengthPhrase()` prints the pod strength as **device context, not
+a dose**: the HARD SAFETY RULES ban dosing guidance, and a mg/day figure is one
+whatever it is called. `notSure` passes through as "strength unknown" rather
+than defaulting to 50mg, which would state a fact the user declined to give.
+New `ObStep.whyWords` after `coachName` (Phase D, outside the 12-question
+progress bar). `WhyWords` mirrors `CoachName` but for prose — punctuation and
+emoji stay, invisibles go, 200 runes. Server `sanitizeProse()` folds newlines
+(a blank line is how user text fakes a prompt section) and **`moodNote` was
+hardened to match**: it had been trimmed and capped but never control-stripped,
+and it already reached the prompt through `ownWords()`. `seedCoachMemories`
+embeds the sentence into `users/{uid}/memories` as a `motivation`, reading it
+from the STORED journey — a client that could pass its own text could write
+itself a memory, and a memory goes into a system prompt. One-shot via
+`coachMemoriesSeeded`; a model outage returns `{seeded: 0}` and leaves the flag
+unset so the next launch retries.
+
+**17.4c** — `worthExtracting` swapped a five-word floor for an 8-character floor
+plus a stop-phrase list. The word count dropped "my dad died", "I got the job",
+"my wife left" — the shortest and heaviest things anyone types here. The trade
+is real and was measured: two `aiCoachChat` tests were asserting extraction cost
+and now assert what they meant (that a capped call spends *nothing more*, and
+that a streamed reply came from the stream) rather than a raw call count.
+
+**17.5** — Day-1 rows navigate and nothing else. `Day1TourStore` derives the
+active step from `day1TasksDone`, so there is no second copy of "have they
+logged a puff yet" to drift and the tour resumes correctly. Each step completes
+on the real event: a `logPuff` (which already ticked task 0 by itself), a coach
+reply that is **not** one of the two client-side failure templates, and
+`setDangerWindow` actually saving. The gate is four mechanisms because three of
+them look fine alone and leak in combination — the showcase barrier, an
+`IgnorePointer` over the rest of Home (one wrapper, not fifteen `enabled:`
+flags), `enabled: false` on the shell tabs and the quick-log `+` (both outside
+any barrier), and `PopScope` for the system back gesture. Step 3 anchors on the
+**Stats** heatmap, not the Settings row: same sheet, but a shell tab and a
+full-width target instead of a `ListView` child that may be off-screen. The
+danger-hours sheet is `isDismissible: false` while that step is live. "Skip
+setup" sets `day1TourSkipped` and **ticks nothing**.
+
+#### Deliberate deviations from the plan
+
+- **No `schemaVersion` bump** on the onboarding draft. Adding a key with a
+  default cannot make an older draft decode into garbage, and bumping would
+  throw away every in-flight draft to add a field.
+- **`appVersion` dropped** from the device document. Nothing on the client
+  could supply it without a new build-time define, and an optional field
+  nothing writes is a shelf.
+- **`pruneDevices` sweeps by collection group** rather than paging `users`.
+  The cron does not care who owns a stale device, and scanning the whole
+  userbase to find the few percent that have one is the expensive way to ask.
+
+#### Still open
+
+1. ~~**The walkthrough does not survive an app kill.**~~ Closed in §17.8: a
+   router redirect sends day-1 shell-tab visits with an unfinished, unskipped
+   checklist back to `/day1`.
+2. ~~**`coachNameInput` is still not persisted in the onboarding draft**~~ —
+   closed in §17.8, with the round-trip test the field never had.
+3. ~~**Deploy `firestore.indexes.json`**~~ — deployed Aug 30 (§17.8), along
+   with the functions themselves, which it turned out had never been deployed
+   either.
+4. **The docs/04 §9 15/15 coach eval has not been re-run.** The user card
+   gained two lines, which §9 counts as a prompt change. STILL OPEN — it is a
+   founder-judged manual protocol.
+5. ~~`integration_test/g_day1_tour_test.dart` and the updated
+   `b_onboarding_test.dart` have not been run on a device yet.~~ Run in
+   §17.8; the first run found four walkthrough dead ends this section's
+   checkmarks had hidden.
+6. ~~Pre-existing and untouched: `flutter analyze` still reports one unused
+   `kDebugMode` show.~~ Fixed in §17.8; `flutter analyze` is clean.
+
+#### Spec conflicts this opened (for §7)
+
+- Onboarding is now **20 linear screens**, not 19, against docs/02. The extra
+  one is Phase D (`whyWords`), so the twelve-question progress bar is unchanged.
+- docs/02 D6a names the third Day-1 move "first community peek"; the code ships
+  "set your danger hours". The code wins — a danger hour is a setting the app
+  acts on, and a community peek is a screen visit that teaches nothing.
+
+### 17.7 — The register gap (found in testing, Aug 30)
+
+Reported as "I registered and Firestore is still empty". It was.
+
+`users/{uid}` is written by `syncUserContext` and **nowhere else**, and
+`syncUserContext` runs from `JourneyStore._onSessionEstablished()` — which
+every session path called except `register()`:
+
+| Path | Called it |
+|---|---|
+| `restoreSession`, `logIn`, `signInWithApple`, `signInWithGoogle`, `startJourney` | yes |
+| **`register`** | **no** |
+
+So a freshly registered account had nothing server-side until it cleared the
+paywall twenty screens later. No `tz`, no `locale`, no `recalcHourUtc` — both
+nightly crons paged straight past it — and no device row, so nothing could
+push to it, including the nudge that would bring the user back to finish.
+
+`register()` now awaits the auth call and syncs, like every other path. After
+the await, never before: a refused registration is not a session, and syncing
+for one would create a row for a uid that does not exist.
+
+**Second finding, from the same report: the failure was invisible.** Every
+caller fire-and-forgets `sync()`, so an App Check refusal — which fails every
+callable at once and does not look like App Check — produced an empty `users`
+collection with no signal anywhere. `FirebaseUserContextRepository.sync()` now
+logs before rethrowing. Still swallowed at the call site; no longer silent.
+
+`test/data/user_context_sync_test.dart` grew from 4 cases to 11 and now pins
+the rule rather than one instance of it: registering syncs and binds
+analytics; a refused registration syncs nothing; a failing sync does not fail
+the registration; sign-in and restore sync; a launch with no session to
+restore syncs nothing.
+
+**Not a bug, but the same symptom:** `resolveBackendMode()` returns `fake` on
+desktop and web, where `NoopUserContextRepository` writes nothing at all. An
+empty Firestore after a desktop run is the fake backend working correctly.
+Check Authentication → Users to tell the two apart.
+
+### 17.8 — Second pass, Aug 30: landed for real this time
+
+Founder retest of §17.6's five checkmarks: "none are handled properly." Both
+halves of that were true at once, and the reconciliation matters:
+
+- **Nothing in §17.6 had been deployed.** `firebase functions:list` showed the
+  OLD `syncUserContext` live; `pruneDevices` and `seedCoachMemories` did not
+  exist in production; the `devices.lastSeenAt` index override was undeployed.
+  Every green local gate was true, and a phone talking to the real backend
+  could not write one device row or seed one memory. The lesson for next
+  time is one line: **a backend change is not done until `functions:list`
+  says so.**
+- **The walkthrough had four dead ends no local gate could see** — §17.6's
+  own device suites had never been run (its open item 5).
+
+#### The four walkthrough dead ends (each reproduced, then fixed)
+
+1. **Step one bricked the app.** Nothing called `complete(logPuff)`: logging
+   ticked task 0 but never returned to the checklist, so the step flipped to
+   `meetCoach` with the user still on a fully locked Home — tabs dead, back
+   swallowed, spotlight gone. Only exit: kill the app. Home's log handler now
+   completes the step (and skips the undo snack; the ticking box is the
+   feedback).
+2. **Step two ticked on arrival.** The seeded greeting is an ember-authored
+   message that appears without a word typed, and it passed every guard —
+   "Meet your coach" completed the moment the tab opened, the exact lie the
+   feature exists to remove. Completion now rides the send future
+   (`_finishTourStepAfter`): the user sent something, the full reply streamed
+   in, it is none of greeting/connectionLost/backendRejected — then a 2.5s
+   beat so the reply is seen landing, then the checklist.
+3. **Step three's target did not exist on a real day one.** Stats swapped the
+   trigger-hours card — the only `dangerHours` spotlight anchor — for its
+   empty state below two day-logs, and `InitialJourney` creates one. Every
+   test hid it behind the 12-day demo seed. The card now renders from day
+   one (the heat is honest with one day of data, and it IS the danger-hours
+   editor).
+4. **The showcase overlay sits above later routes.** The barrier is inserted
+   into the ROOT overlay, so the danger-hours sheet opened UNDER an
+   88%-opacity wash — the user did exactly what the tooltip asked and watched
+   the result happen behind a dark pane. `Day1Spotlight.dismissOverlay()` now
+   takes the highlight down the moment the real action starts (sheet opens,
+   coach message sends); the tour's locks stay until the step completes.
+
+#### And the traps around them
+
+- **Out-of-order row taps stranded the user**: `_begin` navigated by the
+  tapped row while the step derived "first undone" — tap "Meet your coach"
+  first and the coach screen was locked with the HOME spotlight active and no
+  tooltip anywhere. The store now records the requested step; the derivation
+  honours it while undone and falls back to first-undone on resume.
+- **No escape mid-step**: skip vanished after the first tick, back was
+  swallowed, and an offline user on the coach step (completion needs a real
+  reply) was imprisoned. Back now returns to the checklist ticking nothing,
+  the tooltip carries a "Maybe later" that does the same (`pause()`), and the
+  skip link survives until the last box ticks.
+- **A skip made tasks 1–2 permanently untickable**: `start()` refused after
+  `day1TourSkipped`, and the completion guards never passed again. A row tap
+  is explicit intent and now runs the single step; only the automatic entry
+  respects the skip flag.
+- **App kill orphaned the checklist** (§17.6 open item 1): a router redirect
+  now sends authed, day-1, unfinished, unskipped shell-tab visits to `/day1`
+  while the tour is not running. Old journeys (day > 1), skippers and the
+  demo seed are untouched.
+- Hardening: spotlight start waits out the route transition (the rect is
+  measured once, and measured mid-slide it highlights where the control was
+  passing through); `enableAutoScroll` for below-the-fold targets; the
+  `_started` latch resets on bail; every `ShowcaseView` call is guarded; the
+  spotlight dismisses its own overlay when its step deactivates or it
+  disposes; `day1TasksDone` decode defaulted like its sibling.
+
+#### FCM, finished to the industry-standard shape
+
+`unregister()` is bounded at every stage (2s per local FCM call + the 4s
+callable — a hung `deleteToken()` used to hold `signOut()` forever); a
+notifications-step grant now registers the token immediately instead of on
+the next resume; the resume re-sync only fires with a session (it used to
+mint a token and burn a refused callable on every sign-in-screen resume);
+`deleteAccount()` deletes the local token (the server rows already died with
+`recursiveDelete`); `unregisterDevice` no longer resurrects `fcmTokens: []`
+via `arrayRemove`-on-missing-field; Android background pushes land in a real
+`messages` channel (manifest names it, `PushService.ensureAndroidChannel()`
+creates it — a named-but-never-created channel files pushes under
+"Miscellaneous"); `PushService.routeFor`'s allow-list — the one untrusted
+-input parser on the client — got its unit tests. Accepted: a
+revoked-permission sign-out strands the server row until the 60-day prune;
+iOS has no push entitlements because iOS cannot be built at all (no Mac).
+
+#### Copy and the small debts
+
+`obCoachNameTitle` softened off "Meet {name}." in all five locales ("We call
+it {name}." / "Lo llamamos {name}." / "On l'appelle {name}." / "Wir nennen es
+{name}." / "Chamamos-lhe {name}."), which §17.2 asked for and §17.6 skipped.
+`day1TourCoachBody` hardcoded "Ember" in all five locales — Portuguese with
+an article on top — on the very step that introduces the coach; it now takes
+`{name}` and joined `coach_name_test.dart`'s matrix. `coachNameInput` is
+draft-persisted (with the round-trip test `whyWordsInput` was also missing).
+The whyWords step can no longer show zero forward affordances when the text
+is over-long. The 1.8s hold is pinned from both sides (every prior hold test
+pumped 3s, so a silent regression to 3s passed all of them). The unused
+`kDebugMode` show is gone: `flutter analyze` is clean.
+
+#### Deployed, Aug 30 2026
+
+`firebase deploy --only firestore:rules,firestore:indexes` and
+`--only functions` both completed: 19 functions updated, `pruneDevices` and
+`seedCoachMemories` **created** — 21 live, verified via `functions:list`.
+The `f_firebase_backend` suite gained the registry proof: a synced token
+lands as an owner-readable `users/{uid}/devices/{hash}` row with `platform`,
+`createdAt`, `lastSeenAt` and a hashed id, and `removeFcmToken` takes it
+back out.
+
+#### Gates
+
+`flutter analyze` 0 issues · `flutter test` 524 · functions `npm run verify`
+111 · `test:rules` 46 · `test:integration` 201.
+
+#### On-device (Pixel 8, wireless adb) — every suite green
+
+| Suite | Result |
+|---|---|
+| `a_launch_auth` | 5/5 |
+| `b_onboarding` (all 21 steps, incl. whyWords) | 4/4 |
+| `c_core_loop` | 7/7 |
+| `d_social` | 9/9 |
+| `e_settings_screens` | 7/7 |
+| `g_day1_tour` (4 cases → 8) | 8/8 |
+| `f_firebase_backend` — **against the deployed production backend**, incl. the new push-registry case | 13/13 |
+
+The first device run of `g_day1_tour` is what surfaced dead ends 2–4 above —
+`flutter test` structurally could not have (§17.6 built the suite and never
+ran it). The `f` run is the end-to-end proof of §17.1: a token synced from a
+real device landed as `users/{uid}/devices/{hash}` on the LIVE backend, with
+`platform`/`createdAt`/`lastSeenAt` and a hashed id, and `removeFcmToken`
+took it back out.
+
+#### Still open after this pass
+
+1. The docs/04 §9 15/15 coach eval — a founder-judged manual protocol; the
+   user card changed, so it is due before launch.
+2. Wireless adb drops the connection on long multi-suite runs (`Connection
+   closed before full header was received` while loading a suite); run the
+   on-device suites one file at a time, or plug the cable in.
+
+### 17.8 — App Check, and the setup script that could not detect its own failure
+
+The register fix in §17.7 worked; the log proved it (`syncUserContext failed —
+BackendRejectedException` fires twice, from a call that did not exist before).
+What it exposed was the real blocker underneath.
+
+**The launch used an unregistered token.** `.appcheck_token` holds
+`3112010d-…`; the app logged `5cead561-…`. A different value means the
+`--dart-define` was never passed, so `AndroidDebugProvider` minted a throwaway
+secret — which is what plain `flutter run` and every IDE run button do. Every
+callable then fails 403, `users/{uid}` is never written, and nothing on screen
+says so.
+
+Two fixes, because the diagnostic was as broken as the setup:
+
+1. **`activateAppCheck()` now shouts when the define is missing** — a banner at
+   activation, before the first callable, rather than a line you scroll back
+   for. `logAppCheckStatus()` already existed and is wired (`main.dart:35`),
+   but it runs `unawaited` and reads as one line among hundreds.
+2. **`tool/device.ps1` only checked that `.appcheck_token` EXISTED**, never
+   that its contents had been registered. A token registered on another
+   machine, or deleted from the console, left a file that looked correct while
+   every call 403'd.
+
+**A correction worth recording, because it nearly went in as a fix.** The first
+attempt verified registration by matching `debugtokens:list` output against
+base64 of the token. That cannot work: the list returns **resource ids, not
+token values** — registering `3112010d-…` produced resource `d604bda5-…`. Token
+values are secrets and are never echoed back, so *no query answers "is this
+token registered"*. The matching would never have matched, and the script would
+have re-registered **and `adb uninstall`ed on every single launch**.
+
+What shipped instead: a gitignored `.appcheck_token.registered` marker holding
+the last value registered from this checkout. Registration runs when the token
+changes, not per launch; `--force` makes it idempotent (it replaces the entry
+with the same display name rather than adding one — verified against the live
+project); and `-ReRegister` forces it when the console entry has been deleted.
+All four branches of the guard exercised against the real files on disk.

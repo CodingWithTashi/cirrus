@@ -137,6 +137,14 @@ abstract final class OnboardingDraftPersistence {
     'worries': s.worries.map((w) => w.name).toList(),
     'method': s.method.name,
     'paceDays': s.paceDays,
+    // The longest thing anyone types in the funnel, so it is the answer it
+    // would hurt most to lose to a process kill. No schema bump: an added key
+    // with a default cannot make an older draft decode into garbage, and
+    // bumping would throw away every in-flight draft to add a field.
+    'whyWordsInput': s.whyWordsInput,
+    // Same treatment: a typed coach name lost to a process kill resurfaces
+    // as "Ember" on resume, which reads as the rename not taking.
+    'coachNameInput': s.coachNameInput,
     'committed': s.committed,
   };
 
@@ -163,6 +171,8 @@ abstract final class OnboardingDraftPersistence {
       worries: set(WorryChip.values, json['worries']),
       method: enumByName(QuitMethod.values, json['method'], QuitMethod.taper),
       paceDays: json['paceDays'] as int? ?? 30,
+      whyWordsInput: json['whyWordsInput'] as String? ?? '',
+      coachNameInput: json['coachNameInput'] as String? ?? '',
       committed: json['committed'] as bool? ?? false,
     );
   }

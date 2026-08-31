@@ -87,6 +87,8 @@ void main() {
         worries: {WorryChip.stress, WorryChip.weight},
         method: QuitMethod.coldTurkey,
         paceDays: 90,
+        whyWordsInput: 'my daughter should never see me vape',
+        coachNameInput: 'Koda',
         committed: true,
       );
       await OnboardingDraftPersistence.save(draft, now: now);
@@ -107,6 +109,14 @@ void main() {
       expect(back.state.worries, {WorryChip.stress, WorryChip.weight});
       expect(back.state.method, QuitMethod.coldTurkey);
       expect(back.state.paceDays, 90);
+      // The two typed answers of Phase D. Both were once lost to a process
+      // kill — the why words as the longest thing anyone types here, the
+      // coach name as a rename that silently reverted to "Ember" on resume.
+      expect(
+        back.state.whyWordsInput,
+        'my daughter should never see me vape',
+      );
+      expect(back.state.coachNameInput, 'Koda');
       expect(back.state.committed, isTrue);
       // Never encoded: it describes a draft on disk, not the draft itself.
       expect(back.state.resumable, isNull);

@@ -47,7 +47,7 @@ void main() {
     }
   }
 
-  testWidgets('a guest walks all 20 steps to a created journey', (
+  testWidgets('a guest walks all 21 steps to a created journey', (
     tester,
   ) async {
     final e2e = await E2E.boot(tester);
@@ -109,7 +109,25 @@ void main() {
     await e2e.tapText(e2e.l10n.obCoachNameKeep(e2e.l10n.coachName));
     await e2e.settle();
 
-    // The hold-to-commit gesture is a 3s press, not a tap.
+    // D1c — the one free-text answer, and the only onboarding answer that
+    // seeds Ember's vector memory. Typed rather than skipped, because the
+    // skip path is the one that leaves the memory empty and the typed path is
+    // the one with a keyboard, a length cap and a codec behind it.
+    expect(e2e.showing(e2e.l10n.obWhyWordsCta), isTrue,
+        reason: 'the why-in-your-words step never arrived; '
+            'on screen: ${e2e.texts()}');
+    await e2e.enterField(
+      e2e.l10n.obWhyWordsFieldLabel,
+      'so I can run with her without stopping',
+    );
+    await e2e.tapText(e2e.l10n.obWhyWordsCta);
+    await e2e.settle();
+    expect(
+      e2e.container.read(onboardingProvider.notifier).chosenWhyWords,
+      'so I can run with her without stopping',
+    );
+
+    // The hold-to-commit gesture is a press, not a tap.
     final holdTarget = find.text(e2e.l10n.obCommitHold);
     if (holdTarget.evaluate().isNotEmpty) {
       final gesture = await tester.startGesture(

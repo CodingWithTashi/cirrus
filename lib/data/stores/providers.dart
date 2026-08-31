@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/logic/coach_name.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/analytics/analytics.dart';
@@ -150,9 +151,16 @@ final userContextRepositoryProvider = Provider<UserContextRepository>(
 /// brand word is hardcoded in Dart and every read site reads
 /// `ref.watch(coachNameProvider) ?? l10n.coachName`. Watched, not read, so a
 /// rename in Settings redraws the chat header and the memories screen at once.
-final coachNameProvider = Provider<String?>(
-  (ref) => ref.watch(quitStoreProvider)?.profile.coachName,
-);
+///
+/// Re-normalized on read: `CoachName.normalize` now capitalizes the first
+/// letter, and names stored before that change (or written by an older
+/// build) are on journeys already synced — running them through the same
+/// normalizer here is what makes "john" render as "John" everywhere without
+/// waiting for the user to re-save it.
+final coachNameProvider = Provider<String?>((ref) {
+  final stored = ref.watch(quitStoreProvider)?.profile.coachName;
+  return stored == null ? null : CoachName.normalize(stored);
+});
 
 /// The validated, server-owned coach name. See [CoachNameRepository].
 final coachNameRepositoryProvider = Provider<CoachNameRepository>(

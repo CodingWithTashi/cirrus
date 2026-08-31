@@ -35,6 +35,20 @@ void main() {
     'memoriesForgotten',
     'settingsMemories',
     'memoriesLoading',
+    // The three onboarding keys were only ever checked through `renderAll`,
+    // so nothing looked at the ARB source of the very screen that offers the
+    // rename. Rewriting that copy is exactly when a brand word gets typed in
+    // by hand instead of interpolated.
+    'obCoachNameTitle',
+    'obCoachNameAsk',
+    'obCoachNameKeep',
+    'obWhyWordsTitle',
+    'obWhyWordsNote',
+    // The Day-1 walkthrough step that introduces the coach. It hardcoded
+    // "Ember" in all five locales — Portuguese with an article on top — so
+    // the very tooltip pointing at the composer told everyone who renamed
+    // their coach that the rename didn't take.
+    'day1TourCoachBody',
   ];
 
   Map<String, dynamic> arb(String locale) =>
@@ -58,9 +72,35 @@ void main() {
       l10n.obCoachNameTitle(name),
       l10n.obCoachNameAsk(name),
       l10n.obCoachNameKeep(name),
+      l10n.obWhyWordsTitle(name),
+      l10n.obWhyWordsNote(name),
+      l10n.day1TourCoachBody(name),
       l10n.coachRenamed(name),
     ];
   }
+
+  /// The 2am line is the joke that makes the invitation land, and a joke is
+  /// the first thing a translator drops when a sentence gets long. Every
+  /// locale writes the hour with a digit, so this holds across all five.
+  test('the 2am beat survives every translation', () {
+    for (final locale in locales) {
+      expect(
+        arb(locale)['obCoachNameAsk'] as String,
+        contains('2'),
+        reason: '$locale lost the 2am line from the naming ask',
+      );
+    }
+  });
+
+  /// The screen exists to hand the name over. Copy that only announces the
+  /// default is the version this replaced.
+  test('the naming ask offers the choice rather than stating the name', () {
+    // "is the name we gave it" — a statement, not an invitation.
+    expect(
+      arb('en')['obCoachNameAsk'] as String,
+      isNot(contains('is the name we gave')),
+    );
+  });
 
   test('the default is still Ember in every locale', () {
     for (final locale in locales) {

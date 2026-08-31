@@ -102,6 +102,10 @@ class FirebaseCoachRepository implements CoachRepository {
   }
 
   @override
+  Future<void> seedMemories() =>
+      _functions.call('seedCoachMemories', const {});
+
+  @override
   Future<List<CoachMemory>> memories() async {
     final json = await _functions.call('coachMemories');
     final items = json['memories'];

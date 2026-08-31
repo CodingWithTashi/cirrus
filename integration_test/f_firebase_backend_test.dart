@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/data/api/firebase/app_check_setup.dart';
+import 'package:last_puff/data/api/firebase/functions_client.dart';
 import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/data/stores/providers.dart';
@@ -115,7 +116,7 @@ void main() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     expect(uid, isNotNull, reason: 'no auth session; on screen: ${e2e.texts()}');
 
-    // Skip the 19 screens — they are covered against the fake backend. What
+    // Skip the 20 screens — they are covered against the fake backend. What
     // matters here is that the BACKEND mints and stores the journey.
     await e2e.container.read(quitStoreProvider.notifier).startJourney(
           profile: const UserProfile(
@@ -159,6 +160,58 @@ void main() {
     expect(user.data()!['tz'], isNotNull, reason: 'no timezone recorded');
     expect(user.data()!['recalcHourUtc'], isA<int>(),
         reason: 'the cron key is missing, so both crons would skip this user');
+  });
+
+  testWidgets('the push registry registers on sync and releases on request', (
+    tester,
+  ) async {
+    // §17.1 end to end, against the DEPLOYED backend: a token carried by
+    // `syncUserContext` must land as a `users/{uid}/devices/{hash}` row
+    // (owner-readable, so the client can verify its own registration), and
+    // `removeFcmToken` — the field sign-out sends — must take it back out.
+    // The token is fabricated: this device has no notification grant during
+    // an E2E run, and what is under test is the registry, not FCM itself.
+    final e2e = await session(tester);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final token = 'e2e-token-${DateTime.now().millisecondsSinceEpoch}';
+
+    await e2e.container
+        .read(userContextRepositoryProvider)
+        .sync(fcmToken: token);
+    await e2e.waitFor(const Duration(seconds: 4));
+
+    final devices = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('devices');
+    final registered = (await devices.get()).docs
+        .where((d) => d.data()['token'] == token)
+        .toList();
+    expect(
+      registered,
+      hasLength(1),
+      reason: 'no devices row appeared for the synced token — the deployed '
+          'syncUserContext predates the registry',
+    );
+    final row = registered.single;
+    expect(row.data()['platform'], 'android');
+    expect(row.data()['lastSeenAt'], isNotNull, reason: 'no freshness signal');
+    expect(row.data()['createdAt'], isNotNull);
+    expect(
+      row.id.contains(token),
+      isFalse,
+      reason: 'the document id must be a hash — a token is a credential and '
+          'a doc id leaks into logs and index entries',
+    );
+
+    // Release through the exact field sign-out sends.
+    await LpFunctions().call('syncUserContext', {'removeFcmToken': token});
+    await e2e.waitFor(const Duration(seconds: 4));
+
+    final after = (await devices.get()).docs
+        .where((d) => d.data()['token'] == token)
+        .toList();
+    expect(after, isEmpty, reason: 'the released device row survived');
   });
 
   testWidgets('a puff written locally reaches the real journey document', (

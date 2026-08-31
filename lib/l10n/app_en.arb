@@ -463,7 +463,7 @@
   "obRatingQuote1": "\"The panic button got me through week one. I'd have caved on day 3 without it.\"",
   "obRatingQuote2": "\"First app that didn't talk to me like a doctor or my mom.\"",
   "obRatingCta": "Rate Cirrus",
-  "obCoachNameTitle": "Meet {name}.",
+  "obCoachNameTitle": "We call it {name}.",
   "@obCoachNameTitle": {
     "placeholders": {
       "name": {
@@ -472,7 +472,7 @@
     }
   },
   "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
-  "obCoachNameAsk": "{name} is the name we gave it. But a friend you name yourself is more yours — call it whatever you'd actually text at 2am.",
+  "obCoachNameAsk": "We went with {name} because it needed one. Nobody remembers a name someone else picked, though — so if you have a better idea, use it. Whatever you'd actually text at 2am, mid-argument with yourself in the kitchen.",
   "@obCoachNameAsk": {
     "placeholders": {
       "name": {
@@ -509,6 +509,28 @@
   "obCoachNameSuggestion2": "Fin",
   "obCoachNameSuggestion3": "Koda",
   "obCoachNameSuggestion4": "Wren",
+  "obWhyWordsTitle": "Tell {name} one thing.",
+  "@obWhyWordsTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obWhyWordsSubtitle": "Why now? Not the health-class answer — the real one.",
+  "obWhyWordsFieldLabel": "In your own words",
+  "obWhyWordsHint": "so I can run with her without stopping",
+  "obWhyWordsNote": "{name} will remember this.",
+  "@obWhyWordsNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "obWhyWordsErrorLong": "Keep it to 200 characters or fewer.",
+  "obWhyWordsCta": "That's why",
+  "obWhyWordsSkip": "Skip this",
   "obNotifTitle": "Backup, exactly when you cave.",
   "obNotifSubtitle": "Not spam. One nudge before your danger hours, one when you hit a milestone.",
   "obNotifPreviewTime": "Fri 9:54 PM",
@@ -568,6 +590,20 @@
   "day1Task2Sub": "30-sec hello. It already knows your triggers.",
   "day1Task3": "Set your danger hours",
   "day1Task3Sub": "when do you cave? we'll show up early",
+  "day1Skip": "Skip setup for now",
+  "day1TourLogTitle": "This is the whole app.",
+  "day1TourLogBody": "Every puff, tapped here. Honest counts are the only thing that makes the plan real — go on, log one now.",
+  "day1TourCoachTitle": "Say anything.",
+  "day1TourCoachBody": "{name} has already read your plan — your numbers, your triggers, the hours you struggle. Type a hello and see.",
+  "@day1TourCoachBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "day1TourHoursTitle": "When do you cave?",
+  "day1TourHoursBody": "Pick the window you struggle in. We show up ten minutes before it, on your phone, without you asking.",
   "day1FreedomNote": "Freedom Day: {date} · {days} days out · plan armed",
   "@day1FreedomNote": {
     "placeholders": {

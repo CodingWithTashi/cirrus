@@ -8,14 +8,26 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../day1/day1_spotlight.dart';
 
 /// Danger-hours editor sheet — reachable from Settings AND by tapping the
 /// Stats trigger-hours heatmap (frame 38 note: "Heatmap taps into
 /// danger-hours editor").
 void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
+  // Locked shut while the Day-1 walkthrough is on this step: the sheet IS
+  // the lesson, and swiping it away unsaved would leave the step unfinished
+  // with nothing on screen explaining why.
+  final duringTour = ref.read(day1TourStepProvider) == Day1TourStep.dangerHours;
+  // The spotlight has done its job — the user tapped the real control. Down
+  // it comes, or the sheet (pushed under the showcase's root-overlay entry)
+  // opens behind the barrier.
+  if (duringTour) Day1Spotlight.dismissOverlay();
   showModalBottomSheet<void>(
     context: context,
+    isDismissible: !duringTour,
+    enableDrag: !duringTour,
     builder: (sheetContext) {
       var start = ref.read(settingsStoreProvider).dangerStartHour;
       var span = (ref.read(settingsStoreProvider).dangerEndHour - start).clamp(
@@ -79,6 +91,15 @@ void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
                           (start + span) % 24 == 0 ? 24 : start + span,
                         );
                     Navigator.of(sheetContext).pop();
+                    // The real move, and the only thing that ticks the box:
+                    // an hour actually saved. `dangerHoursCustom` flipping
+                    // true is what separates a chosen window from the shipped
+                    // default, and tapping "Save" is where that happens.
+                    if (duringTour) {
+                      ref
+                          .read(day1TourProvider.notifier)
+                          .complete(Day1TourStep.dangerHours);
+                    }
                   },
                   child: Container(
                     height: 52,

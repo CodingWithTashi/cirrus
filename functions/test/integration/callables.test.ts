@@ -16,7 +16,14 @@ import {panicSession} from '../../src/handlers/panicSession';
 import {syncUserContext} from '../../src/handlers/syncUserContext';
 import {reportReply} from '../../src/handlers/reportReply';
 import {matchedTestimonials} from '../../src/handlers/testimonials';
-import {db, postsCol, testimonialsCol, userDoc} from '../../src/lib/firestore';
+import {
+  db,
+  devicesCol,
+  postsCol,
+  testimonialsCol,
+  userDoc,
+} from '../../src/lib/firestore';
+import {listDeviceTokens} from '../../src/lib/push';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -74,19 +81,46 @@ describe('syncUserContext', () => {
   });
 
   it('collects an FCM token without duplicating it', async () => {
-    await syncUserContext.run(caller({fcmToken: 'device-1'}));
-    await syncUserContext.run(caller({fcmToken: 'device-1'}));
-    await syncUserContext.run(caller({fcmToken: 'device-2'}));
+    await syncUserContext.run(
+      caller({fcmToken: 'device-1', platform: 'android'}),
+    );
+    await syncUserContext.run(
+      caller({fcmToken: 'device-1', platform: 'android'}),
+    );
+    await syncUserContext.run(caller({fcmToken: 'device-2', platform: 'ios'}));
 
-    expect((await userDoc('alice').get()).get('fcmTokens')).toEqual([
+    expect((await listDeviceTokens('alice')).toSorted()).toEqual([
       'device-1',
       'device-2',
     ]);
+    expect((await devicesCol('alice').get()).size).toBe(2);
   });
 
   it('does not write an empty token', async () => {
     await syncUserContext.run(caller({fcmToken: ''}));
-    expect((await userDoc('alice').get()).get('fcmTokens')).toBeUndefined();
+    expect((await devicesCol('alice').get()).empty).toBe(true);
+  });
+
+  it('releases the device on sign-out', async () => {
+    // The bug this closes: a token went in and could only ever come back out
+    // when a send to it failed, so the next person to use the phone received
+    // the previous account's pushes.
+    await syncUserContext.run(caller({fcmToken: 'phone'}));
+    expect(await listDeviceTokens('alice')).toEqual(['phone']);
+
+    await syncUserContext.run(caller({removeFcmToken: 'phone'}));
+
+    expect(await listDeviceTokens('alice')).toEqual([]);
+  });
+
+  it('leaves the rest of the user document standing when it releases one', async () => {
+    await userDoc('alice').set({entitlement: {tier: 'premium'}}, {merge: true});
+    await syncUserContext.run(caller({fcmToken: 'phone'}));
+    await syncUserContext.run(caller({removeFcmToken: 'phone'}));
+
+    const snap = await userDoc('alice').get();
+    expect(snap.exists).toBe(true);
+    expect(snap.get('entitlement').tier).toBe('premium');
   });
 
   it('never clobbers the server-owned fields beside it', async () => {

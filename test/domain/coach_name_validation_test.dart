@@ -58,5 +58,19 @@ void main() {
       expect(CoachName.normalize('  Wren  '), 'Wren');
       expect(CoachName.normalize('Ana   Maria'), 'Ana Maria');
     });
+
+    test('normalize capitalizes the first letter, and only the first', () {
+      // The name heads the chat screen and signs every message; "john" up
+      // there reads as a bug. The REST stays as typed — "AJ" and "McCoy" are
+      // spellings, not mistakes.
+      expect(CoachName.normalize('john'), 'John');
+      expect(CoachName.normalize('  john smith '), 'John smith');
+      expect(CoachName.normalize('élodie'), 'Élodie');
+      expect(CoachName.normalize('AJ'), 'AJ');
+      expect(CoachName.normalize('mcCoy'), 'McCoy');
+      // Scripts with no case pass through untouched.
+      expect(CoachName.normalize('さくら'), 'さくら');
+      expect(CoachName.normalize('мира'), 'Мира');
+    });
   });
 }

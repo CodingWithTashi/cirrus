@@ -28,6 +28,48 @@ describe('worthExtracting — the gate before the model call', () => {
       worthExtracting("my sister's wedding is in March and I want to be done by then"),
     ).toBe(true);
   });
+
+  it('does not lose a short disclosure to a word count', () => {
+    // The old gate wanted five words, so the shortest and heaviest things
+    // anyone says here fell straight through it. These are exactly the
+    // sentences a coach that remembers is FOR.
+    for (const text of [
+      'my dad died',
+      'I got the job!',
+      'my wife left',
+      'she said yes',
+      'I am pregnant',
+    ]) {
+      expect(worthExtracting(text), text).toBe(true);
+    }
+  });
+
+  it('still refuses the noise a word count was there to catch', () => {
+    // The gate exists to avoid buying an extraction call on nothing. It is a
+    // cost heuristic, not a classifier, so it stays conservative and cheap.
+    for (const text of [
+      'ok',
+      'okay thanks',
+      'thanks!',
+      'yeah',
+      'yeah ok',
+      'no',
+      'nope',
+      'sure',
+      'lol',
+      'k',
+      '   ',
+      'got it',
+      'thank you so much',
+      'ok cool thanks',
+    ]) {
+      expect(worthExtracting(text), text).toBe(false);
+    }
+  });
+
+  it('still skips a chip however it is written', () => {
+    expect(worthExtracting('  [progress]  ')).toBe(false);
+  });
 });
 
 describe('parseMemories', () => {

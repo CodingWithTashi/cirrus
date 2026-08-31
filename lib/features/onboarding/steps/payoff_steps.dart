@@ -224,9 +224,15 @@ class CommitStep extends ConsumerStatefulWidget {
 
 class _CommitStepState extends ConsumerState<CommitStep>
     with SingleTickerProviderStateMixin {
+  /// 1.8s, down from 3.
+  ///
+  /// Three seconds reads as deliberate on paper and as a stuck button in the
+  /// hand — long enough that a thumb settles and shifts, which is the drift
+  /// the old tap recognizer used to reject. The haptic ramp is what makes the
+  /// gesture feel weighty; the duration was only ever carrying the ramp.
   late final AnimationController _hold = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 3),
+    duration: const Duration(milliseconds: 1800),
     reverseDuration: const Duration(milliseconds: 500),
   );
   bool _done = false;
@@ -250,15 +256,21 @@ class _CommitStepState extends ConsumerState<CommitStep>
       }
     });
     _hold.addStatusListener((status) {
-      if (status == AnimationStatus.completed && !_done) {
-        _done = true;
-        LpHaptics.celebrate();
-        ref.read(onboardingProvider.notifier).markCommitted();
-        setState(() {});
-        Timer(const Duration(milliseconds: 1400), () {
-          if (mounted) ref.read(onboardingProvider.notifier).next();
-        });
-      }
+      if (status == AnimationStatus.completed) _finish();
+    });
+  }
+
+  /// The commit itself, reached either by holding the ring out or by the
+  /// semantic action below. Idempotent: `_done` is set first, so the second
+  /// caller of a race does nothing.
+  void _finish() {
+    if (_done) return;
+    _done = true;
+    LpHaptics.celebrate();
+    ref.read(onboardingProvider.notifier).markCommitted();
+    setState(() {});
+    Timer(const Duration(milliseconds: 1400), () {
+      if (mounted) ref.read(onboardingProvider.notifier).next();
     });
   }
 
@@ -326,52 +338,7 @@ class _CommitStepState extends ConsumerState<CommitStep>
                 style: LpType.body14(lp.textSecondary),
               ),
             ),
-            const SizedBox(height: 34),
-            Center(
-              child: GestureDetector(
-                onTapDown: (_) {
-                  if (!_done) _hold.forward();
-                },
-                onTapUp: (_) {
-                  if (!_done) _hold.reverse();
-                },
-                onTapCancel: () {
-                  if (!_done) _hold.reverse();
-                },
-                child: AnimatedBuilder(
-                  animation: _hold,
-                  builder: (context, _) => ProgressRing(
-                    progress: _hold.value,
-                    size: 170,
-                    strokeWidth: 8,
-                    color: lp.ember,
-                    child: Container(
-                      width: 132,
-                      height: 132,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: lp.surface,
-                        border: Border.all(color: lp.border, width: 1.5),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('🔥', style: TextStyle(fontSize: 26)),
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.obCommitHold,
-                            textAlign: TextAlign.center,
-                            style: LpType.heading(lp.textPrimary, size: 15),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 34),
+            const SizedBox(height: 30),
             AnimatedScale(
               scale: _done ? 1 : 0.96,
               duration: LpMotion.normal,
@@ -401,6 +368,73 @@ class _CommitStepState extends ConsumerState<CommitStep>
                       style: LpType.body13(lp.textSecondary),
                     ),
                   ],
+                ),
+              ),
+            ),
+            // The ring lives BELOW the payoff card, not above it. The frame
+            // put it at ~28% of screen height with the bottom 45% empty,
+            // which stranded the only control on the screen outside the thumb
+            // arc of a 6.7" phone. Read the date, then reach for the ring.
+            // Weighted so it lands in the lower third without touching the
+            // bottom edge.
+            const Spacer(flex: 2),
+            Center(
+              child: Semantics(
+                container: true,
+                button: true,
+                // The hold is a gesture some people cannot make — switch
+                // access, a tremor, one working hand — and this is the one
+                // gate in the funnel with no way around it. The semantic
+                // action is that way around.
+                label: l10n.obCommitHold.replaceAll('\n', ' '),
+                onTap: _finish,
+                excludeSemantics: true,
+                child: Listener(
+                  // A raw pointer listener, never a tap recognizer: a tap
+                  // rejects the moment the pointer drifts past kTouchSlop, so
+                  // a thumb settling two thirds of the way through the hold
+                  // silently threw the whole hold away.
+                  behavior: HitTestBehavior.opaque,
+                  onPointerDown: (_) {
+                    if (!_done) _hold.forward();
+                  },
+                  onPointerUp: (_) {
+                    if (!_done) _hold.reverse();
+                  },
+                  onPointerCancel: (_) {
+                    if (!_done) _hold.reverse();
+                  },
+                  child: AnimatedBuilder(
+                    animation: _hold,
+                    builder: (context, _) => ProgressRing(
+                      progress: _hold.value,
+                      size: 170,
+                      strokeWidth: 8,
+                      color: lp.ember,
+                      child: Container(
+                        width: 132,
+                        height: 132,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: lp.surface,
+                          border: Border.all(color: lp.border, width: 1.5),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🔥', style: TextStyle(fontSize: 26)),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.obCommitHold,
+                              textAlign: TextAlign.center,
+                              style: LpType.heading(lp.textPrimary, size: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -589,6 +623,13 @@ class NotificationsStep extends ConsumerWidget {
             // §8 re-asks after the first survived craving.
             final granted = await PushService.requestPermission();
             ref.read(analyticsProvider).notifPrompt(granted: granted);
+            // Register the freshly minted token NOW. The session already
+            // exists (startJourney ran before this step), and the only other
+            // registration points are the next resume or the next cold start
+            // — a grant that waits for those loses the first day of pushes.
+            if (granted) {
+              ref.read(userContextRepositoryProvider).sync().ignore();
+            }
             if (context.mounted) context.go(Routes.paywall);
           },
         ),

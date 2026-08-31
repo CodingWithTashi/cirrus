@@ -98,6 +98,80 @@ describe('the user card', () => {
     expect(card.text).toContain('tried 2-5 times before');
   });
 
+  it('carries the reason in the words they used', () => {
+    // The chips say "health, money". This says what they actually meant, and
+    // it is the only sentence in the card the user wrote themselves.
+    const card = buildMemoryCard(
+      journey({
+        profile: {
+          alias: 'SteadyFalcon42',
+          avatarEmoji: 'E',
+          tier: 'premium',
+          email: null,
+          gender: 'woman',
+          birthYear: 2001,
+          whys: ['health', 'money'],
+          worries: ['cravings'],
+          attempts: 'twoToFive',
+          frequency: 'always',
+          firstPuff: 'withinFive',
+          whyWords: 'so I can run with her without stopping',
+        },
+      }),
+      NOW,
+      TZ,
+    );
+    expect(card.text).toContain('so I can run with her without stopping');
+  });
+
+  it('says nothing was given rather than inventing a reason', () => {
+    // The seed fixture skipped the question, which is the common case and the
+    // one where a card that guessed would be worst.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).toContain('not given');
+  });
+
+  it('names the nicotine strength they are actually vaping', () => {
+    // Stored since onboarding, typed on both sides, and never shown to the
+    // model — so Ember gave a 50mg salt user the same withdrawal picture as a
+    // 20mg one. The cheapest tailoring on the shelf.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).toContain('50mg');
+  });
+
+  it('describes the device, never a dose', () => {
+    // HARD SAFETY RULES (docs/04 §4): no dosing guidance of any kind. What
+    // the coach needs is what they are vaping, not milligrams per day — a
+    // figure that reads as a dose is one Ember may end up discussing as one.
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).not.toMatch(/mg\s*(a|per)\s*day/i);
+    expect(card.text.toLowerCase()).not.toContain('dose');
+    expect(card.text.toLowerCase()).not.toContain('nicotine intake');
+  });
+
+  it('admits it when they did not know their strength', () => {
+    // "notSure" is a real answer and the honest thing is to pass it through.
+    // Defaulting it to 50mg in the card would have Ember state a fact about
+    // someone that they explicitly declined to give us.
+    const card = buildMemoryCard(
+      journey({
+        plan: {
+          method: 'taper',
+          paceDays: 30,
+          startDate: '2026-08-04',
+          baselinePuffsPerDay: 200,
+          weeklySpend: 70.0,
+          strength: 'notSure',
+          stretchDays: 0,
+        },
+      }),
+      NOW,
+      TZ,
+    );
+    expect(card.text).toContain('strength unknown');
+    expect(card.text).not.toContain('50mg');
+  });
+
   it('never phrases prior attempts as a failure', () => {
     // docs/04's voice rule. "tried 2-5 times before" is history; a count with
     // the word "failed" attached is a scoreboard.

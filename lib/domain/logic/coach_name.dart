@@ -35,10 +35,21 @@ abstract final class CoachName {
   /// entirely in a support ticket.
   static final RegExp _invisible = RegExp(r'[\p{Cf}\p{Co}]', unicode: true);
 
-  /// The name as it should be stored: trimmed, with internal runs of
-  /// whitespace collapsed so "Wren    " and "Wren" cannot both exist.
-  static String normalize(String raw) =>
-      raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  /// The name as it should be stored: trimmed, internal runs of whitespace
+  /// collapsed so "Wren    " and "Wren" cannot both exist, and the first
+  /// letter capitalized — the name heads the chat screen and signs every
+  /// message, and "john" up there reads as a bug, not a choice. First letter
+  /// ONLY: the rest stays exactly as typed, so "AJ" and "McCoy" survive.
+  static String normalize(String raw) {
+    final collapsed = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (collapsed.isEmpty) return collapsed;
+    // By rune, not by code unit: a name can open with a character outside the
+    // basic plane, and uppercasing half a surrogate pair corrupts it.
+    final first = String.fromCharCode(collapsed.runes.first);
+    final upper = first.toUpperCase();
+    if (upper == first) return collapsed;
+    return upper + collapsed.substring(first.length);
+  }
 
   /// Null when [raw] is usable.
   static CoachNameError? validate(String raw) {

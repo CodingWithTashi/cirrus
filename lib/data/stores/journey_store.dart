@@ -168,8 +168,25 @@ class JourneyStore extends Notifier<JourneyState?> {
   }
 
   /// Throws [EmailAlreadyInUseException].
-  Future<void> register({required String email, required String password}) =>
-      _auth.register(email: email, password: password);
+  ///
+  /// Establishes a session like every other path here, so it syncs like every
+  /// other path here. It did not, and that was the whole reason a freshly
+  /// registered account had NOTHING in Firestore: `users/{uid}` is written by
+  /// `syncUserContext` and nowhere else, so an account that registered and
+  /// stopped before the paywall was invisible to the server — no timezone, no
+  /// locale, no `recalcHourUtc`, no device row. Both nightly crons skipped it,
+  /// and nothing could push to it, including the nudge that would bring the
+  /// user back to finish.
+  ///
+  /// After the await, never before: a refused registration is not a session,
+  /// and syncing for one would create a row for a uid that does not exist.
+  Future<void> register({
+    required String email,
+    required String password,
+  }) async {
+    await _auth.register(email: email, password: password);
+    _onSessionEstablished();
+  }
 
   Future<void> requestPasswordReset(String email) =>
       _auth.requestPasswordReset(email);
@@ -192,7 +209,20 @@ class JourneyStore extends Notifier<JourneyState?> {
     // never lands. On a shared phone the alternative is the next person's
     // events arriving under the last person's user id.
     ref.read(analyticsProvider).reset();
-    _auth.signOut().ignore();
+    // Release the push registration BEFORE the credential goes, and chain the
+    // two rather than firing both: `syncUserContext` is a callable, so it
+    // carries the caller's ID token, and a release that raced past
+    // `_auth.signOut()` would arrive unauthenticated and do nothing at all.
+    // Exactly the same shared-phone case as the analytics reset above — this
+    // one is the pushes rather than the events.
+    //
+    // `unregister()` is bounded and never throws, so `whenComplete` always
+    // runs and the sign-out cannot be held up by a slow backend.
+    ref
+        .read(userContextRepositoryProvider)
+        .unregister()
+        .whenComplete(() => _auth.signOut().ignore())
+        .ignore();
   }
 
   /// Erasure, and the one lifecycle call that is deliberately NOT optimistic.
@@ -205,6 +235,13 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<void> deleteAccount() async {
     await _auth.deleteAccount();
     ref.read(analyticsProvider).reset();
+    // The server side of the push registry died with `recursiveDelete`; this
+    // is the local half — without it the device keeps a live FCM token bound
+    // to an account that no longer exists. After the await on purpose: a
+    // refused deletion must not silence the account it failed to delete. The
+    // release callable inside will fail (no session any more) and is
+    // swallowed; the `deleteToken` is the part that matters.
+    ref.read(userContextRepositoryProvider).unregister().ignore();
     state = null;
   }
 
@@ -441,6 +478,14 @@ class JourneyStore extends Notifier<JourneyState?> {
   }
 
   // ---- misc -----------------------------------------------------------------
+
+  /// They chose not to be walked through setup. Ticks nothing — see
+  /// [JourneyState.day1TourSkipped].
+  void skipDay1Tour() {
+    final s = state;
+    if (s == null) return;
+    _commit(s.copyWith(day1TourSkipped: true));
+  }
 
   void completeDay1Task(int index) {
     final s = state;

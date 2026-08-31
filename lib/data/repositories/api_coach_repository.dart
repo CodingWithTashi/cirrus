@@ -45,5 +45,10 @@ class ApiCoachRepository implements CoachRepository {
   Future<List<CoachMemory>> memories() async => const [];
 
   @override
+  // There is no vector store behind the demo backend, and seeding a fixture
+  // one would show the user "memories" of things they never said.
+  Future<void> seedMemories() async {}
+
+  @override
   Future<void> forgetMemory(String id) async {}
 }

@@ -20,6 +20,7 @@ abstract final class JourneyCodec {
     'earnedBadges': s.earnedBadges.toList(),
     'lastPuffAt': s.lastPuffAt == null ? null : encodeTimestamp(s.lastPuffAt!),
     'day1TasksDone': s.day1TasksDone.toList(),
+    'day1TourSkipped': s.day1TourSkipped,
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
     'moodCheckIns': s.moodCheckIns,
     'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
@@ -46,7 +47,12 @@ abstract final class JourneyCodec {
     lastPuffAt: json['lastPuffAt'] == null
         ? null
         : decodeTimestamp(json['lastPuffAt'] as String),
-    day1TasksDone: (json['day1TasksDone'] as List).cast<int>().toSet(),
+    // Both defaulted: a journey written before the checklist (or the tour)
+    // existed is missing these keys, and a decode that threw on one would
+    // take the whole account down on the next launch.
+    day1TasksDone:
+        (json['day1TasksDone'] as List? ?? const []).cast<int>().toSet(),
+    day1TourSkipped: json['day1TourSkipped'] as bool? ?? false,
     pendingSlipCleanDays: json['pendingSlipCleanDays'] as int?,
     moodCheckIns: json['moodCheckIns'] as int,
     planAdvice: json['planAdvice'] == null
@@ -67,6 +73,7 @@ abstract final class JourneyCodec {
     'frequency': p.frequency?.name,
     'firstPuff': p.firstPuff?.name,
     'coachName': p.coachName,
+    'whyWords': p.whyWords,
   };
 
   static UserProfile decodeProfile(Map<String, dynamic> json) => UserProfile(
@@ -92,6 +99,9 @@ abstract final class JourneyCodec {
     frequency: enumByNameOrNull(VapeFrequency.values, json['frequency']),
     firstPuff: enumByNameOrNull(FirstPuffWindow.values, json['firstPuff']),
     coachName: json['coachName'] as String?,
+    // Every journey written before the question existed is missing this key,
+    // so it decodes as "never asked" rather than throwing.
+    whyWords: json['whyWords'] as String?,
   );
 
   static Map<String, dynamic> encodePlan(QuitPlan p) => {

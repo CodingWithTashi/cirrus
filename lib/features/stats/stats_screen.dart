@@ -11,7 +11,9 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../day1/day1_spotlight.dart';
 import '../settings/danger_hours_sheet.dart';
 import '../../domain/logic/danger_hours.dart';
 import '../../domain/logic/dependence_engine.dart';
@@ -64,7 +66,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            if (logs.length < 2)
+            if (logs.length < 2) ...[
               LpCard(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -86,8 +88,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     ),
                   ],
                 ),
-              )
-            else ...[
+              ),
+              const SizedBox(height: 10),
+              // The trigger-hours card renders from day one: the heat is
+              // honest with one day of data (today's own hours), tapping it
+              // is how the danger window gets set — and it is Day-1 step
+              // three's spotlight target, which must exist for a REAL day-1
+              // account and not only for the 12-day demo seed the tests use.
+              _triggerHoursCard(context, logs, snap.dangerWindow, locale),
+            ] else ...[
               _puffsCard(context, logs, locale),
               const SizedBox(height: 10),
               _triggerHoursCard(context, logs, snap.dangerWindow, locale),
@@ -237,28 +246,38 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     }
 
     // Frame 38: tapping the heatmap opens the danger-hours editor.
-    return PressScale(
-      onTap: () => showDangerHoursSheet(context, ref),
-      child: LpCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionLabel(l10n.statsTriggerHours),
-            HourHeatmap(
-              heat: [for (final b in buckets) bucketHeat(b)],
-              labels: [for (final b in buckets) LpFormat.hour(b, locale)],
-            ),
-            if (window != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                l10n.statsDangerWindow(
-                  '${LpFormat.hour(window.$1, locale)}–${LpFormat.hour(window.$2 % 24, locale)}',
-                ),
-                style: LpType.caption11(lp.textSecondary),
+    //
+    // Also Day-1 step three's target. This card rather than the Settings row
+    // that opens the same sheet: it is a shell tab (so the tour never has to
+    // push a route out of itself), it is a full-width target, and the
+    // Settings row is a `ListView` child that may not even be on screen.
+    return Day1Spotlight(
+      step: Day1TourStep.dangerHours,
+      title: l10n.day1TourHoursTitle,
+      description: l10n.day1TourHoursBody,
+      child: PressScale(
+        onTap: () => showDangerHoursSheet(context, ref),
+        child: LpCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionLabel(l10n.statsTriggerHours),
+              HourHeatmap(
+                heat: [for (final b in buckets) bucketHeat(b)],
+                labels: [for (final b in buckets) LpFormat.hour(b, locale)],
               ),
+              if (window != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.statsDangerWindow(
+                    '${LpFormat.hour(window.$1, locale)}–${LpFormat.hour(window.$2 % 24, locale)}',
+                  ),
+                  style: LpType.caption11(lp.textSecondary),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

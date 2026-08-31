@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// FCM registration.
 ///
@@ -45,6 +46,65 @@ abstract final class PushService {
       return null;
     }
   }
+
+  /// Forgets this device's token, so FCM stops delivering to it.
+  ///
+  /// The load-bearing half of sign-out. Releasing the server-side row needs a
+  /// network round trip and a live session and can fail for either reason;
+  /// this cannot fail for either, and on its own it is what guarantees the
+  /// next person on a shared phone hears nothing meant for the last one.
+  ///
+  /// A new token is minted on the next `getToken()`, so a sign-in afterwards
+  /// registers cleanly.
+  static Future<void> deleteToken() async {
+    try {
+      await FirebaseMessaging.instance.deleteToken();
+    } on Object catch (error) {
+      // Nothing to do about it, and nothing worth showing: the account is
+      // being signed out either way.
+      debugPrint('push: token delete failed — $error');
+    }
+  }
+
+  /// The channel a background push lands in on Android.
+  ///
+  /// Named in the manifest
+  /// (`com.google.firebase.messaging.default_notification_channel_id`), and a
+  /// manifest can only NAME a channel — something still has to create it, or
+  /// Android quietly files every server push under the plugin's
+  /// "Miscellaneous" fallback, where the user cannot find the toggle for it.
+  /// English on purpose, like the danger-hours channel: channel names render
+  /// in SYSTEM settings, and this runs at app init where there is no
+  /// localization context yet.
+  static Future<void> ensureAndroidChannel() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await FlutterLocalNotificationsPlugin()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'messages',
+              'Messages',
+              description:
+                  'Replies to your SOS posts, and your weekly report.',
+              importance: Importance.defaultImportance,
+            ),
+          );
+    } on Object catch (error) {
+      debugPrint('push: channel create failed — $error');
+    }
+  }
+
+  /// What the server records alongside the token, for debugging a delivery
+  /// problem that only affects one platform. Anything unrecognised becomes
+  /// 'other' server-side, so this never has to be exhaustive.
+  static String get platformName => switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'android',
+    TargetPlatform.iOS => 'ios',
+    _ => 'other',
+  };
 
   /// Fires when FCM rotates the token, which it does on reinstall, restore,
   /// and occasionally on its own. Without this the server would keep pushing

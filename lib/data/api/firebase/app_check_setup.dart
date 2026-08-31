@@ -38,6 +38,23 @@ const appCheckDebugToken = String.fromEnvironment('LP_APPCHECK_DEBUG_TOKEN');
 /// Activates App Check for the current build.
 Future<void> activateAppCheck() async {
   const token = appCheckDebugToken;
+  if (kDebugMode && token.isEmpty) {
+    // The exact configuration that produces a comprehensively broken app, so
+    // it says so BEFORE the first callable rather than one layer down wearing
+    // an offline error. Forgetting the define is not a niche mistake: it is
+    // what plain `flutter run` and every IDE run button do by default, and the
+    // resulting token is unregistered by construction, so EVERY callable is
+    // rejected with 403 and `users/{uid}` is never written.
+    debugPrint(
+      '========================================================\n'
+      'app-check: NO PINNED DEBUG TOKEN.\n'
+      'This build minted a throwaway token that is NOT registered, so'
+      ' every callable will be rejected (403) and nothing will reach'
+      ' Firestore.\n'
+      'Launch with ./tool/device.ps1 instead of `flutter run`.\n'
+      '========================================================',
+    );
+  }
   await FirebaseAppCheck.instance.activate(
     providerAndroid: kDebugMode
         ? (token.isEmpty

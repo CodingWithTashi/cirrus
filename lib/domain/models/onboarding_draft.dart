@@ -31,6 +31,7 @@ enum ObStep {
   building,
   reveal,
   coachName,
+  whyWords,
   commit,
   rating,
   notifications,
@@ -72,6 +73,7 @@ class OnboardingState {
     this.method = QuitMethod.taper,
     this.paceDays = 30,
     this.coachNameInput = '',
+    this.whyWordsInput = '',
     this.committed = false,
     this.resumable,
     this.testimonials = const [],
@@ -97,6 +99,11 @@ class OnboardingState {
   /// the default, which stays null on the profile rather than becoming the
   /// literal word — see [UserProfile.coachName].
   final String coachNameInput;
+
+  /// Why they are doing this, in their own words — the one free-text answer
+  /// in the funnel, and the only one that can seed Ember's vector memory.
+  /// Empty means they skipped, which is a valid answer.
+  final String whyWordsInput;
 
   final bool committed;
 
@@ -193,6 +200,7 @@ class OnboardingState {
     QuitMethod? method,
     int? paceDays,
     String? coachNameInput,
+    String? whyWordsInput,
     bool? committed,
     ResumableDraft? resumable,
     bool clearResumable = false,
@@ -214,6 +222,7 @@ class OnboardingState {
     method: method ?? this.method,
     paceDays: paceDays ?? this.paceDays,
     coachNameInput: coachNameInput ?? this.coachNameInput,
+    whyWordsInput: whyWordsInput ?? this.whyWordsInput,
     committed: committed ?? this.committed,
     resumable: clearResumable ? null : (resumable ?? this.resumable),
     testimonials: testimonials ?? this.testimonials,

@@ -136,6 +136,17 @@ abstract interface class CoachRepository {
   /// be uneasy about rather than the reason to keep coming back.
   Future<List<CoachMemory>> memories();
 
+  /// Turns the one free-text onboarding answer into Ember's first memory.
+  ///
+  /// Called once, right after the journey is created. The server reads the
+  /// sentence from the stored journey rather than from this call — nothing
+  /// crosses the wire here — so a client cannot write itself a memory, and a
+  /// memory goes straight into a system prompt.
+  ///
+  /// Fire-and-forget: a failure costs one remembered sentence, never the
+  /// account, and the server leaves it retryable.
+  Future<void> seedMemories();
+
   /// Forgets one memory, permanently. The user's call, never ours.
   Future<void> forgetMemory(String id);
 }
@@ -234,6 +245,19 @@ abstract interface class UserContextRepository {
   /// Fire-and-forget by design: a failed sync costs a cron cycle, never a
   /// session. Callers ignore the future.
   Future<void> sync({String? fcmToken});
+
+  /// Releases this device from the push registry, on sign-out.
+  ///
+  /// Without it a token stayed registered to the account that left, so the
+  /// next person to sign in on a shared phone received the previous user's
+  /// pushes. Two halves, and the order matters: the local token is deleted
+  /// (which alone guarantees silence, and needs no network), and the server
+  /// row is released (which is best effort, and needs the caller to still be
+  /// signed in — so this must complete before the credential goes).
+  ///
+  /// Never throws, and is bounded in time: someone who tapped "sign out" is
+  /// not left signed in because a backend was slow.
+  Future<void> unregister();
 }
 
 /// The two quotes shown on the D3 rating ask, chosen for what this person just

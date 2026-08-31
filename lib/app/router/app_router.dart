@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_error.dart';
+import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
@@ -135,6 +136,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.slip) ||
           path.startsWith(Routes.day1);
       if (!authed && needsJourney) return Routes.auth;
+      // Day one, checklist unfinished, not skipped: the shell tabs land on
+      // the checklist instead. This is what lets the walkthrough survive an
+      // app kill — the tour store is session-local and `/day1` is otherwise
+      // reachable only from the paywall, so a force-quit mid-tour used to
+      // strand a partly ticked checklist with no route back to it. Root tab
+      // paths only: deep routes (panic, compose, settings) stay untouched,
+      // and while the tour is actually running the user is on those tabs on
+      // purpose.
+      final journey = ref.read(quitStoreProvider);
+      if (journey != null &&
+          !journey.day1TourSkipped &&
+          journey.day1TasksDone.length < 3 &&
+          journey.plan.dayNumber(DateTime.now()) <= 1 &&
+          !ref.read(day1TourProvider).running &&
+          (path == Routes.home ||
+              path == Routes.stats ||
+              path == Routes.community ||
+              path == Routes.coach)) {
+        return Routes.day1;
+      }
       // Signed-in visits to auth/onboarding are allowed on purpose: the
       // Frame Map previews every screen regardless of session state.
       return null;

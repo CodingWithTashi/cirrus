@@ -115,6 +115,16 @@ class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
     _listener = AppLifecycleListener(
       onResume: () {
         ref.read(quitStoreProvider.notifier).pullPlanAdvice();
+        // `syncUserContext`'s own docstring asks for sign-in, resume and any
+        // timezone change — and only the first of those was wired. Someone
+        // who granted notifications later from OS Settings, or who flew
+        // somewhere, was not re-registered until their next cold session.
+        // Fire-and-forget: a miss costs one cron cycle. Only with a session
+        // to sync FOR: signed out, this call would mint a fresh FCM token
+        // and burn a refused callable on every single resume.
+        if (ref.read(quitStoreProvider) != null) {
+          ref.read(userContextRepositoryProvider).sync().ignore();
+        }
         // The same problem this widget already solves for plan advice: a
         // process Android froze overnight comes back on yesterday's date, and
         // its timers may never have fired.
@@ -173,6 +183,10 @@ class _PushSyncState extends ConsumerState<_PushSync> {
     // FirebaseMessaging in every widget test that pumps the app. This is the
     // same trap `fastBackendOverrides()` exists to close for the repositories.
     if (ref.read(backendModeProvider) != BackendMode.firebase) return;
+
+    // The Android channel the manifest routes background pushes into has to
+    // actually exist; see PushService.ensureAndroidChannel.
+    PushService.ensureAndroidChannel().ignore();
 
     // A rotated token is a device we can no longer reach. Re-register it.
     _subs.add(

@@ -37,6 +37,9 @@ class _SpeakingCoach implements CoachRepository {
   Future<List<CoachMemory>> memories() async => const [];
 
   @override
+  Future<void> seedMemories() async {}
+
+  @override
   Future<void> forgetMemory(String id) async {}
 }
 
@@ -102,6 +105,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(spoken), findsOneWidget);
+  });
+
+  testWidgets('a renamed coach is renamed EVERYWHERE on the chat screen', (
+    tester,
+  ) async {
+    // The bug this guards: every bubble, the greeting and the safety note
+    // interpolated the chosen name, while the header — the biggest text on
+    // the screen — still rendered the ARB default. A user who named their
+    // coach John read "Ember" at the top of a conversation signed john.
+    //
+    // Stored lowercase on purpose: names saved before `CoachName.normalize`
+    // capitalized are already on synced journeys, and the provider is what
+    // makes them render capitalized without a re-save.
+    final container = containerWith(
+      const CoachReply(template: CoachTemplate.generic1, args: {'day': 12}),
+    );
+    await container.read(quitStoreProvider.notifier).reserveCoachName('john');
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: LpTheme.midnight(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const CoachScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The header renders the bare name as its own Text; the greeting and
+    // safety note carry it inside sentences.
+    expect(find.text('John'), findsOneWidget, reason: 'header not renamed');
+    expect(find.textContaining('John'), findsWidgets);
+    expect(
+      find.textContaining('Ember'),
+      findsNothing,
+      reason: 'the brand default leaked past the rename',
+    );
   });
 
   testWidgets('a template-only reply still localizes through the template', (

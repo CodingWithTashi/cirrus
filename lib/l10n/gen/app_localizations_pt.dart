@@ -777,7 +777,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String obCoachNameTitle(String name) {
-    return 'Conhece $name.';
+    return 'Chamamos-lhe $name.';
   }
 
   @override
@@ -786,7 +786,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String obCoachNameAsk(String name) {
-    return '$name foi o nome que nós demos. Mas um amigo a quem dás tu o nome é mais teu — chama-lhe aquilo que lhe escreverias mesmo às 2 da manhã.';
+    return 'Escolhemos $name porque era preciso um nome. Mas ninguém se lembra de um nome escolhido por outra pessoa — por isso, se tiveres uma ideia melhor, usa-a. Aquilo que lhe escreverias mesmo às 2 da manhã, a discutir contigo na cozinha.';
   }
 
   @override
@@ -837,6 +837,35 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obCoachNameSuggestion4 => 'Wren';
+
+  @override
+  String obWhyWordsTitle(String name) {
+    return 'Conta uma coisa a $name.';
+  }
+
+  @override
+  String get obWhyWordsSubtitle =>
+      'Porquê agora? Não a resposta do folheto — a verdadeira.';
+
+  @override
+  String get obWhyWordsFieldLabel => 'Nas tuas palavras';
+
+  @override
+  String get obWhyWordsHint => 'para poder correr com ela sem parar';
+
+  @override
+  String obWhyWordsNote(String name) {
+    return '$name vai lembrar-se disto.';
+  }
+
+  @override
+  String get obWhyWordsErrorLong => 'Não passes dos 200 caracteres.';
+
+  @override
+  String get obWhyWordsCta => 'É por isso';
+
+  @override
+  String get obWhyWordsSkip => 'Saltar';
 
   @override
   String get obNotifTitle => 'Reforços, mesmo quando cedes.';
@@ -1001,6 +1030,31 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get day1Task3Sub => 'quando cedes? chegamos mais cedo';
+
+  @override
+  String get day1Skip => 'Saltar a configuração por agora';
+
+  @override
+  String get day1TourLogTitle => 'É esta a app toda.';
+
+  @override
+  String get day1TourLogBody =>
+      'Cada passa, aqui. Só uma contagem honesta torna o plano real — regista uma agora.';
+
+  @override
+  String get day1TourCoachTitle => 'Diz o que quiseres.';
+
+  @override
+  String day1TourCoachBody(String name) {
+    return '$name já leu o teu plano — os teus números, os teus gatilhos, as horas difíceis. Escreve um olá e vê.';
+  }
+
+  @override
+  String get day1TourHoursTitle => 'Quando é que cedes?';
+
+  @override
+  String get day1TourHoursBody =>
+      'Escolhe a janela difícil. Aparecemos dez minutos antes, no teu telemóvel, sem teres de pedir.';
 
   @override
   String day1FreedomNote(String date, int days) {

@@ -7,6 +7,7 @@ import '../../data/stores/onboarding_draft_persistence.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/coach_name.dart';
+import '../../domain/logic/why_words.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/onboarding_draft.dart';
 
@@ -207,6 +208,16 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   void typeCoachName(String raw) =>
       state = state.copyWith(coachNameInput: raw);
 
+  /// Why they are doing this, in their own words, or null when they skipped.
+  ///
+  /// Null rather than an empty string for the same reason [chosenCoachName]
+  /// is: the two mean different things, and an empty string would print a
+  /// blank line into Ember's user card as though something had been said.
+  String? get chosenWhyWords => WhyWords.stored(state.whyWordsInput);
+
+  void typeWhyWords(String raw) =>
+      state = state.copyWith(whyWordsInput: raw);
+
   void markCommitted() {
     // The hold gesture itself, not the screen advance — someone can complete
     // the commit screen without ever holding, and the two are different
@@ -296,6 +307,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       case ObStep.why:
       case ObStep.building:
       case ObStep.coachName:
+      case ObStep.whyWords:
       case ObStep.commit:
       case ObStep.rating:
       case ObStep.notifications:
@@ -409,11 +421,18 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       frequency: state.frequency,
       firstPuff: state.firstPuff,
       coachName: chosenCoachName,
+      whyWords: chosenWhyWords,
     );
     final plan = draftPlan();
     await ref
         .read(quitStoreProvider.notifier)
         .startJourney(profile: profile, plan: plan);
+    // Ember's first memory, from the one thing they wrote in their own words.
+    // After `startJourney` because the server reads the sentence out of the
+    // journey document this just created — and fire-and-forget because a
+    // model outage must cost a remembered sentence, never the last screen of
+    // onboarding. `ref` is safe here: `invalidateSelf` has not run yet.
+    ref.read(coachRepositoryProvider).seedMemories().ignore();
     // The server has it now, so the local copy is the thing that must not
     // outlive it. Awaited, unlike every other write-behind here: `clear()` is
     // total and never throws, so awaiting adds no failure mode, and it closes
