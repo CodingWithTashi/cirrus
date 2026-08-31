@@ -204,6 +204,17 @@ const POSTS = [
     ],
   },
   {
+    slug: 'easiest-way-to-quit-vaping',
+    eyebrow: 'QUITTING VAPING · A PLAN THAT STACKS',
+    headline: 'The easiest way to quit vaping',
+    blocks: [
+      { n: '2', label: 'problems, not one', color: EMBER },
+      { n: '10', label: 'small steps', color: VOLT },
+      { n: '15–20', label: 'min per craving', color: VOLT },
+      { n: 'Day 2–3', label: 'the hard part', color: EMBER },
+    ],
+  },
+  {
     slug: 'how-to-choose-a-puff-counter-app',
     eyebrow: 'PUFF COUNTER APPS · WHAT TO LOOK FOR',
     headline: 'How to choose a puff counter app',

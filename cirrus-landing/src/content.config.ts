@@ -12,7 +12,10 @@ import { z } from 'zod';
 // or no meta description.
 const blog = defineCollection({
   loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
-  schema: z.object({
+  // The schema-context `image()` helper resolves a relative path into image
+  // metadata the <Image /> component can optimize, exactly like a body image.
+  schema: ({ image: localImage }) =>
+    z.object({
     title: z.string().max(70, 'Keep titles under ~70 chars or Google truncates them'),
     description: z.string().min(50).max(160, 'Meta descriptions over 160 chars get cut off'),
     publishedAt: z.coerce.date(),
@@ -28,6 +31,16 @@ const blog = defineCollection({
      */
     image: z.string().optional(),
     imageAlt: z.string().optional(),
+
+    /**
+     * Optional article hero, rendered by the post layout between the standfirst
+     * and the takeaways box. Distinct from `image` above, which is the social
+     * card. A relative path from the post file, so Astro optimizes it like any
+     * body image. `heroImageCaption` may carry inline HTML (e.g. <b>).
+     */
+    heroImage: localImage().optional(),
+    heroImageAlt: z.string().optional(),
+    heroImageCaption: z.string().optional(),
 
     /**
      * The deck: one sentence under the headline that says what the piece is.
