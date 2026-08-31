@@ -70,12 +70,12 @@ Two other things shorten it: leaving the device somewhere hot, which thins the l
 a coil that starts to burn before the tank is empty. Both are common and neither is on the
 box.
 
-<div class="imgslot" style="--ratio: 3 / 2">
-<p class="imgslot__label">Image goes here</p>
-<p class="imgslot__name">public/blog/disposables/lineup.jpg</p>
-<p class="imgslot__spec">1200 × 800 · JPG</p>
-<p class="imgslot__what">Three or four disposables side by side with their puff-count claims visible on the boxes.</p>
-</div>
+<figure>
+
+![An illustration of three disposable vape boxes on a grey surface, each printed with a large puff-count claim and a nicotine addiction warning. The packaging, brand marks and figures are representative rather than photographs of real products.](./disposables/disposable-vape-puff-count-claims.jpeg)
+
+<figcaption><b>Illustration only.</b> The packaging, brand marks and puff counts shown here are representative, not photographs of real products or verified figures. Real disposables advertise anywhere from 600 to well over 20,000, and every one of those numbers comes off a machine.</figcaption>
+</figure>
 
 ## Puffs are the wrong unit
 

@@ -783,6 +783,11 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   line-height: 1.45;
   color: var(--muted);
 }
+/* An illustration disclaimer has to be legible as a disclaimer, not skimmed as
+   a photo credit — docs/02 §8 bans presenting anything invented as real data,
+   and a mock-up of branded packaging in a post about puff-count claims is
+   exactly that if it is not labelled. */
+.prose figcaption b { color: var(--text); }
 
 /* ---------- image placeholder ----------
    A reserved slot, sized to the real image's aspect ratio so the layout you are

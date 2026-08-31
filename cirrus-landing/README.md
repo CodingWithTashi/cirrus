@@ -165,6 +165,14 @@ reframes them.
 `Organization.logo` URL in the JSON-LD, which must be a stable, unhashed raster
 PNG that crawlers can fetch. Do not point structured data at `/_astro/`.
 
+**An illustration must say so, in the caption.** A mock-up of branded packaging
+carrying invented figures, sitting in a post about how those figures are
+misleading, reads as evidence unless it is labelled — which is the honest-numbers
+rule (docs/02 §8) failing through a picture instead of a sentence. Where an image
+is not a photograph of a real thing, the caption opens with **Illustration only.**
+and the alt text says the same, since a screen-reader user never sees the caption
+styling. `public/blog/disposables/*` is the live example.
+
 Source files should be no wider than **2× their display size**. The prose column
 is 672px, so 1344 is the ceiling; an 1800px source only makes Astro generate
 variants nothing can display, and `sizes` then over-selects them on desktop.
