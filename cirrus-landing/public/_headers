@@ -17,5 +17,38 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Everything below lives at a FIXED, unhashed URL, so none of it can carry
+# `immutable` the way /_astro/* does — a year-long cache would strand a bad
+# favicon or a stale social card on every repeat visitor with no way to bust it.
+# A week is long enough that nobody re-fetches these in practice, and short
+# enough that a fix actually reaches people.
+#
+# Content imagery is deliberately absent from this list: it now goes through
+# astro:assets, lands in /_astro/* with a content hash, and is already covered
+# by the immutable rule above.
+
 /og.png
+  Cache-Control: public, max-age=604800
+
+# Per-post social cards from `npm run og`. Scoped to the directory, so it does
+# not collide with the /og.png rule above.
+/og/*
+  Cache-Control: public, max-age=604800
+
+# Not rendered anywhere on the site. This is the Organization.logo URL inside
+# the JSON-LD, so it has to stay a stable raster PNG that crawlers can fetch —
+# do not point structured data at a hashed /_astro/ file.
+/logo.png
+  Cache-Control: public, max-age=604800
+
+/favicon.svg
+  Cache-Control: public, max-age=604800
+
+/favicon-16.png
+  Cache-Control: public, max-age=604800
+
+/favicon-32.png
+  Cache-Control: public, max-age=604800
+
+/apple-touch-icon.png
   Cache-Control: public, max-age=604800

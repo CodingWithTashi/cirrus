@@ -1,8 +1,9 @@
 ---
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
-import { Font } from 'astro:assets';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE } from '../consts';
+import { Font, Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -16,6 +17,23 @@ interface Props {
   image?: string;
   /** Keep drafts and utility pages out of the index. */
   noindex?: boolean;
+  /** Emits FAQPage structured data. Must mirror FAQ markup actually on the page —
+      schema describing invisible content is a manual-action risk. */
+  faq?: readonly { q: string; a: string }[];
+  /** Trail for the visible breadcrumb and its BreadcrumbList schema. Home is
+      prepended automatically; omit on the home page, which has no parent. */
+  breadcrumbs?: { label: string; href?: string }[];
+  /** Home advertises the app itself via SoftwareApplication. */
+  softwareApp?: boolean;
+  /** Post tags. Emitted as schema keywords + articleSection, not <meta keywords>. */
+  keywords?: readonly string[];
+  /** Measured, not claimed — see readingTime() in lib/posts.ts. */
+  wordCount?: number;
+  readingMinutes?: number;
+  /** Named author. Falls back to the organisation when a post has no byline. */
+  author?: { name: string; title?: string };
+  /** The blog index passes its posts so the listing is machine-readable. */
+  blogPosts?: readonly { title: string; url: string; date: Date }[];
 }
 
 const {
@@ -26,6 +44,14 @@ const {
   updatedAt,
   image = SITE_OG_IMAGE,
   noindex = false,
+  faq,
+  breadcrumbs,
+  softwareApp = false,
+  keywords,
+  wordCount,
+  readingMinutes,
+  author,
+  blogPosts,
 } = Astro.props;
 
 // Home gets brand + tagline; every other page gets "Page · Cirrus" so results
@@ -33,7 +59,7 @@ const {
 // SITE_DESCRIPTION, which produced a 143-character title reading "Cirrus —
 // Cirrus builds..." — Google truncates around 60 and the repetition wasted the
 // most valuable words in the result.
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_TAGLINE}`;
+const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} · ${SITE_TAGLINE}`;
 
 // Astro.site comes from `site` in astro.config.mjs.
 //
@@ -48,25 +74,138 @@ const cleanPath = Astro.url.pathname
 const canonical = new URL(cleanPath, Astro.site);
 const ogImage = image ? new URL(image, Astro.site) : null;
 
-const jsonLd = type === 'article'
-  ? {
-      '@context': 'https://schema.org',
+// Structured data, emitted as one @graph so the page ships a single script tag
+// and the entities can cross-reference each other by @id.
+// Google's Article guidance wants publisher.logo as a real ImageObject with
+// dimensions, not a bare URL string — a plain string is silently ignored and
+// the article loses its publisher attribution in rich results.
+const org = {
+  '@type': 'Organization',
+  '@id': `${Astro.site?.href}#org`,
+  name: SITE_TITLE,
+  url: Astro.site?.href,
+  logo: {
+    '@type': 'ImageObject',
+    url: new URL('/logo.png', Astro.site).href,
+    width: 512,
+    height: 512,
+  },
+  // Profiles Google uses to connect the site to a known entity. Empty until
+  // real accounts exist — a sameAs pointing at nothing is worse than none.
+  ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {}),
+};
+
+const primary =
+  type === 'article'
+    ? {
+        '@type': 'BlogPosting',
+        headline: title,
+        description,
+        url: canonical.href,
+        // Without mainEntityOfPage Google has to guess which URL the article
+        // belongs to, which matters the moment a post is syndicated anywhere.
+        mainEntityOfPage: { '@type': 'WebPage', '@id': canonical.href },
+        datePublished: publishedAt?.toISOString(),
+        dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+        inLanguage: 'en',
+        publisher: { '@id': org['@id'] },
+        // A named human when there is one; the organisation otherwise. Never
+        // absent — an article with no author at all is the single most common
+        // reason health content fails Google's quality bar.
+        author: author
+          ? { '@type': 'Person', name: author.name, ...(author.title ? { jobTitle: author.title } : {}) }
+          : { '@id': org['@id'] },
+        ...(keywords?.length ? { keywords: keywords.join(', '), articleSection: keywords[0] } : {}),
+        ...(wordCount ? { wordCount } : {}),
+        ...(readingMinutes ? { timeRequired: `PT${readingMinutes}M` } : {}),
+        ...(ogImage
+          ? { image: { '@type': 'ImageObject', url: ogImage.href, width: 1200, height: 630 } }
+          : {}),
+      }
+    : {
+        '@type': 'WebSite',
+        '@id': `${Astro.site?.href}#website`,
+        name: SITE_TITLE,
+        alternateName: 'Cirrus Quit',
+        description: SITE_DESCRIPTION,
+        url: Astro.site?.href,
+        inLanguage: 'en',
+        publisher: { '@id': org['@id'] },
+      };
+
+const graph: Record<string, unknown>[] = [org, primary];
+
+// The app itself. Android-only until iOS is buildable (docs/08 B17), and the
+// rating is declared 17+ to match the content guidance in docs/06 §2.5.
+if (softwareApp) {
+  graph.push({
+    '@type': 'SoftwareApplication',
+    name: SITE_TITLE,
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'Android',
+    contentRating: '17+',
+    alternateName: 'Cirrus — Quit Vaping',
+    // schema.org keywords is a real, read field — unlike <meta name="keywords">,
+    // which Google dropped in 2009 and Bing treats as a spam signal.
+    keywords:
+      'quit vaping, quit vaping app, stop vaping, puff counter, vape tracker, taper off vaping, vaping cravings, vaping withdrawal, nicotine',
+    description: SITE_DESCRIPTION,
+    url: Astro.site?.href,
+    publisher: { '@id': org['@id'] },
+    // A free tier exists; paid plans are not listed because the billing
+    // integration is not built yet and schema prices must be real.
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  });
+}
+
+// The blog index as a Blog entity, so the listing itself is machine-readable
+// rather than just a page that happens to contain links.
+if (blogPosts?.length) {
+  graph.push({
+    '@type': 'Blog',
+    '@id': `${Astro.site?.href}blog#blog`,
+    name: `${SITE_TITLE} blog`,
+    url: new URL('/blog', Astro.site).href,
+    inLanguage: 'en',
+    publisher: { '@id': org['@id'] },
+    blogPost: blogPosts.map((post) => ({
       '@type': 'BlogPosting',
-      headline: title,
-      description,
-      url: canonical.href,
-      datePublished: publishedAt?.toISOString(),
-      dateModified: (updatedAt ?? publishedAt)?.toISOString(),
-      publisher: { '@type': 'Organization', name: SITE_TITLE, url: Astro.site?.href },
-      ...(ogImage ? { image: ogImage.href } : {}),
-    }
-  : {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: SITE_TITLE,
-      description: SITE_DESCRIPTION,
-      url: Astro.site?.href,
-    };
+      headline: post.title,
+      url: new URL(post.url, Astro.site).href,
+      datePublished: post.date.toISOString(),
+    })),
+  });
+}
+
+if (faq?.length) {
+  graph.push({
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  });
+}
+
+// Home is always position 1 so the trail Google sees starts at the site root.
+const trail = breadcrumbs?.length
+  ? [{ label: 'Home', href: '/' }, ...breadcrumbs]
+  : null;
+
+if (trail) {
+  graph.push({
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((crumb, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: crumb.label,
+      ...(crumb.href ? { item: new URL(crumb.href, Astro.site).href } : {}),
+    })),
+  });
+}
+
+const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
 ---
 
 <!doctype html>
@@ -77,6 +216,17 @@ const jsonLd = type === 'article'
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#0a0c10" />
 
+    {/* Runs before first paint: .reveal only hides content once we know JS is
+        alive AND motion is welcome, so a failed observer can never leave the
+        page blank. */}
+    <script is:inline>
+      (function () {
+        var r = document.documentElement;
+        r.classList.add('js');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) r.classList.add('motion');
+      })();
+    </script>
+
     <Font cssVariable="--font-space-grotesk" preload />
     <Font cssVariable="--font-inter" preload />
 
@@ -85,8 +235,11 @@ const jsonLd = type === 'article'
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
+    {/* SVG first for crisp tabs; PNGs for browsers that ignore it. All generated
+        from the app's own mark — see scripts/ and public/logo.png. */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link
@@ -120,20 +273,79 @@ const jsonLd = type === 'article'
   </head>
 
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
-      <a class="brand" href="/">{SITE_TITLE}</a>
-      <nav>
-        <a href="/blog">Blog</a>
-      </nav>
+      <div class="wrap">
+        <a class="brand" href="/">
+          <Image src={logo} width={30} height={30} layout="fixed" alt="" />
+          <span>{SITE_TITLE}</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="/blog">Blog</a>
+          <span class="pill">Coming soon</span>
+        </nav>
+      </div>
     </header>
 
-    <main>
+    <main id="main">
+      {
+        trail && (
+          <nav class="breadcrumb wrap" aria-label="Breadcrumb">
+            <ol>
+              {trail.map((crumb, i) => (
+                <li>
+                  {crumb.href && i < trail.length - 1 ? (
+                    <a href={crumb.href}>{crumb.label}</a>
+                  ) : (
+                    <span aria-current="page">{crumb.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
       <slot />
     </main>
 
     <footer class="site-footer">
-      <p>&copy; {new Date().getFullYear()} {SITE_TITLE}</p>
-      <p><a href="/rss.xml">RSS</a></p>
+      <div class="wrap">
+        <a class="brand" href="/">
+          <Image src={logo} width={24} height={24} layout="fixed" alt="" />
+          <span style="font-size:1rem">{SITE_TITLE}</span>
+        </a>
+        <p style="margin:0">Built by someone who quit. 17+ &middot; nicotine is addictive.</p>
+        <div class="footer-links">
+          <a href="/blog">Blog</a>
+          <a href={PRIVACY_URL}>Privacy</a>
+          <a href={TERMS_URL}>Terms</a>
+        </div>
+      </div>
     </footer>
+
+    {/* Scroll reveal. Fires once per element, then a 2.5s failsafe force-reveals
+        anything the observer missed and disconnects — content must never be
+        left hidden by a script that did not run. */}
+    <script>
+      const els = document.querySelectorAll('.reveal');
+      if (els.length && document.documentElement.classList.contains('motion')) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              e.target.classList.add('in-view');
+              io.unobserve(e.target);
+            }
+          },
+          { rootMargin: '0px 0px -10% 0px', threshold: 0.15 },
+        );
+        els.forEach((el) => io.observe(el));
+        setTimeout(() => {
+          els.forEach((el) => el.classList.add('in-view'));
+          io.disconnect();
+        }, 2500);
+      }
+    </script>
   </body>
 </html>

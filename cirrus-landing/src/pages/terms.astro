@@ -1,0 +1,101 @@
+---
+// Terms of Use. The copy is transferred verbatim from the version previously
+// hosted on Firebase — legal text is not paraphrased, and any change here is a
+// change to a published policy, so edit deliberately and bump LAST_UPDATED.
+//
+// Moved onto the apex domain because legal pages on a different host are a weak
+// trust signal, and because these now appear in the sitemap like any other page.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED } from '../consts';
+
+const updated = new Date(LEGAL_LAST_UPDATED).toLocaleDateString('en-GB', {
+  day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+});
+---
+
+<BaseLayout
+  title="Terms of Use"
+  description="The terms for using Cirrus, the quit vaping app: who can use it, what it is and is not, community rules, subscriptions and how to end it."
+  breadcrumbs={[{ label: 'Terms' }]}
+>
+  <div class="wrap page">
+    <article class="prose legal">
+      <h1>Terms of Use</h1>
+      <p class="post-meta">Last updated {updated}</p>
+
+<p class="lede">These are the terms for using Cirrus. Using the app means you
+  accept them.</p>
+
+  <h2>Who can use it</h2>
+  <p>You must be 18 or over. Cirrus is about reducing and stopping nicotine
+  use; it is not appropriate for minors, and the app will not let you continue
+  setup if you tell us you are under 18.</p>
+
+  <h2>What Cirrus is, and is not</h2>
+  <p>Cirrus is a self-help tool: it tracks what you log, calculates a tapering
+  plan from it, and gives you a coach to talk to. <strong>It is not medical
+  treatment, and it does not replace a doctor, a pharmacist, or a quitline.</strong>
+  Ember, the in-app coach, is a language model. It will not give you medical
+  advice, dosing guidance, or a diagnosis, and you should not treat anything it
+  says as any of those.</p>
+  <p>If you are in crisis, please contact your local emergency services. In the
+  US and Canada you can call or text 988 at any time.</p>
+
+  <h2>Your account</h2>
+  <p>Keep your login details to yourself; you are responsible for what happens
+  under your account. Tell us if you think someone else has access to it.</p>
+
+  <h2>The community</h2>
+  <p>The feed is anonymous but it is not unmoderated. When you post you agree
+  not to:</p>
+  <ul>
+    <li>harass, threaten, or abuse anyone;</li>
+    <li>name brands, recommend products, or tell people where to buy nicotine;</li>
+    <li>give medical or dosing advice;</li>
+    <li>post anything illegal, hateful, or sexual;</li>
+    <li>share anyone's personal information, including your own.</li>
+  </ul>
+  <p>Posts are screened automatically before they appear and reviewed by a
+  person when flagged. We aim to review reported content within 24 hours. We
+  can remove content and suspend accounts that break these rules. You can
+  report or block from any post.</p>
+  <p>You keep ownership of what you write. You give us permission to display it
+  in the app and to keep it visible in a thread if you later delete your
+  account, detached from you and re-attributed anonymously, so that a
+  conversation other people are part of stays readable.</p>
+
+  <h2>Subscriptions</h2>
+  <p>Cirrus has a free tier that keeps working indefinitely. Some features are
+  part of a paid subscription.</p>
+  <p>Where subscriptions are available, they are billed through the app store
+  you installed from, on the plan and price shown before you confirm. They
+  renew automatically at the end of each period unless you cancel at least 24
+  hours before it ends. Manage or cancel in your store account settings — not
+  here; we cannot cancel a store subscription for you. If a free trial is
+  offered, any unused part of it ends when you subscribe. Refunds are handled
+  by the store under its own policy.</p>
+
+  <h2>Availability</h2>
+  <p>We do our best to keep Cirrus working, but we do not promise it will
+  always be available or error-free. Features may change. We may need to
+  suspend the service for maintenance.</p>
+
+  <h2>Limits</h2>
+  <p>Cirrus is provided as-is. To the extent the law allows, we are not liable
+  for indirect or consequential loss arising from your use of it. Nothing here
+  limits liability that cannot legally be limited — including for death or
+  personal injury caused by negligence, or for fraud.</p>
+
+  <h2>Ending it</h2>
+  <p>You can stop using Cirrus and delete your account at any time from
+  Settings. We may suspend or end access if these terms are broken.</p>
+
+  <h2>Changes</h2>
+  <p>If we change these terms materially we will say so in the app before the
+  change takes effect.</p>
+
+  <h2>Contact</h2>
+  <p><a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a></p>
+    </article>
+  </div>
+</BaseLayout>

@@ -1,0 +1,231 @@
+---
+// Cirrus's onboarding step 5, rebuilt as live UI you can actually tap.
+//
+// Renders in two halves so the phone can live in the hero while the derived
+// money + curve sit in their own section: <AppDemo part="phone" /> and
+// <AppDemo part="output" />. One script, included with the phone, wires both by
+// querying the document — neither half needs to know where the other is.
+//
+// Not a screenshot and not a "widget" that merely borrows the numbers — this is
+// the screen, keypad and all, running in the browser. docs/06 §4 already names
+// this the ASO thumb-stopper, so it is the right thing to hand a stranger.
+//
+// Every output mirrors real Dart in lib/domain/logic/:
+//   DependenceLevel.forPuffs  — <=50 light, <=150 moderate, <=300 heavy, 301+ severe
+//   DependenceEngine          — round(puffs / 14) cigarettes; ~600 puffs a disposable
+//   TaperEngine               — round(B * (1 - d/P)^1.5) with the <=3, <=1, 0 tail
+//   MoneyEngine               — the visitor's own spend x52. Their arithmetic, not ours.
+
+interface Props { part?: 'phone' | 'output' }
+const { part = 'phone' } = Astro.props;
+---
+
+{part === 'phone' && (
+  <div class="phone phone--live" data-demo>
+    <div class="app">
+      <p class="app__q" data-mode-label>Puffs on a normal day?</p>
+
+      <div class="app__readout">
+        <div class="app__numrow">
+          <p class="app__num" data-num aria-live="polite">150</p>
+          <div class="app__stepper">
+            <button type="button" data-step="up" aria-label="Increase">▲</button>
+            <button type="button" data-step="down" aria-label="Decrease">▼</button>
+          </div>
+        </div>
+        <p class="app__badge"><span class="badge" data-badge data-level="moderate">Moderate dependence</span></p>
+        <p class="app__equiv">≈ <b data-cigs>11</b> cigarettes' worth of puffs</p>
+        <p class="app__quip" data-quip>A pack a day, in vape clothing. Extremely fixable.</p>
+      </div>
+
+      <button class="app__alt" type="button" data-toggle-mode>
+        Not sure? Use device life →
+      </button>
+
+      <div class="app__pad" data-pad role="group" aria-label="Number pad">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <span></span>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="del" aria-label="Delete">⌫</button>
+      </div>
+
+      <button class="app__cta btn btn-primary" type="button" data-continue>Continue</button>
+    </div>
+  </div>
+)}
+
+{part === 'output' && (
+  <div class="demo__out" data-demo-out>
+    <p class="micro micro--volt">And here's what that means</p>
+
+    <div class="demo__money">
+      <label class="micro" for="demo-spend">If you spend</label>
+      <div class="field__box">
+        <span aria-hidden="true">$</span>
+        <input id="demo-spend" type="number" inputmode="decimal" min="0" max="1000" step="5" value="20" data-spend />
+        <span>a week</span>
+      </div>
+      <p class="demo__year" data-year aria-live="polite">$1,040</p>
+      <p class="micro">a year. Your maths, not ours</p>
+    </div>
+
+    <figure class="demo__curve">
+      <figcaption class="curve-caption">
+        <span><b data-start>150</b> a day</span>
+        <span class="curve-freedom">0 · Freedom Day</span>
+      </figcaption>
+      <svg viewBox="0 0 460 120" preserveAspectRatio="none" role="img"
+           aria-label="Your taper curve falling to zero over 30 days.">
+        <defs>
+          <linearGradient id="d-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c8f542" stop-opacity="0.22" />
+            <stop offset="100%" stop-color="#c8f542" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <path data-area fill="url(#d-fill)" d="" />
+        <path data-line fill="none" stroke="#c8f542" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round" d="" />
+        <circle data-end r="5.5" fill="#ff8a00" />
+      </svg>
+      <figcaption class="micro" style="text-align:center;margin-top:0.6rem">
+        Your 30-day curve · redrawn as you type
+      </figcaption>
+    </figure>
+  </div>
+)}
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-demo]');
+  if (root) {
+    // Both halves may be in different sections, so resolve against the document.
+    const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
+    const numEl = $<HTMLElement>('[data-num]');
+    const badge = $<HTMLElement>('[data-badge]');
+    const cigs = $<HTMLElement>('[data-cigs]');
+    const quip = $<HTMLElement>('[data-quip]');
+    const equiv = $<HTMLElement>('.app__equiv');
+    const label = $<HTMLElement>('[data-mode-label]');
+    const alt = $<HTMLButtonElement>('[data-toggle-mode]');
+    const spendEl = document.querySelector<HTMLInputElement>('[data-spend]');
+    const yearEl = document.querySelector<HTMLElement>('[data-year]');
+    const startEl = document.querySelector<HTMLElement>('[data-start]');
+    const line = document.querySelector<SVGPathElement>('[data-line]');
+    const area = document.querySelector<SVGPathElement>('[data-area]');
+    const end = document.querySelector<SVGCircleElement>('[data-end]');
+
+    const money = new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+    });
+
+    // Two input modes, exactly like the app: type puffs directly, or estimate
+    // from how many disposables you get through (~600 puffs each).
+    let mode: 'puffs' | 'devices' = 'puffs';
+    let entry = '150';
+
+    const puffsNow = () => {
+      const n = Number(entry) || 0;
+      return mode === 'puffs' ? n : Math.round((n * 600) / 7);
+    };
+
+    // Mirrors DependenceLevel.forPuffs. Copy is warm and never shaming
+    // (docs/07 §2 bans shame words) — the joke is always about the vape.
+    const bandFor = (p: number) =>
+      p <= 0
+        ? { key: 'light', label: 'Go on, be honest', quip: "Nobody's watching. We can't do maths on an empty box." }
+        : p <= 50
+          ? { key: 'light', label: 'Light dependence', quip: "Genuinely close already. This'll be quicker than you think." }
+          : p <= 150
+            ? { key: 'moderate', label: 'Moderate dependence', quip: 'A pack a day, in vape clothing. Extremely fixable.' }
+            : p <= 300
+              ? { key: 'heavy', label: 'Heavy dependence', quip: "Big number. Also a really common one — you're not an outlier." }
+              : { key: 'severe', label: 'Severe dependence', quip: 'That is a lot of nicotine. No lecture — just a plan that starts where you are.' };
+
+    const W = 460, H = 120, P = 30;
+    const limit = (base: number, d: number) => {
+      if (d >= P) return 0;
+      if (d === P - 1) return 1;
+      if (d === P - 2) return 3;
+      return Math.round(base * Math.pow(1 - d / P, 1.5));
+    };
+
+    const render = () => {
+      const puffs = puffsNow();
+      const band = bandFor(puffs);
+
+      numEl.textContent = entry === '' ? '—' : entry;
+      badge.textContent = band.label;
+      badge.dataset.level = band.key;
+      quip.textContent = band.quip;
+
+      equiv.hidden = puffs <= 0;
+      cigs.textContent = String(Math.round(puffs / 14));
+
+      if (!spendEl || !yearEl || !startEl || !line || !area || !end) return;
+      const spend = Math.min(Math.max(Number(spendEl.value) || 0, 0), 1000);
+      yearEl.textContent = money.format(spend * 52);
+      startEl.textContent = String(puffs);
+
+      const base = Math.max(puffs, 1);
+      const pts: string[] = [];
+      for (let d = 0; d <= P; d++) {
+        const x = 6 + ((W - 12) * d) / P;
+        const y = 10 + (H - 18) * (1 - limit(base, d) / base);
+        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+      const path = `M${pts.join(' L')}`;
+      line.setAttribute('d', path);
+      area.setAttribute('d', `${path} L${W - 6},${H - 8} L6,${H - 8} Z`);
+      const [ex, ey] = pts[pts.length - 1].split(',');
+      end.setAttribute('cx', ex);
+      end.setAttribute('cy', ey);
+    };
+
+    document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const k = btn.dataset.key!;
+        if (k === 'del') entry = entry.slice(0, -1);
+        else if (entry.length < 4) entry = (entry === '0' ? '' : entry) + k;
+        render();
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const step = mode === 'puffs' ? 10 : 1;
+        const max = mode === 'puffs' ? 2000 : 40;
+        const next = (Number(entry) || 0) + (btn.dataset.step === 'up' ? step : -step);
+        entry = String(Math.min(Math.max(next, 0), max));
+        render();
+      });
+    });
+
+    alt.addEventListener('click', () => {
+      mode = mode === 'puffs' ? 'devices' : 'puffs';
+      entry = mode === 'puffs' ? '150' : '3';
+      label.textContent = mode === 'puffs' ? 'Puffs on a normal day?' : 'Disposables a week?';
+      alt.textContent = mode === 'puffs'
+        ? 'Not sure? Use device life →'
+        : '← I know my puff count';
+      render();
+    });
+
+    // Continue does the honest thing: sends you to the one action on the page.
+    $<HTMLButtonElement>('[data-continue]').addEventListener('click', () => {
+      const input = document.querySelector<HTMLInputElement>('#waitlist-hero-email')
+        ?? document.querySelector<HTMLInputElement>('input[type=email]');
+      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => input?.focus({ preventScroll: true }), 400);
+    });
+
+    spendEl?.addEventListener('input', render);
+    render();
+  }
+</script>

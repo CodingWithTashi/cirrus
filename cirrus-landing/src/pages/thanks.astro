@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_TITLE } from '../consts';
+
+// noindex: a confirmation page has no search value and would compete with the
+// landing page for brand queries. It is also excluded from the sitemap.
+---
+
+<BaseLayout
+  title="You're on the list"
+  description="Confirm your email to finish joining the Cirrus waitlist."
+  noindex
+>
+  <div class="wrap page">
+  <h1>Almost. Check your email.</h1>
+  <p class="lede">
+    We've sent a confirmation link. Clicking it is the bit everyone forgets, and without it we
+    can't email you when {SITE_TITLE} lands.
+  </p>
+  <p>
+    Android lands first, iPhone follows. Nothing else will reach your inbox in the meantime.
+  </p>
+  <p><a href="/">Back to the home page</a></p>
+  </div>
+</BaseLayout>

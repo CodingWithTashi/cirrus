@@ -1,24 +1,43 @@
-/* "Midnight Ember" — the palette and type locked in docs/07 §3.
+/* "Midnight Ember" — palette and type locked in docs/07 §3.
    Dark-only by design: the brand has one look, and docs/07 forbids photography,
-   so the page is UI, type and numbers. Never a serif, anywhere. */
+   so the page is UI, type and numbers. Never a serif, anywhere.
+
+   Physical signature: GLOW. Every landing page needs one consistent surface
+   physics or it reads as a stack of unrelated boxes. The app's is glow — the
+   Volt LOG PUFF button, the glowing ring, the Ember SOS — so the site uses the
+   same, applied to primary buttons, live numbers and the curve endpoint, and
+   nowhere else. */
 
 :root {
   color-scheme: dark;
 
+  /* Surfaces, darkest to lightest. Sections alternate between them; a page
+     where every band is the same colour reads as one long document. */
   --void: #0a0c10;
   --slate: #161a22;
+  --lift: #12161d;
   --border: #232a36;
+
   --volt: #c8f542;
+  --volt-dim: #9dc22f;
   --ember: #ff8a00;
   --oxygen: #6ee7ff;
+  --relapse: #ff5c5c;
   --text: #ffffff;
   --muted: #9aa3b2;
 
-  /* Two widths: a wide shell for the page frame and the feature grid, and a
-     narrow measure for anything you actually read. One value for both made the
-     three feature cards ~180px wide and every heading wrapped. */
-  --shell: 1040px;
-  --measure: 68ch;
+  --glow-volt: 0 0 32px rgb(200 245 66 / 0.35);
+  --glow-ember: 0 0 24px rgb(255 138 0 / 0.45);
+
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --shell: 1080px;
+  --measure: 66ch;
+  --gutter: 20px;
+
   /* Supplied by <Font> in BaseLayout (see astro.config.mjs `fonts`). */
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -26,9 +45,7 @@
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -36,211 +53,1205 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
-  line-height: 1.65;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
-main {
-  flex: 1;
-  width: 100%;
-  max-width: var(--shell);
-  margin: 0 auto;
-  padding: 3.5rem 1.25rem;
-}
-
-/* Keep running text at a readable measure inside the wide shell. */
-main > p,
-section > p,
-.post-list,
-.prose {
-  max-width: var(--measure);
-}
+main { flex: 1; width: 100%; }
 
 a { color: var(--volt); }
 img { max-width: 100%; height: auto; }
 
-h1, h2, h3, .brand, .stat-value {
+h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
   text-wrap: balance;
+  margin: 0;
 }
 
-h1 {
-  font-size: clamp(2.25rem, 6vw, 3.5rem);
-  margin: 0 0 0.75rem;
-  max-width: 18ch;
+p { text-wrap: pretty; }
+
+/* ---------- layout primitives ---------- */
+
+.wrap {
+  width: min(100% - var(--gutter) * 2, var(--shell));
+  margin-inline: auto;
 }
 
-/* Chrome */
-.site-header, .site-footer {
-  width: 100%;
-  max-width: var(--shell);
-  margin: 0 auto;
-  padding: 1.25rem;
+/* One rhythm rule for the whole page. */
+.section { padding-block: clamp(56px, 9vw, 104px); }
+.section--tight { padding-block: clamp(40px, 6vw, 64px); }
+
+/* Alternating surfaces. */
+.section--lift { background: var(--lift); }
+.section--rules { border-block: 1px solid var(--border); }
+
+.section__head {
+  max-width: 640px;
+  margin-inline: auto;
+  text-align: center;
+  margin-bottom: clamp(28px, 5vw, 48px);
+}
+.section__head h2 { font-size: clamp(1.8rem, 4.4vw, 2.6rem); margin: 10px 0 0; }
+.section__head p { color: var(--muted); margin: 12px 0 0; }
+
+/* The single most recognisable device on the page: a tiny uppercase eyebrow
+   above every section head and above the email field. */
+.micro {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+.micro--volt { color: var(--volt); }
+.micro--ember { color: var(--ember); }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  background: var(--volt);
+  color: var(--void);
+  padding: 0.6rem 1rem;
+  border-radius: 0 0 var(--r-sm) 0;
+  font-weight: 700;
+}
+.skip-link:focus { left: 0; }
+
+:where(a, button, input, summary):focus-visible {
+  outline: 2px solid var(--volt);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- scroll reveal ----------
+   Transform-only, never opacity: if the observer fails or a browser does
+   something unexpected, content is still readable rather than invisible.
+   `.js`/`.motion` are set on <html> before first paint, so no-JS and
+   reduced-motion visitors never see a flash of shifted layout. */
+html.js.motion .reveal {
+  transform: translateY(24px);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+html.js.motion .reveal.in-view { transform: none; }
+html.js.motion .reveal[data-delay='1'] { transition-delay: 0.08s; }
+html.js.motion .reveal[data-delay='2'] { transition-delay: 0.16s; }
+html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
+
+/* ---------- header ---------- */
+
+.site-header {
+  padding: 18px 0;
+}
+.site-header .wrap {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.site-header { border-bottom: 1px solid var(--border); }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.brand img { display: block; border-radius: 7px; }
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.site-nav a:hover { color: var(--text); }
+
+.pill {
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: rgb(200 245 66 / 0.12);
+  color: var(--volt);
+  border: 1px solid rgb(200 245 66 / 0.25);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 0 1.5rem;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.08s ease;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--volt);
+  color: var(--void);
+  box-shadow: var(--glow-volt);
+}
+.btn-white {
+  background: var(--void);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* ---------- hero ---------- */
+
+.hero { padding: clamp(28px, 6vw, 56px) 0 clamp(48px, 8vw, 88px); }
+
+.hero__grid {
+  display: grid;
+  gap: clamp(32px, 5vw, 56px);
+  align-items: center;
+}
+@media (min-width: 62rem) {
+  .hero__grid { grid-template-columns: 1.05fr 0.95fr; }
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  max-width: 13ch;
+  margin: 14px 0 0;
+}
+
+/* One accented word, the way Rangjong underlines "fun". */
+.hero h1 .accent {
+  color: var(--volt);
+  text-shadow: var(--glow-volt);
+}
+
+.hero__sub {
+  font-size: 1.15rem;
+  color: var(--muted);
+  max-width: 44ch;
+  margin: 18px 0 28px;
+}
+
+.hero__trust { margin-top: 14px; }
+.hero__trust strong { color: var(--text); }
+
+/* ---------- waitlist form ---------- */
+
+.waitlist { max-width: 34rem; }
+.waitlist__label { margin-bottom: 10px; }
+
+.waitlist-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+.waitlist-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  min-height: 54px;
+  padding: 0 1rem;
+}
+.waitlist-input::placeholder { color: #67707e; }
+.waitlist-input:focus { border-color: var(--volt); outline: none; }
+.waitlist-input[aria-invalid='true'] { border-color: var(--relapse); }
+
+.waitlist-btn { flex: 0 0 auto; }
+.waitlist-btn[disabled] { opacity: 0.65; cursor: progress; }
+
+.waitlist-status {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 10px 0 0;
+  min-height: 1.4em;
+}
+.waitlist-status[data-tone='err'] { color: var(--relapse); }
+
+/* Off-screen rather than display:none, which some bots detect. */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Success replaces the whole form. */
+.waitlist__done { display: none; }
+.waitlist[data-done='true'] .waitlist__form { display: none; }
+.waitlist[data-done='true'] .waitlist__done {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  background: var(--slate);
+  border: 1px solid rgb(200 245 66 / 0.35);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--glow-volt);
+}
+.waitlist__done img { width: 44px; height: 44px; border-radius: 10px; }
+.waitlist__done strong { font-family: var(--font-display); font-size: 1.05rem; display: block; }
+.waitlist__done span { color: var(--muted); font-size: 0.875rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .waitlist[data-done='true'] .waitlist__done { animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes pop { from { transform: scale(0.9); } to { transform: none; } }
+}
+
+/* ---------- the live widget ---------- */
+
+.widget {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.widget__q {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+  text-align: center;
+  margin: 0 0 1.25rem;
+}
+
+.widget__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.field { text-align: center; }
+.field label { display: block; margin-bottom: 8px; }
+.field__box {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 0.5rem 0.9rem;
+}
+.field__box:focus-within { border-color: var(--volt); }
+.field__box span { color: var(--muted); font-family: var(--font-display); font-size: 1.4rem; }
+.field__box input {
+  width: 5.5rem;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0;
+}
+.field__box input:focus { outline: none; }
+
+/* The headline result — the moment the page exists for. */
+.widget__result { text-align: center; margin-top: 1.75rem; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+.badge::before {
+  content: '';
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badge[data-level='light'] { color: var(--volt); }
+.badge[data-level='moderate'] { color: var(--ember); }
+.badge[data-level='heavy'] { color: var(--ember); }
+.badge[data-level='severe'] { color: var(--relapse); }
+
+.widget__lines { margin: 1rem 0 0; color: var(--muted); }
+.widget__lines b {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+.widget__money {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  color: var(--volt);
+  text-shadow: var(--glow-volt);
+  font-variant-numeric: tabular-nums;
+  margin: 0.4rem 0 0;
+}
+
+.widget__curve { margin-top: 1.75rem; }
+.widget__curve svg { width: 100%; height: 150px; display: block; }
+.curve-caption {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.curve-freedom { color: var(--ember); font-weight: 600; }
+
+.widget__cta { margin-top: 1.75rem; text-align: center; }
+
+/* ---------- phone frames ---------- */
+
+.screens {
+  display: flex;
+  gap: clamp(16px, 3vw, 28px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+  /* Bleed to the viewport edge on mobile so the row reads as scrollable. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  scrollbar-width: thin;
+}
+@media (min-width: 62rem) {
+  .screens { justify-content: center; overflow: visible; margin-inline: 0; padding-inline: 0; }
+}
+
+.screen { flex: 0 0 auto; width: 208px; scroll-snap-align: center; }
+
+.phone {
+  border: 2px solid var(--border);
+  border-radius: 26px;
+  padding: 6px;
+  background: var(--slate);
+  overflow: hidden;
+}
+.phone img {
+  display: block;
+  border-radius: 20px;
+  width: 100%;
+  aspect-ratio: 9 / 17;
+  object-fit: cover;
+  object-position: top;
+}
+
+.screen figcaption {
+  margin-top: 0.9rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+.screen figcaption b { color: var(--text); display: block; font-family: var(--font-display); }
+
+/* ---------- Ember message ---------- */
+
+.ember {
+  display: flex;
+  gap: 0.9rem;
+  max-width: 620px;
+  margin: clamp(32px, 4vw, 48px) auto 0;
+}
+.ember__avatar {
+  flex: 0 0 auto;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--oxygen);
+  color: var(--oxygen);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  background: rgb(110 231 255 / 0.08);
+}
+.ember__name { font-family: var(--font-display); font-weight: 700; margin: 0 0 2px; }
+.ember__meta { color: var(--volt); font-size: 0.8125rem; margin: 0 0 0.6rem; }
+.ember__bubble {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1rem 1.15rem;
+  margin: 0;
+}
+
+/* ---------- stat cards ---------- */
+
+.stats {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 48rem) { .stats { grid-template-columns: repeat(3, 1fr); } }
+
+.stat {
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem;
+}
+.stat__figure {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--volt);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 0.45rem;
+}
+.stat__claim { margin: 0 0 0.7rem; font-size: 0.9375rem; }
+.stat__source {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+/* ---------- FAQ ---------- */
+
+.faq { max-width: var(--measure); margin-inline: auto; }
+.faq details { border-bottom: 1px solid var(--border); }
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85rem 2rem 0.85rem 0;
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: '+';
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  color: var(--volt);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.faq details[open] summary::after { content: '−'; }
+.faq p { margin: 0 0 1.25rem; color: var(--muted); }
+
+/* Hand-off link to the post that owns a query. See the ONE QUERY, ONE PAGE note
+   in src/lib/content.ts. */
+.faq__more { font-size: 0.9375rem; }
+.faq__more a { text-underline-offset: 0.2em; }
+
+/* ---------- closing CTA band ---------- */
+
+.cta-band {
+  background:
+    radial-gradient(80% 120% at 15% 0%, rgb(200 245 66 / 0.16) 0%, transparent 60%),
+    radial-gradient(70% 110% at 90% 100%, rgb(255 138 0 / 0.18) 0%, transparent 60%),
+    var(--slate);
+  border-block: 1px solid var(--border);
+}
+.cta-band h2 { font-size: clamp(1.9rem, 5vw, 3rem); max-width: 16ch; }
+.cta-band p { color: var(--muted); max-width: 42ch; margin: 14px 0 28px; }
+
+/* ---------- footer ---------- */
 
 .site-footer {
   border-top: 1px solid var(--border);
+  padding: 32px 0 40px;
   color: var(--muted);
   font-size: 0.875rem;
 }
-
-.site-footer a { color: var(--muted); }
-
-.brand {
-  font-size: 1.2rem;
-  color: var(--text);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Ember: a single glowing dot. The mascot is a real design deliverable
-   (docs/07 §5) — this is a placeholder mark, not a stand-in for it. */
-.brand::before {
-  content: '';
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: var(--ember);
-  box-shadow: 0 0 12px 2px rgb(255 138 0 / 0.55);
-}
-
-nav a {
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.9375rem;
-}
-
-nav a:hover { color: var(--text); }
-
-/* Hero */
-.lede {
-  font-size: 1.1875rem;
-  color: var(--muted);
-  max-width: 48ch;
-  margin: 0 0 2rem;
-}
-
-.cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.btn {
-  display: inline-block;
-  padding: 0.75rem 1.4rem;
-  border-radius: 10px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.9375rem;
-  text-decoration: none;
-  border: 1px solid transparent;
-}
-
-.btn-primary { background: var(--volt); color: var(--void); }
-.btn-secondary { border-color: var(--border); color: var(--text); }
-.btn-secondary:hover { border-color: var(--muted); }
-
-.note { color: var(--muted); font-size: 0.875rem; }
-
-/* Feature blocks */
-.features {
+.site-footer .wrap {
   display: grid;
-  gap: 1rem;
-  margin: 3.5rem 0 0;
-  padding: 0;
-  list-style: none;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
 }
-
-@media (min-width: 40rem) {
-  .features { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 45rem) {
+  .site-footer .wrap {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+  .site-footer .wrap > :last-child { justify-self: end; }
+  .site-footer .wrap > :first-child { justify-self: start; }
 }
+.footer-links { display: flex; flex-wrap: wrap; gap: 1rem; }
+.site-footer a { color: var(--muted); }
+.site-footer a:hover { color: var(--volt); }
 
-.feature {
-  background: var(--slate);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1.5rem;
-}
+/* ---------- breadcrumbs ---------- */
 
-.feature h3 { margin: 0 0 0.5rem; font-size: 1.0625rem; }
-.feature p { margin: 0; color: var(--muted); font-size: 0.9375rem; }
+.breadcrumb { margin-block: 0 1.5rem; font-size: 0.875rem; }
+.breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0; }
+.breadcrumb li + li::before { content: '/'; color: var(--muted); margin-right: 0.4rem; }
+.breadcrumb a { color: var(--muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--volt); }
+.breadcrumb [aria-current='page'] { color: var(--text); }
 
-.feature .rule {
-  width: 2rem;
-  height: 3px;
-  border-radius: 2px;
-  margin-bottom: 1rem;
-}
+/* ============================================================
+   Blog
+   ============================================================
 
-section { margin-top: 3.5rem; }
-section > h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+   One set of article tokens, the same ones Medium, Squarespace and the default
+   WordPress themes converge on: ~19px body, 1.65 line-height, a measure around
+   68 characters, and generous space between blocks. Everything else on this
+   site is a landing page and can be loud; an article is for reading, so the
+   only jobs here are rhythm and contrast.
 
-/* Blog */
-.post-list { list-style: none; padding: 0; margin: 2rem 0 0; }
+   Deliberately plain. No cards, chips, tinted callouts or coloured tiles —
+   they read as a dashboard, not a piece of writing. The devices below (pull
+   quote, figure, table, takeaways, contents) are the ones every publishing
+   platform ships, and nothing else. */
 
-.post-list li {
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border);
-}
+/* ---------- index ---------- */
 
+.page { padding-block: clamp(40px, 7vw, 72px); }
+.page h1 { font-size: clamp(2rem, 5vw, 3rem); }
+.lede { font-size: 1.125rem; color: var(--muted); max-width: 48ch; }
+
+.post-list { list-style: none; padding: 0; margin: 2.5rem 0 0; max-width: 42rem; }
+.post-list li { padding: 1.75rem 0; border-bottom: 1px solid var(--border); }
 .post-list li:first-child { padding-top: 0; }
-
-.post-list h2, .post-list h3 {
-  font-size: 1.25rem;
-  margin: 0 0 0.25rem;
-}
-
+.post-list h2, .post-list h3 { font-size: 1.375rem; margin: 0 0 0.35rem; }
 .post-list a { color: var(--text); text-decoration: none; }
 .post-list a:hover { color: var(--volt); }
-.post-list p { color: var(--muted); margin: 0.5rem 0 0; font-size: 0.9375rem; }
+.post-list p { color: var(--muted); margin: 0.5rem 0 0; font-size: 1rem; }
 
 .post-meta {
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
 
-/* Article body */
-.prose h2 { margin-top: 2.5rem; font-size: 1.375rem; }
+/* ---------- reading progress ---------- */
 
-.prose code {
-  background: var(--slate);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.875em;
+.progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  z-index: 20;
+  pointer-events: none;
+}
+.progress__bar {
+  height: 100%;
+  width: 0;
+  background: var(--volt);
+  box-shadow: var(--glow-volt);
 }
 
-.prose pre {
-  background: var(--slate);
-  border: 1px solid var(--border);
-  padding: 1rem;
-  border-radius: 10px;
-  overflow-x: auto;
+/* ---------- the article ---------- */
+
+/* The reading measure now comes from the grid column (.post-main), so .prose
+   just fills it. Left-aligned, never centred: the site header, the breadcrumb
+   and the article all start on the same axis, and a centred column sits ~200px
+   right of the breadcrumb above it and reads as unmoored from the page. */
+.prose {
+  /* The measure lives here so any page can use .prose on its own. On a blog
+     post .post-main is the same width, so this is a no-op there. */
+  max-width: 42rem;
+  font-size: 1.1875rem;
+  line-height: 1.65;
 }
 
-.prose pre code { background: none; border: none; padding: 0; }
+/* Legal copy is reference material, not a read-through — slightly smaller and
+   tighter than an article so the whole policy is scannable. */
+.legal { font-size: 1.0625rem; }
+.legal h2 { font-size: 1.25rem; margin-top: 2.25rem; }
+.legal h3 { font-size: 1.0625rem; margin-top: 1.5rem; }
+.legal .lede { font-size: 1.1875rem; color: var(--muted); max-width: none; }
+.legal ul { margin-block: 1rem; }
+.legal li { margin-block: 0.5rem; }
+
+.prose h1 { font-size: clamp(2.1rem, 5.5vw, 3.1rem); line-height: 1.06; }
+
+/* Space above a heading, very little below it: a heading belongs to the text
+   that follows, and equal margins make it float between two sections. */
+.prose h2 { font-size: clamp(1.5rem, 3.4vw, 1.875rem); margin: 3rem 0 0; }
+.prose h3 { font-size: 1.3125rem; margin: 2.25rem 0 0; }
+.prose h2 + p,
+.prose h3 + p,
+.prose h2 + ul,
+.prose h3 + ul { margin-top: 0.85rem; }
+
+.prose p,
+.prose ul,
+.prose ol { margin-block: 1.4rem; }
+.prose li { margin-block: 0.5rem; }
+.prose ul, .prose ol { padding-left: 1.35rem; }
+.prose strong { color: var(--text); font-weight: 600; }
+
+/* Underlined in the body, because in a wall of prose colour alone is a weak
+   affordance and fails for colourblind readers. */
+.prose p a,
+.prose li a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgb(200 245 66 / 0.45);
+}
+.prose p a:hover, .prose li a:hover { text-decoration-color: var(--volt); }
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 3rem;
+}
+
+/* The deck — one grey line under the headline saying what the piece is. */
+.standfirst {
+  font-size: 1.3125rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 1.1rem 0 0;
+}
+
+/* ---------- pull quote ---------- */
 
 .prose blockquote {
-  margin: 1.5rem 0;
-  padding-left: 1rem;
+  margin: 2.25rem 0;
+  padding-left: 1.25rem;
   border-left: 3px solid var(--ember);
+  font-size: 1.3125rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.prose blockquote p { margin-block: 0.5rem; }
+.prose blockquote cite {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  font-style: normal;
   color: var(--muted);
 }
+
+/* ---------- images ---------- */
+
+.prose figure { margin: 2.25rem 0; }
+/* Markdown wraps an image in a paragraph. Strip the inherited margin so the
+   figure hugs the image. */
+.prose figure p { margin: 0; }
+.prose figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+}
+.prose figcaption {
+  margin-top: 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+/* An illustration disclaimer has to be legible as a disclaimer, not skimmed as
+   a photo credit — docs/02 §8 bans presenting anything invented as real data,
+   and a mock-up of branded packaging in a post about puff-count claims is
+   exactly that if it is not labelled. */
+.prose figcaption b { color: var(--text); }
+
+/* ---------- image placeholder ----------
+   A reserved slot, sized to the real image's aspect ratio so the layout you are
+   reviewing is the layout you will ship. Obviously unfinished on purpose —
+   nobody should be able to publish one of these by accident. Swap it for a
+   plain <figure> the moment the file lands in public/blog/<slug>/. */
+
+.imgslot {
+  display: grid;
+  place-content: center;
+  gap: 0.3rem;
+  text-align: center;
+  margin: 2.25rem 0;
+  padding: 1.25rem;
+  aspect-ratio: var(--ratio, 16 / 9);
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 10px,
+    rgb(255 255 255 / 0.015) 10px 20px
+  );
+}
+.imgslot p { margin: 0; }
+.imgslot__label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+.imgslot__name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--text);
+  word-break: break-all;
+}
+.imgslot__spec {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.imgslot__what {
+  font-size: 0.9375rem;
+  color: var(--muted);
+  max-width: 34ch;
+  margin-inline: auto !important;
+  line-height: 1.45;
+}
+
+/* A portrait screenshot at the full measure would be taller than the viewport. */
+.prose .figure--phone img { max-width: 15rem; }
+
+/* ---------- tables ---------- */
+
+.table-wrap {
+  overflow-x: auto;
+  margin-block: 2rem;
+}
+.table-wrap:focus-visible { outline: 2px solid var(--volt); outline-offset: 4px; }
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 30rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.prose th,
+.prose td {
+  text-align: left;
+  padding: 0.75rem 1rem 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.prose thead th {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom-color: var(--muted);
+}
+.prose td:first-child { color: var(--text); }
+
+/* ---------- key takeaways ---------- */
+
+.tldr {
+  margin: 2rem 0 0;
+  padding: 1.35rem 0;
+  border-block: 1px solid var(--border);
+}
+.tldr h2 {
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.9rem;
+}
+.tldr ul { margin: 0; padding-left: 1.2rem; }
+.tldr li { margin-block: 0.55rem; font-size: 1.0625rem; line-height: 1.5; }
+
+/* ---------- contents ---------- */
+
+.toc { margin: 1.75rem 0 0; }
+.toc summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.toc summary::-webkit-details-marker { display: none; }
+.toc summary::after { content: ' ▾'; }
+.toc[open] summary::after { content: ' ▴'; }
+.toc ol {
+  /* The headings number themselves, so a list counter would double it. */
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  font-size: 1rem;
+}
+.toc li { margin-block: 0.45rem; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--volt); text-decoration: underline; }
+
+/* ---------- byline (E-E-A-T) ----------
+   Rendered only when a real person is named. Never a placeholder — see the
+   note in src/content.config.ts. */
+
+.byline {
+  margin: 1.25rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+.byline p { margin: 0.2rem 0 0; }
+.byline b { color: var(--text); font-weight: 600; }
+
+/* ---------- tags ---------- */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tags li {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* ---------- FAQ, sources, disclaimer ---------- */
+
+.post-faq, .post-sources { margin-top: 3.5rem; }
+.post-faq h2, .post-sources h2 { margin-top: 0; }
+.post-faq .faq { margin-top: 1.25rem; font-size: 1rem; }
+.post-faq .faq details:first-of-type { border-top: 1px solid var(--border); }
+.post-faq .faq p { font-size: 1.0625rem; }
+
+.post-sources > p { color: var(--muted); font-size: 1rem; margin-top: 0.85rem; }
+.post-sources ol {
+  margin: 1.25rem 0 0;
+  padding-left: 1.35rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.post-sources li { margin-block: 0.7rem; }
+.post-sources a { color: var(--muted); text-decoration-color: var(--border); }
+.post-sources a:hover { color: var(--volt); }
+.post-sources__id { display: block; font-size: 0.8125rem; color: #67707e; word-break: break-word; }
+
+.disclaimer {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.disclaimer p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.5; }
+.disclaimer b { color: var(--text); }
+
+/* ---------- share ---------- */
+
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+.share p { margin: 0; color: var(--muted); }
+.share a, .share button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.share a:hover, .share button:hover { color: var(--volt); }
+
+/* ---------- end-of-post CTA ---------- */
+
+.post-cta {
+  max-width: 42rem;
+  margin: 3rem 0 0;
+  padding: clamp(1.35rem, 4vw, 1.9rem);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(80% 130% at 10% 0%, rgb(200 245 66 / 0.1) 0%, transparent 62%),
+    radial-gradient(70% 120% at 95% 100%, rgb(255 138 0 / 0.12) 0%, transparent 62%),
+    var(--slate);
+}
+.post-cta h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-size: clamp(1.4rem, 3.6vw, 1.8rem);
+  margin: 0.5rem 0 0;
+}
+.post-cta > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
+.post-cta .waitlist { margin-top: 1.2rem; }
+
+/* ---------- post layout: article + sidebar ----------
+   One column on a phone, two once there is genuinely room. The breakpoint is
+   the measure (42rem) plus the sidebar plus a gap — below that the sidebar
+   would squeeze the article's line length, which is the one thing on this page
+   that must not move. */
+
+.post-layout { display: grid; }
+.post-main { min-width: 0; max-width: 42rem; }
+
+/* 58rem is the narrowest the two columns fit without crushing either: the
+   article can flex down from 42rem a little, and the sidebar stays wide enough
+   for a two-line title. Below this it stacks. */
+@media (min-width: 58rem) {
+  .post-layout {
+    grid-template-columns: minmax(0, 42rem) minmax(13rem, 18rem);
+    gap: 0 clamp(1.75rem, 3.5vw, 3.5rem);
+    align-items: start;
+  }
+  /* Follows the reader down a long article instead of scrolling away in the
+     first screenful, which is the whole point of putting it here. */
+  .post-side {
+    position: sticky;
+    top: 2rem;
+    margin-top: clamp(40px, 7vw, 72px);
+  }
+  .post-side .related { border-top: 0; padding-top: 0; margin-top: 0; }
+}
+
+/* ---------- related posts ---------- */
+
+.related {
+  max-width: 42rem;
+  margin: 3.5rem 0 0;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+.related h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.related__list { list-style: none; margin: 1.25rem 0 0; padding: 0; }
+.related__list li + li { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+
+.related__list a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.related__title {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.related__list a:hover .related__title { color: var(--volt); }
+.related__desc {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.related__all {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+/* ---------- footer nav ---------- */
+
+.post-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  max-width: 42rem;
+  margin: 2.5rem 0 0;
+}
+
+/* ============================================================
+   Live app demo — the onboarding screen, running in the browser
+   ============================================================ */
+
+.demo {
+  display: grid;
+  gap: clamp(28px, 4vw, 48px);
+  align-items: center;
+}
+@media (min-width: 60rem) {
+  .demo { grid-template-columns: 264px 1fr; justify-content: center; }
+}
+
+/* The phone shell, reused from the screenshot frames but sized for live UI. */
+.phone--live { width: 100%; max-width: 264px; margin-inline: auto; }
+
+.app {
+  background: var(--void);
+  border-radius: 20px;
+  padding: 20px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app__q { font-size: 1.2rem; margin: 0; }
+
+.app__readout { text-align: center; }
+
+.app__numrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 2px 0 10px;
+}
+
+.app__num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--volt);
+  text-shadow: 0 0 26px rgb(200 245 66 / 0.45);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* Nudge the value without going near the keypad. */
+.app__stepper { display: flex; flex-direction: column; gap: 4px; }
+.app__stepper button {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 5px 7px;
+  cursor: pointer;
+  transition: color 0.08s ease, border-color 0.08s ease;
+}
+.app__stepper button:hover { color: var(--volt); border-color: var(--volt); }
+.app__stepper button:active { transform: translateY(1px); }
+.app__badge { margin: 0 0 10px; }
+.app__equiv { color: var(--muted); font-size: 0.8125rem; margin: 0; }
+.app__equiv b { color: var(--text); font-family: var(--font-display); }
+.app__quip {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 6px 0 0;
+  min-height: 2.6em;
+  text-wrap: balance;
+}
+
+.app__alt {
+  background: none;
+  border: 0;
+  color: var(--volt);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: center;
+}
+
+.app__pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: auto;
+}
+.app__pad button {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  transition: background 0.08s ease, transform 0.08s ease;
+}
+.app__pad button:hover { background: #1c2230; }
+.app__pad button:active { transform: translateY(1px); background: #222a3a; }
+
+.app__cta { width: 100%; min-height: 48px; }
+
+/* ---------- the "what it means" panel ---------- */
+
+.demo__out {
+  max-width: 620px;
+  margin-inline: auto;
+  text-align: center;
+}
+.demo__money .field__box { margin-inline: auto; }
+.demo__curve .curve-caption { text-align: left; }
+.demo__money { margin: 14px 0 0; }
+.demo__money .field__box { display: inline-flex; margin-top: 8px; }
+.demo__money .field__box input { width: 4.5rem; font-size: 1.5rem; }
+.demo__money .field__box span { font-size: 1rem; }
+
+.demo__year {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  color: var(--volt);
+  text-shadow: var(--glow-volt);
+  font-variant-numeric: tabular-nums;
+  margin: 0.6rem 0 0;
+}
+
+.demo__curve { margin: 1.75rem 0 0; }
+.demo__curve svg { width: 100%; height: 120px; display: block; }
+
+/* Hero screenshot: static proof beside the copy. The interactive version lives
+   in its own section below, where it has room for the keypad. */
+.hero__shot { width: 100%; max-width: 250px; margin: 0 auto; }
