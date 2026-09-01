@@ -55,6 +55,17 @@ class JourneyStore extends Notifier<JourneyState?> {
         .ignore();
   }
 
+  /// FCM rotated the device token. Re-register it — but only for a session
+  /// that exists. FCM mints a token on a fresh install before anyone has
+  /// signed in, and re-registering that one burned a refused callable on
+  /// every sessionless cold launch (`syncUserContext failed —
+  /// InvalidCredentialsException`, QA L6). The store is the one place that
+  /// knows whether there is anyone to sync for.
+  void onPushTokenRefreshed(String token) {
+    if (state == null) return;
+    ref.read(userContextRepositoryProvider).sync(fcmToken: token).ignore();
+  }
+
   /// Everything a freshly-established session should pull from the server.
   /// One call so a new session path cannot wire half of it.
   void _onSessionEstablished() {
@@ -107,7 +118,9 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
-  DateTime get _now => DateTime.now();
+  /// The clock, through the seam — so "what does this do on day 22 of a
+  /// 30-day plan" is a test that advances a provider, not a 22-day wait.
+  DateTime get _now => ref.read(nowProvider)();
 
   DateTime get _todayKey => JourneyState.dateKey(_now);
 
@@ -276,7 +289,6 @@ class JourneyStore extends Notifier<JourneyState?> {
         s.days[key] ??
         DayLog(date: key, puffs: 0, limit: s.limitOn(when));
 
-    var tokens = s.repairTokens;
     int? pendingSlip = s.pendingSlipCleanDays;
     for (var i = 0; i < count; i++) {
       final wasOver = updated.puffs > updated.limit;
@@ -288,18 +300,26 @@ class JourneyStore extends Notifier<JourneyState?> {
       );
 
       final nowOver = updated.puffs > updated.limit;
-      if (!wasOver && nowOver) {
-        // First over-limit puff today: a repair token absorbs it silently
-        // (docs/03 §5); with no token the recovery flow arms.
-        final streakBefore = StreakEngine.currentStreak(
-          s.days,
-          LpDate.addDays(when, -1),
-        );
-        if (tokens > 0) {
-          tokens -= 1;
+      // First over-limit puff today: a repair token absorbs it silently
+      // (docs/03 §5); with no token the recovery flow arms. A day that
+      // already burned its token is already absorbed — an undo back under
+      // the line and a second crossing is the same slip, not a new one, so
+      // it must neither spend again nor arm recovery.
+      if (!wasOver && nowOver && !updated.repairTokenUsed) {
+        //
+        // The wallet is DERIVED from history at the moment of crossing,
+        // never read from the stored number. Stored, it was re-minted on
+        // every commit and absorbed four slips off a two-token wallet (QA
+        // H2). Only completed days fund it, so today's own puffs cannot mint
+        // the token that then absorbs them.
+        final wallet = StreakEngine.repairTokens(s.days, when);
+        if (wallet > 0) {
           updated = updated.copyWith(repairTokenUsed: true);
         } else {
-          pendingSlip = streakBefore;
+          pendingSlip = StreakEngine.currentStreak(
+            s.days,
+            LpDate.addDays(when, -1),
+          );
         }
       }
     }
@@ -316,7 +336,6 @@ class JourneyStore extends Notifier<JourneyState?> {
         s.copyWith(
           days: {...s.days, key: updated},
           lastPuffAt: when,
-          repairTokens: tokens,
           pendingSlipCleanDays: () => pendingSlip,
           day1TasksDone: {...s.day1TasksDone, 0},
         ),
@@ -362,16 +381,23 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
-  void confirmVapeFreeDay() {
+  /// Marks [date] — today by default — as a confirmed vape-free day.
+  ///
+  /// Takes a date because of the morning after: an unconfirmed day breaks
+  /// the chain, and the one person who knows whether it was vape-free is the
+  /// user, so Home ASKS about yesterday rather than assuming either way (QA
+  /// H4: a perfect 0-limit day nobody confirmed zeroed a 21-day streak with
+  /// no notice). Creates the log when the day has none; never invents puffs.
+  void confirmVapeFreeDay({DateTime? date}) {
     final s = state;
     if (s == null) return;
+    final key = JourneyState.dateKey(date ?? _now);
     final log =
-        s.days[_todayKey] ??
-        DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
+        s.days[key] ?? DayLog(date: key, puffs: 0, limit: s.limitOn(key));
     _commit(
       _withBadges(
         s.copyWith(
-          days: {...s.days, _todayKey: log.copyWith(vapeFreeConfirmed: true)},
+          days: {...s.days, key: log.copyWith(vapeFreeConfirmed: true)},
         ),
       ),
     );
@@ -396,16 +422,28 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   void editPastDay(DateTime date, int puffs) {
     final s = state;
-    if (s == null) return;
+    if (s == null || puffs < 0) return;
     final key = JourneyState.dateKey(date);
-    final log = s.days[key];
-    if (log == null) return;
+    // A day with no log yet is still the user's to fill in — the
+    // morning-after prompt's "I vaped" lands here, and so does a long-press
+    // on an empty Stats bar. It used to return early, which is why neither
+    // repair path in QA H4 could reach an unlogged day. The limit is what the
+    // plan said that day.
+    final log =
+        s.days[key] ?? DayLog(date: key, puffs: 0, limit: s.limitOn(key));
     _commit(
       _withBadges(
         s.copyWith(
           days: {
             ...s.days,
-            key: log.copyWith(puffs: puffs),
+            key: log.copyWith(
+              puffs: puffs,
+              // Typing 0 for a past day is the user's own word that it was
+              // vape-free — the sheet asked for a count and they gave one.
+              // Left unconfirmed, correcting a mis-tap down to zero would
+              // silently break the chain it was meant to repair.
+              vapeFreeConfirmed: puffs == 0 ? true : log.vapeFreeConfirmed,
+            ),
           },
         ),
       ),
@@ -589,11 +627,12 @@ class JourneyStore extends Notifier<JourneyState?> {
   JourneyState _withBadges(JourneyState s) {
     final streak = StreakEngine.currentStreak(s.days, _now);
     final longest = streak > s.longestStreak ? streak : s.longestStreak;
-    // Repair tokens accrue 1 per 7 streak-days, wallet capped (docs/03 §5).
-    final earnedTokens = streak ~/ StreakEngine.tokenEveryDays;
-    final tokens = s.repairTokens > earnedTokens
-        ? s.repairTokens
-        : earnedTokens.clamp(s.repairTokens, StreakEngine.tokenWalletCap);
+    // The wallet is a function of the day map (docs/03 §5: 1 per 7
+    // streak-days, cap 2, one spent per absorbed day). The stored number is
+    // only ever this derivation, never an input to it — a stored wallet that
+    // fed its own recomputation is how four slips got absorbed off two
+    // tokens (QA H2).
+    final tokens = StreakEngine.repairTokens(s.days, _now);
 
     final saved = MoneyEngine.lifetimeSaved(s.plan, s.days.values);
     final anyPuffs = s.days.values.any((l) => l.puffs > 0);

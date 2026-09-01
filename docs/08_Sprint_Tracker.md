@@ -111,7 +111,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ~~**B2**~~ | [RESOLVED Aug 29] **All 9 functions live** in us-central1 (Node 22, gen-2). Needed 3 service-agent IAM bindings, one retry past first-deploy Eventarc/bucket races, and an Artifact Registry cleanup policy (1 day) so old images stop billing. | `firebase functions:list` -> 9 of 9 | S0 done |
 | ~~**B3**~~ | [RESOLVED Aug 29] **The client reaches the backend.** `cloud_functions` + `firebase_app_check` added, App Check debug token registered for emulator-5554, `LpFunctions` is the single door (injects IANA timezone + locale, maps wire errors to the domain taxonomy). Proven on device: signing in wrote a real `users/{uid}` doc via the deployed `syncUserContext`. | `tz=America/New_York`, `locale=en-US`, `recalcHourUtc=5` in production Firestore | S1 done |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
-| ~~**B5**~~ | [RESOLVED Aug 29] Coach and community switch on `backendModeProvider`. `FirebaseCoachRepository` calls `aiCoachChat`; `FirebaseCommunityRepository` reads Firestore (rules expose only live) and writes via `createPost`/`createReply`, with `FieldValue.increment` for reactions and reports. **Open sub-item:** `isMine`/`myReactions` are session-scoped until the `reactions{uid: emoji}` change (S3-7). | `lib/data/stores/providers.dart` | S2-S3 done |
+| ~~**B5**~~ | [RESOLVED Aug 29] Coach and community switch on `backendModeProvider`. `FirebaseCoachRepository` calls `aiCoachChat`; `FirebaseCommunityRepository` reads Firestore (rules expose only live) and writes via `createPost`/`createReply`, with `FieldValue.increment` for reactions and reports. ~~**Open sub-item:** `isMine`/`myReactions` are session-scoped until the `reactions{uid: emoji}` change (S3-7).~~ `myReactions` moved to `reactors/{uid}` (S3-7); **`isMine` resolved Sep 1** — decided by the backend per account through the `users/{uid}/posts` mirror (§21, H3). | `lib/data/stores/providers.dart` | S2-S3 done |
 | **B6** | **iOS cannot build against Firebase.** No `GoogleService-Info.plist`, no `.entitlements`, no URL schemes. **Deferred to the iOS fast-follow** with B17. Note the plist is not actually hard to get - `firebase apps:sdkconfig IOS <appId>` returns it - the blocker is having no machine to build on. | `ios/Runner/` | iOS fast-follow |
 | ~~**B7**~~ | [RESOLVED Aug 29] Crashlytics on both error paths (async errors recorded non-fatal, so the crash-free gate is not understated); `PushService` registers the FCM token through `syncUserContext` and asks permission only from the D4 CTA; the docs/02 §7 funnel fires with `screen_completed` emitted centrally. **Fully resolved Aug 30:** Amplitude takes the product-analytics slot docs/05 reserved for Mixpanel, behind the `AnalyticsSink` seam — the vocabulary (`domain/analytics/lp_events.dart`) and the vendors (`data/analytics/`) are now separate, and `FanOutAnalytics` sends one event to both Amplitude and Firebase Analytics. Swapping or dropping a vendor is one entry in `analyticsProvider`. Reports from the **release build only** (`kReleaseMode`), so profile runs and `flutter test` stay out of the funnel the drop-off alert reads. | verified on emulator-5554; `test/analytics_test.dart` (9 cases) | S4 done |
 | ~~**B8**~~ | [RESOLVED Aug 29] `SettingsPersistence` stores the whole state object, so a field cannot be saved on write and forgotten on read. Restore is not awaited in `build()`; tests pin it off for determinism. | `test/data/settings_persistence_test.dart`, 5 cases | S4 done |
@@ -1852,3 +1852,191 @@ path).
 
 `flutter analyze` 0 · `flutter test` 544 · functions `verify` 154 ·
 `test:rules` 47 · `test:integration` 218 · `eval:coach` 19/19 both models.
+
+---
+
+## 21. THE E2E QA ROUND (Sep 1) — 4 high, 4 medium, 6 low, one copy sweep
+
+Source: the "Cirrus QA Pass" report (Aug 31 – Sep 1, Pixel 8 on production
++ emulator 30-day sim, 54/54 automated cases green, 17 bugs). Every bug
+below was reproduced with a failing test **before** it was touched; the
+shared-engine change landed with parity cases on both sides; every new
+string shipped ×5 locales through `l10n_parity_test` + `coach_name_test`.
+**Nothing is deployed** — see 21.5.
+
+### 21.1 Wave 1 — core-loop data integrity
+
+1. **H1 — rapid taps multiplied the count (18 → 68, 5 → 7).** Instrumented
+   first: `logPuff` fires **exactly once per pointer-up** (the `puff_logged`
+   event count equals the tap count). The multiplier was the deliberate
+   accelerating tap ramp in `PuffBurst` (+1,+1,+1,+2,+2,+3,+3,+5…), whose
+   sums are exactly 7 and 68. **Decision: a tap is one puff, always.** The
+   ramp is removed; the burst still groups taps for the undo snack, and
+   press-and-hold ticks one puff per 180 ms (a ~5 s hold ≈ 30). Pinned by
+   `test/widgets/log_puff_tap_test.dart` (N taps == N puffs, the hold, the
+   undo). This reverses a shipped design choice — the "I had ~30 in a dozen
+   taps" affordance is now the hold.
+2. **H2 — the repair-token wallet never depleted.** `_withBadges` re-derived
+   the wallet as `streak ~/ 7` on every mutation and clamped it *up* to the
+   stored value, so a spent token was re-minted on the next commit. **The
+   wallet is now a pure function of the day map** on both sides:
+   `StreakEngine.repairTokens` / `streakEngine.ts repairTokens` walk every
+   calendar day, +1 per seven holding days (cap 2), −1 per `repairTokenUsed`
+   day, run resets on a non-holding day, wallet carries over. **Semantics
+   decision: tokens are earned by *completed* days** — today can spend,
+   never mint. Mid-day minting funded a THIRD absorb on day 21 of the sim
+   (the 21st holding day minted on its first puff and spent on its last), so
+   the sim's expectation (two absorbs, day 21 breaks) only holds with
+   completed-day minting. `memoryCard.ts` now quotes the derived wallet, not
+   `journey.repairTokens`. `JourneyStore._now` reads `nowProvider`, so
+   `test/data/repair_token_rollover_test.dart` replays the 22-day sim through
+   the real store. Parity cases in `test/domain/streak_and_money_test.dart`
+   and `functions/test/streakEngine.test.ts` (6 each). Fixtures that stored a
+   wallet without the history to back it (`quick_log_burst_test`,
+   `c_core_loop`) now express it as history.
+3. **H4 — a zero-puff day with no evening open zeroed the streak.** The
+   confirm card is shown **all day on 0-limit days** (evening rule kept
+   elsewhere), and Home now **asks** "Was yesterday vape-free?" whenever
+   yesterday (≥ plan start) has no confirmed log: *Vape-free ✓* confirms it,
+   *I vaped* opens the day editor for yesterday. `confirmVapeFreeDay` takes a
+   date; `editPastDay` creates a missing day and treats a typed 0 as the
+   user's own word (confirmed). Home's calendar reads go through `snap.now`.
+   `test/widgets/vape_free_confirm_test.dart` (5).
+4. **M1 + L7 — Stats windowed over the last seven *logged* days.** New
+   `DayWindow.trailing/previous` (domain): calendar days ending today,
+   clamped to plan start, unlogged days as empty bars carrying that day's
+   limit; hard day = most puffs among days with any, best = fewest among
+   confirmed, "vs last" over confirmed days only, a new caption when the
+   window has no puffs. Bar cells are `HitTestBehavior.opaque` (an empty day
+   was a 4 % sliver nobody could long-press). Day view is *today* (the phantom
+   10 AM bar was Sep 27's bucket) and long-press opens today's editor, as the
+   caption promises. The coach's YOUR WEEK card uses the same window and is
+   **hidden until two days have puffs** (M2's one-bar "trending down").
+   `test/domain/day_window_test.dart`, `test/widgets/stats_window_test.dart`.
+
+### 21.2 Wave 2 — compliance and trust
+
+5. **H3 — fresh live posts by others had no ⋯ menu.** `isMine` was a
+   session-scoped `Set` on `FirebaseCommunityRepository`, an object that
+   lives for the whole process — whoever signed in next on the same phone
+   inherited the previous account's "mine", and "mine" is the condition
+   that hides Report/Mute/Block. The fake backend had the purer form:
+   `isMine: true` travelled *inside* the post JSON. **Ownership is decided by
+   the backend, per account:** the fake keeps a server-side `_postAuthors`
+   map and computes `isMine` per session; production reads the new
+   server-owned mirror `users/{uid}/posts/{postId}` on every fetch (see M5).
+   Reproduced by `test/data/community_ownership_test.dart` (two accounts,
+   one server; ownership survives a cold restart). The f-suite gained a case
+   that goes green only after the functions deploy.
+6. **M4 — weak password → glitch dialog.** `guardAuth` maps `weak-password`
+   to a new `WeakPasswordException`; the register form declines < 6 chars
+   before the wire; copy `authPasswordTooShort` ×5. `auth_error_mapping_test`
+   + `register_weak_password_test`.
+7. **M5 — "so fucking proud of myself, day 1" never published; held posts
+   vanished.** Two halves. *(a)* A moderation eval now exists —
+   `npm run eval:moderation` (`tools/moderationEval.ts`): 17 founder-policy
+   cases × N rolls through the production pipeline on the pinned model,
+   every case every roll or exit 1. Baseline on the old prompt: 50/51 — the
+   recorded ALLOW case actually passed 3/3 here, so the production miss was
+   either a roll or the same contradiction that failed: "celebratory tag on
+   hostile or negative text → FLAG" fought "hostile rant → HOLD" and the
+   model flipped between them. `MODERATION_PROMPT` now decides by the
+   **target** of the words (self/cravings/nobody → ALLOW even when profane
+   or celebratory; a person/the app/the community → HOLD; the tag never
+   softens hostility; a celebratory tag on sad-but-not-hostile text → FLAG).
+   Re-rolled **85/85 (17 × 5)** on `gemini-3.5-flash-lite`. *(b)* The
+   author-visible state: `createPost` writes `users/{uid}/posts/{postId}`
+   (alias, tag, text, `status: pending`) in the same batch as the post;
+   `moderatePost`, `reportPost` (auto-hide) and `resolveModeration` (posts)
+   call one `mirrorPostStatus` helper. No rules change — the
+   `users/{uid}/{document=**}` owner-read rule covers it, and
+   `deleteUserData`'s `recursiveDelete` sweeps it. Client: `PostStatus`
+   {live, pending, blocked} on the model + codec (+ round-trip case),
+   `CommunityRepository.addPost` answers the server id and
+   `watchPostStatus` streams the mirror; the store rebinds the optimistic
+   post and follows its state; a held post shows "In review — only you can
+   see this for now", a refused one "Not published — it didn't clear the
+   community rules". Server tests: +4 emulator cases (createPost mirror,
+   moderatePost mirror per verdict, reportPost auto-hide mirror, resolve
+   mirror).
+8. **M3 — "Day 31 of 30".** `TodaySnapshot.isFreedomDay / isMaintenance /
+   daysPastPlan`. Home header: "{date} · Freedom Day 🏆" on the last day,
+   "{date} · N days past Freedom Day" after; a Freedom Day completion card
+   on the day itself; the memories fact line uses the same rule. Never N > P
+   anywhere the pair renders. `plan_terminal_state_test` (3).
+
+### 21.3 Wave 3 — lows and copy
+
+9. **L1** `CoachHistory.ordered` (domain): by `sentAt`, user before Ember at
+   the same instant (the user turn and the reply share one batch timestamp),
+   unresolved timestamps last in arrival order; used by the Firestore
+   history read. 10. **L2** the slip note follows the chosen trigger
+   (`slipCurveNote{Party,Stress,Boredom,Drinking,Friends,JustHappened}` ×5,
+   generic fallback) and promises only features that exist. 11. **L3**
+   `LoginDefaults.email(backend)` — the demo prefill only on the fake
+   backend (login + forgot). 12. **L4** the composer's `FocusNode` takes the
+   spotlight overlay down on focus: the showcase measures its hole once, the
+   keyboard slides the composer up, and the send arrow ended up under the
+   barrier (`day1_tour_send_test` reproduces it with a 600 px view inset).
+   13. **L5** `StreakEngine.nextBadgeFlame` skips spark (no badge) and the
+   progress line takes a real `{remaining}` plural instead of "two more
+   sunrises". 14. **L6** the FCM token-refresh listener goes through
+   `JourneyStore.onPushTokenRefreshed`, which syncs nothing without a
+   session. 15. **Copy:** `obNotifBullet3` → "Nothing else — no marketing,
+   ever", `paywallFeatPanic` → "Panic Button + community SOS", the commit
+   screen counts `totalDays − 1` from today, `coachReplyProgress2` no longer
+   claims "would've been double" (×5; `test/copy_honesty_test.dart`).
+
+### 21.4 Gates and proof
+
+`flutter analyze` 0 · `flutter test` **599** (was 544) · functions `verify`
+**161** · `test:integration` **226** · `eval:moderation` 85/85.
+On device (Pixel 8, pinned App Check token, one file at a time): fake
+**a 5/5 · b 4/4 · c 7/7 · d 9/9 · e 7/7 · g 8/8**; firebase **f 14/15** — the
+one red is the new ownership case, failing exactly where predicted (the post
+reaches the feed, `isMine` is false because the deployed `createPost` does not
+write the mirror yet). Suite d's first run aborted after its third case with
+"did not complete" for everything after and no app exception in logcat (the
+buffer had wrapped); the immediate rerun was 9/9. Treat as a harness
+disconnect until it repeats.
+
+### 21.5 Deploy list — DONE Sep 1 (functions deployed, release bundle built)
+
+**Deployed Sep 1 2026:** `firebase deploy --only functions` updated all 22
+functions (verify predeploy green). Acceptance check passed: the f suite is
+**15/15** on the Pixel 8 against production — the ownership case that was red
+pre-deploy now reads the mirror. Release bundle built:
+`build/app/outputs/bundle/release/app-release.aab` (51.4 MB, signed) — **Play
+upload is the founder's action.** The order as it was run:
+
+1. `cd functions && npm run verify && firebase deploy --only functions` —
+   the mirror writers (`createPost`, `moderatePost`, `reportPost`,
+   `resolveModeration`) and the tuned `MODERATION_PROMPT` in
+   `aiCoachChat`'s bundle. No new functions, no `.env` change, no rules
+   change. Until this is live, the new client still works: it reads an empty
+   mirror, `isMine` is false for everything (Report is available on your own
+   posts too — the safe direction), and a held post stays "in review" locally
+   until the next launch.
+2. Then the client build. The f-suite ownership case is the acceptance
+   check: `flutter test integration_test/f_firebase_backend_test.dart -d
+   <device> --dart-define=LP_BACKEND=firebase
+   --dart-define-from-file=.dart_defines.json` → 15/15.
+3. `firestore.rules` / `firestore.indexes`: **unchanged this round.** The
+   §20.2 sequencing (reportCount carve-out deletion after the tester is on
+   the callable build) still applies as written there.
+
+### 21.6 Still open from the report
+
+- **M6** the live pre-fix "fuck this app" post — founder console sweep, not
+  code (§20.2). Also worth one look while there: the queue row for the
+  "so fucking proud" post will say whether it was `hold` or `block`, which
+  settles whether the miss was a roll or the prompt.
+- **M2** is only half-addressed: the card hides under two logged days; the
+  "trending down" caption still does not compare anything (it names the
+  hard day). A real trend needs a second week.
+- QA observations not in scope this round: "$2 saved so far" credited on a
+  fresh 0-puff day 1; panic step 3's "your 10 PM stress pattern" on day 1;
+  Plan "COMING UP" listing passed milestones; the day-1 flame badge 0-vs-1;
+  the coach addressing the user by community alias.
+- **B4/billing and the crons** — out of scope by decision.
+

@@ -25,7 +25,8 @@
     "test:all": "npm run test && npm run test:rules && npm run test:integration",
     "test:integration": "firebase emulators:exec --only firestore,auth --project demo-cirrus \"vitest run --config vitest.integration.config.ts\"",
     "seed:testimonials": "npm run build && node lib/tools/seedTestimonials.js",
-    "eval:coach": "npm run build && node lib/tools/coachEval.js"
+    "eval:coach": "npm run build && node lib/tools/coachEval.js",
+    "eval:moderation": "npm run build && node lib/tools/moderationEval.js"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

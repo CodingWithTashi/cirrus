@@ -19,6 +19,7 @@ abstract final class PostCodec {
     'replies': [for (final r in p.replies) encodeReply(r)],
     'isMine': p.isMine,
     'hidden': p.hidden,
+    'status': p.status.name,
   };
 
   static Post decode(Map<String, dynamic> json) => Post(
@@ -44,6 +45,9 @@ abstract final class PostCodec {
     ],
     isMine: json['isMine'] as bool? ?? false,
     hidden: json['hidden'] as bool? ?? false,
+    // Absent on anything written before moderation state reached the
+    // client; those were all live by construction.
+    status: enumByName(PostStatus.values, json['status'], PostStatus.live),
   );
 
   static Map<String, dynamic> encodeReply(Reply r) => {

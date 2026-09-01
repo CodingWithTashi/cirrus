@@ -188,11 +188,13 @@ class _PushSyncState extends ConsumerState<_PushSync> {
     // actually exist; see PushService.ensureAndroidChannel.
     PushService.ensureAndroidChannel().ignore();
 
-    // A rotated token is a device we can no longer reach. Re-register it.
+    // A rotated token is a device we can no longer reach. Re-register it —
+    // through the store, which skips it when nobody is signed in (QA L6).
     _subs.add(
-      PushService.onTokenRefresh.listen((token) {
-        ref.read(userContextRepositoryProvider).sync(fcmToken: token).ignore();
-      }),
+      PushService.onTokenRefresh.listen(
+        (token) =>
+            ref.read(quitStoreProvider.notifier).onPushTokenRefreshed(token),
+      ),
     );
 
     // Tapped from the background.

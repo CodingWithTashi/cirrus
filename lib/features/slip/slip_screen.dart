@@ -170,7 +170,19 @@ class _SlipFlowState extends ConsumerState<SlipFlow> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.slipCurveNote,
+                  // The note names the trigger THEY picked, or none. One
+                  // fixed "Party nights get…" string told a stressed person
+                  // about their party habit (QA L2). Nothing here promises
+                  // a feature the app does not have.
+                  switch (_trigger) {
+                    SlipTrigger.party => l10n.slipCurveNoteParty,
+                    SlipTrigger.stress => l10n.slipCurveNoteStress,
+                    SlipTrigger.boredom => l10n.slipCurveNoteBoredom,
+                    SlipTrigger.drinking => l10n.slipCurveNoteDrinking,
+                    SlipTrigger.friends => l10n.slipCurveNoteFriends,
+                    SlipTrigger.justHappened => l10n.slipCurveNoteJustHappened,
+                    null => l10n.slipCurveNote,
+                  },
                   style: LpType.caption(lp.textSecondary),
                 ),
               ],

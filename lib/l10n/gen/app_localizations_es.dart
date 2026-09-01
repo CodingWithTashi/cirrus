@@ -163,6 +163,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authEmailInUse => 'ese email ya tiene un plan — inicia sesión';
 
   @override
+  String get authPasswordTooShort =>
+      'la contraseña necesita al menos 6 caracteres; unos pocos más y listo';
+
+  @override
   String obProgressOf(int step, int total) {
     return '$step/$total';
   }
@@ -890,7 +894,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get obNotifBullet2 => 'Celebraciones de rachas e hitos';
 
   @override
-  String get obNotifBullet3 => 'Avisos SOS de tu aliado — nada más';
+  String get obNotifBullet3 => 'Nada más: cero marketing, nunca';
 
   @override
   String get obNotifCta => 'Activar refuerzos';
@@ -905,7 +909,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paywallFeatCoach => 'Coach IA, sin límite';
 
   @override
-  String get paywallFeatPanic => 'Botón de pánico + aviso al aliado';
+  String get paywallFeatPanic => 'Botón de pánico + SOS a la comunidad';
 
   @override
   String get paywallFeatPlan => 'Plan adaptativo';
@@ -1076,6 +1080,30 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String homeGreetingFreedomDay(String date) {
+    return '$date · Día de la Libertad 🏆';
+  }
+
+  @override
+  String homeGreetingMaintenance(String date, num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días después del Día de la Libertad',
+      one: '1 día después del Día de la Libertad',
+    );
+    return '$date · $_temp0';
+  }
+
+  @override
+  String get homeFreedomDayTitle =>
+      'Día de la Libertad. Tú elegiste esta fecha.';
+
+  @override
+  String get homeFreedomDayBody =>
+      'El plan termina hoy y la línea se queda en cero desde aquí. Cada día sin vapear que confirmes ahora es mantenimiento: misma llama, misma racha.';
+
+  @override
   String get homeTitle => 'Hoy';
 
   @override
@@ -1143,6 +1171,24 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get homeVapeFreeDone =>
       'Día sin vapear confirmado. Eso es todo el juego. 🔥';
+
+  @override
+  String get homeYesterdayTitle => '¿Ayer fue un día sin vapear?';
+
+  @override
+  String homeYesterdayBody(String date) {
+    return 'No hay registro del $date. Solo tú lo sabes, así que preguntamos en vez de suponer.';
+  }
+
+  @override
+  String get homeYesterdayYes => 'Sin vapear ✓';
+
+  @override
+  String get homeYesterdayNo => 'Vapeé';
+
+  @override
+  String get homeYesterdayDone =>
+      'Ayer queda registrado. Tu racha sabe la verdad. 🔥';
 
   @override
   String homeLoggedSnackCount(num count) {
@@ -1490,7 +1536,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String coachReplyProgress2(int today, int limit) {
-    return '$today caladas hoy contra una línea de $limit. Hace dos semanas ese número habría sido el doble. Lo estás haciendo de verdad.';
+    return '$today caladas hoy contra una línea de $limit. Cada una que evitas queda en el registro, y el registro es lo que dobla la curva. Lo estás haciendo de verdad.';
   }
 
   @override
@@ -1651,6 +1697,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get statsWindowNoPuffs => 'sin caladas registradas en este periodo';
+
+  @override
   String get statsTriggerHours => 'HORAS DISPARADOR';
 
   @override
@@ -1799,6 +1848,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get communityPosted =>
       'Publicado. Una breve revisión de seguridad pasa antes de que otros lo vean.';
+
+  @override
+  String get communityStatusHeld =>
+      'En revisión: por ahora solo tú puedes verlo';
+
+  @override
+  String get communityStatusBlocked =>
+      'No publicado: no cumplió las normas de la comunidad';
 
   @override
   String get buddyLinkCopied =>
@@ -1981,8 +2038,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String milestonesNextProgress(int day, int target) {
-    return 'día $day de $target · dos amaneceres más';
+  String milestonesNextProgress(int day, int target, num remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining amaneceres más',
+      one: 'un amanecer más',
+    );
+    return 'día $day de $target · $_temp0';
   }
 
   @override
@@ -2171,8 +2234,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get slipCurveNote =>
-      'Dos días extra, mismo destino. Las noches de fiesta llevan aviso pre-armado + acceso directo al juego.';
+  String get slipCurveNote => 'Dos días extra, mismo destino.';
 
   @override
   String slipStreakSurvives(int days) {
@@ -2288,6 +2350,17 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String memoriesFactDayValue(int day, int total) {
     return 'Día $day de $total';
+  }
+
+  @override
+  String memoriesFactDayMaintenance(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Plan completado · $count días después del Día de la Libertad',
+      one: 'Plan completado · 1 día después del Día de la Libertad',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2581,4 +2654,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authWorking => 'Un segundo…';
+
+  @override
+  String get slipCurveNoteParty =>
+      'Dos días extra, mismo destino. Antes de la próxima fiesta, marca una hora de riesgo para que el aviso llegue primero.';
+
+  @override
+  String get slipCurveNoteStress =>
+      'Dos días extra, mismo destino. Cuando llegue el estrés, la respiración de 60 segundos del botón de pánico está hecha justo para ese minuto.';
+
+  @override
+  String get slipCurveNoteBoredom =>
+      'Dos días extra, mismo destino. Para los minutos vacíos, el juego dentro del modo pánico está a un toque.';
+
+  @override
+  String get slipCurveNoteDrinking =>
+      'Dos días extra, mismo destino. Marca una hora de riesgo antes de tu próxima copa: el aviso llega antes de la primera.';
+
+  @override
+  String get slipCurveNoteFriends =>
+      'Dos días extra, mismo destino. La próxima vez, escríbele a tu coach antes de verlos, no después.';
+
+  @override
+  String get slipCurveNoteJustHappened =>
+      'Dos días extra, mismo destino. Pasa. El registro sigue siendo honesto y mañana es un día limpio.';
 }

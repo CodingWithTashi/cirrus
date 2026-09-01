@@ -26,7 +26,7 @@ import {sendLocalized} from '../../src/lib/push';
 import {moderatePost} from '../../src/handlers/moderatePost';
 import {moderateReply} from '../../src/handlers/moderateReply';
 import {onReaction} from '../../src/handlers/onReaction';
-import {db, postsCol} from '../../src/lib/firestore';
+import {db, myPostsCol, postsCol} from '../../src/lib/firestore';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -66,8 +66,31 @@ describe('moderatePost', () => {
   > {
     const ref = postsCol().doc('p1');
     await ref.set({alias: 'a', text, status: 'pending', tag: 'day1'});
+    // What createPost writes alongside a post: the authorship mapping and
+    // the author's mirror row.
+    await db.collection('postAuthors').doc('p1').set({uid: 'alice'});
+    await myPostsCol('alice').doc('p1').set({text, status: 'pending', tag: 'day1'});
     return ref;
   }
+
+  it("tells the author through their mirror row, whatever the verdict", async () => {
+    // QA M5: a held post used to say "Posted." and then vanish on the next
+    // launch. The author's own row carries the verdict — held content stays
+    // invisible to everyone else and visibly "in review" to its author.
+    for (const [action, status] of [
+      ['allow', 'live'],
+      ['flag', 'live'],
+      ['hold', 'pending'],
+      ['block', 'blocked'],
+    ] as const) {
+      await clearFirestore();
+      verdict(action);
+      const ref = await seed();
+      await moderatePost.run(await created(ref, {postId: 'p1'}));
+
+      expect((await myPostsCol('alice').doc('p1').get()).get('status')).toBe(status);
+    }
+  });
 
   it('publishes a clean post', async () => {
     verdict('allow');

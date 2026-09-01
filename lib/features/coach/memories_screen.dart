@@ -149,7 +149,9 @@ class CoachMemoriesScreen extends ConsumerWidget {
       if (snap != null) ...[
         (
           l10n.memoriesFactDay,
-          l10n.memoriesFactDayValue(snap.dayNumber, snap.totalDays),
+          snap.isMaintenance
+              ? l10n.memoriesFactDayMaintenance(snap.daysPastPlan)
+              : l10n.memoriesFactDayValue(snap.dayNumber, snap.totalDays),
         ),
         (
           l10n.memoriesFactToday,

@@ -18,6 +18,7 @@ import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
+import 'login_defaults.dart';
 import '../../domain/repositories/repositories.dart';
 import '../onboarding/onboarding_view_model.dart';
 
@@ -270,9 +271,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  /// Firebase's floor. Checked here too so the common case never spends a
+  /// round trip — and mapped in `guardAuth` so a backend with a stricter
+  /// rule still gets the same copy instead of the glitch dialog (QA M4).
+  static const int _minPasswordLength = 6;
+
   Future<void> _createAccount() async {
     if (!_email.text.contains('@')) {
       showLpSnack(context, context.l10n.authInvalidEmail);
+      return;
+    }
+    if (_password.text.length < _minPasswordLength) {
+      showLpSnack(context, context.l10n.authPasswordTooShort);
       return;
     }
     final email = _email.text.trim();
@@ -285,6 +295,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
       setState(() => _busy = false);
       showLpSnack(context, context.l10n.authEmailInUse);
+      return;
+    } on WeakPasswordException {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showLpSnack(context, context.l10n.authPasswordTooShort);
       return;
     } on Exception catch (error) {
       if (!mounted) return;
@@ -427,7 +442,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _email = TextEditingController(text: 'maya@quitmail.com');
+  late final _email = TextEditingController(
+    text: LoginDefaults.email(ref.read(backendModeProvider)),
+  );
   final _password = TextEditingController();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
@@ -598,7 +615,9 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
-  final _email = TextEditingController(text: 'maya@quitmail.com');
+  late final _email = TextEditingController(
+    text: LoginDefaults.email(ref.read(backendModeProvider)),
+  );
   final _emailFocus = FocusNode();
   bool _sent = false;
   int _cooldown = 0;

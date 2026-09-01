@@ -392,6 +392,12 @@ abstract class AppLocalizations {
   /// **'that email already has a journey — log in instead'**
   String get authEmailInUse;
 
+  /// No description provided for @authPasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'passwords need at least 6 characters — a few more and you\'re in'**
+  String get authPasswordTooShort;
+
   /// No description provided for @obProgressOf.
   ///
   /// In en, this message translates to:
@@ -1631,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet3.
   ///
   /// In en, this message translates to:
-  /// **'Buddy SOS pings — nothing else'**
+  /// **'Nothing else — no marketing, ever'**
   String get obNotifBullet3;
 
   /// No description provided for @obNotifCta.
@@ -1661,7 +1667,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallFeatPanic.
   ///
   /// In en, this message translates to:
-  /// **'Panic Button + buddy ping'**
+  /// **'Panic Button + community SOS'**
   String get paywallFeatPanic;
 
   /// No description provided for @paywallFeatPlan.
@@ -1970,6 +1976,30 @@ abstract class AppLocalizations {
   /// **'{date} · Day {day} of {total}'**
   String homeGreetingDate(String date, int day, int total);
 
+  /// No description provided for @homeGreetingFreedomDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · Freedom Day 🏆'**
+  String homeGreetingFreedomDay(String date);
+
+  /// No description provided for @homeGreetingMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {count, plural, one{1 day past Freedom Day} other{{count} days past Freedom Day}}'**
+  String homeGreetingMaintenance(String date, num count);
+
+  /// No description provided for @homeFreedomDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day. You picked this date.'**
+  String get homeFreedomDayTitle;
+
+  /// No description provided for @homeFreedomDayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.'**
+  String get homeFreedomDayBody;
+
   /// No description provided for @homeTitle.
   ///
   /// In en, this message translates to:
@@ -2065,6 +2095,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vape-free day locked in. That\'s the whole game. 🔥'**
   String get homeVapeFreeDone;
+
+  /// No description provided for @homeYesterdayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Was yesterday vape-free?'**
+  String get homeYesterdayTitle;
+
+  /// No description provided for @homeYesterdayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No log for {date}. Only you know, so we ask instead of guessing.'**
+  String homeYesterdayBody(String date);
+
+  /// No description provided for @homeYesterdayYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Vape-free ✓'**
+  String get homeYesterdayYes;
+
+  /// No description provided for @homeYesterdayNo.
+  ///
+  /// In en, this message translates to:
+  /// **'I vaped'**
+  String get homeYesterdayNo;
+
+  /// No description provided for @homeYesterdayDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday locked in. Your streak knows the truth. 🔥'**
+  String get homeYesterdayDone;
 
   /// No description provided for @homeLoggedSnackCount.
   ///
@@ -2621,7 +2681,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachReplyProgress2.
   ///
   /// In en, this message translates to:
-  /// **'{today} puffs today against a line of {limit}. Two weeks ago that number would\'ve been double. You\'re actually doing this.'**
+  /// **'{today} puffs today against a line of {limit}. Every one you skip is in the log now, and the log is what bends the curve. You\'re actually doing this.'**
   String coachReplyProgress2(int today, int limit);
 
   /// No description provided for @coachReplyGeneric1.
@@ -2857,6 +2917,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{day} was the difficult day. You recovered next morning.'**
   String statsHardDayCaptionPlain(String day);
+
+  /// No description provided for @statsWindowNoPuffs.
+  ///
+  /// In en, this message translates to:
+  /// **'no puffs logged in this window'**
+  String get statsWindowNoPuffs;
 
   /// No description provided for @statsTriggerHours.
   ///
@@ -3109,6 +3175,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posted. A quick safety check runs before others can see it.'**
   String get communityPosted;
+
+  /// No description provided for @communityStatusHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'In review — only you can see this for now'**
+  String get communityStatusHeld;
+
+  /// No description provided for @communityStatusBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not published — it didn\'t clear the community rules'**
+  String get communityStatusBlocked;
 
   /// No description provided for @buddyLinkCopied.
   ///
@@ -3407,8 +3485,8 @@ abstract class AppLocalizations {
   /// No description provided for @milestonesNextProgress.
   ///
   /// In en, this message translates to:
-  /// **'day {day} of {target} · two more sunrises'**
-  String milestonesNextProgress(int day, int target);
+  /// **'day {day} of {target} · {remaining, plural, one{one more sunrise} other{{remaining} more sunrises}}'**
+  String milestonesNextProgress(int day, int target, num remaining);
 
   /// No description provided for @milestonesNotLeaderboard.
   ///
@@ -3749,7 +3827,7 @@ abstract class AppLocalizations {
   /// No description provided for @slipCurveNote.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. Party nights get a pre-armed nudge + game shortcut.'**
+  /// **'Two extra days, same destination.'**
   String get slipCurveNote;
 
   /// No description provided for @slipStreakSurvives.
@@ -3937,6 +4015,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Day {day} of {total}'**
   String memoriesFactDayValue(int day, int total);
+
+  /// No description provided for @memoriesFactDayMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Plan complete · 1 day past Freedom Day} other{Plan complete · {count} days past Freedom Day}}'**
+  String memoriesFactDayMaintenance(num count);
 
   /// No description provided for @memoriesFactToday.
   ///
@@ -4441,6 +4525,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One sec…'**
   String get authWorking;
+
+  /// No description provided for @slipCurveNoteParty.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. Before the next party, set a danger hour so the reminder lands first.'**
+  String get slipCurveNoteParty;
+
+  /// No description provided for @slipCurveNoteStress.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. When stress hits, the panic button\'s 60-second breathe is built for exactly that minute.'**
+  String get slipCurveNoteStress;
+
+  /// No description provided for @slipCurveNoteBoredom.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.'**
+  String get slipCurveNoteBoredom;
+
+  /// No description provided for @slipCurveNoteDrinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.'**
+  String get slipCurveNoteDrinking;
+
+  /// No description provided for @slipCurveNoteFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. Next time, text your coach before you meet them, not after.'**
+  String get slipCurveNoteFriends;
+
+  /// No description provided for @slipCurveNoteJustHappened.
+  ///
+  /// In en, this message translates to:
+  /// **'Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.'**
+  String get slipCurveNoteJustHappened;
 }
 
 class _AppLocalizationsDelegate

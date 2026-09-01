@@ -93,6 +93,15 @@ enum Mood { rough, meh, okay, good, great }
 
 enum PostTag { win, sos, day1, milestone, vent }
 
+/// Where a post is in moderation (docs/03 §9). Encoded by `.name`, and the
+/// same three words `posts/{id}.status` carries server-side.
+///
+/// Every post is born `pending` and only the server flips it. Other people's
+/// posts reach a reader only when `live` (the rules see to that); the AUTHOR
+/// sees their own post in every state, so a held post is a post that says it
+/// is held rather than one that vanishes on the next launch (QA M5).
+enum PostStatus { live, pending, blocked }
+
 enum SubscriptionTier { free, trial, premium }
 
 enum PanicOutcome { survived, slipped }

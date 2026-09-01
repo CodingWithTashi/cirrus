@@ -11,7 +11,7 @@
 import type {CallableRequest} from 'firebase-functions/v2/https';
 import {beforeEach, describe, expect, it} from 'vitest';
 import {createPost} from '../../src/handlers/createPost';
-import {db, postsCol} from '../../src/lib/firestore';
+import {db, myPostsCol, postsCol} from '../../src/lib/firestore';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -61,6 +61,22 @@ describe('createPost — the anonymity contract', () => {
     const author = await db.collection('postAuthors').doc(postId).get();
 
     expect(author.get('uid')).toBe('alice');
+  });
+
+  it("writes the author's own mirror row, under their own document", async () => {
+    // QA M5 / H3: the mirror is what lets the app say "in review" instead of
+    // "Posted." followed by silence, and what answers "is this mine?" per
+    // account instead of per session. Same batch as the post, so one cannot
+    // exist without the other.
+    const {postId} = await createPost.run(request(post()));
+    const mine = await myPostsCol('alice').doc(postId).get();
+
+    expect(mine.exists).toBe(true);
+    expect(mine.get('status')).toBe('pending');
+    expect(mine.get('text')).toBe('day 12 and still here');
+    expect(mine.get('tag')).toBe('win');
+    // Still no uid on the post itself.
+    expect((await postsCol().doc(postId).get()).data()).not.toHaveProperty('uid');
   });
 
   // Nothing reaches a reader before moderatePost classifies it — the rules

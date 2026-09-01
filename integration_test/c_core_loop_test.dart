@@ -68,11 +68,12 @@ void main() {
     final today = JourneyState.dateKey(DateTime.now());
     final limit = e2e.container.read(todayProvider)!.limit;
 
-    // Park exactly on the line with a token in the wallet, so the very next
-    // tap is the one that crosses it.
+    // Park exactly on the line, so the very next tap is the one that crosses
+    // it. The wallet is DERIVED from history (docs/03 §5, one token per seven
+    // completed holding days — QA H2 found the stored one re-minted itself),
+    // and the seeded demo's eleven clean days fund exactly one token.
     store.replaceForTest(
       journey.copyWith(
-        repairTokens: 2,
         days: {
           ...journey.days,
           today: journey.days[today]!.copyWith(
@@ -86,19 +87,24 @@ void main() {
 
     await e2e.tapText(e2e.l10n.homeLogPuff);
     final afterFirst = e2e.container.read(quitStoreProvider)!;
-    expect(afterFirst.repairTokens, 1, reason: 'token not spent');
-    expect(afterFirst.days[today]!.repairTokenUsed, isTrue);
+    expect(afterFirst.days[today]!.repairTokenUsed, isTrue,
+        reason: 'the one token the eleven-day chain earned was not spent');
+    expect(afterFirst.repairTokens, 0, reason: 'token not deducted');
+    expect(afterFirst.pendingSlipCleanDays, isNull,
+        reason: 'the token absorbed the slip; recovery must not arm');
     // docs/03 §5: the token is spent silently and the flame dims rather than
     // dying — the user is told, once.
     expect(await e2e.waitForText(e2e.l10n.homeTokenUsedNote), isTrue,
         reason: 'on screen: ${e2e.texts()}');
 
     // Every further puff the same day is already over the line; a second
-    // token must not be spent for the same slip.
+    // token must not be spent for the same slip, and recovery must not arm.
     await e2e.tapText(e2e.l10n.homeLogPuff);
     await e2e.tapText(e2e.l10n.homeLogPuff);
-    expect(e2e.container.read(quitStoreProvider)!.repairTokens, 1,
-        reason: 'a second token was burned on the same over-limit day');
+    final afterMore = e2e.container.read(quitStoreProvider)!;
+    expect(afterMore.repairTokens, 0);
+    expect(afterMore.pendingSlipCleanDays, isNull,
+        reason: 'a second crossing was counted on the same over-limit day');
   });
 
   testWidgets('with no token left, crossing the line arms slip recovery', (
@@ -110,12 +116,17 @@ void main() {
     final today = JourneyState.dateKey(DateTime.now());
     final limit = e2e.container.read(todayProvider)!.limit;
 
+    // Only the last three completed days survive, so the derived wallet has
+    // never earned a token (seven holding days mint one).
+    final recent = journey.days.keys.toList()..sort();
+    final kept = recent.sublist(recent.length - 4);
     store.replaceForTest(
       journey.copyWith(
-        repairTokens: 0,
         days: {
-          ...journey.days,
-          today: journey.days[today]!.copyWith(puffs: limit),
+          for (final d in kept)
+            d: d == today
+                ? journey.days[today]!.copyWith(puffs: limit)
+                : journey.days[d]!,
         },
       ),
     );

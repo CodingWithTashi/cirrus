@@ -21,7 +21,7 @@ import {
   moderationQueue,
   resolveModeration,
 } from '../../src/handlers/moderationQueue';
-import {db} from '../../src/lib/firestore';
+import {db, myPostsCol} from '../../src/lib/firestore';
 import {sendLocalized} from '../../src/lib/push';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
@@ -192,6 +192,21 @@ describe('resolveModeration', () => {
     expect((await db.collection('posts').doc('p1').get()).get('status')).toBe(
       'live',
     );
+  });
+
+  it("a decision on a post reaches its author's mirror row", async () => {
+    // The founder's Allow on a held post is the moment it goes live for
+    // everyone — and the moment the author's "in review" chip should go.
+    await seedFlag('p1');
+    await db.collection('posts').doc('p1').update({status: 'pending'});
+    await db.collection('postAuthors').doc('p1').set({uid: 'alice'});
+    await myPostsCol('alice').doc('p1').set({status: 'pending', text: 'x', tag: 'vent'});
+
+    await resolveModeration.run(admin({flagId: 'p1', action: 'allow'}));
+    expect((await myPostsCol('alice').doc('p1').get()).get('status')).toBe('live');
+
+    await resolveModeration.run(admin({flagId: 'p1', action: 'block'}));
+    expect((await myPostsCol('alice').doc('p1').get()).get('status')).toBe('blocked');
   });
 
   it('resolves a REPLY flag, and the reply — not its parent post', async () => {

@@ -261,6 +261,7 @@ class Post {
     this.replies = const [],
     this.isMine = false,
     this.hidden = false,
+    this.status = PostStatus.live,
   }) : assert(text != null || seedTextId != null);
 
   final String id;
@@ -285,13 +286,22 @@ class Post {
   /// Hidden by report threshold or block (moderation UX).
   final bool hidden;
 
+  /// Moderation state. Only ever not-live on the author's own posts.
+  final PostStatus status;
+
+  /// Visible to other people. An author's held or refused post is still in
+  /// their feed, wearing its state, so it can never silently disappear.
+  bool get isLive => status == PostStatus.live;
+
   Post copyWith({
+    String? id,
     Map<String, int>? reactions,
     Set<String>? myReactions,
     List<Reply>? replies,
     bool? hidden,
+    PostStatus? status,
   }) => Post(
-    id: id,
+    id: id ?? this.id,
     alias: alias,
     avatarEmoji: avatarEmoji,
     dayN: dayN,
@@ -304,6 +314,7 @@ class Post {
     replies: replies ?? this.replies,
     isMine: isMine,
     hidden: hidden ?? this.hidden,
+    status: status ?? this.status,
   );
 }
 

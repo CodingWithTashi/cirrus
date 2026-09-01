@@ -18,6 +18,8 @@ import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
+import '../../domain/date_key.dart';
+import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import 'widgets/log_feedback.dart';
 import 'widgets/mood_sheet.dart';
@@ -57,18 +59,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final over = snap.isOverLimit;
     final ringColor = over ? lp.danger : lp.voltStrong;
-    final todayLog = journey.logFor(DateTime.now());
+    // `snap.now` is the clock seam, so "what does Home show at 10:15 on a
+    // 0-limit day" is a widget test rather than a 29-day wait.
+    final now = snap.now;
+    final todayLog = journey.logFor(now);
+    // On a 0-limit day zero puffs IS the goal, so the confirm card is there
+    // all day; on any other day confirming "no puffs today" at breakfast
+    // would be a guess about the evening, so it waits for 8pm. Evening-only
+    // on the tail days is how a perfect day 28 zeroed a 21-day streak (QA H4).
     final showVapeFree =
         snap.puffs == 0 &&
         !(todayLog?.vapeFreeConfirmed ?? false) &&
-        DateTime.now().hour >= 20;
-    final showMoodPrompt = todayLog?.mood == null && DateTime.now().hour >= 18;
+        (snap.limit == 0 || now.hour >= 20);
+    // The morning after an unconfirmed day: ask, never assume. A day with no
+    // log — or a zero-puff log nobody confirmed — breaks the chain, and the
+    // only honest way to know what happened is to ask the one person who
+    // does. Never about a day before the plan existed.
+    final yesterdayKey = LpDate.addDays(JourneyState.dateKey(now), -1);
+    final yesterdayLog = journey.days[yesterdayKey];
+    final askYesterday =
+        !yesterdayKey.isBefore(JourneyState.dateKey(journey.plan.startDate)) &&
+        !(yesterdayLog?.isConfirmed ?? false);
+    final showMoodPrompt = todayLog?.mood == null && now.hour >= 18;
 
     bool onTourStep() =>
         ref.read(day1TourStepProvider) == Day1TourStep.logPuff;
 
     bool tokenUsedToday() =>
-        ref.read(quitStoreProvider)?.logFor(DateTime.now())?.repairTokenUsed ??
+        ref.read(quitStoreProvider)?.logFor(now)?.repairTokenUsed ??
         false;
 
     // Frame 31: "+1 = ring tick + 1.02 bounce + light haptic".
@@ -167,11 +185,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.homeGreetingDate(
-                                        LpFormat.weekdayDate(snap.now, locale),
-                                        snap.dayNumber,
-                                        snap.totalDays,
-                                      ),
+                                      // Never "Day 31 of 30": the last day
+                                      // is Freedom Day and every day after
+                                      // is maintenance, said so (QA M3).
+                                      snap.isMaintenance
+                                          ? l10n.homeGreetingMaintenance(
+                                              LpFormat.weekdayDate(
+                                                snap.now,
+                                                locale,
+                                              ),
+                                              snap.daysPastPlan,
+                                            )
+                                          : snap.isFreedomDay
+                                          ? l10n.homeGreetingFreedomDay(
+                                              LpFormat.weekdayDate(
+                                                snap.now,
+                                                locale,
+                                              ),
+                                            )
+                                          : l10n.homeGreetingDate(
+                                              LpFormat.weekdayDate(
+                                                snap.now,
+                                                locale,
+                                              ),
+                                              snap.dayNumber,
+                                              snap.totalDays,
+                                            ),
                                       style: LpType.caption(lp.textSecondary),
                                     ),
                                     Text(
@@ -211,7 +250,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ref,
                               todayLog ??
                                   DayLog(
-                                    date: DateTime.now(),
+                                    date: now,
                                     puffs: 0,
                                     limit: snap.limit,
                                   ),
@@ -489,6 +528,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                         const SizedBox(height: 12),
+                        // The completion state. Day 30 of 30 used to render
+                        // as any other 0-limit day (QA M3).
+                        if (snap.isFreedomDay) ...[
+                          PressScale(
+                            onTap: () => context.push(Routes.plan),
+                            child: LpCard(
+                              borderColor: lp.ember.withValues(alpha: 0.5),
+                              glowColor: lp.ember,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 15,
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    '🏆',
+                                    style: TextStyle(fontSize: 26),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.homeFreedomDayTitle,
+                                          style: LpType.body14(
+                                            lp.textPrimary,
+                                            weight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          l10n.homeFreedomDayBody,
+                                          style: LpType.caption(
+                                            lp.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        if (askYesterday) ...[
+                          _YesterdayCard(
+                            date: LpFormat.mediumDate(yesterdayKey, locale),
+                            onVapeFree: () {
+                              LpHaptics.celebrate();
+                              ref
+                                  .read(quitStoreProvider.notifier)
+                                  .confirmVapeFreeDay(date: yesterdayKey);
+                              showLpSnack(context, l10n.homeYesterdayDone);
+                            },
+                            onVaped: () => showEditDaySheet(
+                              context,
+                              ref,
+                              yesterdayLog ??
+                                  DayLog(
+                                    date: yesterdayKey,
+                                    puffs: 0,
+                                    limit: journey.limitOn(yesterdayKey),
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         if (showVapeFree) ...[
                           PressScale(
                             onTap: () {
@@ -782,6 +891,92 @@ class _MoodPromptCard extends StatelessWidget {
             Icon(Icons.chevron_right_rounded, color: lp.textSecondary),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Was yesterday vape-free?" — the morning-after prompt (QA H4).
+///
+/// Two answers, both the user's own word: vape-free confirms the day; "I
+/// vaped" opens the day editor so the count they enter is the count that
+/// stands. No third option that quietly picks for them.
+class _YesterdayCard extends StatelessWidget {
+  const _YesterdayCard({
+    required this.date,
+    required this.onVapeFree,
+    required this.onVaped,
+  });
+
+  final String date;
+  final VoidCallback onVapeFree;
+  final VoidCallback onVaped;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return LpCard(
+      borderColor: lp.volt.withValues(alpha: 0.5),
+      glowColor: lp.volt,
+      padding: const EdgeInsets.fromLTRB(18, 15, 18, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.homeYesterdayTitle,
+            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.homeYesterdayBody(date),
+            style: LpType.caption(lp.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: PressScale(
+                  onTap: onVapeFree,
+                  child: Container(
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: lp.volt,
+                      borderRadius: BorderRadius.circular(LpDimens.rChip),
+                    ),
+                    child: Text(
+                      l10n.homeYesterdayYes,
+                      style: LpType.body13(lp.onVolt, weight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: PressScale(
+                  onTap: onVaped,
+                  child: Container(
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: lp.surface,
+                      borderRadius: BorderRadius.circular(LpDimens.rChip),
+                      border: Border.all(color: lp.border, width: 1.5),
+                    ),
+                    child: Text(
+                      l10n.homeYesterdayNo,
+                      style: LpType.body13(
+                        lp.textPrimary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

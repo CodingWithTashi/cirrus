@@ -29,7 +29,10 @@ class _RecordingCommunity implements CommunityRepository {
   Future<List<Post>> fetchPosts() async => _posts;
 
   @override
-  Future<void> addPost(Post post) async {}
+  Future<String?> addPost(Post post) async => null;
+
+  @override
+  Stream<PostStatus> watchPostStatus(String postId) => const Stream.empty();
 
   @override
   Future<void> setReaction(String postId, String emoji, {required bool on}) async {}

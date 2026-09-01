@@ -58,6 +58,53 @@ export function currentStreak(
   }
 }
 
+/** docs/03 §5: one token per seven holding days, wallet capped at two. */
+export const TOKEN_EVERY_DAYS = 7;
+export const TOKEN_WALLET_CAP = 2;
+
+/**
+ * The repair-token wallet, derived from history. Mirrors
+ * `StreakEngine.repairTokens` in `lib/domain/logic/streak_engine.dart`
+ * line for line — parity cases in both suites.
+ *
+ * Walks every calendar day from the first log through YESTERDAY: a holding
+ * day extends a run, every seventh day of a run mints (never past the cap),
+ * a day that used a token spends one. A non-holding day ends the run; the
+ * wallet carries over. Today can only spend — a token is earned by finishing
+ * the seventh day, not by starting it. Clamped at zero so a
+ * `repairTokenUsed` day the old client leak let through still holds without
+ * the wallet going negative.
+ *
+ * The app used to STORE this and re-derive it as `streak / 7` on every
+ * mutation, re-minting spent tokens (QA H2, Aug 31 2026). The memory card
+ * reads this rather than `journey.repairTokens` for the same reason it
+ * recomputes the streak: Ember must never quote a number the app contradicts.
+ */
+export function repairTokens(
+  days: Readonly<Record<string, DayLog>>,
+  todayKey: string,
+): number {
+  const keys = Object.keys(days);
+  if (keys.length === 0) return 0;
+  let cursor = keys.reduce((a, b) => (a < b ? a : b));
+  let run = 0;
+  let tokens = 0;
+  while (cursor < todayKey) {
+    const log = days[cursor];
+    if (log && holds(log)) {
+      run++;
+      if (run % TOKEN_EVERY_DAYS === 0 && tokens < TOKEN_WALLET_CAP) tokens++;
+      if (log.repairTokenUsed && tokens > 0) tokens--;
+    } else {
+      run = 0;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  const today = days[todayKey];
+  if (today?.repairTokenUsed === true && tokens > 0) tokens--;
+  return tokens;
+}
+
 /** Trailing [count] days ending at [todayKey], oldest → newest. */
 export function trailingDays(
   days: Readonly<Record<string, DayLog>>,

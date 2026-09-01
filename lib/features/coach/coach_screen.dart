@@ -16,6 +16,7 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
+import '../../domain/logic/day_window.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -32,6 +33,7 @@ class CoachScreen extends ConsumerStatefulWidget {
 
 class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _input = TextEditingController();
+  final _inputFocus = FocusNode();
   final _scroll = ScrollController();
 
   /// Rides on the next message only: the craving that opened this screen is
@@ -41,6 +43,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   @override
   void initState() {
     super.initState();
+    _inputFocus.addListener(_onInputFocus);
     _panicIntensity = widget.panicIntensity;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Pull the stored transcript first; the greeting is what you get when
@@ -57,8 +60,24 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     if (next != null && next != old.panicIntensity) _panicIntensity = next;
   }
 
+  /// The spotlight measures its target ONCE, when the step starts. Tapping
+  /// the field opens the keyboard and the composer slides up above it, so
+  /// the send arrow ends up outside the hole the barrier left — and the
+  /// barrier ate the tap (QA L4: the in-app arrow was dead on step two, the
+  /// IME key worked). Focus is the moment the lesson's real action begins:
+  /// the highlight comes down, the tour's locks stay.
+  void _onInputFocus() {
+    if (!_inputFocus.hasFocus) return;
+    if (ref.read(day1TourStepProvider) == Day1TourStep.meetCoach) {
+      Day1Spotlight.dismissOverlay();
+    }
+  }
+
   @override
   void dispose() {
+    _inputFocus
+      ..removeListener(_onInputFocus)
+      ..dispose();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -276,7 +295,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                           ),
                           if (m.showWeekCard && journey != null) ...[
                             const SizedBox(height: 12),
-                            _WeekCard(journey: journey, locale: locale),
+                            _WeekCard(
+                              journey: journey,
+                              now: ref.watch(nowProvider)(),
+                              locale: locale,
+                            ),
                           ],
                           const SizedBox(height: 12),
                         ],
@@ -350,6 +373,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       Expanded(
                         child: TextField(
                           controller: _input,
+                          focusNode: _inputFocus,
                           style: LpType.body14(lp.textPrimary),
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _send(),
@@ -586,20 +610,31 @@ class _TypingBubbleState extends State<_TypingBubble>
 }
 
 /// Inline "YOUR WEEK" stat card rendered in-thread.
+///
+/// The same calendar window as Stats (QA M1: both used to window over the
+/// last seven LOGGED days and named a "hard day" from last week). Hidden
+/// until two days have puffs at all — one point is not a trend, and a day-1
+/// account was being told "trending down — Monday was the hard one" from a
+/// single bar (QA M2).
 class _WeekCard extends StatelessWidget {
-  const _WeekCard({required this.journey, required this.locale});
+  const _WeekCard({
+    required this.journey,
+    required this.now,
+    required this.locale,
+  });
 
   final JourneyState journey;
+  final DateTime now;
   final String locale;
 
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
-    final logs = journey.days.values.toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final week = logs.length > 7 ? logs.sublist(logs.length - 7) : logs;
-    if (week.isEmpty) return const SizedBox.shrink();
+    final week = DayWindow.trailing(journey, now, 7);
+    if (week.where((l) => l.puffs > 0).length < 2) {
+      return const SizedBox.shrink();
+    }
     var hardest = 0;
     for (var i = 0; i < week.length; i++) {
       if (week[i].puffs > week[hardest].puffs) hardest = i;

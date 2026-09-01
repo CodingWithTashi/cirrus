@@ -280,6 +280,39 @@ class PostCard extends ConsumerWidget {
                 ],
               ],
             ),
+            // The author's own post, not (yet) visible to anyone else. Says
+            // so, in the feed, for as long as that is true — "Posted." and a
+            // post that is gone next session is the lie this replaces.
+            if (post.isMine && !post.isLive) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    post.status == PostStatus.pending
+                        ? Icons.hourglass_top_rounded
+                        : Icons.visibility_off_outlined,
+                    size: 14,
+                    color: post.status == PostStatus.pending
+                        ? lp.cautionText
+                        : lp.dangerText,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      post.status == PostStatus.pending
+                          ? l10n.communityStatusHeld
+                          : l10n.communityStatusBlocked,
+                      style: LpType.caption11(
+                        post.status == PostStatus.pending
+                            ? lp.cautionText
+                            : lp.dangerText,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 10),
             Text(postText(context, post), style: LpType.body14(lp.textPrimary)),
             const SizedBox(height: 12),

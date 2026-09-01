@@ -194,6 +194,7 @@ void main() {
           ),
         ],
         isMine: true,
+        status: PostStatus.pending,
       );
       final wire = jsonEncode(PostCodec.encode(post));
       final decoded = PostCodec.decode(
@@ -202,6 +203,7 @@ void main() {
       expect(jsonEncode(PostCodec.encode(decoded)), wire);
       expect(decoded.replies.single.text, 'hold the line');
       expect(decoded.myReactions, {'💪'});
+      expect(decoded.status, PostStatus.pending);
     });
   });
 

@@ -16,6 +16,7 @@ import '../day1/day1_spotlight.dart';
 import '../settings/danger_hours_sheet.dart';
 import 'edit_day_sheet.dart';
 import '../../domain/logic/danger_hours.dart';
+import '../../domain/logic/day_window.dart';
 import '../../domain/logic/dependence_engine.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
@@ -44,6 +45,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
     final logs = journey.days.values.toList()
       ..sort((a, b) => a.date.compareTo(b.date));
+    // The clock seam, so "what does Stats show on Tue Sep 29 with nothing
+    // logged since Sunday" is a widget test.
+    final now = snap.now;
 
     return Scaffold(
       body: SafeArea(
@@ -97,7 +101,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               // account and not only for the 12-day demo seed the tests use.
               _triggerHoursCard(context, logs, snap.dangerWindow, locale),
             ] else ...[
-              _puffsCard(context, logs, locale),
+              _puffsCard(context, journey, now, locale),
               const SizedBox(height: 10),
               _triggerHoursCard(context, logs, snap.dangerWindow, locale),
               const SizedBox(height: 10),
@@ -118,65 +122,92 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     );
   }
 
-  Widget _puffsCard(BuildContext context, List<DayLog> logs, String locale) {
+  Widget _puffsCard(
+    BuildContext context,
+    JourneyState journey,
+    DateTime now,
+    String locale,
+  ) {
     final lp = context.lp;
     final l10n = context.l10n;
 
     final (window, label) = switch (_range) {
-      0 => (logs.length.clamp(0, 1), l10n.statsPuffsToday),
+      0 => (1, l10n.statsPuffsToday),
       1 => (7, l10n.statsPuffsThisWeek),
       _ => (30, l10n.statsPuffsThisMonth),
     };
 
     if (_range == 0) {
-      // Today by hour.
-      final today = logs.last;
+      // TODAY by hour — `journey.logFor(now)`, never "the last logged day":
+      // that drew Sep 27's 10 AM bucket on a Sep 29 with no puffs (QA L7).
+      // Long-press opens today's editor, which is what the caption under the
+      // cards promises for every bar.
+      final today =
+          journey.logFor(now) ??
+          DayLog(date: JourneyState.dateKey(now), puffs: 0, limit: 0);
       final buckets = today.hourBuckets;
       final hours = [for (var h = 6; h < 24; h += 2) h];
-      return LpCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionLabel(label, padding: const EdgeInsets.only(bottom: 12)),
-            BarChart(
-              values: [
-                for (final h in hours)
-                  (buckets[h] ?? 0) + (buckets[h + 1] ?? 0),
-              ],
-              labels: [for (final h in hours) LpFormat.hour(h, locale)],
-              height: 70,
-              gap: 5,
-            ),
-          ],
+      return GestureDetector(
+        onLongPress: () {
+          LpHaptics.medium();
+          showEditDaySheet(context, ref, today);
+        },
+        child: LpCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionLabel(label, padding: const EdgeInsets.only(bottom: 12)),
+              BarChart(
+                values: [
+                  for (final h in hours)
+                    (buckets[h] ?? 0) + (buckets[h + 1] ?? 0),
+                ],
+                labels: [for (final h in hours) LpFormat.hour(h, locale)],
+                height: 70,
+                gap: 5,
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    final shown = logs.length > window
-        ? logs.sublist(logs.length - window)
-        : logs;
-    var hardest = 0;
+    // Calendar days ending TODAY (QA M1): an unlogged day is an empty bar
+    // that can still be long-pressed and fixed, never a hole that slides the
+    // whole chart back into last week.
+    final shown = DayWindow.trailing(journey, now, window);
+    // The hard day is the most puffs among days that had any; the best day
+    // is the fewest among days the user actually confirmed. An empty day is
+    // neither — it is not a win nobody logged.
+    var hardest = -1;
+    var best = -1;
     for (var i = 0; i < shown.length; i++) {
-      if (shown[i].puffs > shown[hardest].puffs) hardest = i;
+      final log = shown[i];
+      if (log.puffs > 0 &&
+          (hardest == -1 || log.puffs > shown[hardest].puffs)) {
+        hardest = i;
+      }
+      if (log.isConfirmed && (best == -1 || log.puffs < shown[best].puffs)) {
+        best = i;
+      }
     }
-    final best = shown.indexOf(
-      shown.reduce((a, b) => a.puffs <= b.puffs ? a : b),
-    );
 
-    // Percent vs the previous equal-length window when available.
+    // Percent vs the previous equal-length window, over confirmed days only
+    // — unlogged days are unknown, not zero.
     int? vsLast;
-    if (logs.length > window) {
-      final prev = logs.sublist(
-        (logs.length - 2 * window).clamp(0, logs.length),
-        logs.length - window,
-      );
-      if (prev.isNotEmpty) {
-        final prevAvg = prev.fold(0, (a, b) => a + b.puffs) / prev.length;
-        final nowAvg = shown.fold(0, (a, b) => a + b.puffs) / shown.length;
-        if (prevAvg > 0) {
-          vsLast = (((nowAvg - prevAvg) / prevAvg) * 100).round();
-        }
+    final prev = DayWindow.previous(
+      journey,
+      now,
+      window,
+    ).where((l) => l.isConfirmed).toList();
+    final confirmedNow = shown.where((l) => l.isConfirmed).toList();
+    if (prev.isNotEmpty && confirmedNow.isNotEmpty) {
+      final prevAvg = prev.fold(0, (a, b) => a + b.puffs) / prev.length;
+      final nowAvg =
+          confirmedNow.fold(0, (a, b) => a + b.puffs) / confirmedNow.length;
+      if (prevAvg > 0) {
+        vsLast = (((nowAvg - prevAvg) / prevAvg) * 100).round();
       }
     }
 
@@ -208,19 +239,24 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             compact: _range == 2,
           ),
           const SizedBox(height: 8),
-          Text(switch (shown[hardest].moodNote ??
-              (shown[hardest].mood == Mood.rough
-                  ? context.l10n.moodRough
-                  : null)) {
-            // No note, no rough mood — drop the dash clause entirely.
-            null => l10n.statsHardDayCaptionPlain(
-              LpFormat.weekday(shown[hardest].date, locale),
-            ),
-            final reason => l10n.statsHardDayCaption(
-              LpFormat.weekday(shown[hardest].date, locale),
-              reason,
-            ),
-          }, style: LpType.caption11(lp.textSecondary)),
+          Text(
+            hardest == -1
+                ? l10n.statsWindowNoPuffs
+                : switch (shown[hardest].moodNote ??
+                      (shown[hardest].mood == Mood.rough
+                          ? context.l10n.moodRough
+                          : null)) {
+                    // No note, no rough mood — drop the dash clause entirely.
+                    null => l10n.statsHardDayCaptionPlain(
+                      LpFormat.weekday(shown[hardest].date, locale),
+                    ),
+                    final reason => l10n.statsHardDayCaption(
+                      LpFormat.weekday(shown[hardest].date, locale),
+                      reason,
+                    ),
+                  },
+            style: LpType.caption11(lp.textSecondary),
+          ),
         ],
       ),
     );
@@ -398,6 +434,10 @@ class _EditableBars extends ConsumerWidget {
             if (i > 0) SizedBox(width: compact ? 3 : 7),
             Expanded(
               child: GestureDetector(
+                // The whole column, not just the painted bar: an empty day
+                // is a 4%-tall sliver, and the day you most need to fix is
+                // the one with nothing on it (QA H4's repair path).
+                behavior: HitTestBehavior.opaque,
                 onLongPress: () {
                   LpHaptics.medium();
                   showEditDaySheet(context, ref, log);

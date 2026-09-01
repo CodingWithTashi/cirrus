@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../domain/logic/community_rules.dart';
 import '../../../domain/repositories/repositories.dart';
 import 'fake_fixtures.dart';
 
@@ -39,6 +40,12 @@ class FakeServer {
 
   /// Lazily seeded on first fetch so fixture timestamps are relative to then.
   List<Map<String, dynamic>>? _posts;
+
+  /// post id → the account that wrote it. The fake's `postAuthors`: kept
+  /// OFF the post, exactly like production, so "is this mine" is answered
+  /// per session by the backend and never by a flag riding on the wire —
+  /// which is how every reader of the store used to be its author (QA H3).
+  final Map<String, String> _postAuthors = {};
 
   final Map<String, int> _reportCounts = {};
 
@@ -127,7 +134,41 @@ class FakeServer {
   List<Map<String, dynamic>> get posts =>
       _posts ??= FakeFixtures.communityJson(DateTime.now());
 
-  void insertPost(Map<String, dynamic> post) => posts.insert(0, _copy(post)!);
+  /// The feed as THIS session sees it: other people's posts only when live,
+  /// the caller's own posts in every state, `isMine` decided here.
+  List<Map<String, dynamic>> postsForSession() => [
+    for (final p in posts)
+      if (_postAuthors[p['id']] == _sessionAccountId ||
+          (p['status'] ?? 'live') == 'live')
+        {
+          ..._copy(p)!,
+          'isMine':
+              _sessionAccountId != null &&
+              _postAuthors[p['id']] == _sessionAccountId,
+        },
+  ];
+
+  /// Stores the post without its `isMine`, records who wrote it, and
+  /// "moderates" it the way production does — synchronously, so the status
+  /// a client reads back is the verdict, never the optimistic guess.
+  String insertPost(Map<String, dynamic> post) {
+    final stored = _copy(post)!..remove('isMine');
+    final id = stored['id'] as String;
+    stored['status'] = CommunityRules.violates(stored['text'] as String? ?? '')
+        ? 'pending'
+        : 'live';
+    _postAuthors[id] = _sessionOrGuest();
+    posts.insert(0, stored);
+    return id;
+  }
+
+  /// `posts/{id}.status` as the backend has it, null when unknown.
+  String? postStatus(String postId) {
+    for (final p in posts) {
+      if (p['id'] == postId) return (p['status'] ?? 'live') as String;
+    }
+    return null;
+  }
 
   void updatePost(String postId, void Function(Map<String, dynamic>) mutate) {
     for (final p in posts) {

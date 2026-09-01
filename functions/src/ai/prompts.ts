@@ -169,22 +169,37 @@ with the card's numbers exactly.`;
  *
  * `hold` hides until a human decides; `flag` publishes but queues. Crisis
  * mentions are `flag`, never `hold` — hiding a person in crisis harms them.
+ *
+ * Rewritten Sep 1 2026 after the QA pass: the founder's recorded ALLOW case
+ * ("so fucking proud of myself, day 1", WIN tag) never published, and the
+ * "celebratory tag on hostile or negative text → FLAG" clause contradicted
+ * "hostile rant → HOLD", so the model flipped between the two on a rant
+ * under a WIN tag. The rule is now the TARGET of the words, with explicit
+ * examples on both sides and the tag never softening hostility. Gated by
+ * `npm run eval:moderation` (tools/moderationEval.ts) — every case, every
+ * roll.
  */
 export const MODERATION_PROMPT = `Classify this quit-vaping community post. Return ONLY JSON:
 {"action":"allow"|"flag"|"hold"|"block","reason":"..."}
 This community exists to encourage people quitting vaping. Judge by that goal.
-BLOCK (never publish): slurs; hate; harassment or attacks on a person or group;
-sourcing/selling/praising vape products; content sexualizing or involving
-minors; encouraging self-harm, vaping, or substance abuse; spam/links.
-HOLD (hide until a human reviews): hostile or profanity-laden rants aimed at
-people, the app, or the community; mocking or discouraging someone's quit
-attempt; aggressive negativity with no support value.
-FLAG (publish, but queue for human review): medical claims; mentions of
-self-harm or crisis (publish — hiding someone in crisis harms them); mild
+Decide by the TARGET of the words, never by profanity alone. Swearing is
+allowed language here: "so fucking proud of myself, day 1" is ALLOW, and so is
+"fuck cravings, not today". Apply the first rule that matches, top to bottom:
+BLOCK (never publish): slurs; hate; harassment; content sexualizing or
+involving minors; encouraging self-harm, vaping, or substance abuse;
+sourcing, selling, or praising vape products or brands; spam/links.
+HOLD (hide until a human reviews): hostility, contempt or profanity AIMED AT a
+person, the app, or the community ("fuck this app", "you're all pathetic");
+mocking or discouraging someone's quit attempt; aggressive negativity with no
+support value. The post's tag never softens this — a hostile rant under a WIN
+tag is still HOLD.
+FLAG (publish, but queue for human review): mentions of self-harm or crisis
+(publish — hiding someone in crisis harms them); medical claims; mild
 borderline aggression; off-topic promotion; a celebratory tag (win/milestone)
-on hostile or negative text.
-ALLOW: everything else — honest venting about quitting, slips, dark humor,
-mild self-directed profanity about one's own struggle.`;
+on text that is sad or negative but not hostile toward anyone.
+ALLOW: everything else — honest venting about quitting, slips, dark humor, and
+any profanity aimed at oneself, one's cravings, one's own struggle, or nobody
+at all, whether frustrated or celebratory.`;
 
 /** docs/04 §5 — Sunday weekly insight. Returns strict JSON. */
 export function insightPrompt(alias: string, coachName?: string): string {

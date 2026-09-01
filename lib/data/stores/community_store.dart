@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/logic/community_rules.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import 'community_prefs.dart';
@@ -75,6 +76,9 @@ class CommunityStore extends Notifier<CommunityState> {
   /// on-device suite.
   final Map<String, int> _reportsByPost = {};
 
+  /// Live moderation-state subscriptions for posts written this session.
+  final Map<String, StreamSubscription<PostStatus>> _statusSubs = {};
+
   bool Function() _alive = () => false;
 
   @override
@@ -82,7 +86,13 @@ class CommunityStore extends Notifier<CommunityState> {
     // Riverpod 2.x Notifiers have no `ref.mounted`; guard the async load
     // against provider invalidation (sign-out) mid-fetch.
     var alive = true;
-    ref.onDispose(() => alive = false);
+    ref.onDispose(() {
+      alive = false;
+      for (final sub in _statusSubs.values) {
+        unawaited(sub.cancel());
+      }
+      _statusSubs.clear();
+    });
     _alive = () => alive;
     unawaited(_load());
     unawaited(_restorePrefs());
@@ -146,26 +156,16 @@ class CommunityStore extends Notifier<CommunityState> {
   }
 
   /// Client-side guard mirroring the moderation policy (docs/03 §9): brand
-  /// praise and sourcing get held. The real Gemini pass is server-side later.
-  static bool violatesCommunityRules(String text) {
-    final t = text.toLowerCase();
-    const banned = [
-      'elfbar',
-      'elf bar',
-      'geekbar',
-      'geek bar',
-      'juul',
-      'vuse',
-      'lostmary',
-      'lost mary',
-      'where to buy',
-      'for sale',
-      'plug for',
-      'best flavor to buy',
-    ];
-    return banned.any(t.contains);
-  }
+  /// praise and sourcing get held. The real Gemini pass is server-side.
+  static bool violatesCommunityRules(String text) =>
+      CommunityRules.violates(text);
 
+  /// Optimistic: the post is in the author's feed at once, marked `pending`
+  /// — every post is born pending on the backend and only the server flips
+  /// it live. Once the backend acknowledges, the local copy is rebound to
+  /// the server's id and its moderation state is followed, so a held post
+  /// says "in review" instead of showing "Posted." and then vanishing on
+  /// the next launch (QA M5).
   void addPost({required String text, required PostTag tag}) {
     final post = Post(
       id: 'p${DateTime.now().microsecondsSinceEpoch}',
@@ -176,11 +176,55 @@ class CommunityStore extends Notifier<CommunityState> {
       text: text,
       createdAt: DateTime.now(),
       isMine: true,
-      hidden: violatesCommunityRules(text),
+      status: PostStatus.pending,
     );
     state = state.copyWith(posts: [post, ...state.posts]);
-    _repo.addPost(post).ignore();
+    unawaited(_syncPost(post));
     ref.read(quitStoreProvider.notifier).awardBadge('firstPost');
+  }
+
+  Future<void> _syncPost(Post local) async {
+    final String? serverId;
+    try {
+      serverId = await _repo.addPost(local);
+    } on Exception {
+      // Offline or refused: the banner tells the story, the post stays
+      // pending locally — which is the truth, it never reached anyone.
+      return;
+    }
+    if (!_alive()) return;
+    final id = serverId ?? local.id;
+    if (id != local.id) {
+      state = state.copyWith(
+        posts: [
+          for (final p in state.posts)
+            if (p.id == local.id) p.copyWith(id: id) else p,
+        ],
+      );
+    }
+    final stale = _statusSubs.remove(id);
+    if (stale != null) unawaited(stale.cancel());
+    _statusSubs[id] = _repo.watchPostStatus(id).listen(
+      (status) => _setStatus(id, status),
+      onError: (Object _) {},
+    );
+  }
+
+  void _setStatus(String postId, PostStatus status) {
+    if (!_alive()) return;
+    state = state.copyWith(
+      posts: [
+        for (final p in state.posts)
+          if (p.id == postId && p.status != status)
+            p.copyWith(status: status)
+          else
+            p,
+      ],
+    );
+    if (status != PostStatus.pending) {
+      final done = _statusSubs.remove(postId);
+      if (done != null) unawaited(done.cancel());
+    }
   }
 
   void toggleReaction(String postId, String emoji) {

@@ -62,9 +62,20 @@ abstract interface class JourneyRepository {
 
 /// Anonymous community feed.
 abstract interface class CommunityRepository {
+  /// Everyone's live posts, plus the caller's own posts in every state, with
+  /// `isMine` decided by the backend per account — never by anything the
+  /// client remembered from an earlier session (QA H3).
   Future<List<Post>> fetchPosts();
 
-  Future<void> addPost(Post post);
+  /// Answers the backend's id for the post (null when the backend did not
+  /// say), so the optimistic copy can be rebound to the real document.
+  Future<String?> addPost(Post post);
+
+  /// The post's moderation state as it changes: `pending` until the server
+  /// has classified it, then `live` or `blocked`. Emits at least the current
+  /// state; closes when a final state is reached or the backend has no such
+  /// post. The author's "held for review" chip is driven from this.
+  Stream<PostStatus> watchPostStatus(String postId);
 
   Future<void> setReaction(String postId, String emoji, {required bool on});
 
@@ -205,6 +216,13 @@ final class InvalidCredentialsException extends AuthException {
 
 final class EmailAlreadyInUseException extends AuthException {
   const EmailAlreadyInUseException();
+}
+
+/// The backend refused the password itself (Firebase: fewer than 6
+/// characters). The user's input, not our failure — it gets its own copy
+/// rather than the generic "that one's on us" dialog (QA M4).
+final class WeakPasswordException extends AuthException {
+  const WeakPasswordException();
 }
 
 /// The user dismissed a native sign-in sheet (Google/Apple). Not a failure:

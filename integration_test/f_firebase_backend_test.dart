@@ -555,6 +555,53 @@ void main() {
         reason: 'the feed stopped reading after a write: $readFailure');
   });
 
+  testWidgets('the backend says which posts are mine, and their state', (
+    tester,
+  ) async {
+    // QA H3 + M5. Ownership used to be a session-scoped set on the client,
+    // so a post written by the previous account on the same phone stayed
+    // "mine" for the next one — and "mine" is what hides Report and Block.
+    // It is answered by the server-owned `users/{uid}/posts` mirror now,
+    // which also carries the moderation state the rules hide from everyone
+    // else, so a held post can say so instead of vanishing.
+    //
+    // Goes green only once the functions that write the mirror are
+    // deployed: `createPost`, `moderatePost`, `reportPost`,
+    // `resolveModeration`.
+    final e2e = await session(tester);
+    final repo = e2e.container.read(communityRepositoryProvider);
+
+    final id = await repo.addPost(
+      Post(
+        id: 'pending',
+        alias: '@e2eotter',
+        avatarEmoji: '🦦',
+        dayN: 1,
+        tag: PostTag.win,
+        text: 'e2e ownership check — please ignore, this account is '
+            'deleted at the end',
+        createdAt: DateTime.now(),
+      ),
+    );
+    expect(id, isNotNull, reason: 'createPost must answer the post id');
+    await e2e.waitFor(const Duration(seconds: 4));
+
+    // A fresh fetch (nothing remembered on the client) must carry the post
+    // as mine, in whatever state moderation has it in by now.
+    final feed = await repo.fetchPosts();
+    final mine = feed.where((p) => p.id == id).toList();
+    expect(mine, hasLength(1),
+        reason: "the author's own post must be in their feed in every state; "
+            'got ${feed.length} posts, none with id $id');
+    expect(mine.single.isMine, isTrue);
+
+    // And the status stream answers at least the current state.
+    final status = await repo.watchPostStatus(id!).first.timeout(
+          const Duration(seconds: 10),
+        );
+    expect(PostStatus.values, contains(status));
+  });
+
   testWidgets('deleteUserData erases the account and everything under it', (
     tester,
   ) async {

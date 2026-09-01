@@ -132,13 +132,14 @@ void main() {
       );
       // Past the long-press threshold: the first tick fires (+1)…
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 20));
-      // …then three more on the repeat clock (+1, +1, +2).
+      // …then three more on the repeat clock, one puff each. (The old ramp
+      // made the fourth tick +2; a tick is one puff now — QA H1.)
       await tester.pump(HoldToLog.interval * 3);
       await gesture.up();
       await tester.pumpAndSettle();
 
-      expect(container.read(todayProvider)!.puffs, before + 5);
-      expect(find.text(l10n.homeLoggedSnackCount(5)), findsOneWidget);
+      expect(container.read(todayProvider)!.puffs, before + 4);
+      expect(find.text(l10n.homeLoggedSnackCount(4)), findsOneWidget);
 
       await tester.tap(find.text(l10n.commonUndo));
       await tester.pumpAndSettle();

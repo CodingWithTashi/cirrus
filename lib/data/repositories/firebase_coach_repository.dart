@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/logic/coach_history.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/firebase/functions_client.dart';
@@ -73,9 +74,12 @@ class FirebaseCoachRepository implements CoachRepository {
         .orderBy('ts', descending: true)
         .limit(_historyLimit)
         .get();
-    return [
+    // `orderBy('ts')` alone is not an order for a user/reply pair written in
+    // one batch with one server timestamp — the tie came back reversed
+    // after a cold restart (QA L1). `CoachHistory` breaks it: user first.
+    return CoachHistory.ordered([
       for (final doc in snap.docs.reversed) ?_decodeHistory(doc.id, doc.data()),
-    ];
+    ]);
   }
 
   /// Enough to feel continuous without paying to rebuild a year of chat on

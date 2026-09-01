@@ -11,7 +11,13 @@
  */
 import {dayKeyIn} from '../domain/dateKey';
 import {decodeJourney} from '../domain/journeyCodec';
-import {currentStreak, dangerHours, flameFor, trailingDays} from '../domain/streakEngine';
+import {
+  currentStreak,
+  dangerHours,
+  flameFor,
+  repairTokens,
+  trailingDays,
+} from '../domain/streakEngine';
 import {dayNumber, limitFor} from '../domain/taperEngine';
 import {weekStats, type WeekStat} from '../domain/weekStats';
 import {
@@ -96,7 +102,7 @@ export function buildMemoryCard(
     `about them: ${describeProfile(profile, age)}`,
     `vaping: ${strengthPhrase(plan.strength)}`,
     `saving toward: ${goalsLine(journey, saved)}`,
-    `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${journey.repairTokens}`,
+    `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${repairTokens(journey.days, todayKey)}`,
     `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
     `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'}`,
     `last 7 days: ${last7.length > 0 ? last7.map((d) => d.puffs).join(',') : 'no logs yet'}`,

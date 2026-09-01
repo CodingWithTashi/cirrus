@@ -20,6 +20,7 @@ import {matchedTestimonials} from '../../src/handlers/testimonials';
 import {
   db,
   devicesCol,
+  myPostsCol,
   postsCol,
   testimonialsCol,
   userDoc,
@@ -352,6 +353,17 @@ describe('reportPost', () => {
     // Pending, never deleted: the founder still has to be able to read it
     // and disagree.
     expect(post.get('status')).toBe('pending');
+  });
+
+  it("an auto-hide tells the author through their mirror row", async () => {
+    await seedPost();
+    await db.collection('postAuthors').doc('p1').set({uid: 'dave'});
+    await myPostsCol('dave').doc('p1').set({status: 'live', text: 'x', tag: 'win'});
+    for (const uid of ['alice', 'bob', 'carol']) {
+      await reportPost.run(caller({postId: 'p1'}, uid));
+    }
+
+    expect((await myPostsCol('dave').doc('p1').get()).get('status')).toBe('pending');
   });
 
   it('refuses a post that does not exist', async () => {

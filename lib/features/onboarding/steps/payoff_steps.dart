@@ -364,7 +364,10 @@ class _CommitStepState extends ConsumerState<CommitStep>
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      l10n.obCommitDaysOut(plan.totalDays),
+                      // Day 1 is today, so Freedom Day is totalDays − 1
+                      // days out — the checklist already said "29 days";
+                      // this said "30 days from today" (QA copy sweep).
+                      l10n.obCommitDaysOut(plan.totalDays - 1),
                       style: LpType.body13(lp.textSecondary),
                     ),
                   ],

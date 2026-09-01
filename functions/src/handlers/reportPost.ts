@@ -15,7 +15,7 @@
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
-import {db, FieldValue, moderationDoc, postsCol} from '../lib/firestore';
+import {db, FieldValue, mirrorPostStatus, moderationDoc, postsCol} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
 
@@ -49,18 +49,22 @@ export const reportPost = onCall(
     const reporter = ref.collection('reporters').doc(caller.uid);
     const applied = await db.runTransaction(async (tx) => {
       const [fresh, rep] = await Promise.all([tx.get(ref), tx.get(reporter)]);
-      if (!fresh.exists || rep.exists) return false;
+      if (!fresh.exists || rep.exists) return 'skipped' as const;
       const count = ((fresh.get('reportCount') as number | undefined) ?? 0) + 1;
       tx.set(reporter, {reportedAt: FieldValue.serverTimestamp()});
+      const hide = count >= AUTO_HIDE_AT;
       tx.update(ref, {
         reportCount: count,
         // Hidden pending review, never deleted: the founder still has to be
         // able to read it and disagree.
-        ...(count >= AUTO_HIDE_AT ? {status: 'pending'} : {}),
+        ...(hide ? {status: 'pending'} : {}),
       });
-      return true;
+      return hide ? ('hidden' as const) : ('counted' as const);
     });
-    if (!applied) return {ok: true};
+    if (applied === 'skipped') return {ok: true};
+    // The author sees their post go back "in review" rather than watching it
+    // silently disappear from everyone else's feed.
+    if (applied === 'hidden') await mirrorPostStatus(postId, 'pending');
 
     // A report re-opens an existing queue row but never rewrites it: the
     // classifier's `action`/`reason` are the evidence the founder reads, and

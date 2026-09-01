@@ -15,7 +15,7 @@
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
-import {db, FieldValue, postsCol} from '../lib/firestore';
+import {db, FieldValue, mirrorPostStatus, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
 import {notifyPostAuthor} from './moderateReply';
@@ -175,7 +175,11 @@ export const resolveModeration = onCall(
     // row stays in the queue and the founder retries — the reverse order
     // dropped the row from the queue with the content's status unchanged.
     if (action !== null && targetSnap.exists) {
-      await target.update({status: action === 'block' ? 'blocked' : 'live'});
+      const status = action === 'block' ? 'blocked' : 'live';
+      await target.update({status});
+      // A post's author learns the founder's decision the same way they
+      // learned the classifier's: through their own mirror row.
+      if (kind !== 'reply') await mirrorPostStatus(postId, status);
       // A held reply the founder just published: the SOS author is owed the
       // "someone answered" push the trigger rightly skipped while the reply
       // was invisible. Only on a pending→live transition — a `flag` reply

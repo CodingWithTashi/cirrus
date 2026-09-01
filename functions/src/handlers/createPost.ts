@@ -15,7 +15,7 @@ import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {dayKeyIn} from '../domain/dateKey';
-import {db, FieldValue, postsCol} from '../lib/firestore';
+import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {claimDailyPost} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
@@ -69,6 +69,19 @@ export const createPost = onCall(
     // Server-only. Never readable by any client (see firestore.rules).
     batch.set(db.collection('postAuthors').doc(post.id), {
       uid: caller.uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    // The author's own copy, under their own document: what lets the app
+    // show "in review" instead of "Posted." followed by silence, and what
+    // makes "is this mine?" a backend answer rather than a session memory.
+    // Same batch, so a post can never exist without its author knowing.
+    batch.set(myPostsCol(caller.uid).doc(post.id), {
+      alias,
+      avatarEmoji: typeof data['avatarEmoji'] === 'string' ? data['avatarEmoji'] : '🔥',
+      dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
+      tag,
+      text,
+      status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
     });
     await batch.commit();

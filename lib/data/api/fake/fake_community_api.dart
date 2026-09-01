@@ -9,11 +9,15 @@ class FakeCommunityApi implements CommunityApi {
 
   @override
   Future<List<Map<String, dynamic>>> fetchPosts() =>
-      _server.respond(() => FakeServer.copyList(_server.posts));
+      _server.respond(_server.postsForSession);
 
   @override
-  Future<void> addPost(Map<String, dynamic> post) =>
+  Future<String> addPost(Map<String, dynamic> post) =>
       _server.respond(() => _server.insertPost(post));
+
+  @override
+  Future<String?> postStatus(String postId) =>
+      _server.respond(() => _server.postStatus(postId));
 
   @override
   Future<void> setReaction({

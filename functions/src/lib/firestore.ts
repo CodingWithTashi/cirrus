@@ -77,6 +77,46 @@ export const devicesCol = (uid: string): CollectionReference =>
 export const insightDoc = (uid: string, weekId: string): DocumentReference =>
   userDoc(uid).collection('insights').doc(weekId);
 
+/**
+ * The author's own view of their posts: `users/{uid}/posts/{postId}` carries
+ * the post's text, tag and — the part that matters — its moderation
+ * `status`, kept in step by every handler that flips `posts/{id}.status`.
+ *
+ * Why it exists: the feed rules expose only `status == 'live'`, and posts
+ * carry no uid, so an author had NO way to learn that their post was held
+ * or refused — it said "Posted." and was gone on the next launch (QA M5) —
+ * and no durable way to know which live posts were theirs at all, which is
+ * the condition that hides Report and Block (QA H3). Server-owned like
+ * everything else under `users/{uid}`: readable by the owner through the
+ * existing `users/{uid}/{document=**}` rule, written only from here, and
+ * swept by `deleteUserData`'s `recursiveDelete` with the rest.
+ */
+export const myPostsCol = (uid: string): CollectionReference =>
+  userDoc(uid).collection('posts');
+
+export type PostStatus = 'live' | 'pending' | 'blocked';
+
+/**
+ * Reflects a post's new status into its author's mirror row.
+ *
+ * Looks the author up through the server-only `postAuthors` mapping, so the
+ * post itself still carries no uid. A post with no mapping (seeded fixtures,
+ * a pre-mirror post) is left alone; a missing mirror row is created, so a
+ * status change on an older post still tells its author.
+ */
+export async function mirrorPostStatus(
+  postId: string,
+  status: PostStatus,
+): Promise<void> {
+  const author = await db.collection('postAuthors').doc(postId).get();
+  const uid = author.get('uid') as string | undefined;
+  if (uid === undefined) return;
+  await myPostsCol(uid).doc(postId).set(
+    {status, moderatedAt: FieldValue.serverTimestamp()},
+    {merge: true},
+  );
+}
+
 // --- Community -------------------------------------------------------------
 
 /** Posts carry no uid — see createPost for why the mapping lives elsewhere. */

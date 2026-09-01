@@ -73,16 +73,20 @@ class MilestonesScreen extends ConsumerWidget {
     if (journey == null || snap == null) return const SizedBox.shrink();
     final earned = journey.earnedBadges;
 
-    // Next streak-flame badge as the pinned progress card.
-    final nextFlameDays = StreakEngine.daysToNextFlame(snap.streak);
-    final nextFlame = FlameState.forStreak(snap.streak + (nextFlameDays ?? 0));
+    // Next streak-flame BADGE as the pinned progress card. Only the states
+    // that carry a badge count (spark at 3, week at 7, two-week at 14,
+    // inferno at 30): `FlameState.spark` (1 day) has no badge, and computing
+    // "next" from it read "Next: 30-day inferno · day 0 of 1" after a reset
+    // (QA L5). Null past the inferno — there is nothing next.
+    final nextFlame = StreakEngine.nextBadgeFlame(snap.streak);
     final nextName = switch (nextFlame) {
       FlameState.flicker => l10n.mSpark,
       FlameState.flame => l10n.mWeekFlame,
       FlameState.blaze => l10n.mTwoWeekFlame,
       _ => l10n.mInferno,
     };
-    final target = nextFlame.minDays;
+    final target = nextFlame?.minDays ?? 0;
+    final remaining = target - snap.streak;
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +108,7 @@ class MilestonesScreen extends ConsumerWidget {
         child: Column(
           children: [
             // Next-badge card pinned above the scrolling grid (frame 47).
-            if (nextFlameDays != null)
+            if (nextFlame != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                 child: LpCard(
@@ -146,7 +150,11 @@ class MilestonesScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              l10n.milestonesNextProgress(snap.streak, target),
+                              l10n.milestonesNextProgress(
+                                snap.streak,
+                                target,
+                                remaining,
+                              ),
                               style: LpType.caption11(lp.textSecondary),
                             ),
                           ],

@@ -164,6 +164,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'that email already has a journey — log in instead';
 
   @override
+  String get authPasswordTooShort =>
+      'passwords need at least 6 characters — a few more and you\'re in';
+
+  @override
   String obProgressOf(int step, int total) {
     return '$step/$total';
   }
@@ -885,7 +889,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obNotifBullet2 => 'Streak + milestone celebrations';
 
   @override
-  String get obNotifBullet3 => 'Buddy SOS pings — nothing else';
+  String get obNotifBullet3 => 'Nothing else — no marketing, ever';
 
   @override
   String get obNotifCta => 'Turn on backup';
@@ -900,7 +904,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallFeatCoach => 'AI coach, unlimited';
 
   @override
-  String get paywallFeatPanic => 'Panic Button + buddy ping';
+  String get paywallFeatPanic => 'Panic Button + community SOS';
 
   @override
   String get paywallFeatPlan => 'Adaptive quit plan';
@@ -1070,6 +1074,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeGreetingFreedomDay(String date) {
+    return '$date · Freedom Day 🏆';
+  }
+
+  @override
+  String homeGreetingMaintenance(String date, num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days past Freedom Day',
+      one: '1 day past Freedom Day',
+    );
+    return '$date · $_temp0';
+  }
+
+  @override
+  String get homeFreedomDayTitle => 'Freedom Day. You picked this date.';
+
+  @override
+  String get homeFreedomDayBody =>
+      'The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.';
+
+  @override
   String get homeTitle => 'Today';
 
   @override
@@ -1137,6 +1164,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeVapeFreeDone =>
       'Vape-free day locked in. That\'s the whole game. 🔥';
+
+  @override
+  String get homeYesterdayTitle => 'Was yesterday vape-free?';
+
+  @override
+  String homeYesterdayBody(String date) {
+    return 'No log for $date. Only you know, so we ask instead of guessing.';
+  }
+
+  @override
+  String get homeYesterdayYes => 'Vape-free ✓';
+
+  @override
+  String get homeYesterdayNo => 'I vaped';
+
+  @override
+  String get homeYesterdayDone =>
+      'Yesterday locked in. Your streak knows the truth. 🔥';
 
   @override
   String homeLoggedSnackCount(num count) {
@@ -1483,7 +1528,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachReplyProgress2(int today, int limit) {
-    return '$today puffs today against a line of $limit. Two weeks ago that number would\'ve been double. You\'re actually doing this.';
+    return '$today puffs today against a line of $limit. Every one you skip is in the log now, and the log is what bends the curve. You\'re actually doing this.';
   }
 
   @override
@@ -1643,6 +1688,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get statsWindowNoPuffs => 'no puffs logged in this window';
+
+  @override
   String get statsTriggerHours => 'TRIGGER HOURS';
 
   @override
@@ -1791,6 +1839,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityPosted =>
       'Posted. A quick safety check runs before others can see it.';
+
+  @override
+  String get communityStatusHeld => 'In review — only you can see this for now';
+
+  @override
+  String get communityStatusBlocked =>
+      'Not published — it didn\'t clear the community rules';
 
   @override
   String get buddyLinkCopied =>
@@ -1970,8 +2025,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String milestonesNextProgress(int day, int target) {
-    return 'day $day of $target · two more sunrises';
+  String milestonesNextProgress(int day, int target, num remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining more sunrises',
+      one: 'one more sunrise',
+    );
+    return 'day $day of $target · $_temp0';
   }
 
   @override
@@ -2160,8 +2221,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get slipCurveNote =>
-      'Two extra days, same destination. Party nights get a pre-armed nudge + game shortcut.';
+  String get slipCurveNote => 'Two extra days, same destination.';
 
   @override
   String slipStreakSurvives(int days) {
@@ -2277,6 +2337,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String memoriesFactDayValue(int day, int total) {
     return 'Day $day of $total';
+  }
+
+  @override
+  String memoriesFactDayMaintenance(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Plan complete · $count days past Freedom Day',
+      one: 'Plan complete · 1 day past Freedom Day',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2570,4 +2641,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authWorking => 'One sec…';
+
+  @override
+  String get slipCurveNoteParty =>
+      'Two extra days, same destination. Before the next party, set a danger hour so the reminder lands first.';
+
+  @override
+  String get slipCurveNoteStress =>
+      'Two extra days, same destination. When stress hits, the panic button\'s 60-second breathe is built for exactly that minute.';
+
+  @override
+  String get slipCurveNoteBoredom =>
+      'Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.';
+
+  @override
+  String get slipCurveNoteDrinking =>
+      'Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.';
+
+  @override
+  String get slipCurveNoteFriends =>
+      'Two extra days, same destination. Next time, text your coach before you meet them, not after.';
+
+  @override
+  String get slipCurveNoteJustHappened =>
+      'Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.';
 }

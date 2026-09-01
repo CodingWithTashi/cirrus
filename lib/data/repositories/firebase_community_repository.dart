@@ -16,12 +16,21 @@ import '../api/firebase/functions_client.dart';
 /// `myReactions` is read from the `reactors` subcollection, so it survives a
 /// restart and a device change — the reaction is stored, not remembered.
 ///
-/// KNOWN LIMITATION — `isMine` is still session-scoped. Posts deliberately
-/// carry no uid, so "did I write this?" is not derivable from the feed, and
-/// the only alternative would be exposing `postAuthors` to readers, which is
-/// exactly the thing that keeps the feed anonymous. A restart forgets which
-/// posts were yours. That is cosmetic; `postAuthors` remains authoritative
-/// server-side for deletion.
+/// **`isMine` is decided by the backend, per account.** `createPost` writes a
+/// server-owned mirror at `users/{uid}/posts/{postId}` (status, text, tag),
+/// readable only by its owner, and `moderatePost`/`reportPost`/
+/// `resolveModeration` keep its `status` in step with the post. Reading that
+/// mirror on every fetch answers two questions the feed could not before:
+/// which posts are the caller's (durably, across restarts and devices) and
+/// what state the caller's own posts are in, including the held and refused
+/// ones the rules hide from everybody else.
+///
+/// It used to be a session-scoped `Set<String>` on this object. This object
+/// lives for the whole process, so a post written by whoever signed in first
+/// stayed "mine" for whoever signed in next on the same phone — and "mine"
+/// is exactly the condition that hides Report, Mute and Block (QA H3, three
+/// accounts on one device). Posts still carry no uid; the mirror lives under
+/// the author's own document, so the feed stays anonymous.
 class FirebaseCommunityRepository implements CommunityRepository {
   FirebaseCommunityRepository({
     FirebaseFirestore? firestore,
@@ -39,15 +48,22 @@ class FirebaseCommunityRepository implements CommunityRepository {
   /// scroll — docs/03 §9 describes a reverse-chron feed, not a timeline.
   static const int _feedLimit = 50;
 
-  final Set<String> _minePostIds = <String>{};
+  /// Per account, never shared across sign-ins on one device.
+  final Map<String, Set<String>> _blockedByUid = <String, Set<String>>{};
   final Map<String, Set<String>> _myReactions = <String, Set<String>>{};
-  final Set<String> _blockedAliases = <String>{};
 
   CollectionReference<Map<String, dynamic>> get _posts =>
       _db.collection('posts');
 
+  CollectionReference<Map<String, dynamic>> _myPosts(String uid) =>
+      _db.collection('users').doc(uid).collection('posts');
+
+  Set<String> get _blockedAliases =>
+      _blockedByUid[_auth.currentUser?.uid ?? ''] ??= <String>{};
+
   @override
   Future<List<Post>> fetchPosts() async {
+    final uid = _auth.currentUser?.uid;
     final snap = await _posts
         .where('status', isEqualTo: 'live')
         .orderBy('createdAt', descending: true)
@@ -68,12 +84,32 @@ class FirebaseCommunityRepository implements CommunityRepository {
     }
 
     await _loadMyReactions();
+    final mine = uid == null
+        ? const <String, Map<String, dynamic>>{}
+        : await _loadMine(uid);
 
-    return [
+    final feed = [
       for (final doc in snap.docs)
         if (!_blockedAliases.contains(doc.data()['alias']))
-          _toPost(doc, repliesByPost[doc.id] ?? const []),
+          _toPost(
+            doc.id,
+            doc.data(),
+            repliesByPost[doc.id] ?? const [],
+            isMine: mine.containsKey(doc.id),
+          ),
     ];
+
+    // The caller's own posts the rules hide from everyone else — held for
+    // review, refused, or simply not classified yet. They render in the
+    // author's feed wearing their state (QA M5: "Posted." and then gone).
+    final liveIds = {for (final doc in snap.docs) doc.id};
+    for (final entry in mine.entries) {
+      if (liveIds.contains(entry.key)) continue;
+      final status = _statusOf(entry.value['status']);
+      if (status == PostStatus.live) continue; // paged out of the 50; fine
+      feed.add(_toPost(entry.key, entry.value, const [], isMine: true));
+    }
+    return feed;
   }
 
   /// One collection-group query for every reaction this viewer has left,
@@ -97,8 +133,17 @@ class FirebaseCommunityRepository implements CommunityRepository {
     }
   }
 
+  /// The server-owned mirror of this account's posts: id → document.
+  Future<Map<String, Map<String, dynamic>>> _loadMine(String uid) async {
+    final snap = await _myPosts(uid)
+        .orderBy('createdAt', descending: true)
+        .limit(_feedLimit)
+        .get();
+    return {for (final doc in snap.docs) doc.id: doc.data()};
+  }
+
   @override
-  Future<void> addPost(Post post) async {
+  Future<String?> addPost(Post post) async {
     final json = await _functions.call('createPost', {
       'text': post.text ?? '',
       'tag': post.tag.name,
@@ -107,7 +152,29 @@ class FirebaseCommunityRepository implements CommunityRepository {
       'dayN': post.dayN,
     });
     final id = json['postId'];
-    if (id is String) _minePostIds.add(id);
+    return id is String ? id : null;
+  }
+
+  /// Follows the mirror document: `pending` while `moderatePost` is still
+  /// running, then whatever it decided. Closes on a final state, and closes
+  /// too when the SERVER says there is no such row — a cache-only "missing"
+  /// is the normal first snapshot and is waited through, but a row the
+  /// backend does not have would otherwise hold a listener open for the
+  /// rest of the session. Reading `posts/{id}` directly would be denied
+  /// while it is pending, which is the whole reason the mirror exists.
+  @override
+  Stream<PostStatus> watchPostStatus(String postId) async* {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    await for (final snap in _myPosts(uid).doc(postId).snapshots()) {
+      if (!snap.exists) {
+        if (snap.metadata.isFromCache) continue;
+        return;
+      }
+      final status = _statusOf(snap.data()?['status']);
+      yield status;
+      if (status != PostStatus.pending) return;
+    }
   }
 
   @override
@@ -173,31 +240,37 @@ class FirebaseCommunityRepository implements CommunityRepository {
     _blockedAliases.add(alias);
   }
 
+  static PostStatus _statusOf(Object? raw) => switch (raw) {
+    'live' => PostStatus.live,
+    'blocked' => PostStatus.blocked,
+    _ => PostStatus.pending,
+  };
+
   Post _toPost(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-    List<Reply> replies,
-  ) {
-    final data = doc.data();
-    return Post(
-      id: doc.id,
-      alias: data['alias'] as String? ?? 'quitter',
-      avatarEmoji: data['avatarEmoji'] as String? ?? '🔥',
-      dayN: (data['dayN'] as num?)?.toInt() ?? 0,
-      tag: PostTag.values.firstWhere(
-        (t) => t.name == data['tag'],
-        orElse: () => PostTag.win,
-      ),
-      text: data['text'] as String? ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      reactions: {
-        for (final e in (data['reactions'] as Map? ?? const {}).entries)
-          e.key as String: (e.value as num).toInt(),
-      },
-      myReactions: _myReactions[doc.id] ?? const {},
-      replies: replies,
-      isMine: _minePostIds.contains(doc.id),
-    );
-  }
+    String id,
+    Map<String, dynamic> data,
+    List<Reply> replies, {
+    required bool isMine,
+  }) => Post(
+    id: id,
+    alias: data['alias'] as String? ?? 'quitter',
+    avatarEmoji: data['avatarEmoji'] as String? ?? '🔥',
+    dayN: (data['dayN'] as num?)?.toInt() ?? 0,
+    tag: PostTag.values.firstWhere(
+      (t) => t.name == data['tag'],
+      orElse: () => PostTag.win,
+    ),
+    text: data['text'] as String? ?? '',
+    createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    reactions: {
+      for (final e in (data['reactions'] as Map? ?? const {}).entries)
+        e.key as String: (e.value as num).toInt(),
+    },
+    myReactions: _myReactions[id] ?? const {},
+    replies: replies,
+    isMine: isMine,
+    status: _statusOf(data['status'] ?? 'live'),
+  );
 
   Reply _toReply(String id, Map<String, dynamic> data) => Reply(
     id: id,

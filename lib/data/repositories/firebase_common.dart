@@ -60,6 +60,7 @@ Exception? _mapAuthCode(String code) => switch (code) {
   'email-already-in-use' ||
   'account-exists-with-different-credential' ||
   'credential-already-in-use' => const EmailAlreadyInUseException(),
+  'weak-password' => const WeakPasswordException(),
   'network-request-failed' => const NoConnectionException(),
   'canceled' ||
   'user-cancelled' ||

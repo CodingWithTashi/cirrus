@@ -203,6 +203,17 @@ class TodaySnapshot {
 
   int get puffsLeft => (limit - puffs).clamp(0, 999999);
 
+  /// The plan's last day, the Plan screen's "🏆 Freedom Day", rendered as
+  /// the completion it is rather than an ordinary 0-limit day (QA M3).
+  bool get isFreedomDay => dayNumber == totalDays;
+
+  /// Past the plan's end: maintenance. "Day N of P" must never show N > P
+  /// — Oct 1 of a 30-day September plan is not "Day 31 of 30".
+  bool get isMaintenance => dayNumber > totalDays;
+
+  /// Days since Freedom Day, 1 on the first day after it; 0 during the plan.
+  int get daysPastPlan => isMaintenance ? dayNumber - totalDays : 0;
+
   int get daysToFreedom {
     final diff = LpDate.daysBetween(now, freedomDate);
     return diff < 0 ? 0 : diff;

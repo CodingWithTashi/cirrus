@@ -15,7 +15,7 @@
 import {onDocumentCreated} from 'firebase-functions/v2/firestore';
 import {GEMINI_API_KEY, REGION} from '../config';
 import {classify, type ModerationAction} from '../ai/moderation';
-import {FieldValue, moderationDoc} from '../lib/firestore';
+import {FieldValue, mirrorPostStatus, moderationDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
 
 /**
@@ -52,6 +52,7 @@ export const moderatePost = onDocumentCreated(
 
     if (typeof text !== 'string' || text.trim().length === 0) {
       await snap.ref.update({status: 'blocked', moderatedAt: FieldValue.serverTimestamp()});
+      await mirrorPostStatus(postId, 'blocked');
       return;
     }
 
@@ -79,6 +80,9 @@ export const moderatePost = onDocumentCreated(
       status: VERDICT_STATUS[verdict.action],
       moderatedAt: FieldValue.serverTimestamp(),
     });
+    // The author learns the verdict through their own mirror row — a held
+    // post says "in review" in their feed rather than vanishing (QA M5).
+    await mirrorPostStatus(postId, VERDICT_STATUS[verdict.action]);
 
     log.info('moderation.verdict', {postId, action: verdict.action});
   },

@@ -69,6 +69,7 @@
   "authBackToLogin": "Back to log in",
   "authInvalidEmail": "that doesn't look like an email",
   "authEmailInUse": "that email already has a journey — log in instead",
+  "authPasswordTooShort": "passwords need at least 6 characters — a few more and you're in",
   "obProgressOf": "{step}/{total}",
   "@obProgressOf": {
     "placeholders": {
@@ -537,12 +538,12 @@
   "obNotifPreviewBody": "heads up — Friday nights are your spike. Plan's ready 💪",
   "obNotifBullet1": "Danger-hour heads-up (you set the hours)",
   "obNotifBullet2": "Streak + milestone celebrations",
-  "obNotifBullet3": "Buddy SOS pings — nothing else",
+  "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitle": "Your plan is ready.",
   "paywallSubtitle": "Try everything free for 3 days.",
   "paywallFeatCoach": "AI coach, unlimited",
-  "paywallFeatPanic": "Panic Button + buddy ping",
+  "paywallFeatPanic": "Panic Button + community SOS",
   "paywallFeatPlan": "Adaptive quit plan",
   "paywallFeatForecasts": "Craving forecasts",
   "paywallFeatCommunity": "Community",
@@ -631,6 +632,27 @@
       }
     }
   },
+  "homeGreetingFreedomDay": "{date} · Freedom Day 🏆",
+  "@homeGreetingFreedomDay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingMaintenance": "{date} · {count, plural, one{1 day past Freedom Day} other{{count} days past Freedom Day}}",
+  "@homeGreetingMaintenance": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "homeFreedomDayTitle": "Freedom Day. You picked this date.",
+  "homeFreedomDayBody": "The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.",
   "homeTitle": "Today",
   "homeStreakChip": "{count, plural, one{🔥 {count} day} other{🔥 {count} days}}",
   "@homeStreakChip": {
@@ -696,6 +718,18 @@
   "homeVapeFreeTitle": "No puffs today?",
   "homeVapeFreeCta": "Confirm vape-free day ✓",
   "homeVapeFreeDone": "Vape-free day locked in. That's the whole game. 🔥",
+  "homeYesterdayTitle": "Was yesterday vape-free?",
+  "homeYesterdayBody": "No log for {date}. Only you know, so we ask instead of guessing.",
+  "@homeYesterdayBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeYesterdayYes": "Vape-free ✓",
+  "homeYesterdayNo": "I vaped",
+  "homeYesterdayDone": "Yesterday locked in. Your streak knows the truth. 🔥",
   "homeLoggedSnackCount": "{count, plural, one{Logged 1 puff} other{Logged {count} puffs}}",
   "@homeLoggedSnackCount": {
     "placeholders": {
@@ -932,7 +966,7 @@
       }
     }
   },
-  "coachReplyProgress2": "{today} puffs today against a line of {limit}. Two weeks ago that number would've been double. You're actually doing this.",
+  "coachReplyProgress2": "{today} puffs today against a line of {limit}. Every one you skip is in the log now, and the log is what bends the curve. You're actually doing this.",
   "@coachReplyProgress2": {
     "placeholders": {
       "today": {
@@ -1107,6 +1141,7 @@
       }
     }
   },
+  "statsWindowNoPuffs": "no puffs logged in this window",
   "statsTriggerHours": "TRIGGER HOURS",
   "statsDangerWindow": "{range} is your danger window · nudges armed there",
   "@statsDangerWindow": {
@@ -1208,6 +1243,8 @@
   "communityEmptyTitle": "No posts yet — say hi.",
   "communityEmptyBody": "Your Day 1 post is the one someone on Day 0 needs to read.",
   "communityPosted": "Posted. A quick safety check runs before others can see it.",
+  "communityStatusHeld": "In review — only you can see this for now",
+  "communityStatusBlocked": "Not published — it didn't clear the community rules",
   "buddyLinkCopied": "Link copied — quitting hits different with backup.",
   "moneyTitle": "Money back",
   "moneySavedSince": "saved since {date} · {perDay} rolling in daily",
@@ -1332,7 +1369,7 @@
       }
     }
   },
-  "milestonesNextProgress": "day {day} of {target} · two more sunrises",
+  "milestonesNextProgress": "day {day} of {target} · {remaining, plural, one{one more sunrise} other{{remaining} more sunrises}}",
   "@milestonesNextProgress": {
     "placeholders": {
       "day": {
@@ -1340,6 +1377,9 @@
       },
       "target": {
         "type": "int"
+      },
+      "remaining": {
+        "type": "num"
       }
     }
   },
@@ -1460,7 +1500,7 @@
       }
     }
   },
-  "slipCurveNote": "Two extra days, same destination. Party nights get a pre-armed nudge + game shortcut.",
+  "slipCurveNote": "Two extra days, same destination.",
   "slipStreakSurvives": "Your {days} days still count.",
   "@slipStreakSurvives": {
     "placeholders": {
@@ -1578,6 +1618,14 @@
       },
       "total": {
         "type": "int"
+      }
+    }
+  },
+  "memoriesFactDayMaintenance": "{count, plural, one{Plan complete · 1 day past Freedom Day} other{Plan complete · {count} days past Freedom Day}}",
+  "@memoriesFactDayMaintenance": {
+    "placeholders": {
+      "count": {
+        "type": "num"
       }
     }
   },
@@ -1739,5 +1787,11 @@
   },
   "coachLoadingThread": "Catching up on your chat…",
   "moderationLoading": "Loading the queue…",
-  "authWorking": "One sec…"
+  "authWorking": "One sec…",
+  "slipCurveNoteParty": "Two extra days, same destination. Before the next party, set a danger hour so the reminder lands first.",
+  "slipCurveNoteStress": "Two extra days, same destination. When stress hits, the panic button's 60-second breathe is built for exactly that minute.",
+  "slipCurveNoteBoredom": "Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.",
+  "slipCurveNoteDrinking": "Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.",
+  "slipCurveNoteFriends": "Two extra days, same destination. Next time, text your coach before you meet them, not after.",
+  "slipCurveNoteJustHappened": "Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day."
 }

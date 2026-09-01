@@ -8,7 +8,7 @@
  * and keep these aligned.
  */
 import {describe, expect, it} from 'vitest';
-import {currentStreak, flameFor} from '../src/domain/streakEngine';
+import {currentStreak, flameFor, repairTokens} from '../src/domain/streakEngine';
 import {addDays} from '../src/domain/dateKey';
 import type {DayLog} from '../src/domain/types';
 
@@ -112,6 +112,95 @@ describe('currentStreak — parity with the Dart engine', () => {
   it('a slip today with a token counts today too', () => {
     const d = days(log(day(1), 1, 76), log(day(0), 90, 72, {token: true}));
     expect(currentStreak(d, TODAY)).toBe(2);
+  });
+});
+
+describe('repairTokens — parity with the Dart engine', () => {
+  // QA H2 (Aug 31 2026): the client re-derived the wallet as `streak / 7` on
+  // every mutation, so a spent token was re-minted at once and over-limit
+  // days 15, 20, 21 and 22 were all "absorbed". The wallet is now derived
+  // from history on both sides — same walk, same numbers — so Ember never
+  // quotes a token count the Home screen contradicts.
+  // Chains end YESTERDAY: a token is earned by finishing a day, so the
+  // wallet on `today` is a function of the completed days before it.
+  function chain(
+    length: number,
+    opts: {
+      overrides?: Record<number, {puffs: number; token: boolean}>;
+      unlogged?: number[];
+      endingAt?: string;
+    } = {},
+  ): Record<string, DayLog> {
+    const end = opts.endingAt ?? day(1);
+    const out: Record<string, DayLog> = {};
+    for (let i = 1; i <= length; i++) {
+      if (opts.unlogged?.includes(i)) continue;
+      const key = addDays(end, i - length);
+      const o = opts.overrides?.[i];
+      out[key] = log(key, o?.puffs ?? 10, 100, {token: o?.token ?? false});
+    }
+    return out;
+  }
+
+  it('mints one token per seven holding days, capped at two', () => {
+    expect(repairTokens(chain(6), TODAY)).toBe(0);
+    expect(repairTokens(chain(7), TODAY)).toBe(1);
+    expect(repairTokens(chain(13), TODAY)).toBe(1);
+    expect(repairTokens(chain(14), TODAY)).toBe(2);
+    expect(repairTokens(chain(21), TODAY)).toBe(2);
+    expect(repairTokens(chain(28), TODAY)).toBe(2);
+  });
+
+  it('a spent token stays spent', () => {
+    const d = chain(8, {overrides: {8: {puffs: 130, token: true}}});
+    expect(currentStreak(d, TODAY)).toBe(8);
+    expect(repairTokens(d, TODAY)).toBe(0);
+  });
+
+  it('today can spend a token but never mint one', () => {
+    expect(repairTokens(chain(7, {endingAt: TODAY}), TODAY)).toBe(0);
+    const spentToday = {
+      ...chain(7),
+      [TODAY]: log(TODAY, 130, 100, {token: true}),
+    };
+    expect(currentStreak(spentToday, TODAY)).toBe(8);
+    expect(repairTokens(spentToday, TODAY)).toBe(0);
+  });
+
+  it('the QA 22-day scenario funds exactly two absorbs', () => {
+    const d = chain(22, {
+      endingAt: TODAY,
+      overrides: {
+        15: {puffs: 130, token: true},
+        20: {puffs: 130, token: true},
+        21: {puffs: 130, token: false},
+        22: {puffs: 130, token: false},
+      },
+    });
+    const planDay = (n: number): string => addDays(TODAY, n - 22);
+    const upTo = (n: number): Record<string, DayLog> =>
+      Object.fromEntries(Object.entries(d).filter(([key]) => key <= planDay(n)));
+    expect(repairTokens(upTo(15), planDay(15))).toBe(1);
+    expect(repairTokens(upTo(20), planDay(20))).toBe(0);
+    expect(repairTokens(upTo(21), planDay(21))).toBe(0);
+    expect(repairTokens(d, TODAY)).toBe(0);
+    expect(currentStreak(d, TODAY)).toBe(0);
+  });
+
+  it('an unspent wallet survives a break in the chain', () => {
+    const d = chain(9, {unlogged: [8]});
+    expect(currentStreak(d, TODAY)).toBe(1);
+    expect(repairTokens(d, TODAY)).toBe(1);
+  });
+
+  it('a new chain after a break mints on its own seventh day', () => {
+    expect(repairTokens(chain(15, {unlogged: [8]}), TODAY)).toBe(2);
+  });
+
+  it('a token used with no history to fund it counts as zero', () => {
+    const d = days(log(day(0), 130, 100, {token: true}));
+    expect(currentStreak(d, TODAY)).toBe(1);
+    expect(repairTokens(d, TODAY)).toBe(0);
   });
 });
 

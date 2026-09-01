@@ -1,6 +1,7 @@
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/community_api.dart';
+import '../dto/codec_helpers.dart';
 import '../dto/community_codec.dart';
 
 /// [CommunityRepository] over the wire-level [CommunityApi].
@@ -15,7 +16,16 @@ class ApiCommunityRepository implements CommunityRepository {
   ];
 
   @override
-  Future<void> addPost(Post post) => _api.addPost(PostCodec.encode(post));
+  Future<String?> addPost(Post post) => _api.addPost(PostCodec.encode(post));
+
+  /// The fake backend moderates synchronously on insert, so one read is the
+  /// whole story.
+  @override
+  Stream<PostStatus> watchPostStatus(String postId) async* {
+    final name = await _api.postStatus(postId);
+    if (name == null) return;
+    yield enumByName(PostStatus.values, name, PostStatus.live);
+  }
 
   @override
   Future<void> setReaction(String postId, String emoji, {required bool on}) =>
