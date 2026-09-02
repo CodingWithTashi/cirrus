@@ -130,7 +130,7 @@ export const AI_COST_PANIC = defineString('AI_COST_PANIC', {default: 'false'});
  * hard stop. It must hold thoughts + text: the premium model cannot stop
  * thinking (see `ai/gemini.ts`) and spends its thought tokens inside this
  * budget — at docs/04 §3's original 500, every premium reply arrived cut off
- * mid-word, which the first automated eval run caught. docs/08 records the
+ * mid-word, which the first automated eval run caught. docs/10 §11.10 records the
  * change.
  */
 export const MAX_OUTPUT_TOKENS = 2000;

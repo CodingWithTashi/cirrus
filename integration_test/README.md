@@ -4,7 +4,7 @@ These drive the **real app** — real router, real stores, real platform
 channels — on a real device. The widget suite pins each piece on its own;
 this is the only harness that catches what needs a tree to be built,
 disposed or navigated. It found three bugs on its first three runs
-(docs/08 §12).
+(docs/10 §5).
 
 ## Running
 
@@ -25,11 +25,13 @@ flutter test integration_test/f_firebase_backend_test.dart \
 | Suite | Covers |
 |---|---|
 | `a_launch_auth` | Cold start, the auth gate, sign-in, wrong password, offline, duplicate email |
-| `b_onboarding` | All 19 steps with real keypad taps and a real 3s hold, the age gate, back navigation |
+| `b_onboarding` | The 20-step first session with real keypad taps and a real 3s hold, the age gate, back navigation |
 | `c_core_loop` | Log, undo, repair tokens, slip recovery, panic, offline logging |
 | `d_social` | Feed, compose, report, block, coach, coach offline |
-| `e_settings_screens` | All 20 routes, 4 shell tabs, 404, theme, locale, sign-out, delete |
+| `e_settings_screens` | A sweep of every screen route, 4 shell tabs, 404, theme, locale, sign-out, delete |
 | `f_firebase_backend` | The real backend: auth, journey persistence, callables, erasure |
+| `g_day1_tour` | The Day-1 walkthrough gate — showcase barrier, `IgnorePointer`, disabled tabs and `PopScope` exercised together on a real tree |
+| `h_panic_games` | The panic arcade — a real round, drags, flicks, pill swaps and a mid-round exit; disposal and the router are what only a device sees |
 
 ## App Check
 

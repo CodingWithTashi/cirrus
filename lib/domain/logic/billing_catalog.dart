@@ -1,5 +1,5 @@
 /// The identifiers the RevenueCat dashboard, Google Play Console and App Store
-/// Connect were configured with (docs/08, "RevenueCat naming sheet"). They are
+/// Connect were configured with (docs/10 §14, "Identifiers"). They are
 /// permanent on both stores — a product id can never be reused, even after
 /// deletion — so this file changes by addition only.
 ///

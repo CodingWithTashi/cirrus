@@ -1,6 +1,6 @@
 /**
  * Ember's prompts. The coach system prompt is docs/04 §4 with the
- * founder-sanctioned prompt-v1.1 deltas (Aug 30 2026, recorded in docs/08),
+ * founder-sanctioned prompt-v1.1 deltas (Aug 30 2026, recorded in docs/10 §11.10),
  * each earned by an automated-eval failure: identity de-labeling (the model
  * repeated "your streak flame" back verbatim), the data-grounding rule for
  * history/stats questions, BODY CHANGES and RISKY SITUATION protocols, the

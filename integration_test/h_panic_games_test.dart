@@ -11,7 +11,7 @@ import 'package:last_puff/features/panic/games/tile_field.dart';
 
 import 'harness.dart';
 
-/// The panic arcade on a real device (docs/08 §23): a real round, sixty
+/// The panic arcade on a real device (docs/10 §15): a real round, sixty
 /// more, "it passed" counted once, then real drags, flicks, pill swaps and
 /// a mid-round exit — disposal and the router are what only a device sees.
 void main() {

@@ -1,6 +1,6 @@
 /**
  * The identifiers the RevenueCat dashboard, Google Play Console and App Store
- * Connect were configured with (docs/08, "RevenueCat naming sheet"). Mirrors
+ * Connect were configured with (docs/10 §14, "Identifiers"). Mirrors
  * `lib/domain/logic/billing_catalog.dart` name-for-name; parity pinned by
  * `test/plans.test.ts` and `test/domain/billing_catalog_test.dart` with the
  * same fixtures. A product added on the stores lands in both files and both

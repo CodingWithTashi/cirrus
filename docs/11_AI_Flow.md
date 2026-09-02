@@ -1,4 +1,4 @@
-# AI Flow — the pipeline, and the economics
+# 📄 DOC 11 — AI FLOW — the pipeline, and the economics
 
 For a technical lead: how data moves through the system, how **embeddings** and **generation
 tokens** work together, and what 1,000 paying users cost and earn. No code, just the workflow.

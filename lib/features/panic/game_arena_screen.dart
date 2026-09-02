@@ -27,7 +27,7 @@ import 'games/paused_veil.dart';
 import 'games/round_panel.dart';
 import 'panic_screens.dart';
 
-/// The panic arena (docs/08 §23): one game-agnostic screen that owns the
+/// The panic arena (docs/10 §15): one game-agnostic screen that owns the
 /// ticker, the [GameSession] of chained 60-second rounds, the frame clock the
 /// painters repaint off, and the feedback layer. Which game is on screen is a
 /// [GameEntry]; the pills swap games in place, and the abandoned round is

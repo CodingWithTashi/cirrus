@@ -38,15 +38,24 @@ lives in `users/{uid}`, which `firestore.rules` makes read-only to clients.
 |---|---|---|
 | `aiCoachChat` | callable (streaming) | Tier → quota → memory card → Gemini → persist both turns |
 | `panicSession` | callable | Counts the session, reports AI availability. Never blocks. |
-| `createPost` | callable | Stamps alias, writes `postAuthors`, lands `status: 'pending'` |
-| `syncUserContext` | callable | The app's only write path into `users/{uid}` (tz, locale, FCM token) |
+| `syncUserContext` | callable | The app's only write path into `users/{uid}` (tz, locale, device registry) |
+| `setCoachName` | callable | Validates the coach's name and stores the server-owned copy — the only one `aiCoachChat` is ever told |
+| `coachMemories` / `forgetCoachMemory` | callable | List and delete Ember's remembered facts (`users/{uid}/memories`) for their owner |
+| `seedCoachMemories` | callable | Ember's first memories from onboarding, so the vector layer is not empty on day 1 |
 | `deleteUserData` | callable | Full erasure; posts anonymize to `[departed quitter]` |
+| `createPost` | callable | Stamps alias, writes `postAuthors`, lands `status: 'pending'`; idempotent on the app's `clientId` |
+| `createReply` | callable | The reply write path (docs/03 §9): `replyAuthors` map, lands `pending`, flipped by moderation |
+| `reportPost` / `reportReply` | callable | A reader's report; three reports auto-hide (`held` on the author's mirror) and clear `retryable` |
 | `moderatePost` | Firestore onCreate | Gemini classification → live/pending/blocked on the post; live/`held`/blocked on the author's mirror `users/{uid}/posts/{id}` + review queue. Only words aimed at people are ever hidden (Sep 1 policy) |
 | `remoderateHeld` | every 15 min cron | Re-asks the classifier about holds the pipeline itself caused (model down, unparseable verdict — queue rows with `retryable: true`), so an outage delays clean posts by minutes instead of parking them in the founder's queue |
+| `moderateReply` | Firestore onCreate | The same classifier and verdicts for replies |
+| `moderationQueue` / `resolveModeration` | callable (`admin` claim) | The founder's review queue and their verdict on a held item — a person's decision is never re-asked |
+| `onReaction` | Firestore onWrite (`posts/{id}/reactors/{uid}`) | Recomputes the public reaction count from private per-person documents, by delta |
 | `taperRecalc` | hourly cron | Adaptive taper advice (docs/03 §3.3) → `users/{uid}.planAdvice` |
 | `weeklyInsight` | hourly cron | Premium-only Sunday report (docs/04 §5) |
+| `pruneDevices` | cron | Drops push registrations nobody is behind any more (replaced or wiped phones) |
 | `matchedTestimonials` | callable | The two beta-tester quotes for D3, ranked against the answers the caller sends |
-| `rcWebhook` | HTTPS | RevenueCat → the trusted entitlement mirror |
+| `rcWebhook` | HTTPS | RevenueCat → the trusted entitlement mirror (fetch-and-reconcile of the subscriber snapshot) |
 
 `dangerHourPush` from docs/05 §7 is **deliberately absent**. Danger-hour
 reminders are deterministic once computed, so they're scheduled on-device with
@@ -128,8 +137,16 @@ firebase deploy --only functions
 ## Model routing
 
 `MODEL_FREE` / `MODEL_PREMIUM` / `MODEL_MODERATION` are deploy params, so an
-EOL model is swapped without changing code. **Gemini 2.5 Flash-Lite retires
-2026-10-16**; the defaults already target the 3.1 line.
+EOL model is swapped without changing code. The live ids are in
+`.env.alastpuff` (`gemini-3.5-flash-lite` for free and moderation,
+`gemini-3.6-flash` for premium). An id must exist AND support
+`generateContent` — `gemini-3.1-flash` did neither and silently broke the
+coach for days — so no `-preview` ids and no `-latest` aliases (docs/04 §9
+gates the coach on an eval pass that an alias would swap the model under),
+and a non-lite id must be able to stop thinking (`.env.alastpuff` rule 4).
+`aiCoachChat` logs the live catalogue on a 404 (`coach.models_available`);
+read that rather than guessing. The pipeline end to end, with its cost per
+turn, is `docs/11_AI_Flow.md`.
 
 Only `src/ai/gemini.ts` imports a vendor SDK. Everything else depends on the
 `TextModel` interface in `src/ai/model.ts` — dropping in Genkit (docs/05 §1),

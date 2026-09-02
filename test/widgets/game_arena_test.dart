@@ -18,7 +18,7 @@ import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
 
-/// The panic arena on the real router (docs/08 §23): one tap is one hit, a
+/// The panic arena on the real router (docs/10 §15): one tap is one hit, a
 /// miss costs only the combo, sixty seconds end on a choice, the best is
 /// never shown before it exists, rounds chain to five, and the pills swap
 /// games without recording the round they cut short.
