@@ -99,6 +99,11 @@ void main() {
       'obSpendKickerMid',
       'obSpendKickerBig',
       'obFirstPuffScienceLabel',
+      // The panic arena (Sep 2 2026): one why line for every game, minutes
+      // counted on the round panel, and the unit per game.
+      'gameSubtitle',
+      'gameRoundDone',
+      'survivedGameTiles',
     ];
     for (final locale in locales) {
       for (final key in retired) {

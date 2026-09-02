@@ -183,6 +183,7 @@ Upgrade prompts: contextual only (hitting a cap), never interstitial spam, max 1
 | Money figures | User's own input × 52, real arithmetic only |
 | "≈{mg} mg of nicotine a day" (B3 fact) | `DependenceEngine.nicotineMg` — the user's own puff count × the absorbed mg/puff for their stated strength (docs/03 §2). Their arithmetic, not a claim. Always shown with "≈" |
 | Spend-comparison item prices (B4, D1) | `lib/domain/logic/spend_comparisons.dart` header table — rounded US median bands, one line of provenance per item, reviewed 2026-08-30. **Never rendered**: a price is only ever a divisor, so the screen shows the user's own money and our noun |
+| "In a week-long study, three minutes of a visual game cut cravings by about a fifth" | Skorka-Brown, Andrade, Whalley & May 2015, *Addictive Behaviors* 51:165–170 — EMA, n=31, 7 prompts/day × 7 days, 3 min of Tetris per prompt; cravings for drugs (incl. nicotine), food and activities down a mean 13.9 points/100 (≈70 → 56), f²=0.11, consistent across the week. Mechanism: Elaborated Intrusion theory (Kavanagh, Andrade & May 2005; May, Andrade, Panabokke & Kavanagh 2010 for cigarettes). Added 2026-09-02. The game is never named on screen and the effect is never claimed for vaping specifically |
 | Banned forever | "78% of members quit," "2× faster," "27% more likely" — any uncited number |
 
 **Where each approved row is spent.** A fact may only appear on screen if it is
@@ -197,6 +198,7 @@ in this table, and adding one here is part of the same change that renders it.
 | Peer support ~40% | `obFactWorrySocial` — C2, when they name social pressure |
 | ≈14 puffs ≈ 1 cigarette | `obPuffsCigEquiv` — B2 live equivalence |
 | Nicotine mg | `obFactStrength` — B3, via `StepFact` |
+| Three minutes of a visual game | `gameResearchNote` — the panic arena's round panel, every game; the panel's ring fills toward the same three minutes (`GameSession.targetRounds`). `gameWhy` on the arena carries the mechanism in words with no number |
 
 Steps with no row left to spend say nothing. That is the design, not a gap:
 `ObTailoring.fact` is exhaustive over all 19 `ObStep`s, so a new screen forces

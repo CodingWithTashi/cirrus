@@ -7,6 +7,7 @@ import 'package:last_puff/data/dto/community_codec.dart';
 import 'package:last_puff/data/dto/entitlement_codec.dart';
 import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/domain/models/models.dart';
 
 /// Every model field must survive encode → real JSON string → decode →
@@ -122,29 +123,64 @@ void main() {
       expect(JourneyCodec.decode(json).day1TourSkipped, isFalse);
     });
 
-    test('a game best round-trips, and its absence stays absent', () {
-      // The demo journey has never played the game: a seeded best would be an
-      // invented number rendered as the user's own (docs/09 §8), and null is
-      // what the survived screen's honest empty state reads.
-      expect(journey.bestGameScore, isNull);
+    test('per-game bests round-trip, and their absence stays absent', () {
+      // The demo journey has never played a game: a seeded best would be an
+      // invented number rendered as the user's own (docs/09 §8), and an empty
+      // map is what the survived screen's honest empty state reads.
+      expect(journey.gameBests, isEmpty);
+      expect(journey.lastGame, isNull);
+      final encoded = JourneyCodec.encode(journey);
+      expect(encoded['gameBests'], isEmpty);
+      expect(encoded['lastGame'], isNull);
       expect(
-        JourneyCodec.encode(journey)['bestGameScore'],
-        isNull,
-        reason: 'a journey that never played must not claim a best',
+        encoded.containsKey('bestGameScore'),
+        isFalse,
+        reason: 'the single-game key is read for old documents, never written',
       );
 
-      final played = journey.copyWith(bestGameScore: 112);
+      final played = journey.copyWith(
+        gameBests: {GameId.tiles: 112, GameId.blocks: 6},
+        lastGame: GameId.blocks,
+      );
       final wire = jsonEncode(JourneyCodec.encode(played));
       final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
-      expect(back.bestGameScore, 112);
+      expect(back.gameBests, {GameId.tiles: 112, GameId.blocks: 6});
+      expect(back.gameBests[GameId.orbs], isNull);
+      expect(back.lastGame, GameId.blocks);
       expect(jsonEncode(JourneyCodec.encode(back)), wire);
     });
 
-    test('a journey written before the game kept score still decodes', () {
-      // Every live journey document predates this field; a missing key is
+    test('a journey from the single-game days keeps its tile best', () {
+      // Sep 1–2 2026 journeys carried the tile game's best as `bestGameScore`.
+      // It decodes as the tiles best and is re-encoded under the new key.
+      final json = JourneyCodec.encode(journey)
+        ..remove('gameBests')
+        ..remove('lastGame')
+        ..['bestGameScore'] = 112;
+      final back = JourneyCodec.decode(json);
+      expect(back.gameBests, {GameId.tiles: 112});
+      expect(back.lastGame, isNull);
+      expect(JourneyCodec.encode(back)['gameBests'], {'tiles': 112});
+    });
+
+    test('a journey written before any game kept score still decodes', () {
+      // Every live journey document predates these fields; a missing key is
       // "never played", not a crash on the next launch.
-      final json = JourneyCodec.encode(journey)..remove('bestGameScore');
-      expect(JourneyCodec.decode(json).bestGameScore, isNull);
+      final json = JourneyCodec.encode(journey)
+        ..remove('gameBests')
+        ..remove('lastGame');
+      final back = JourneyCodec.decode(json);
+      expect(back.gameBests, isEmpty);
+      expect(back.lastGame, isNull);
+    });
+
+    test('a game this build does not know is dropped, not a crash', () {
+      final json = JourneyCodec.encode(journey)
+        ..['gameBests'] = {'tiles': 4, 'hexes': 9, 'orbs': 'nine'}
+        ..['lastGame'] = 'hexes';
+      final back = JourneyCodec.decode(json);
+      expect(back.gameBests, {GameId.tiles: 4});
+      expect(back.lastGame, isNull);
     });
 
     test('planAdvice round-trips, and its absence stays absent', () {

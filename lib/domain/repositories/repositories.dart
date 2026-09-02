@@ -4,6 +4,7 @@
 /// single store or view (docs/05 architecture).
 library;
 
+import '../logic/games/game_id.dart';
 import '../models/journey_state.dart';
 import '../models/models.dart';
 
@@ -117,9 +118,14 @@ abstract interface class PanicRepository {
   /// than to a blocked screen.
   Future<PanicAvailability> begin();
 
-  /// The craving passed. Fire-and-forget: the session is already counted, and
-  /// a lost outcome costs one data point, never the user anything.
-  Future<void> survived({required int intensity});
+  /// The craving passed. Fire-and-forget: a lost outcome costs one data
+  /// point, never the user anything. [intensityAfter] is the optional
+  /// re-rating on the round panel; [game] the one on screen at the time.
+  Future<void> survived({
+    required int intensity,
+    int? intensityAfter,
+    GameId? game,
+  });
 }
 
 /// Ember — the backend decides *what* to say ([CoachReply]); views localize.

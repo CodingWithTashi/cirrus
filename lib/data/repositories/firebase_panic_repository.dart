@@ -1,3 +1,4 @@
+import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/firebase/functions_client.dart';
@@ -26,10 +27,16 @@ class FirebasePanicRepository implements PanicRepository {
   }
 
   @override
-  Future<void> survived({required int intensity}) async {
+  Future<void> survived({
+    required int intensity,
+    int? intensityAfter,
+    GameId? game,
+  }) async {
     await _functions.call('panicSession', {
       'outcome': 'survived',
       'intensity': intensity,
+      'intensityAfter': ?intensityAfter,
+      'game': ?game?.name,
     });
   }
 }
@@ -47,5 +54,9 @@ class NoopPanicRepository implements PanicRepository {
   Future<PanicAvailability> begin() async => PanicAvailability.unknown;
 
   @override
-  Future<void> survived({required int intensity}) async {}
+  Future<void> survived({
+    required int intensity,
+    int? intensityAfter,
+    GameId? game,
+  }) async {}
 }

@@ -1,3 +1,4 @@
+import '../logic/games/game_id.dart';
 import 'analytics.dart';
 
 /// The funnel instrumentation from docs/02 §7.
@@ -119,23 +120,44 @@ extension LpEvents on AnalyticsSink {
   /// who log on 4+ days a week — and that is uncountable without this.
   void puffLogged() => track(const AnalyticsEvent('puff_logged'));
 
-  void cravingSurvived({required bool survived}) =>
-      track(AnalyticsEvent('craving_outcome', {'survived': survived.toString()}));
+  /// A panic session ended, with the game on screen (`none` when unplayed),
+  /// its rounds, and their 1–10 before and (optionally) after.
+  void cravingSurvived({
+    required bool survived,
+    GameId? game,
+    int rounds = 0,
+    int? intensity,
+    int? intensityAfter,
+  }) => track(
+    AnalyticsEvent('craving_outcome', {
+      'survived': survived.toString(),
+      'game': game?.name ?? 'none',
+      'rounds': rounds,
+      'intensity': ?intensity,
+      'intensity_after': ?intensityAfter,
+    }),
+  );
 
-  /// The 60-second panic game ran to the end (docs/09 §8). Not in docs/02
-  /// §7 either: the tempo ramp is tuned off this. A median score close to
-  /// the tile count says the ramp is too slow; misses climbing through the
-  /// stages say the steps are too steep. Numbers only — no lane data, no
-  /// timings.
+  /// A 60-second round ran to the end (docs/09 §8); the tempo ramps are
+  /// tuned off this. Numbers only, and never for a round cut short.
   void gameFinished({
+    required GameId game,
+    required int round,
     required int score,
     required int bestCombo,
     required int misses,
   }) => track(
     AnalyticsEvent('game_finished', {
+      'game': game.name,
+      'round': round,
       'score': score,
       'best_combo': bestCombo,
       'misses': misses,
     }),
+  );
+
+  /// The arena's pills swapped games mid-session.
+  void gameSwitched({required GameId from, required GameId to}) => track(
+    AnalyticsEvent('game_switched', {'from': from.name, 'to': to.name}),
   );
 }

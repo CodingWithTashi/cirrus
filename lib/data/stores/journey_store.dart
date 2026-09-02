@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/date_key.dart';
 import '../../domain/logic/dependence_engine.dart';
+import '../../domain/logic/games/game_id.dart';
+import '../../domain/logic/games/game_score.dart';
 import '../../domain/logic/money_engine.dart';
 import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
-import '../../domain/logic/tile_game.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/analytics/lp_events.dart';
@@ -485,16 +486,28 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
-  /// A run of the 60-second panic game finished with [score] tiles caught.
-  /// Returns true when that is a new personal best — the first real score is
-  /// one by definition — and records it; anything else leaves the journey
-  /// untouched. Zero never becomes a best: `TileGame.beats` keeps the honest
-  /// empty state until someone has actually caught something.
-  bool recordGameScore(int score) {
+  /// A round of [id] ended with [score]. Returns true when that is a new
+  /// best for the game (zero never is) and records it; either way the game
+  /// is remembered as the last played.
+  bool recordGameScore(GameId id, int score) {
     final s = state;
-    if (s == null || !TileGame.beats(score, s.bestGameScore)) return false;
-    _commit(s.copyWith(bestGameScore: score));
-    return true;
+    if (s == null) return false;
+    final newBest = GameScore.beats(score, s.gameBests[id]);
+    if (!newBest && s.lastGame == id) return false;
+    _commit(
+      s.copyWith(
+        gameBests: newBest ? {...s.gameBests, id: score} : null,
+        lastGame: id,
+      ),
+    );
+    return newBest;
+  }
+
+  /// The arena opened on, or switched to, [id]; a no-op when unchanged.
+  void setLastGame(GameId id) {
+    final s = state;
+    if (s == null || s.lastGame == id) return;
+    _commit(s.copyWith(lastGame: id));
   }
 
   void recordSlipTrigger(SlipTrigger trigger) {

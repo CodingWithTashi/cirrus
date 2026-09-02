@@ -1,16 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:last_puff/domain/logic/tile_game.dart';
+import 'package:last_puff/domain/logic/games/games.dart';
 
-/// The 60-second panic game's rules (docs/09 §8), pinned without a widget.
-///
-/// Four of them are the whole reason the game exists in this form: the
-/// board goes as fast as the thumbs do and never makes anyone wait, a tile
-/// waits a fixed multiple of the player's own pace so difficulty follows
-/// the player, a miss costs the combo and nothing else (no game-over
-/// mid-craving), and one tap is one hit — the same rule LOG PUFF learned the
-/// hard way (QA H1).
+/// The tile game's rules (docs/09 §8), pinned without a widget; the clock
+/// is the session's and lives in `game_session_test.dart`.
 void main() {
   /// Advances in 60 fps frames, the way the ticker does.
   List<GameEvent> run(TileGame game, double seconds) {
@@ -30,11 +24,12 @@ void main() {
   group('the board', () {
     test('opens full, target at home, nothing to wait for', () {
       final game = TileGame(random: math.Random(1));
+      expect(game.id, GameId.tiles);
+      expect(game.freshEachRound, isTrue);
       expect(game.rows, hasLength(TileGame.bufferedRows));
       expect(game.sink, 0);
       expect(game.targetY, TileGame.home);
       expect(game.window, TileGame.windowCeilingStart);
-      expect(game.secondsLeft, 60);
       expect(game.score, 0);
       expect(game.lastAdvanceAt, lessThan(0));
     });
@@ -84,10 +79,10 @@ void main() {
         missed = game.advance(1 / 60).whereType<TileMissed>().firstOrNull;
       }
       expect(missed.lane, lane);
+      expect(missed.feedback, GameFeedback.miss);
       expect(game.elapsed, closeTo(TileGame.windowCeilingStart, 0.02));
       expect(game.misses, 1);
       expect(game.combo, 0);
-      expect(game.finished, isFalse);
       // The board moved on: the next row is the target, at home again.
       expect(game.targetLane, next);
       expect(game.sink, closeTo(0, 0.02));
@@ -120,22 +115,11 @@ void main() {
       }
     });
 
-    test('a long pause resumes where it froze', () {
-      // The ticker hands over the whole background gap in one call; without
-      // the clamp the target would be lost the moment the app came back.
-      final game = TileGame(random: math.Random(5));
-      final events = game.advance(30);
-      expect(game.elapsed, TileGame.maxStep);
-      expect(events.whereType<TileMissed>(), isEmpty);
-      expect(game.misses, 0);
-    });
-
-    test('sixty seconds end it, and nothing moves afterwards', () {
+    test('frozen between rounds: nothing moves and a tap is not a hit', () {
       final game = TileGame(random: math.Random(6));
-      final events = run(game, 60);
-      expect(events.whereType<GameFinished>(), hasLength(1));
-      expect(game.finished, isTrue);
-      expect(game.secondsLeft, 0);
+      run(game, 1);
+      game.roundEnded(1);
+      expect(game.frozen, isTrue);
 
       final rows = game.rows;
       final sink = game.sink;
@@ -143,18 +127,11 @@ void main() {
       expect(game.rows, rows);
       expect(game.sink, sink);
       expect(game.tap(game.targetLane), TapOutcome.ignored);
-    });
+      expect(game.score, 0);
 
-    test('the countdown reads 60 at the start and moves with the clock', () {
-      final game = TileGame(random: math.Random(7));
-      run(game, 0.5);
-      expect(game.secondsLeft, 60);
-      run(game, 0.5);
-      expect(game.secondsLeft, 59);
-      run(game, 58.5);
-      expect(game.secondsLeft, 1);
-      run(game, 0.5);
-      expect(game.secondsLeft, 0);
+      game.roundStarted(2);
+      expect(game.frozen, isFalse);
+      expect(game.tap(game.targetLane), TapOutcome.hit);
     });
   });
 
@@ -212,7 +189,7 @@ void main() {
       // Two hits a second, all minute long: the window is 0.75 s and the tap
       // always comes at 0.5 s. Sixty seconds, a hundred and twenty tiles.
       final game = TileGame(random: math.Random(9));
-      while (!game.finished) {
+      while (game.elapsed < 60 - 1e-9) {
         expect(
           game.tap(game.targetLane),
           TapOutcome.hit,
@@ -295,15 +272,4 @@ void main() {
       expect(game.misses, 0);
     });
   });
-
-  test(
-    'beats: zero never sets a best, the first real score does, ties do not',
-    () {
-      expect(TileGame.beats(0, null), isFalse);
-      expect(TileGame.beats(1, null), isTrue);
-      expect(TileGame.beats(40, 40), isFalse);
-      expect(TileGame.beats(39, 40), isFalse);
-      expect(TileGame.beats(41, 40), isTrue);
-    },
-  );
 }

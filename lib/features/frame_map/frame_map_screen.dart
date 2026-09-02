@@ -13,6 +13,7 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/logic/games/game_id.dart';
 import '../onboarding/onboarding_view_model.dart';
 import '../panic/panic_screens.dart';
 
@@ -141,6 +142,13 @@ class FrameMapScreen extends ConsumerWidget {
       (32, 'PANIC 1 · Breathe', () => _panic(ref, context, 0)),
       (33, 'PANIC 2 · Your why', () => _panic(ref, context, 1)),
       (34, 'PANIC 3 · Break the loop', () => _panic(ref, context, 2)),
+      // The arena hangs off step 3 and is not one of the 52 design frames.
+      for (final id in GameId.values)
+        (
+          34,
+          'PANIC 3 · Arena — ${id.name}',
+          () => _withJourney(ref, context, Routes.gameFor(id)),
+        ),
       (
         35,
         'Craving survived 🎉',

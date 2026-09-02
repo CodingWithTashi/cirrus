@@ -1,8 +1,37 @@
 import 'package:flutter/widgets.dart';
 
+import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/spend_comparisons.dart';
 import '../../domain/models/enums.dart';
 import 'l10n_ext.dart';
+
+/// The panic games as the arena names them; the unit is the countable thing
+/// each score is.
+extension GameIdLabel on GameId {
+  String get emoji => switch (this) {
+    GameId.tiles => '🎹',
+    GameId.blocks => '🧱',
+    GameId.orbs => '🔮',
+  };
+
+  String label(BuildContext context) => switch (this) {
+    GameId.tiles => context.l10n.gameNameTiles,
+    GameId.blocks => context.l10n.gameNameBlocks,
+    GameId.orbs => context.l10n.gameNameOrbs,
+  };
+
+  String hint(BuildContext context) => switch (this) {
+    GameId.tiles => context.l10n.gameHintTiles,
+    GameId.blocks => context.l10n.gameHintBlocks,
+    GameId.orbs => context.l10n.gameHintOrbs,
+  };
+
+  String unit(BuildContext context, int count) => switch (this) {
+    GameId.tiles => context.l10n.gameUnitTiles(count),
+    GameId.blocks => context.l10n.gameUnitBlocks(count),
+    GameId.orbs => context.l10n.gameUnitOrbs(count),
+  };
+}
 
 /// Localized display names for domain enums, shared by every feature.
 extension WhyChipLabel on WhyChip {

@@ -16,6 +16,8 @@ import 'package:last_puff/features/milestones/milestones_screen.dart';
 import 'package:last_puff/features/moderation/moderation_screen.dart';
 import 'package:last_puff/features/money/money_screen.dart';
 import 'package:last_puff/features/onboarding/onboarding_flow.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
+import 'package:last_puff/features/panic/game_arena_screen.dart';
 import 'package:last_puff/features/panic/panic_screens.dart';
 import 'package:last_puff/features/paywall/paywall_screens.dart';
 import 'package:last_puff/features/plan/plan_screen.dart';
@@ -60,7 +62,9 @@ void main() {
     'Settings': const SettingsScreen(),
     'Slip': const SlipFlow(),
     'Panic': const PanicFlow(),
-    'TapGame': const TapGameScreen(),
+    'GameArena': const GameArenaScreen(),
+    'GameArenaBlocks': const GameArenaScreen(initial: GameId.blocks),
+    'GameArenaOrbs': const GameArenaScreen(initial: GameId.orbs),
     'Survived': const SurvivedScreen(),
     'Paywall': const PaywallScreen(),
     'FreePlan': const FreePlanScreen(),

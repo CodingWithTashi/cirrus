@@ -2,47 +2,76 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../app/theme/lp_colors.dart';
-import '../../app/theme/lp_typography.dart';
-import '../../domain/logic/tile_game.dart';
+import '../../../app/theme/lp_colors.dart';
+import '../../../domain/logic/games/games.dart';
+import 'game_catalog.dart';
+import 'ghost_combo.dart';
 
-/// The playfield of the 60-second panic game (docs/09 §8): four full-bleed
-/// columns behind hairline dividers, a board of volt tiles with the target
-/// in the bottom row, the tapped lane washing oxygen on a hit and ember on
-/// a miss, and the combo as a ghost number behind it all — Piano Tiles 2's
-/// trick, so the reward lands where the eyes already are instead of
-/// pulling them to the header.
+/// The playfield of Tiles (docs/09 §8): four full-bleed lanes, volt tiles
+/// with the target in the bottom row, the tapped lane washing oxygen or
+/// ember, and the ghost combo behind it all.
 ///
-/// Every pointer-down is one tap in one lane, handed straight to
-/// [onLaneTap]. A raw [Listener] rather than a gesture detector: it fires on
-/// the down event with no arena to wait on, and two thumbs landing in the
-/// same frame are two events. One tap is one hit, always — the engine
-/// resolves at most one tile per call.
-///
-/// Sized by its parent (an `Expanded`), never by its content. A `Stack` with
-/// fitted children: nothing here reports an intrinsic size that an
-/// `IntrinsicHeight` above could choke on.
-class TileField extends StatelessWidget {
-  const TileField({
-    super.key,
-    required this.game,
-    required this.frame,
-    required this.flashes,
-    required this.combo,
-    required this.onLaneTap,
-  });
+/// A raw [Listener] hands every pointer-down to the engine as one tap in one
+/// lane — no arena to wait on, and one tap is one hit, always.
+class TileField extends StatefulWidget {
+  const TileField({super.key, required this.scope});
+
+  final GameFieldScope scope;
 
   /// The live engine. Public so tests can read where the target is.
-  final TileGame game;
+  TileGame get game => scope.game as TileGame;
 
-  /// Ticks once per frame; the painter repaints off it without a rebuild.
-  final Listenable frame;
+  @override
+  State<TileField> createState() => _TileFieldState();
+}
 
-  /// Recent taps, for the lane wash. Owned and pruned by the screen.
-  final List<LaneFlash> flashes;
+class _TileFieldState extends State<TileField> {
+  /// The taps' washes, pruned off the frame clock; the painter reads the
+  /// list by reference, so no rebuild is needed.
+  final List<LaneFlash> _flashes = [];
 
-  final int combo;
-  final ValueChanged<int> onLaneTap;
+  @override
+  void initState() {
+    super.initState();
+    widget.scope.frame.addListener(_prune);
+  }
+
+  @override
+  void didUpdateWidget(TileField old) {
+    super.didUpdateWidget(old);
+    if (old.scope.frame != widget.scope.frame) {
+      old.scope.frame.removeListener(_prune);
+      widget.scope.frame.addListener(_prune);
+    }
+    // A fresh board's clock starts over, so old washes would never age out.
+    if (old.game != widget.game) _flashes.clear();
+  }
+
+  @override
+  void dispose() {
+    widget.scope.frame.removeListener(_prune);
+    super.dispose();
+  }
+
+  void _prune() => _flashes.removeWhere(
+    (f) => widget.game.elapsed - f.at >= TileFieldPainter.flashFor,
+  );
+
+  void _tap(int lane) {
+    if (!widget.scope.accepting) return;
+    final game = widget.game;
+    final at = (x: (lane + 0.5) / TileGame.lanes, y: 0.8);
+    switch (game.tap(lane)) {
+      case TapOutcome.hit:
+        _flashes.add(LaneFlash(lane: lane, at: game.elapsed, hit: true));
+        widget.scope.report(GameFeedback.hit, at: at);
+      case TapOutcome.miss:
+        _flashes.add(LaneFlash(lane: lane, at: game.elapsed, hit: false));
+        widget.scope.report(GameFeedback.miss, at: at);
+      case TapOutcome.ignored:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +81,7 @@ class TileField extends StatelessWidget {
         final laneWidth = constraints.maxWidth / TileGame.lanes;
         return Listener(
           behavior: HitTestBehavior.opaque,
-          onPointerDown: (event) => onLaneTap(
+          onPointerDown: (event) => _tap(
             (event.localPosition.dx / laneWidth).floor().clamp(
               0,
               TileGame.lanes - 1,
@@ -61,13 +90,18 @@ class TileField extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Center(child: GhostCombo(combo: combo)),
+              Center(
+                child: GhostCombo(
+                  combo: widget.scope.combo,
+                  threshold: widget.scope.ghostFrom,
+                ),
+              ),
               RepaintBoundary(
                 child: CustomPaint(
                   painter: TileFieldPainter(
-                    game: game,
-                    flashes: flashes,
-                    repaint: frame,
+                    game: widget.game,
+                    flashes: _flashes,
+                    repaint: widget.scope.frame,
                     // `voltStrong`, not `volt`: the same lime in the dark
                     // theme, the stronger green on the pale daylight ground
                     // where plain volt washes out.
@@ -97,67 +131,9 @@ class LaneFlash {
   final bool hit;
 }
 
-/// The combo as a huge, faint number behind the tiles. Appears from
-/// [threshold] hits, pops on every hit, fades when a miss drops it — the last
-/// value stays on screen through the fade rather than snapping to zero.
-class GhostCombo extends StatefulWidget {
-  const GhostCombo({super.key, required this.combo});
-
-  final int combo;
-
-  static const int threshold = 3;
-
-  @override
-  State<GhostCombo> createState() => _GhostComboState();
-}
-
-class _GhostComboState extends State<GhostCombo> {
-  late int _shown = widget.combo;
-
-  @override
-  void didUpdateWidget(GhostCombo old) {
-    super.didUpdateWidget(old);
-    if (widget.combo >= GhostCombo.threshold) _shown = widget.combo;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    final visible = widget.combo >= GhostCombo.threshold;
-    return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: visible ? 1 : 0,
-        duration: Duration(milliseconds: visible ? 80 : 260),
-        child: TweenAnimationBuilder<double>(
-          // A new key per hit restarts the pop; explicit begin so the first
-          // build animates too (the begin-less Tween gotcha).
-          key: ValueKey(visible ? widget.combo : -1),
-          tween: Tween(begin: visible ? 1.16 : 1.0, end: 1.0),
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          builder: (context, scale, child) =>
-              Transform.scale(scale: scale, child: child),
-          child: Text(
-            '$_shown',
-            style: LpType.numberHero(
-              lp.voltText.withValues(alpha: 0.16),
-              size: 120,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Paints one frame of the field straight off the engine — `repaint:` keeps
-/// the widget tree out of the 60 fps loop entirely.
-///
-/// The board is drawn where the engine says it is, plus one purely visual
-/// touch: for [slideFor] after every advance the rows are drawn one row
-/// higher and ease down into place, so a hit reads as the board scrolling
-/// rather than the tiles teleporting. The engine's positions are already
-/// final the moment the tap lands — the slide never delays an input.
+/// Paints one frame off the engine, repainting off the frame clock. For
+/// [slideFor] after an advance the rows ease down a row so a hit reads as
+/// scrolling; the engine's positions are already final.
 class TileFieldPainter extends CustomPainter {
   TileFieldPainter({
     required this.game,
@@ -214,6 +190,14 @@ class TileFieldPainter extends CustomPainter {
       rowHeight - 2 * inset,
     );
 
+    void wash(int lane, double age, Color color) {
+      if (age < 0 || age >= flashFor) return;
+      canvas.drawRect(
+        Rect.fromLTWH(lane * laneWidth, 0, laneWidth, size.height),
+        Paint()..color = color.withValues(alpha: 0.22 * (1 - age / flashFor)),
+      );
+    }
+
     // 1. Dividers — the quiet edges two thumbs steer by.
     final dividerPaint = Paint()
       ..color = divider
@@ -223,17 +207,12 @@ class TileFieldPainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), dividerPaint);
     }
 
-    // 2. Lane washes — the tap's own echo, fading over [flashFor].
+    // 2. Lane washes: the tap's echo, and the lane a tile got away in.
     for (final flash in flashes) {
-      final age = now - flash.at;
-      if (age < 0 || age >= flashFor) continue;
-      canvas.drawRect(
-        Rect.fromLTWH(flash.lane * laneWidth, 0, laneWidth, size.height),
-        Paint()
-          ..color = (flash.hit ? hit : miss).withValues(
-            alpha: 0.22 * (1 - age / flashFor),
-          ),
-      );
+      wash(flash.lane, now - flash.at, flash.hit ? hit : miss);
+    }
+    for (final d in game.departed) {
+      if (!d.hit) wash(d.lane, now - d.at, miss);
     }
 
     // 3. Tiles on their way out, under the live board.

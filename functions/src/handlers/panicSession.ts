@@ -23,6 +23,31 @@ import {countPanicSession, tierFor} from '../lib/usage';
 /** docs/04 §7 — free tier gets one AI-backed panic session per day. */
 const FREE_DAILY_PANIC_SESSIONS = 1;
 
+/** The panic games, by the ids the client's `GameId.name` uses. */
+export const PANIC_GAMES = ['tiles', 'blocks', 'orbs'] as const;
+export type PanicGame = (typeof PANIC_GAMES)[number];
+
+/**
+ * The two 1–10 ratings and the game on screen when the craving passed.
+ * Anything off the scale or unknown is stored as null, never trusted.
+ */
+export function cravingFields(data: Record<string, unknown>): {
+  intensity: number | null;
+  intensityAfter: number | null;
+  game: PanicGame | null;
+} {
+  const rating = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 10 ? v : null;
+  const game = data['game'];
+  return {
+    intensity: rating(data['intensity']),
+    intensityAfter: rating(data['intensityAfter']),
+    game: (PANIC_GAMES as readonly string[]).includes(game as string)
+      ? (game as PanicGame)
+      : null,
+  };
+}
+
 export const panicSession = onCall(
   {region: REGION, enforceAppCheck: true, memory: '256MiB'},
   async (request): Promise<{aiAvailable: boolean; sessionsToday: number}> => {
@@ -41,7 +66,7 @@ export const panicSession = onCall(
     if (outcome === 'survived' || outcome === 'slipped') {
       await userDoc(caller.uid).collection('cravings').add({
         outcome,
-        intensity: typeof data['intensity'] === 'number' ? data['intensity'] : null,
+        ...cravingFields(data),
         startedAt: FieldValue.serverTimestamp(),
       });
     }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,15 +21,14 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/rolling_number.dart';
-import '../../data/stores/journey_store.dart';
 import '../../data/stores/providers.dart';
-import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
-import '../../domain/logic/tile_game.dart';
+import '../../domain/logic/games/games.dart';
 import '../../domain/models/models.dart';
 import 'breath_pacer.dart';
 import 'breath_ring.dart';
-import 'tile_field.dart';
+import 'games/game_outcome.dart';
+import 'games/game_result_line.dart';
 
 /// Session state shared by the three panic steps (feature-local VM).
 class PanicSession {
@@ -65,6 +63,12 @@ class PanicSession {
 class PanicViewModel extends Notifier<PanicSession> {
   @override
   PanicSession build() {
+    // Riverpod re-runs `build` on the SAME instance after `invalidateSelf`,
+    // so every per-session field starts over here.
+    _resolved = false;
+    _disposed = false;
+    _lastGame = null;
+    _rounds = 0;
     ref.onDispose(() => _disposed = true);
     _openSession();
     return PanicSession(startedAt: DateTime.now());
@@ -78,6 +82,16 @@ class PanicViewModel extends Notifier<PanicSession> {
   /// the availability call is still in flight; writing `state` after that
   /// throws.
   bool _disposed = false;
+
+  /// The game on screen when the session ends and its rounds run to the end.
+  /// Plain fields: nothing rebuilds, and `abandon()` can read them late.
+  GameId? _lastGame;
+  int _rounds = 0;
+
+  void noteGame(GameId id, {required int rounds}) {
+    _lastGame = id;
+    _rounds = rounds;
+  }
 
   /// Tells the server a craving started, and folds the answer in when it
   /// arrives. Deliberately not awaited anywhere: the breathing screen is
@@ -103,12 +117,25 @@ class PanicViewModel extends Notifier<PanicSession> {
   Duration get elapsed => DateTime.now().difference(state.startedAt!);
 
   /// Craving survived → celebrate, then reset for the next session.
-  void survive() {
+  /// [intensityAfter] is the optional re-rating on the arena's round panel.
+  void survive({int? intensityAfter}) {
     _resolved = true;
-    ref.read(analyticsProvider).cravingSurvived(survived: true);
+    ref
+        .read(analyticsProvider)
+        .cravingSurvived(
+          survived: true,
+          game: _lastGame,
+          rounds: _rounds,
+          intensity: state.intensity,
+          intensityAfter: intensityAfter,
+        );
     ref
         .read(panicRepositoryProvider)
-        .survived(intensity: state.intensity)
+        .survived(
+          intensity: state.intensity,
+          intensityAfter: intensityAfter,
+          game: _lastGame,
+        )
         .ignore();
     ref.read(quitStoreProvider.notifier).recordCravingSurvived();
     ref.invalidateSelf();
@@ -123,7 +150,14 @@ class PanicViewModel extends Notifier<PanicSession> {
   void abandon() {
     if (_resolved) return;
     _resolved = true;
-    ref.read(analyticsProvider).cravingSurvived(survived: false);
+    ref
+        .read(analyticsProvider)
+        .cravingSurvived(
+          survived: false,
+          game: _lastGame,
+          rounds: _rounds,
+          intensity: _disposed ? null : state.intensity,
+        );
   }
 }
 
@@ -193,16 +227,16 @@ class _PanicFlowState extends ConsumerState<PanicFlow> {
 }
 
 /// Live mm:ss craving timer pill ("peaks ~15 min").
-class _CravingTimer extends ConsumerStatefulWidget {
-  const _CravingTimer({this.late = false});
+class CravingTimer extends ConsumerStatefulWidget {
+  const CravingTimer({super.key, this.late = false});
 
   final bool late;
 
   @override
-  ConsumerState<_CravingTimer> createState() => _CravingTimerState();
+  ConsumerState<CravingTimer> createState() => _CravingTimerState();
 }
 
-class _CravingTimerState extends ConsumerState<_CravingTimer> {
+class _CravingTimerState extends ConsumerState<CravingTimer> {
   Timer? _timer;
 
   @override
@@ -379,7 +413,7 @@ class _BreatheStepState extends ConsumerState<_BreatheStep>
             style: LpType.body14(lp.textSecondary),
           ),
           const SizedBox(height: 22),
-          const _CravingTimer(),
+          const CravingTimer(),
           const SizedBox(height: 18),
           PressScale(
             onTap: vm.next,
@@ -610,7 +644,7 @@ class _BreakLoopStep extends ConsumerWidget {
           //
           // Deliberately NOT the `StepScrollView` idiom the auth forms use.
           // That is min-height + `IntrinsicHeight`, and an intrinsic walk over
-          // the animating `_CravingTimer` below is the exact combination that
+          // the animating `CravingTimer` below is the exact combination that
           // took the Health screen down — it crashed this screen outright when
           // tried here. `Expanded` takes the slack instead, so there is no
           // intrinsic pass at all.
@@ -668,7 +702,7 @@ class _BreakLoopStep extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Center(child: _CravingTimer(late: true)),
+          const Center(child: CravingTimer(late: true)),
           const SizedBox(height: 14),
           LpTextButton(
             l10n.panicItPassed,
@@ -681,389 +715,6 @@ class _BreakLoopStep extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// The 60-second game (docs/09 §8): Piano Tiles, the way the founder plays
-/// it — four lanes, the bottom row is the gap to fill, and the board comes
-/// down exactly as fast as the thumbs go. The target slips toward the edge
-/// over a window that follows the player's own pace, so it tightens as they
-/// find it easy and loosens when they struggle (the numbers live in
-/// `TileGame`). The spark it replaced waited to be tapped; so did the first
-/// waterfall version, for a fast tapper — neither is allowed now.
-///
-/// No game-over: a miss costs the combo and the clock keeps running. Sixty
-/// seconds end on the same two choices the why step offers — "it passed" or
-/// "still craving, 60 more" — never on a claim the person did not make. The
-/// point is the craving, not the game: a "+1" is only ever theirs to say.
-///
-/// The best is kept quiet while playing. No target in the header, only a
-/// "new best" caption the moment a run passes a best that already existed;
-/// the first run ever has nothing to pass, and its end panel says so.
-class TapGameScreen extends ConsumerStatefulWidget {
-  const TapGameScreen({super.key, this.random});
-
-  /// Seeded by tests for a reproducible deal.
-  final math.Random? random;
-
-  @override
-  ConsumerState<TapGameScreen> createState() => _TapGameScreenState();
-}
-
-class _TapGameScreenState extends ConsumerState<TapGameScreen>
-    with SingleTickerProviderStateMixin {
-  /// Captured in [initState]: the exit navigates before it mutates, and
-  /// Riverpod forbids `ref` once the element is on its way out.
-  late final JourneyStore _store = ref.read(quitStoreProvider.notifier);
-  late final PanicViewModel _session = ref.read(panicProvider.notifier);
-  late final AnalyticsSink _analytics = ref.read(analyticsProvider);
-
-  late TileGame _game;
-  late final Ticker _ticker = createTicker(_onTick);
-  Duration _lastTick = Duration.zero;
-  final _frame = _FrameClock();
-  final List<LaneFlash> _flashes = [];
-
-  /// The journey's best when this run started; null = never played.
-  int? _bestBefore;
-  bool _passedBest = false;
-  int _secondsLeft = TileGame.length.inSeconds;
-  int _score = 0;
-  int _combo = 0;
-
-  /// Non-null once the 60 seconds are up: the end panel replaces the field.
-  GameOutcome? _outcome;
-
-  @override
-  void initState() {
-    super.initState();
-    _store; // resolve the three now, while ref is still usable
-    _session;
-    _analytics;
-    _startRun();
-  }
-
-  void _startRun() {
-    _game = TileGame(random: widget.random);
-    _bestBefore = _store.journey?.bestGameScore;
-    _passedBest = false;
-    _flashes.clear();
-    _secondsLeft = TileGame.length.inSeconds;
-    _score = 0;
-    _combo = 0;
-    _outcome = null;
-    _lastTick = Duration.zero;
-    _ticker.start();
-  }
-
-  @override
-  void dispose() {
-    _ticker.dispose();
-    _frame.dispose();
-    super.dispose();
-  }
-
-  void _onTick(Duration now) {
-    final dt =
-        (now - _lastTick).inMicroseconds / Duration.microsecondsPerSecond;
-    _lastTick = now;
-    for (final event in _game.advance(dt)) {
-      switch (event) {
-        case TileMissed(:final lane):
-          LpHaptics.medium();
-          _flashes.add(LaneFlash(lane: lane, at: _game.elapsed, hit: false));
-        case GameFinished():
-          _finishRun();
-          return;
-      }
-    }
-    _flashes.removeWhere(
-      (f) => _game.elapsed - f.at >= TileFieldPainter.flashFor,
-    );
-    // The painter repaints off this; the tree only rebuilds when a number
-    // the header shows has actually changed.
-    _frame.tick();
-    if (_game.secondsLeft != _secondsLeft || _game.combo != _combo) {
-      setState(() {
-        _secondsLeft = _game.secondsLeft;
-        _combo = _game.combo;
-      });
-    }
-  }
-
-  void _onLaneTap(int lane) {
-    if (_outcome != null) return;
-    switch (_game.tap(lane)) {
-      case TapOutcome.hit:
-        LpHaptics.light();
-        _flashes.add(LaneFlash(lane: lane, at: _game.elapsed, hit: true));
-        // Only a best that already existed can be passed mid-run. The first
-        // run ever has nothing to pass, and "new best" at one tile would be
-        // the game talking, not the app.
-        if (!_passedBest &&
-            _bestBefore != null &&
-            TileGame.beats(_game.score, _bestBefore)) {
-          _passedBest = true;
-          LpHaptics.celebrate();
-        }
-        setState(() {
-          _score = _game.score;
-          _combo = _game.combo;
-        });
-      case TapOutcome.miss:
-        LpHaptics.medium();
-        _flashes.add(LaneFlash(lane: lane, at: _game.elapsed, hit: false));
-        setState(() => _combo = _game.combo);
-      case TapOutcome.ignored:
-        break;
-    }
-  }
-
-  void _finishRun() {
-    _ticker.stop();
-    final score = _game.score;
-    // Recorded here, with no navigation in flight: the leave-first rule is
-    // about the exit below, and the best must be on the journey before the
-    // end panel names it.
-    final newBest = _store.recordGameScore(score);
-    _analytics.gameFinished(
-      score: score,
-      bestCombo: _game.bestCombo,
-      misses: _game.misses,
-    );
-    _frame.tick();
-    setState(() {
-      _secondsLeft = 0;
-      _combo = _game.combo;
-      _outcome = GameOutcome(score: score, newBest: newBest);
-    });
-  }
-
-  void _itPassed() {
-    final outcome = _outcome!;
-    // Leave first, then mutate: `survive()` changes the journey, and a
-    // router refresh delivered after an imperative navigation undoes it
-    // (the paywall and the composer both fell into that hole).
-    context.pushReplacement('${Routes.survived}?${outcome.toQuery()}');
-    _session.survive();
-  }
-
-  void _anotherRound() {
-    LpHaptics.light();
-    setState(_startRun);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    final l10n = context.l10n;
-    final outcome = _outcome;
-    return Scaffold(
-      backgroundColor: lp.panicBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      BackChevron(onTap: () => context.pop()),
-                      Text(
-                        l10n.gameTimeLeft(_secondsLeft),
-                        style: LpType.number(lp.oxygenText, size: 24),
-                      ),
-                      // Fixed box: the caption arriving never shifts the row.
-                      // `OverflowBox` because `flutter test`'s square-glyph
-                      // fallback font is taller than Inter and would trip the
-                      // overflow assertion for a box that fits every phone.
-                      SizedBox(
-                        width: 72,
-                        height: 44,
-                        child: OverflowBox(
-                          alignment: Alignment.topRight,
-                          maxHeight: double.infinity,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '$_score',
-                                style: LpType.number(lp.voltText, size: 24),
-                              ),
-                              AnimatedSwitcher(
-                                duration: LpMotion.fast,
-                                child: _passedBest
-                                    ? Text(
-                                        l10n.gameNewBest,
-                                        key: const ValueKey('newBest'),
-                                        style: LpType.caption11(
-                                          lp.voltText,
-                                          weight: FontWeight.w600,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(l10n.gameTitle, style: LpType.titleSm(lp.textPrimary)),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.gameSubtitle,
-                    textAlign: TextAlign.center,
-                    style: LpType.caption(lp.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Full-bleed: lanes a quarter of the screen wide are the target
-            // two thumbs need. Bounded by `Expanded`, never by content.
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: LpMotion.normal,
-                child: outcome == null
-                    ? TileField(
-                        key: ValueKey(_game),
-                        game: _game,
-                        frame: _frame,
-                        flashes: _flashes,
-                        combo: _combo,
-                        onLaneTap: _onLaneTap,
-                      )
-                    : _RoundDone(
-                        key: const ValueKey('done'),
-                        outcome: outcome,
-                        best: _store.journey?.bestGameScore,
-                        onPassed: _itPassed,
-                        onAnother: _anotherRound,
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Ticks the painter once per frame without rebuilding the widget tree.
-class _FrameClock extends ChangeNotifier {
-  void tick() => notifyListeners();
-}
-
-/// The end of a run: what happened, then the why step's two choices. The
-/// primary is another 60 seconds — assuming the craving passed is the one
-/// thing this screen must never do; "it passed" is theirs to say.
-class _RoundDone extends StatelessWidget {
-  const _RoundDone({
-    super.key,
-    required this.outcome,
-    required this.best,
-    required this.onPassed,
-    required this.onAnother,
-  });
-
-  final GameOutcome outcome;
-  final int? best;
-  final VoidCallback onPassed;
-  final VoidCallback onAnother;
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    final l10n = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Spacer(),
-          Text(
-            l10n.gameRoundDone,
-            textAlign: TextAlign.center,
-            style: LpType.title(lp.textPrimary, size: 28),
-          ),
-          const SizedBox(height: 14),
-          Center(
-            child: GameResultLine(outcome: outcome, best: best),
-          ),
-          const Spacer(),
-          const Center(child: _CravingTimer(late: true)),
-          const SizedBox(height: 14),
-          LpButton(
-            l10n.gameAnotherRound,
-            style: LpButtonStyle.oxygen,
-            onTap: onAnother,
-          ),
-          const SizedBox(height: 6),
-          LpTextButton(l10n.panicItPassed, onTap: onPassed),
-        ],
-      ),
-    );
-  }
-}
-
-/// "🎹 112 tiles · NEW BEST" as a volt chip when the run set the best,
-/// "🎹 112 tiles · best 130" in secondary text otherwise, and just the count
-/// when there is no best to name (a run that caught nothing, before any).
-/// Shared by the end panel and the survived screen so the two never drift.
-class GameResultLine extends StatelessWidget {
-  const GameResultLine({super.key, required this.outcome, required this.best});
-
-  final GameOutcome outcome;
-
-  /// The journey's best right now — already this run's score when it set it.
-  final int? best;
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    final l10n = context.l10n;
-    final tiles = '🎹 ${l10n.survivedGameTiles(outcome.score)}';
-    if (outcome.newBest) {
-      return StaticChip('$tiles · ${l10n.survivedGameNewBest}', small: true);
-    }
-    final b = best;
-    return Text(
-      b == null ? tiles : '$tiles · ${l10n.survivedGameBest(b)}',
-      textAlign: TextAlign.center,
-      style: LpType.body13(lp.textSecondary),
-    );
-  }
-}
-
-/// What a finished game hands the survived screen (docs/09 §8), carried in
-/// the route's query string so that it survives `survive()` invalidating
-/// the panic session and never needs a provider of its own.
-class GameOutcome {
-  const GameOutcome({required this.score, required this.newBest});
-
-  /// Tiles caught in the run — a real number from real play.
-  final int score;
-
-  /// Whether the run set the journey's best. Decided BEFORE the journey is
-  /// mutated (the router refresh rule: leave first, then mutate), which is
-  /// why it travels here rather than being re-derived from the store.
-  final bool newBest;
-
-  static const _scoreKey = 'game';
-  static const _bestKey = 'best';
-
-  /// Null when the screen was reached without playing ("it passed").
-  static GameOutcome? fromQuery(Map<String, String> query) {
-    final score = int.tryParse(query[_scoreKey] ?? '');
-    if (score == null || score < 0) return null;
-    return GameOutcome(score: score, newBest: query[_bestKey] == '1');
-  }
-
-  String toQuery() => '$_scoreKey=$score&$_bestKey=${newBest ? 1 : 0}';
 }
 
 /// Frame 35 — craving survived. Confetti, rolling counter, share the W.
@@ -1094,7 +745,9 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
     final l10n = context.l10n;
     final total = ref.watch(todayProvider)?.cravingsSurvivedTotal ?? 0;
     final game = widget.game;
-    final best = ref.watch(quitStoreProvider)?.bestGameScore;
+    final best = game == null
+        ? null
+        : ref.watch(quitStoreProvider)?.gameBests[game.game];
     final line = [
       l10n.survivedLine1,
       l10n.survivedLine2,
@@ -1162,6 +815,18 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
                           if (game != null) ...[
                             const SizedBox(height: 14),
                             GameResultLine(outcome: game, best: best),
+                            // Their two numbers, only when the second is
+                            // lower — never the app disputing "it passed".
+                            if (game.intensityBefore case final before?)
+                              if (game.intensityAfter case final after?
+                                  when after < before) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  l10n.survivedIntensityDrop(before, after),
+                                  textAlign: TextAlign.center,
+                                  style: LpType.caption(lp.textSecondary),
+                                ),
+                              ],
                           ],
                         ],
                       ),

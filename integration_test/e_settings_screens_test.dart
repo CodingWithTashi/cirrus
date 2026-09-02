@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
 
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
@@ -32,7 +33,7 @@ void main() {
 
   /// Every route reachable with a live journey. The shell tabs are driven
   /// separately below because they are a StatefulShellRoute, not a push.
-  const routes = [
+  final routes = [
     Routes.plan,
     Routes.money,
     Routes.health,
@@ -44,6 +45,8 @@ void main() {
     Routes.day1,
     Routes.panic,
     Routes.game,
+    Routes.gameFor(GameId.blocks),
+    Routes.gameFor(GameId.orbs),
     Routes.survived,
     Routes.compose,
     Routes.paywall,

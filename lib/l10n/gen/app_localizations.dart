@@ -2578,13 +2578,13 @@ abstract class AppLocalizations {
   /// No description provided for @panicLoopGame.
   ///
   /// In en, this message translates to:
-  /// **'60-second game'**
+  /// **'Play for a minute'**
   String get panicLoopGame;
 
   /// No description provided for @panicLoopGameSub.
   ///
   /// In en, this message translates to:
-  /// **'occupies the exact itch — thumbs busy, brain busy'**
+  /// **'Tiles, Blocks or Orbs — thumbs busy, brain busy'**
   String get panicLoopGameSub;
 
   /// No description provided for @panicLoopSos.
@@ -2623,12 +2623,6 @@ abstract class AppLocalizations {
   /// **'Crowd the craving out.'**
   String get gameTitle;
 
-  /// No description provided for @gameSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'A craving is mostly a picture in your head. Tap the falling tiles for 60 seconds and it gets less room to grow.'**
-  String get gameSubtitle;
-
   /// No description provided for @gameTimeLeft.
   ///
   /// In en, this message translates to:
@@ -2641,17 +2635,167 @@ abstract class AppLocalizations {
   /// **'new best'**
   String get gameNewBest;
 
-  /// No description provided for @gameRoundDone.
-  ///
-  /// In en, this message translates to:
-  /// **'60 seconds done.'**
-  String get gameRoundDone;
-
   /// No description provided for @gameAnotherRound.
   ///
   /// In en, this message translates to:
   /// **'Still craving — 60 more seconds'**
   String get gameAnotherRound;
+
+  /// No description provided for @gameWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'A craving is mostly a picture in your head. Fill the space for a few minutes and it has less room to grow.'**
+  String get gameWhy;
+
+  /// No description provided for @gameNameTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Tiles'**
+  String get gameNameTiles;
+
+  /// No description provided for @gameNameBlocks.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocks'**
+  String get gameNameBlocks;
+
+  /// No description provided for @gameNameOrbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Orbs'**
+  String get gameNameOrbs;
+
+  /// No description provided for @gameHintTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the bottom tile in its lane.'**
+  String get gameHintTiles;
+
+  /// No description provided for @gameHintBlocks.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move · tap to turn · flick down to drop'**
+  String get gameHintBlocks;
+
+  /// No description provided for @gameHintOrbs.
+  ///
+  /// In en, this message translates to:
+  /// **'A few orbs glow. Keep your eyes on them as they move, then tap them.'**
+  String get gameHintOrbs;
+
+  /// No description provided for @orbsCue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Remember this one} other{Remember these {count}}}'**
+  String orbsCue(int count);
+
+  /// No description provided for @orbsCueSub.
+  ///
+  /// In en, this message translates to:
+  /// **'They go grey in a moment — keep your eyes on them'**
+  String get orbsCueSub;
+
+  /// No description provided for @orbsTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your eyes on them'**
+  String get orbsTrack;
+
+  /// No description provided for @orbsTrackSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The ring is coming'**
+  String get orbsTrackSub;
+
+  /// No description provided for @orbsPick.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Tap the one you followed} other{Tap the {count} you followed}}'**
+  String orbsPick(int count);
+
+  /// No description provided for @orbsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{found} of {count}'**
+  String orbsProgress(int found, int count);
+
+  /// No description provided for @orbsPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Got it — perfect} other{All {count} — perfect}}'**
+  String orbsPerfect(int count);
+
+  /// No description provided for @orbsRevealSub.
+  ///
+  /// In en, this message translates to:
+  /// **'These were the ones'**
+  String get orbsRevealSub;
+
+  /// No description provided for @gameUnitTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 tile} other{{count} tiles}}'**
+  String gameUnitTiles(int count);
+
+  /// No description provided for @gameUnitBlocks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 line} other{{count} lines}}'**
+  String gameUnitBlocks(int count);
+
+  /// No description provided for @gameUnitOrbs.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 orb} other{{count} orbs}}'**
+  String gameUnitOrbs(int count);
+
+  /// No description provided for @gameMinutesDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{60 seconds done.} other{{minutes} minutes done.}}'**
+  String gameMinutesDone(int minutes);
+
+  /// No description provided for @gameDoseDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Three minutes — the full dose.'**
+  String get gameDoseDone;
+
+  /// No description provided for @gameResearchNote.
+  ///
+  /// In en, this message translates to:
+  /// **'In a week-long study, three minutes of a visual game cut cravings by about a fifth.'**
+  String get gameResearchNote;
+
+  /// No description provided for @gameIntensityNow.
+  ///
+  /// In en, this message translates to:
+  /// **'How bad is it now?'**
+  String get gameIntensityNow;
+
+  /// No description provided for @gameCapLine.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s five minutes of your own attention. Pick what\'s next.'**
+  String get gameCapLine;
+
+  /// No description provided for @gameCapTryElse.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another way'**
+  String get gameCapTryElse;
+
+  /// No description provided for @gamePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get gamePaused;
+
+  /// No description provided for @gamePausedTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to keep going'**
+  String get gamePausedTap;
 
   /// No description provided for @survivedPlusOne.
   ///
@@ -2713,12 +2857,6 @@ abstract class AppLocalizations {
   /// **'cravings survived total'**
   String get survivedTotalLabel;
 
-  /// No description provided for @survivedGameTiles.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{1 tile} other{{count} tiles}}'**
-  String survivedGameTiles(int count);
-
   /// No description provided for @survivedGameNewBest.
   ///
   /// In en, this message translates to:
@@ -2730,6 +2868,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'best {best}'**
   String survivedGameBest(int best);
+
+  /// No description provided for @survivedIntensityDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'You said {before}/10 — now {after}/10.'**
+  String survivedIntensityDrop(int before, int after);
 
   /// No description provided for @survivedShare.
   ///

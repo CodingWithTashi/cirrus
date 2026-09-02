@@ -211,18 +211,21 @@ class StaticChip extends StatelessWidget {
   }
 }
 
-/// Segmented pill control (Stats: Day / Week / Month).
+/// Segmented pill control (Stats: Day / Week / Month; the arena's game
+/// switcher). A pill in [badges] wears a small volt dot at its corner.
 class SegmentedPills extends StatelessWidget {
   const SegmentedPills({
     super.key,
     required this.labels,
     required this.selectedIndex,
     required this.onChanged,
+    this.badges = const {},
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
+  final Set<int> badges;
 
   @override
   Widget build(BuildContext context) {
@@ -240,23 +243,41 @@ class SegmentedPills extends StatelessWidget {
           for (var i = 0; i < labels.length; i++)
             PressScale(
               onTap: () => onChanged(i),
-              child: AnimatedContainer(
-                duration: LpMotion.fast,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: i == selectedIndex ? lp.volt : Colors.transparent,
-                  borderRadius: BorderRadius.circular(LpDimens.rChip),
-                ),
-                child: Text(
-                  labels[i],
-                  style: LpType.caption(
-                    i == selectedIndex ? lp.onVolt : lp.textSecondary,
-                    weight: FontWeight.w600,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: LpMotion.fast,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: i == selectedIndex ? lp.volt : Colors.transparent,
+                      borderRadius: BorderRadius.circular(LpDimens.rChip),
+                    ),
+                    child: Text(
+                      labels[i],
+                      style: LpType.caption(
+                        i == selectedIndex ? lp.onVolt : lp.textSecondary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                  if (badges.contains(i) && i != selectedIndex)
+                    Positioned(
+                      top: 1,
+                      right: 3,
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: lp.volt,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
         ],

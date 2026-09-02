@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/features/panic/panic_screens.dart';
@@ -50,6 +51,29 @@ void main() {
     expect(panic.begins, 1);
     // And the first step is already on screen — nothing awaited the call.
     expect(c.read(panicProvider).step, 0);
+  });
+
+  testWidgets('a re-rated craving reports both numbers and the game', (
+    tester,
+  ) async {
+    final c = await mount(tester);
+    c.read(quitStoreProvider.notifier).seedDemoJourney();
+
+    final vm = c.read(panicProvider.notifier);
+    vm.setIntensity(8);
+    vm.noteGame(GameId.blocks, rounds: 2);
+    vm.survive(intensityAfter: 3);
+    await tester.pumpAndSettle();
+
+    expect(panic.survivedIntensities, [8]);
+    expect(panic.survivedAfter, [3]);
+    expect(panic.survivedGames, [GameId.blocks]);
+
+    // Skipping the re-ask sends nothing in its place, never a guess.
+    c.read(panicProvider.notifier).survive();
+    await tester.pumpAndSettle();
+    expect(panic.survivedAfter, [3, null]);
+    expect(panic.survivedGames, [GameId.blocks, null]);
   });
 
   testWidgets('a survived craving is reported with its intensity', (
@@ -184,6 +208,8 @@ void main() {
 class _StubPanic implements PanicRepository {
   int begins = 0;
   final survivedIntensities = <int>[];
+  final survivedAfter = <int?>[];
+  final survivedGames = <GameId?>[];
   PanicAvailability result = PanicAvailability.unknown;
   Object? failure;
 
@@ -195,8 +221,14 @@ class _StubPanic implements PanicRepository {
   }
 
   @override
-  Future<void> survived({required int intensity}) async {
+  Future<void> survived({
+    required int intensity,
+    int? intensityAfter,
+    GameId? game,
+  }) async {
     survivedIntensities.add(intensity);
+    survivedAfter.add(intensityAfter);
+    survivedGames.add(game);
     if (failure != null) throw failure!;
   }
 }

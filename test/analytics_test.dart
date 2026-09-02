@@ -12,6 +12,7 @@ import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/domain/analytics/lp_events.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
@@ -56,7 +57,14 @@ void main() {
         ..entitlementChanged('trial')
         ..puffLogged()
         ..cravingSurvived(survived: true)
-        ..gameFinished(score: 112, bestCombo: 40, misses: 3);
+        ..gameFinished(
+          game: GameId.tiles,
+          round: 1,
+          score: 112,
+          bestCombo: 40,
+          misses: 3,
+        )
+        ..gameSwitched(from: GameId.tiles, to: GameId.blocks);
 
       expect(a.names, [
         'onboarding_start',
@@ -83,6 +91,7 @@ void main() {
         'puff_logged',
         'craving_outcome',
         'game_finished',
+        'game_switched',
       ]);
       expect(a.propsOf('purchase_completed'), {
         'plan': 'yearly',
@@ -93,14 +102,21 @@ void main() {
       // Property keys are read by the same dashboards.
       expect(a.propsOf('screen_completed'), {'screen_id': 'welcome', 'ms': 1200});
       expect(a.propsOf('game_finished'), {
+        'game': 'tiles',
+        'round': 1,
         'score': 112,
         'best_combo': 40,
         'misses': 3,
       });
+      expect(a.propsOf('game_switched'), {'from': 'tiles', 'to': 'blocks'});
       expect(a.propsOf('puffs_entered'), {'value': 200, 'badge': 'heavy'});
       expect(a.propsOf('spend_entered'), {'weekly': 45, 'yearly_shown': 2340});
       expect(a.propsOf('pace_chosen'), {'pace_days': 30});
-      expect(a.propsOf('craving_outcome'), {'survived': 'true'});
+      expect(a.propsOf('craving_outcome'), {
+        'survived': 'true',
+        'game': 'none',
+        'rounds': 0,
+      });
     });
 
     // Firebase Analytics rejects anything else outright, and a rejected event

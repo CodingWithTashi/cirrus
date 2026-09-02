@@ -279,7 +279,8 @@ class _GlowProgressBarState extends State<GlowProgressBar> {
 }
 
 /// Horizontal error shake (Run 2 frame 28: "wrong password shakes the field
-/// 2px"). Trigger via a GlobalKey: `_shakeKey.currentState?.shake()`.
+/// 2px"; the panic arena's big clear at 4). Trigger via a GlobalKey:
+/// `_shakeKey.currentState?.shake()`.
 class ShakeIt extends StatefulWidget {
   const ShakeIt({super.key, required this.child});
 
@@ -294,9 +295,11 @@ class ShakeItState extends State<ShakeIt> with SingleTickerProviderStateMixin {
     vsync: this,
     duration: const Duration(milliseconds: 320),
   );
+  double _amplitude = 2;
 
-  void shake() {
+  void shake({double amplitude = 2}) {
     if (MediaQuery.disableAnimationsOf(context)) return;
+    _amplitude = amplitude;
     _controller.forward(from: 0);
   }
 
@@ -312,8 +315,8 @@ class ShakeItState extends State<ShakeIt> with SingleTickerProviderStateMixin {
       animation: _controller,
       builder: (context, child) {
         final t = _controller.value;
-        // Three decaying ±2px swings.
-        final dx = math.sin(t * math.pi * 6) * 2 * (1 - t);
+        // Three decaying swings, ±2px by default.
+        final dx = math.sin(t * math.pi * 6) * _amplitude * (1 - t);
         return Transform.translate(offset: Offset(dx, 0), child: child);
       },
       child: widget.child,

@@ -10,6 +10,7 @@ import '../../data/stores/providers.dart';
 import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
+import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/models.dart';
 import '../../features/coach/coach_screen.dart';
 import '../../features/coach/memories_screen.dart';
@@ -23,6 +24,8 @@ import '../../features/milestones/milestones_screen.dart';
 import '../../features/money/money_screen.dart';
 import '../../features/moderation/moderation_screen.dart';
 import '../../features/onboarding/onboarding_flow.dart';
+import '../../features/panic/game_arena_screen.dart';
+import '../../features/panic/games/game_outcome.dart';
 import '../../features/panic/panic_screens.dart';
 import '../../features/paywall/paywall_screens.dart';
 import '../../features/plan/plan_screen.dart';
@@ -56,6 +59,10 @@ abstract final class Routes {
   static const compose = '/community/compose';
   static const panic = '/panic';
   static const game = '/panic/game';
+
+  /// The arena opened on a given game; a query like [paywallFrom], so the
+  /// recorded screen name stays `/panic/game`.
+  static String gameFor(GameId id) => '$game?g=${id.name}';
   static const survived = '/panic/survived';
   static const plan = '/plan';
   static const money = '/money';
@@ -263,7 +270,22 @@ final routerProvider = Provider<GoRouter>((ref) {
               FadeTransition(opacity: animation, child: child),
         ),
       ),
-      GoRoute(path: Routes.game, builder: (_, _) => const TapGameScreen()),
+      // The arena opens on `?g=`, else the last game played. Same fade as
+      // the takeover; the key makes an in-place query change a new screen.
+      GoRoute(
+        path: Routes.game,
+        pageBuilder: (_, state) {
+          final id = GameId.values
+              .where((g) => g.name == state.uri.queryParameters['g'])
+              .firstOrNull;
+          return CustomTransitionPage(
+            child: GameArenaScreen(key: ValueKey(id), initial: id),
+            transitionDuration: const Duration(milliseconds: 250),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+          );
+        },
+      ),
       GoRoute(
         path: Routes.survived,
         // The game hands its result over in the query string

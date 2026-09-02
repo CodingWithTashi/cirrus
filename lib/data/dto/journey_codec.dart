@@ -1,3 +1,4 @@
+import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import 'codec_helpers.dart';
@@ -24,7 +25,8 @@ abstract final class JourneyCodec {
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
     'moodCheckIns': s.moodCheckIns,
     'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
-    'bestGameScore': s.bestGameScore,
+    'gameBests': {for (final e in s.gameBests.entries) e.key.name: e.value},
+    'lastGame': s.lastGame?.name,
   };
 
   static JourneyState decode(Map<String, dynamic> json) => JourneyState(
@@ -59,10 +61,25 @@ abstract final class JourneyCodec {
     planAdvice: json['planAdvice'] == null
         ? null
         : decodeAdvice(json['planAdvice'] as Map<String, dynamic>),
-    // Missing on every journey written before the game kept score, and null
-    // is the honest answer there: nothing has been played yet.
-    bestGameScore: json['bestGameScore'] as int?,
+    gameBests: _decodeGameBests(json),
+    lastGame: enumByNameOrNull(GameId.values, json['lastGame']),
   );
+
+  /// Per-game bests keyed by `GameId.name`; missing means never played. The
+  /// single-game `bestGameScore` is read once as the tiles best, never
+  /// written again; an unknown id is dropped, not a crash.
+  static Map<GameId, int> _decodeGameBests(Map<String, dynamic> json) {
+    final raw = json['gameBests'];
+    if (raw is Map) {
+      return {
+        for (final e in raw.entries)
+          if (enumByNameOrNull(GameId.values, e.key) case final id?)
+            if (e.value case final int score) id: score,
+      };
+    }
+    final legacy = json['bestGameScore'];
+    return legacy is int ? {GameId.tiles: legacy} : const {};
+  }
 
   static Map<String, dynamic> encodeProfile(UserProfile p) => {
     'alias': p.alias,

@@ -1478,11 +1478,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your hands and brain need a job for 60 seconds. Pick one.';
 
   @override
-  String get panicLoopGame => '60-second game';
+  String get panicLoopGame => 'Play for a minute';
 
   @override
   String get panicLoopGameSub =>
-      'occupies the exact itch — thumbs busy, brain busy';
+      'Tiles, Blocks or Orbs — thumbs busy, brain busy';
 
   @override
   String get panicLoopSos => 'Ask the community';
@@ -1505,10 +1505,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameTitle => 'Crowd the craving out.';
 
   @override
-  String get gameSubtitle =>
-      'A craving is mostly a picture in your head. Tap the falling tiles for 60 seconds and it gets less room to grow.';
-
-  @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
@@ -1517,10 +1513,148 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameNewBest => 'new best';
 
   @override
-  String get gameRoundDone => '60 seconds done.';
+  String get gameAnotherRound => 'Still craving — 60 more seconds';
 
   @override
-  String get gameAnotherRound => 'Still craving — 60 more seconds';
+  String get gameWhy =>
+      'A craving is mostly a picture in your head. Fill the space for a few minutes and it has less room to grow.';
+
+  @override
+  String get gameNameTiles => 'Tiles';
+
+  @override
+  String get gameNameBlocks => 'Blocks';
+
+  @override
+  String get gameNameOrbs => 'Orbs';
+
+  @override
+  String get gameHintTiles => 'Tap the bottom tile in its lane.';
+
+  @override
+  String get gameHintBlocks =>
+      'Drag to move · tap to turn · flick down to drop';
+
+  @override
+  String get gameHintOrbs =>
+      'A few orbs glow. Keep your eyes on them as they move, then tap them.';
+
+  @override
+  String orbsCue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Remember these $count',
+      one: 'Remember this one',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orbsCueSub => 'They go grey in a moment — keep your eyes on them';
+
+  @override
+  String get orbsTrack => 'Keep your eyes on them';
+
+  @override
+  String get orbsTrackSub => 'The ring is coming';
+
+  @override
+  String orbsPick(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tap the $count you followed',
+      one: 'Tap the one you followed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String orbsProgress(int found, int count) {
+    return '$found of $count';
+  }
+
+  @override
+  String orbsPerfect(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'All $count — perfect',
+      one: 'Got it — perfect',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orbsRevealSub => 'These were the ones';
+
+  @override
+  String gameUnitTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tiles',
+      one: '1 tile',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String gameUnitBlocks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lines',
+      one: '1 line',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String gameUnitOrbs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count orbs',
+      one: '1 orb',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String gameMinutesDone(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes done.',
+      one: '60 seconds done.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get gameDoseDone => 'Three minutes — the full dose.';
+
+  @override
+  String get gameResearchNote =>
+      'In a week-long study, three minutes of a visual game cut cravings by about a fifth.';
+
+  @override
+  String get gameIntensityNow => 'How bad is it now?';
+
+  @override
+  String get gameCapLine =>
+      'That\'s five minutes of your own attention. Pick what\'s next.';
+
+  @override
+  String get gameCapTryElse => 'Try another way';
+
+  @override
+  String get gamePaused => 'Paused';
+
+  @override
+  String get gamePausedTap => 'Tap to keep going';
 
   @override
   String get survivedPlusOne => '+1 craving beaten';
@@ -1553,22 +1687,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get survivedTotalLabel => 'cravings survived total';
 
   @override
-  String survivedGameTiles(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count tiles',
-      one: '1 tile',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get survivedGameNewBest => 'NEW BEST';
 
   @override
   String survivedGameBest(int best) {
     return 'best $best';
+  }
+
+  @override
+  String survivedIntensityDrop(int before, int after) {
+    return 'You said $before/10 — now $after/10.';
   }
 
   @override

@@ -1,5 +1,6 @@
 import '../date_key.dart';
 import '../logic/danger_hours.dart';
+import '../logic/games/game_id.dart';
 import '../logic/money_engine.dart';
 import '../logic/streak_engine.dart';
 import '../logic/taper_engine.dart';
@@ -22,7 +23,8 @@ class JourneyState {
     this.pendingSlipCleanDays,
     this.moodCheckIns = 0,
     this.planAdvice,
-    this.bestGameScore,
+    this.gameBests = const {},
+    this.lastGame,
   });
 
   final UserProfile profile;
@@ -62,13 +64,13 @@ class JourneyState {
   /// anyone whose plan has already finished.
   final PlanAdvice? planAdvice;
 
-  /// Most tiles caught in one run of the 60-second panic game (docs/09 §8).
-  ///
-  /// Null until a game has actually been played to the end: the survived
-  /// screen and the game's header show nothing rather than "best: 0". A best
-  /// is only ever a number from real play — never seeded, never invented —
-  /// and it only ever goes up (`TileGame.beats`).
-  final int? bestGameScore;
+  /// Personal best per panic game in one 60-second round; absent until a
+  /// round ran to the end. Never seeded, and it only goes up
+  /// (`GameScore.beats`).
+  final Map<GameId, int> gameBests;
+
+  /// The game the arena opened on last; null until one has been played.
+  final GameId? lastGame;
 
   /// Local midnight — the day map's key. Delegates to the one truncation in
   /// the app; the name and its call sites stay put.
@@ -104,7 +106,8 @@ class JourneyState {
     int? Function()? pendingSlipCleanDays,
     int? moodCheckIns,
     PlanAdvice? Function()? planAdvice,
-    int? bestGameScore,
+    Map<GameId, int>? gameBests,
+    GameId? lastGame,
   }) => JourneyState(
     profile: profile ?? this.profile,
     plan: plan ?? this.plan,
@@ -122,8 +125,10 @@ class JourneyState {
         : this.pendingSlipCleanDays,
     moodCheckIns: moodCheckIns ?? this.moodCheckIns,
     planAdvice: planAdvice != null ? planAdvice() : this.planAdvice,
-    // Plain `??`, not a thunk: a best never needs resetting to null.
-    bestGameScore: bestGameScore ?? this.bestGameScore,
+    // Plain `??`, not thunks: a best never needs resetting, and the last
+    // game only ever moves to another game.
+    gameBests: gameBests ?? this.gameBests,
+    lastGame: lastGame ?? this.lastGame,
   );
 }
 
