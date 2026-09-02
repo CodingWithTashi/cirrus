@@ -114,7 +114,7 @@ Zero hardcoded UI strings. ARB files in `lib/l10n/app_{en,es,fr,de,pt}.arb`, gen
 
 - `docs/01–07` are the frozen product specs; `docs/07` is the brand/design brief.
 - **`docs/08_Sprint_Tracker.md` is the only living doc** — build status, blockers (`B1`–`B16`, each with an evidence path), sprint plan, and the current revenue model. Update it as work lands; when it disagrees with `docs/01–07`, it wins.
-- The visual source of truth is a Claude Design project exported into the four `docs/design/*handoff*` bundles (byte-identical `project/` folders; 52 frames across Runs 1/2/2-Light/3). Per-frame implementation status, deliberate deviations, and past fix rounds are tracked in `docs/design/HANDOFF_COMPLETION.md`.
+- The visual source of truth is a Claude Design project exported into `docs/design/handoff/` (one bundle — the four per-run exports were byte-identical and were collapsed on Sep 2 2026; 52 frames across Runs 1/2/2-Light/3). Per-frame implementation status, deliberate deviations, and past fix rounds are tracked in `docs/design/HANDOFF_COMPLETION.md`.
 
 ### Spec conflicts — these resolutions win over the spec text
 

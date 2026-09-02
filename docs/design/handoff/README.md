@@ -6,7 +6,9 @@ A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported t
 
 ## What you should do — IMPORTANT
 
-**Read `run-1-frame-review/project/LastPuff Run 1.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+**Read the design files in `project/` in full, in this order:** `LastPuff Run 1.dc.html` (frames 1–24, onboarding + paywall), `LastPuff Run 2.dc.html` (frames 25–38, auth + core app, Midnight Ember), `LastPuff Run 3.dc.html` (frames 39–52), then `LastPuff Run 2 Light.dc.html` (the Daylight Ember theme). Read each top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+
+Per-frame implementation status, deliberate deviations and past fix rounds are tracked in `../HANDOFF_COMPLETION.md`.
 
 **If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
 
@@ -18,5 +20,7 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 
 ## Bundle contents
 
-- `run-1-frame-review/README.md` — this file
-- `run-1-frame-review/project/` — the `RUN 1 frame review` project files (HTML prototypes, assets, components)
+- `README.md` — this file
+- `project/` — the Claude Design project files: the four `.dc.html` design files, `support.js`, `ios-frame.jsx`
+
+The project was exported once per run. The four exports' `project/` folders were byte-identical (MD5-verified), so they were collapsed into this one bundle on Sep 2, 2026.

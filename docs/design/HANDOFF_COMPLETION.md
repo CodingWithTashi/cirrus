@@ -1,7 +1,7 @@
-﻿# Handoff Completion Matrix — all four bundles
+# Handoff Completion Matrix
 
-**Bundles:** `RUN 1 frame review-handoff` · `RUN 2 frame review-handof` · `RUN 3 frame review-handof` · `LastPuff Run 2 Light handoff`
-**Fact:** the four bundles' `project/` folders are byte-identical exports of one Claude Design project (verified by MD5); each README marks a different primary file. Completion below is therefore tracked per design file, frame by frame.
+**Bundle:** `docs/design/handoff/` — the Claude Design export; `project/` holds the four design files (Run 1, Run 2, Run 3, Run 2 Light).
+**History:** the project was exported once per run, and the four exports' `project/` folders were byte-identical (verified by MD5) — only each README's "read this file first" sentence differed. The copies were collapsed into one bundle on Sep 2, 2026. Completion is tracked per design file, frame by frame.
 
 **Legend:** ✅ implemented · ✅* implemented with a deliberate deviation (noted) · 📐 design-system component (built, surfaced in a later phase) · 🔌 out of UI-phase scope (backend / native)
 
@@ -49,7 +49,7 @@
 | 31 | Log + over-limit | +1 → ring tick + 1.02 card bounce + haptic + 5s undo snackbar; over-limit → Relapse-Red ring, kind copy, Breathe/Coach actions, honest footer; repair-token dim note | ✅ |
 | 32 | Panic 1 Breathe | Oxygen ground, 4-7-8 ring with phase haptics, live craving timer, skip-to-why | ✅ |
 | 33 | Panic 2 Your why | user's own C1 chips + B4 math, intensity slider, "It passed" exits to celebration | ✅ |
-| 34 | Panic 3 Break loop | game / buddy-ping (pre-written) / coach, late-timer copy | ✅ |
+| 34 | Panic 3 Break loop | game / buddy-ping (pre-written) / coach, late-timer copy | ✅* buddy ping removed with Quit Buddies (descoped Aug 2026, docs/08 §7 row 13); the community SOS holds that slot |
 | 35 | Craving survived | confetti + rolling total + 8 rotating celebration lines (never twice in a row) + share card | ✅ |
 | 36 | AI Coach chat | Ember header, stat-citing scripted replies, inline YOUR WEEK card, chips, typing flame pulse (+ screen-reader label), free-tier counter | ✅ |
 | 37 | Plan | morphing curve with glowing today marker, COMING UP milestones, adjust sheet — no reset, no lost history | ✅ |
@@ -66,7 +66,7 @@
 | 43 | Community feed | anonymous animal avatars, tag filters, SOS pinned 60min with Oxygen ring, reactions, report/block menu | ✅ |
 | 44 | Post composer | tag required, SOS flips Post to Oxygen, persistent kindness line, always-anonymous row | ✅ |
 | 45 | SOS rally | "have your back" banner, replies, OP update highlighted Oxygen | ✅ |
-| 46 | Buddy / invite | side-by-side flames, combined streak, nudge with **2/day cap**, privacy contract, invite link copy | ✅ |
+| 46 | Buddy / invite | side-by-side flames, combined streak, nudge with **2/day cap**, privacy contract, invite link copy | ✅ → **removed** — Quit Buddies descoped Aug 2026 (docs/08 §7 row 13); the S8 referral loop is its planned return |
 | 47 | Milestones | pinned next-badge progress, earned glow / locked grayscale grid, "not a leaderboard" | ✅ |
 | 48a | Slip — what happened | trigger chips, zero red, teammate tone | ✅ |
 | 48b | Slip — adjust | bumped curve reflow, +2 days honest stretch, dimmed-flame card, coach path | ✅ |
@@ -94,7 +94,7 @@ An exhaustive sweep of every frame's "Notes:" annotation against the code produc
 - **PressScale** now overshoots to 1.02 on release (the "1.02 bounce" of every note) instead of only sinking to 0.97.
 - Run 1: welcome shimmer tease · birth-year odometer digits · tried-banner 250ms slide-up · severe-tier haptic thud · Why-chip catch-pop + haptic · pace curve 400ms morph + pulsing Ember Freedom dot · staggered reveal counters · commit haptic ramp light→medium→**heavy** + pre-commit specks · option-border fade 150ms · progress bar never animates backwards · under-18 resource CTAs act (copy contact) and Close **exits the app** · "fear of failing" earns a coach note on the Method screen · Day-1 CTA always targets the next unchecked task · win-back = one-time in-app card on Home for Free users (docs/02 §4), burned on open.
 - Run 2: login shake (2px, kind copy) · Home **LOG PUFF pinned in the thumb zone** (no longer scrolls away) + ring-card log bounce + honest over-limit footer · panic breathing haptics tick with the ring (silent through the hold) · survived counter rolls previous→new + share copies an anonymous stat line · coach chips **prefill** the composer (protocol routing preserved per locale) + typing bubble announces "Ember is typing…" to screen readers · Stats heatmap **taps into the danger-hours editor** (sheet shared with Settings).
-- Run 3: health Volt line grows in · money goal bars spring + goal-funded confetti · community **Mute** + brand/sourcing **auto-hold** with honest copy + one-tap reply flagging · buddy nudge 2/day cap + flame chips scale with streak · milestones next-badge card pinned + badge-unlock confetti · slip curve shows the bump then **visibly reflows** · profile Why card links into the panic reframe.
+- Run 3: health Volt line grows in · money goal bars spring + goal-funded confetti · community **Mute** + brand/sourcing **auto-hold** with honest copy + one-tap reply flagging · buddy nudge 2/day cap (since removed with Quit Buddies) + flame chips scale with streak · milestones next-badge card pinned + badge-unlock confetti · slip curve shows the bump then **visibly reflows** · profile Why card links into the panic reframe.
 
 ## Standing deviations (intentional — spec or phase outranks the mock note)
 
@@ -105,14 +105,14 @@ An exhaustive sweep of every frame's "Notes:" annotation against the code produc
 5. **SOS pin window** — 60 minutes per docs/03 §9 (the frame-43 note says 30; spec wins).
 6. **"Only place Oxygen is used"** (frame 32 note) — contradicted by the design's own Run 2/3 frames (SOS, coach, insight all use Oxygen); the palette follows the frames, not the note.
 7. **Curve morph easing** — 400ms emphasized ease rather than a literal spring (overshoot on a 0..1-clamped curve reads as a glitch).
-8. **Backend/native-phase notes** — Face ID auto-login (`local_auth`), panic intensity feeding the coach memory card + weekly report, slip triggers feeding the heatmap, live SOS viewer counts, real buddy pushes, StoreKit rating, SMS/web deep links (`url_launcher`): all deferred to the Firebase/integration phase per docs/04–05; the UI seams exist.
+8. **Backend/native-phase notes** — Face ID auto-login (`local_auth`), panic intensity feeding the coach memory card + weekly report, slip triggers feeding the heatmap, live SOS viewer counts, ~~real buddy pushes~~ (Quit Buddies descoped Aug 2026), StoreKit rating, SMS/web deep links (`url_launcher`): all deferred to the Firebase/integration phase per docs/04–05; the UI seams exist.
 
 
 ---
 
 ## Round 3 — live emulator verification, every frame, both themes (Aug 17–18, 2026)
 
-All 52 frames were walked **screen-by-screen on an Android emulator** (Pixel-class, 1080×2400), first end-to-end in **Midnight (dark)**, then end-to-end in **Daylight (light)** — organic navigation where the product offers it (onboarding funnel, login, panic loop, tabs, quick links, profile/settings) and the Frame Map (Settings → "All 52 design frames") for preview-only states. Every screen was screenshot-compared against its design frame. Result: **52/52 match in both themes** after the fixes below.
+All 52 frames were walked **screen-by-screen on an Android emulator** (Pixel-class, 1080×2400), first end-to-end in **Midnight (dark)**, then end-to-end in **Daylight (light)** — organic navigation where the product offers it (onboarding funnel, login, panic loop, tabs, quick links, profile/settings) and the Frame Map (`/frames`, `kDebugMode` builds only) for preview-only states. Every screen was screenshot-compared against its design frame. Result: **52/52 match in both themes** after the fixes below.
 
 Defects found by the walk and fixed (all covered by `flutter analyze` 0 issues · `flutter test` 20/20 green):
 
@@ -134,7 +134,7 @@ Full-codebase review (all 67 hand-written Dart files). Architecture held up: pur
 
 **Correctness/UX** — Adjust-plan sheet preselected a hardcoded 30-day pace instead of the user's actual runway · selected SOS/oxygen chips used raw Oxygen as text (light-theme contrast) — LpChip now maps every accent to its text token · login's wrong-password error clears while retyping · register's invalid-email used a raw SnackBar bypassing showLpSnack's replace contract · Welcome's "Restore purchase" was a dead link · Insight's ✕ got a 40×40 tap target.
 
-**DRY** — celebrate-on-new-milestone confetti (was duplicated in Milestones + Money) extracted to `NewIdConfetti` · OS push-preview bubble (duplicated in D4 + trial-ending) extracted to `PushPreviewCard` · all paywall prices centralized in `LpPricing` (the StoreKit seam) · invite URL centralized in `LpLinks` and removed from all 5 ARBs (URLs aren't translations) · buddy's magic `2` now reads `CommunityStore.nudgeDailyCap` · settings' chevron-in-translation hack removed (glyph belongs to the row template) + one language map for row and picker · JourneyStore's day-limit computation deduped into `_limitOn` · dead `tab(index:)` param and unused `ConfettiBurst.play` removed.
+**DRY** — celebrate-on-new-milestone confetti (was duplicated in Milestones + Money) extracted to `NewIdConfetti` · OS push-preview bubble (duplicated in D4 + trial-ending) extracted to `PushPreviewCard` · all paywall prices centralized in `LpPricing` (the StoreKit seam) · invite URL centralized in `LpLinks` and removed from all 5 ARBs (URLs aren't translations) · buddy's magic `2` now reads `CommunityStore.nudgeDailyCap` (both since removed with Quit Buddies) · settings' chevron-in-translation hack removed (glyph belongs to the row template) + one language map for row and picker · JourneyStore's day-limit computation deduped into `_limitOn` · dead `tab(index:)` param and unused `ConfettiBurst.play` removed.
 
 **SOLID/design system** — cravings-fade day (70% rule) and projected-puffs-avoided moved from views into `TaperEngine` · new `caution`/`cautionText` theme tokens replace the one raw hex in a feature file (moderate-dependence badge; also fixes its light-theme contrast) · seeded goal names ("Tokyo flight", "New kicks") now resolve through l10n like seed posts · goal/alias sheet controllers disposed via `whenComplete` · deliberate non-token colors (Apple HIG button, iOS rating-sheet blue) annotated as intentional.
 
