@@ -23,6 +23,7 @@ export {panicSession} from './handlers/panicSession';
 export {syncUserContext} from './handlers/syncUserContext';
 export {deleteUserData} from './handlers/deleteUserData';
 export {moderatePost} from './handlers/moderatePost';
+export {remoderateHeld} from './handlers/remoderate';
 export {taperRecalc} from './handlers/taperRecalc';
 export {pruneDevices} from './handlers/pruneDevices';
 export {weeklyInsight} from './handlers/weeklyInsight';

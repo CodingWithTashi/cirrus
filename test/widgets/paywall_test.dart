@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +84,59 @@ void main() {
       expect(LpPricing.weekly, r'$2.99');
       expect(LpPricing.monthly, r'$7.99');
       expect(LpPricing.yearly, r'$39.99');
+    });
+  });
+
+  group('the seven-day trial', () {
+    testWidgets('the timeline quotes the price of the plan selected', (
+      tester,
+    ) async {
+      // Sep 1 (docs/09 issue 4): "cancel before, pay nothing" is said where
+      // the price is, and the price has to be the one they just picked.
+      await open(tester, Routes.paywall);
+
+      expect(
+        find.text(
+          l10n.paywallTimelineChargeBody(l10n.paywallPerYear(LpPricing.yearly)),
+        ),
+        findsOneWidget,
+        reason: 'yearly is preselected',
+      );
+
+      await tester.ensureVisible(find.text(l10n.paywallMonthly));
+      await tester.tap(find.text(l10n.paywallMonthly));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          l10n.paywallTimelineChargeBody(
+            l10n.paywallPerMonth(LpPricing.monthly),
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    test('every locale says seven days and none still says three', () {
+      // The trial length was 3 days in the copy alone — nothing computed it —
+      // so the only thing that can drift is a string. Pinned in all five.
+      for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
+        final arb =
+            jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
+                as Map<String, dynamic>;
+        expect(arb['paywallSubtitle'] as String, contains('7'), reason: locale);
+        for (final key in [
+          'paywallSubtitle',
+          'paywallCta',
+          'trialEndingStatsLabel',
+        ]) {
+          expect(
+            arb[key] as String,
+            isNot(contains('3')),
+            reason: '$locale/$key still counts three days',
+          );
+        }
+      }
     });
   });
 

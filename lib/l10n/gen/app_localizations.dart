@@ -1445,8 +1445,8 @@ abstract class AppLocalizations {
   /// No description provided for @obCoachNameTitle.
   ///
   /// In en, this message translates to:
-  /// **'We call it {name}.'**
-  String obCoachNameTitle(String name);
+  /// **'Meet your coach.'**
+  String get obCoachNameTitle;
 
   /// No description provided for @obCoachNameSubtitle.
   ///
@@ -1457,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @obCoachNameAsk.
   ///
   /// In en, this message translates to:
-  /// **'We went with {name} because it needed one. Nobody remembers a name someone else picked, though — so if you have a better idea, use it. Whatever you\'d actually text at 2am, mid-argument with yourself in the kitchen.'**
+  /// **'We call it {name}. It answers to anything — pick the name you\'d text at 2am.'**
   String obCoachNameAsk(String name);
 
   /// No description provided for @obCoachNameFieldLabel.
@@ -1568,11 +1568,41 @@ abstract class AppLocalizations {
   /// **'In your own words'**
   String get obWhyWordsFieldLabel;
 
-  /// No description provided for @obWhyWordsHint.
+  /// No description provided for @obWhyWordsHintHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'so I stop sounding like a kettle on the stairs'**
+  String get obWhyWordsHintHealth;
+
+  /// No description provided for @obWhyWordsHintMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'I want my money back. And my mornings.'**
+  String get obWhyWordsHintMoney;
+
+  /// No description provided for @obWhyWordsHintFreedom.
+  ///
+  /// In en, this message translates to:
+  /// **'because I\'m done with the 11pm gas-station run'**
+  String get obWhyWordsHintFreedom;
+
+  /// No description provided for @obWhyWordsHintFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'my kid found it in my jacket. Never again.'**
+  String get obWhyWordsHintFamily;
+
+  /// No description provided for @obWhyWordsHintFitness.
   ///
   /// In en, this message translates to:
   /// **'so I can run with her without stopping'**
-  String get obWhyWordsHint;
+  String get obWhyWordsHintFitness;
+
+  /// No description provided for @obWhyWordsHintAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'I want the un-tired version of my face back'**
+  String get obWhyWordsHintAppearance;
 
   /// No description provided for @obWhyWordsNote.
   ///
@@ -1655,43 +1685,43 @@ abstract class AppLocalizations {
   /// No description provided for @paywallSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Try everything free for 3 days.'**
+  /// **'Try everything free for 7 days.'**
   String get paywallSubtitle;
 
   /// No description provided for @paywallFeatCoach.
   ///
   /// In en, this message translates to:
-  /// **'AI coach, unlimited'**
+  /// **'Unlimited AI coach that remembers your why'**
   String get paywallFeatCoach;
 
   /// No description provided for @paywallFeatPanic.
   ///
   /// In en, this message translates to:
-  /// **'Panic Button + community SOS'**
+  /// **'Panic button: a 60-second craving killer'**
   String get paywallFeatPanic;
 
   /// No description provided for @paywallFeatPlan.
   ///
   /// In en, this message translates to:
-  /// **'Adaptive quit plan'**
+  /// **'A plan that adapts when you slip'**
   String get paywallFeatPlan;
 
   /// No description provided for @paywallFeatForecasts.
   ///
   /// In en, this message translates to:
-  /// **'Craving forecasts'**
+  /// **'Craving forecasts for your danger hours'**
   String get paywallFeatForecasts;
 
   /// No description provided for @paywallFeatCommunity.
   ///
   /// In en, this message translates to:
-  /// **'Community'**
+  /// **'Community that answers your SOS'**
   String get paywallFeatCommunity;
 
   /// No description provided for @paywallFeatReports.
   ///
   /// In en, this message translates to:
-  /// **'Weekly reports'**
+  /// **'Weekly report in your own numbers'**
   String get paywallFeatReports;
 
   /// No description provided for @paywallYearly.
@@ -1751,7 +1781,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallCta.
   ///
   /// In en, this message translates to:
-  /// **'Start my free 3 days'**
+  /// **'Start my free week'**
   String get paywallCta;
 
   /// No description provided for @paywallFreeLink.
@@ -1759,6 +1789,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with Free plan →'**
   String get paywallFreeLink;
+
+  /// No description provided for @paywallTimelineToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get paywallTimelineToday;
+
+  /// No description provided for @paywallTimelineDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {n}'**
+  String paywallTimelineDay(int n);
+
+  /// No description provided for @paywallTimelineTodayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything unlocked'**
+  String get paywallTimelineTodayBody;
+
+  /// No description provided for @paywallTimelineRemindBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We remind you'**
+  String get paywallTimelineRemindBody;
+
+  /// No description provided for @paywallTimelineChargeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'First charge {price}. Cancel before, pay nothing.'**
+  String paywallTimelineChargeBody(String price);
+
+  /// No description provided for @paywallPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/yr'**
+  String paywallPerYear(String price);
+
+  /// No description provided for @paywallPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/mo'**
+  String paywallPerMonth(String price);
+
+  /// No description provided for @paywallPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/wk'**
+  String paywallPerWeek(String price);
 
   /// No description provided for @freePlanTitle.
   ///
@@ -1949,7 +2027,7 @@ abstract class AppLocalizations {
   /// No description provided for @day1TourHoursBody.
   ///
   /// In en, this message translates to:
-  /// **'Pick the window you struggle in. We show up ten minutes before it, on your phone, without you asking.'**
+  /// **'Pick the hour it usually hits. We show up ten minutes before it, on your phone, without you asking.'**
   String get day1TourHoursBody;
 
   /// No description provided for @day1FreedomNote.
@@ -2204,22 +2282,28 @@ abstract class AppLocalizations {
   /// **'this feeling peaks and passes — most cravings die in 15 min'**
   String get panicBreatheNote;
 
+  /// No description provided for @panicBreatheInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe with the circle.'**
+  String get panicBreatheInstruction;
+
   /// No description provided for @panicBreatheIn.
   ///
   /// In en, this message translates to:
-  /// **'In…'**
+  /// **'Breathe in'**
   String get panicBreatheIn;
 
   /// No description provided for @panicBreatheHold.
   ///
   /// In en, this message translates to:
-  /// **'Hold…'**
+  /// **'Hold'**
   String get panicBreatheHold;
 
   /// No description provided for @panicBreatheOut.
   ///
   /// In en, this message translates to:
-  /// **'Out…'**
+  /// **'Breathe out'**
   String get panicBreatheOut;
 
   /// No description provided for @panicBreathePattern.
@@ -3092,12 +3176,6 @@ abstract class AppLocalizations {
   /// **'Muted. You won\'t see their posts anymore.'**
   String get communityMuted;
 
-  /// No description provided for @communityAutoFlagged.
-  ///
-  /// In en, this message translates to:
-  /// **'Held for review — brand names and sourcing aren\'t allowed here.'**
-  String get communityAutoFlagged;
-
   /// No description provided for @communityComposerTitle.
   ///
   /// In en, this message translates to:
@@ -3133,6 +3211,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Be kind — everyone here is mid-fight. No brand names, no where-to-buy.'**
   String get communityKindnessNote;
+
+  /// No description provided for @communityRuleSlur.
+  ///
+  /// In en, this message translates to:
+  /// **'This can\'t be posted — slurs and hate aren\'t allowed here.'**
+  String get communityRuleSlur;
+
+  /// No description provided for @communityRuleSourcing.
+  ///
+  /// In en, this message translates to:
+  /// **'Where-to-buy and for-sale talk isn\'t allowed here. Edit it and try again.'**
+  String get communityRuleSourcing;
+
+  /// No description provided for @communityDailyCapReached.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s 3 posts today — the cap resets at midnight.'**
+  String get communityDailyCapReached;
 
   /// No description provided for @communityTagRequired.
   ///
@@ -3187,6 +3283,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not published — it didn\'t clear the community rules'**
   String get communityStatusBlocked;
+
+  /// No description provided for @communityStatusPosting.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting…'**
+  String get communityStatusPosting;
+
+  /// No description provided for @communityStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t send — tap to retry'**
+  String get communityStatusFailed;
+
+  /// No description provided for @communityStatusCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Not posted — that\'s 3 today. The cap resets at midnight.'**
+  String get communityStatusCapped;
 
   /// No description provided for @buddyLinkCopied.
   ///
@@ -4325,19 +4439,31 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDangerHoursTitle.
   ///
   /// In en, this message translates to:
-  /// **'Danger hours'**
+  /// **'When do cravings hit hardest?'**
   String get settingsDangerHoursTitle;
 
   /// No description provided for @settingsDangerHoursNote.
   ///
   /// In en, this message translates to:
-  /// **'We nudge you 10 minutes before your window opens. Max 3 pushes a day, quiet hours respected.'**
+  /// **'Pick the hour it usually starts. We nudge you 10 minutes before it — one push a day, nothing more.'**
   String get settingsDangerHoursNote;
+
+  /// No description provided for @settingsDangerHoursNudge.
+  ///
+  /// In en, this message translates to:
+  /// **'One nudge at {time}, every day.'**
+  String settingsDangerHoursNudge(String time);
+
+  /// No description provided for @settingsDangerHoursNotifOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off, so nothing fires until you turn them on.'**
+  String get settingsDangerHoursNotifOff;
 
   /// No description provided for @settingsQuietHours.
   ///
   /// In en, this message translates to:
-  /// **'Quiet hours: {range}'**
+  /// **'Never between {range} — quiet hours.'**
   String settingsQuietHours(String range);
 
   /// No description provided for @trialEndingPushTime.
@@ -4367,7 +4493,7 @@ abstract class AppLocalizations {
   /// No description provided for @trialEndingStatsLabel.
   ///
   /// In en, this message translates to:
-  /// **'YOUR 3 DAYS SO FAR'**
+  /// **'YOUR WEEK SO FAR'**
   String get trialEndingStatsLabel;
 
   /// No description provided for @trialEndingVsDay1.

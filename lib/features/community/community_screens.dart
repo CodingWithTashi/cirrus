@@ -18,6 +18,7 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/community_store.dart' show CommunityStore, FeedStatus;
+import '../../domain/logic/community_rules.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 
@@ -285,33 +286,7 @@ class PostCard extends ConsumerWidget {
             // post that is gone next session is the lie this replaces.
             if (post.isMine && !post.isLive) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    post.status == PostStatus.pending
-                        ? Icons.hourglass_top_rounded
-                        : Icons.visibility_off_outlined,
-                    size: 14,
-                    color: post.status == PostStatus.pending
-                        ? lp.cautionText
-                        : lp.dangerText,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      post.status == PostStatus.pending
-                          ? l10n.communityStatusHeld
-                          : l10n.communityStatusBlocked,
-                      style: LpType.caption11(
-                        post.status == PostStatus.pending
-                            ? lp.cautionText
-                            : lp.dangerText,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _OwnPostStatus(post: post),
             ],
             const SizedBox(height: 10),
             Text(postText(context, post), style: LpType.body14(lp.textPrimary)),
@@ -501,6 +476,14 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   final _text = TextEditingController();
   late PostTag? _tag = widget.initialTag;
 
+  /// Watched for the rebuild; the count itself lives on the notifier, which
+  /// knows which of today's posts never claimed a server slot.
+  bool _capReached(WidgetRef ref) {
+    ref.watch(communityStoreProvider);
+    return ref.read(communityStoreProvider.notifier).myPostsToday >=
+        CommunityStore.dailyPostCap;
+  }
+
   @override
   void dispose() {
     _text.dispose();
@@ -512,7 +495,16 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     final lp = context.lp;
     final l10n = context.l10n;
     final journey = ref.watch(quitStoreProvider);
-    final canPost = _text.text.trim().isNotEmpty && _tag != null;
+    // Refused before the send, under the text, with the words still there
+    // to edit — not "not published" after the pop (docs/09 issue 6). The
+    // server runs the same prefilter and the same cap at the door.
+    final blocker = switch (CommunityRules.check(_text.text)) {
+      CommunityRuleViolation.slur => l10n.communityRuleSlur,
+      CommunityRuleViolation.sourcing => l10n.communityRuleSourcing,
+      null => _capReached(ref) ? l10n.communityDailyCapReached : null,
+    };
+    final canPost =
+        _text.text.trim().isNotEmpty && _tag != null && blocker == null;
     final isSos = _tag == PostTag.sos;
 
     return Scaffold(
@@ -544,20 +536,23 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                             onTap: canPost
                                 ? () {
                                     final text = _text.text.trim();
-                                    ref
-                                        .read(communityStoreProvider.notifier)
-                                        .addPost(text: text, tag: _tag!);
-                                    LpHaptics.medium();
-                                    context.pop();
-                                    // Brand/sourcing talk gets held, and says so.
-                                    showLpSnack(
-                                      context,
-                                      CommunityStore.violatesCommunityRules(
-                                            text,
-                                          )
-                                          ? l10n.communityAutoFlagged
-                                          : l10n.communityPosted,
+                                    final tag = _tag!;
+                                    final store = ref.read(
+                                      communityStoreProvider.notifier,
                                     );
+                                    LpHaptics.medium();
+                                    // Leave FIRST, then mutate. `addPost`
+                                    // awards the first-post badge, which
+                                    // changes the journey and rebuilds the
+                                    // router after this frame; a pop issued
+                                    // after that mutation was recomputed away
+                                    // and the composer stayed on screen with
+                                    // the post already made — on every
+                                    // account's first post (docs/09 issue 6c;
+                                    // the `leavePaywall` mechanism).
+                                    context.pop();
+                                    store.addPost(text: text, tag: tag);
+                                    showLpSnack(context, l10n.communityPosted);
                                   }
                                 : null,
                             child: Opacity(
@@ -642,6 +637,29 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                           ),
                         ),
                       ),
+                      if (blocker != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.block_rounded,
+                              size: 14,
+                              color: lp.dangerText,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                blocker,
+                                style: LpType.caption11(
+                                  lp.dangerText,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       SectionLabel(l10n.communityTagIt),
                       Wrap(
@@ -658,7 +676,14 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                                         tag == PostTag.milestone
                                   ? lp.ember
                                   : null,
-                              onTap: () => setState(() => _tag = tag),
+                              onTap: () {
+                                // The keyboard was up for the text. A tag is
+                                // a tap target, not a field, so let it go —
+                                // and let the note and Post back into view
+                                // (docs/09 issue 6a).
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                setState(() => _tag = tag);
+                              },
                               fontSize: 13,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 15,
@@ -940,4 +965,77 @@ class _FeedSkeleton extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The author's own post while it is not (yet) visible to anyone else.
+///
+/// Four honest states, none of which is "Posted." followed by silence:
+/// `pending` is the backend still classifying (seconds — a spinner, not a
+/// warning), `held` is a human looking, `blocked` is a no, and `failed` is
+/// the network never having carried it, with the retry right on the row.
+/// The first two used to share one "In review" line, so every post read as
+/// held for its first seconds (docs/09 issue 6).
+class _OwnPostStatus extends ConsumerWidget {
+  const _OwnPostStatus({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final (Widget icon, String label, Color color, VoidCallback? onTap) =
+        switch (post.status) {
+          PostStatus.pending => (
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.6,
+                color: lp.textSecondary,
+              ),
+            ),
+            l10n.communityStatusPosting,
+            lp.textSecondary,
+            null,
+          ),
+          PostStatus.held => (
+            Icon(Icons.hourglass_top_rounded, size: 14, color: lp.cautionText),
+            l10n.communityStatusHeld,
+            lp.cautionText,
+            null,
+          ),
+          PostStatus.failed => (
+            Icon(Icons.refresh_rounded, size: 14, color: lp.dangerText),
+            l10n.communityStatusFailed,
+            lp.dangerText,
+            () => ref.read(communityStoreProvider.notifier).retryPost(post.id),
+          ),
+          PostStatus.capped => (
+            Icon(Icons.schedule_rounded, size: 14, color: lp.cautionText),
+            l10n.communityStatusCapped,
+            lp.cautionText,
+            null,
+          ),
+          PostStatus.blocked || PostStatus.live => (
+            Icon(Icons.visibility_off_outlined, size: 14, color: lp.dangerText),
+            l10n.communityStatusBlocked,
+            lp.dangerText,
+            null,
+          ),
+        };
+    final row = Row(
+      children: [
+        icon,
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: LpType.caption11(color, weight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+    return onTap == null ? row : PressScale(onTap: onTap, child: row);
+  }
 }

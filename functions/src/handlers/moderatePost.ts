@@ -10,12 +10,20 @@
  * than going live unreviewed (`classify` answers `hold`, which maps to
  * `pending` here, and every non-allow verdict writes a queue row so nothing
  * can strand invisibly). A delayed post is a bug report; an unmoderated one
- * is an app removal.
+ * is an app removal. A hold the pipeline itself caused is marked `retryable`
+ * on its queue row, and `remoderateHeld` re-runs it on a schedule — so an
+ * outage delays a clean post by minutes instead of parking it in the
+ * founder's queue until a human gets to it.
  */
 import {onDocumentCreated} from 'firebase-functions/v2/firestore';
 import {GEMINI_API_KEY, REGION} from '../config';
 import {classify, type ModerationAction} from '../ai/moderation';
-import {FieldValue, mirrorPostStatus, moderationDoc} from '../lib/firestore';
+import {
+  FieldValue,
+  mirrorPostStatus,
+  moderationDoc,
+  type PostStatus,
+} from '../lib/firestore';
 import {log} from '../lib/logger';
 
 /**
@@ -27,6 +35,25 @@ export const VERDICT_STATUS: Record<ModerationAction, 'live' | 'pending' | 'bloc
   allow: 'live',
   flag: 'live', // visible but queued — crisis posts must stay visible
   hold: 'pending',
+  block: 'blocked',
+};
+
+/**
+ * Verdict → the author's own mirror row (`users/{uid}/posts/{postId}`).
+ *
+ * Differs from [VERDICT_STATUS] in exactly one cell: a hold is `held` here
+ * and `pending` on the post. The post's `pending` is a rules concept — "not
+ * readable by anyone yet" — and covers both "the classifier has not answered"
+ * and "the classifier said a human must look". The mirror is the author's
+ * private view, where those are different sentences on screen ("Posting…"
+ * vs "In review"). Collapsing them made every post read as held for its
+ * first seconds, which the Sep 1 field test reported as "why does every
+ * post need review?" (docs/09 issue 6).
+ */
+export const MIRROR_STATUS: Record<ModerationAction, PostStatus> = {
+  allow: 'live',
+  flag: 'live',
+  hold: 'held',
   block: 'blocked',
 };
 
@@ -71,6 +98,10 @@ export const moderatePost = onDocumentCreated(
         postId,
         action: verdict.action,
         reason: verdict.reason,
+        // The sweeper's selector. Only a hold the PIPELINE caused (model
+        // down, verdict unparseable) is worth re-asking; a hold the model
+        // chose is the founder's to decide.
+        retryable: verdict.retryable === true,
         reviewed: false,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -82,7 +113,7 @@ export const moderatePost = onDocumentCreated(
     });
     // The author learns the verdict through their own mirror row — a held
     // post says "in review" in their feed rather than vanishing (QA M5).
-    await mirrorPostStatus(postId, VERDICT_STATUS[verdict.action]);
+    await mirrorPostStatus(postId, MIRROR_STATUS[verdict.action]);
 
     log.info('moderation.verdict', {postId, action: verdict.action});
   },

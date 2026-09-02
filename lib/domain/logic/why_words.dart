@@ -14,6 +14,8 @@
 /// prompt is checked where it is read, not only where it is typed.
 library;
 
+import '../models/enums.dart';
+
 enum WhyWordsError { tooLong }
 
 abstract final class WhyWords {
@@ -67,4 +69,32 @@ abstract final class WhyWords {
   /// is optional and declining it is a valid answer.
   static WhyWordsError? validate(String raw) =>
       normalize(raw).runes.length > maxLength ? WhyWordsError.tooLong : null;
+
+  /// Which of the user's whys the field's placeholder should echo.
+  ///
+  /// The question before this one was "Why do you want out?", answered in
+  /// chips. A placeholder that picks up one of those answers reads as a
+  /// continuation of the conversation; a generic one read as a non sequitur
+  /// ("so I can run with her without stopping" — who?). So the hint is keyed
+  /// to a why they chose, and since the placeholder is never stored, nothing
+  /// here can leak into the journey as words the user did not write.
+  ///
+  /// With several whys picked, [hintPrecedence] decides: the most personal
+  /// reason first, because that is the one a real answer tends to be about.
+  /// Deterministic on purpose — the same answers always show the same line,
+  /// so going back a step does not reshuffle the screen.
+  static WhyChip hintFor(Set<WhyChip> whys) =>
+      hintPrecedence.firstWhere(whys.contains, orElse: () => WhyChip.fitness);
+
+  /// Most personal first. Fitness is the fallback when nothing was picked
+  /// (the Frame Map's preview), so the line that shipped first is the one an
+  /// empty state still shows.
+  static const List<WhyChip> hintPrecedence = [
+    WhyChip.family,
+    WhyChip.fitness,
+    WhyChip.health,
+    WhyChip.freedom,
+    WhyChip.money,
+    WhyChip.appearance,
+  ];
 }

@@ -94,7 +94,14 @@ export const insightDoc = (uid: string, weekId: string): DocumentReference =>
 export const myPostsCol = (uid: string): CollectionReference =>
   userDoc(uid).collection('posts');
 
-export type PostStatus = 'live' | 'pending' | 'blocked';
+/**
+ * `held` exists on the MIRROR only. The post document itself never carries
+ * it — there a hold stays `pending`, which the rules treat as invisible — but
+ * the author's private row distinguishes "not classified yet" (`pending`,
+ * rendered "Posting…") from "a human must look" (`held`, "In review"). See
+ * `MIRROR_STATUS` in handlers/moderatePost.ts.
+ */
+export type PostStatus = 'live' | 'pending' | 'held' | 'blocked';
 
 /**
  * Reflects a post's new status into its author's mirror row.

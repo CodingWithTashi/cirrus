@@ -363,7 +363,9 @@ describe('reportPost', () => {
       await reportPost.run(caller({postId: 'p1'}, uid));
     }
 
-    expect((await myPostsCol('dave').doc('p1').get()).get('status')).toBe('pending');
+    // `held`, not `pending`: the author's row says "in review", never
+    // "posting…" (docs/09 issue 6, review).
+    expect((await myPostsCol('dave').doc('p1').get()).get('status')).toBe('held');
   });
 
   it('refuses a post that does not exist', async () => {

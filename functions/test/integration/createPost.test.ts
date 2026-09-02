@@ -154,3 +154,59 @@ describe('createPost — the 3-a-day cap', () => {
     expect(stored.size).toBeLessThanOrEqual(3);
   });
 });
+
+describe('createPost — refuses rule-breaking text at the door', () => {
+  // docs/09 issue 6: a "no" before posting, not "not published" after. The
+  // same deterministic prefilter `moderatePost` runs first now also runs
+  // here, so a slur is never written anywhere.
+  const slur = 'quit? not with these faggots cheering';
+
+  it('refuses a slur before anything is written', async () => {
+    await expect(createPost.run(request(post(slur)))).rejects.toMatchObject({
+      code: 'invalid-argument',
+    });
+    expect((await postsCol().get()).empty).toBe(true);
+    expect((await db.collection('postAuthors').get()).empty).toBe(true);
+    expect((await myPostsCol('alice').get()).empty).toBe(true);
+  });
+
+  it('spends no cap slot on a refusal', async () => {
+    await expect(createPost.run(request(post(slur)))).rejects.toThrow();
+    for (let i = 0; i < 3; i++) {
+      await expect(createPost.run(request(post(`post ${i}`)))).resolves.toBeDefined();
+    }
+  });
+
+  it('lets profanity through to the classifier — the target is the signal', async () => {
+    await expect(createPost.run(request(post('fuck this app')))).resolves.toHaveProperty(
+      'postId',
+    );
+  });
+});
+
+describe('createPost — idempotent on the client id', () => {
+  // The app's retry re-sends a post whose response was lost. Without this a
+  // committed-but-unheard send became two posts and two cap slots.
+  it('the same clientId twice is one post and one cap slot', async () => {
+    const first = await createPost.run(request({...post('once'), clientId: 'p1'}));
+    const second = await createPost.run(request({...post('once'), clientId: 'p1'}));
+    expect(second.postId).toBe(first.postId);
+    expect((await postsCol().get()).size).toBe(1);
+    const usage = (await db.collection('users').doc('alice').get()).get('postUsage') as {
+      count: number;
+    };
+    expect(usage.count).toBe(1);
+  });
+
+  it('another user with the same clientId gets their own post', async () => {
+    const a = await createPost.run(request({...post('mine'), clientId: 'p1'}, 'alice'));
+    const b = await createPost.run(request({...post('mine'), clientId: 'p1'}, 'bob'));
+    expect(a.postId).not.toBe(b.postId);
+  });
+
+  it('an unusable clientId falls back to a fresh id every time', async () => {
+    const a = await createPost.run(request({...post('x'), clientId: 'no spaces here!'}));
+    const b = await createPost.run(request({...post('x'), clientId: 'no spaces here!'}));
+    expect(a.postId).not.toBe(b.postId);
+  });
+});

@@ -24,6 +24,8 @@ import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/models/models.dart';
+import 'breath_pacer.dart';
+import 'breath_ring.dart';
 
 /// Session state shared by the three panic steps (feature-local VM).
 class PanicSession {
@@ -231,6 +233,12 @@ class _CravingTimerState extends ConsumerState<_CravingTimer> {
 }
 
 /// Step 1 — 4-7-8 breathing ring with matching haptic rhythm.
+///
+/// QA Sep 1 (docs/09 §7): the ring read as a pressed button. The orb at rest
+/// was 80% of full, the label was a single word and nothing told the user to
+/// breathe. Now the instruction is on screen from the first frame, the verb
+/// says what to do, the orb rests at 40% so the first second of inhale is a
+/// quarter of its size, and a pointer laps the track so the hold still moves.
 class _BreatheStep extends ConsumerStatefulWidget {
   const _BreatheStep();
 
@@ -240,41 +248,37 @@ class _BreatheStep extends ConsumerStatefulWidget {
 
 class _BreatheStepState extends ConsumerState<_BreatheStep>
     with SingleTickerProviderStateMixin {
-  // 4s in, 7s hold, 8s out.
-  static const _cycle = Duration(seconds: 19);
+  static const _pacer = BreathPacer();
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: _cycle,
+    duration: _pacer.cycle,
   )..repeat();
-  int _phase = -1;
-  int _lastSecond = -1;
+
+  /// Null until the first tick, so entering the screen gets the phase haptic
+  /// that marks the start of the first inhale.
+  BreathPhase? _phase;
+  int _remaining = _pacer.inhale;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() {
-      final phase = _phaseFor(_controller.value).$1;
-      final second = (_controller.value * 19).floor();
-      if (phase != _phase) {
-        _phase = phase;
-        _lastSecond = second;
-        LpHaptics.light();
-        setState(() {});
-      } else if (second != _lastSecond && phase != 1) {
-        // Frame 32: the haptics breathe with the ring — a soft tick each
-        // second while inhaling/exhaling, silence through the hold.
-        _lastSecond = second;
-        LpHaptics.tick();
-      }
-    });
+    _controller.addListener(_onTick);
   }
 
-  /// (phase 0/1/2, phase-local progress 0..1, seconds remaining)
-  (int, double, int) _phaseFor(double t) {
-    final seconds = t * 19;
-    if (seconds < 4) return (0, seconds / 4, (4 - seconds).ceil());
-    if (seconds < 11) return (1, (seconds - 4) / 7, (11 - seconds).ceil());
-    return (2, (seconds - 11) / 8, (19 - seconds).ceil());
+  void _onTick() {
+    final m = _pacer.at(_controller.value);
+    if (m.phase != _phase) {
+      _phase = m.phase;
+      _remaining = m.remaining;
+      LpHaptics.light();
+      setState(() {});
+    } else if (m.remaining != _remaining) {
+      _remaining = m.remaining;
+      // Frame 32: the haptics breathe with the ring — a soft tick each
+      // second while inhaling/exhaling, silence through the hold.
+      if (m.phase != BreathPhase.hold) LpHaptics.tick();
+      setState(() {});
+    }
   }
 
   @override
@@ -288,6 +292,11 @@ class _BreatheStepState extends ConsumerState<_BreatheStep>
     final lp = context.lp;
     final l10n = context.l10n;
     final vm = ref.read(panicProvider.notifier);
+    final label = switch (_phase ?? BreathPhase.inhale) {
+      BreathPhase.inhale => l10n.panicBreatheIn,
+      BreathPhase.hold => l10n.panicBreatheHold,
+      BreathPhase.exhale => l10n.panicBreatheOut,
+    };
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 16, 28, 40),
@@ -306,67 +315,60 @@ class _BreatheStepState extends ConsumerState<_BreatheStep>
             textAlign: TextAlign.center,
             style: LpType.body13(lp.textSecondary),
           ),
-          const Spacer(),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              final (phase, progress, remaining) = _phaseFor(_controller.value);
-              final scale = switch (phase) {
-                0 => 0.8 + 0.2 * Curves.easeInOut.transform(progress),
-                1 => 1.0,
-                _ => 1.0 - 0.2 * Curves.easeInOut.transform(progress),
-              };
-              final label = switch (phase) {
-                0 => l10n.panicBreatheIn,
-                1 => l10n.panicBreatheHold,
-                _ => l10n.panicBreatheOut,
-              };
-              return Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        lp.oxygen.withValues(alpha: 0.22),
-                        lp.oxygen.withValues(alpha: 0.05),
-                        lp.oxygen.withValues(alpha: 0),
-                      ],
-                      stops: const [0, 0.65, 1],
-                    ),
-                    border: Border.all(
-                      color: lp.oxygen.withValues(alpha: 0.6),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: lp.oxygen.withValues(alpha: 0.3),
-                        blurRadius: 60,
-                      ),
-                    ],
-                  ),
+          // The middle takes whatever the header and footer leave, and the
+          // ring sizes itself to it — a 5" phone gets a smaller ring, never
+          // an overflow. Bounded boxes only: no IntrinsicHeight around an
+          // animated size.
+          //
+          // The orb is EMPTY and the verb + count caption it from below
+          // (Apple Watch Breathe, Headspace). A circle with a label in it is
+          // a button by convention, and a resting orb is narrower than any
+          // 28-px verb — the rim cut straight through "Breathe out".
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final ring = (constraints.maxHeight - 168).clamp(160.0, 272.0);
+                return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        label,
-                        style: LpType.heading(lp.oxygenText, size: 34),
+                        l10n.panicBreatheInstruction,
+                        textAlign: TextAlign.center,
+                        style: LpType.body15(
+                          lp.textPrimary,
+                          weight: FontWeight.w500,
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 20),
+                      BreathRing(
+                        animation: _controller,
+                        pacer: _pacer,
+                        size: ring,
+                      ),
+                      const SizedBox(height: 16),
+                      // The verb crossfades on the same beat as the haptic
+                      // instead of snapping.
+                      AnimatedSwitcher(
+                        duration: LpMotion.fast,
+                        child: Text(
+                          label,
+                          key: ValueKey(label),
+                          textAlign: TextAlign.center,
+                          style: LpType.heading(lp.oxygenText, size: 28),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
                       Text(
-                        '$remaining',
-                        style: LpType.body13(lp.textSecondary),
+                        '$_remaining',
+                        style: LpType.number(lp.textPrimary, size: 34),
                       ),
                     ],
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-          const Spacer(),
           Text(
             l10n.panicBreathePattern,
             style: LpType.body14(lp.textSecondary),

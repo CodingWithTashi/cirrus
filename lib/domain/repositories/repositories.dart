@@ -253,6 +253,22 @@ final class BackendRejectedException implements Exception {
   const BackendRejectedException();
 }
 
+/// Why the backend said no to a piece of content. The two read differently
+/// on screen: a rules refusal is "not published", a cap refusal is "not
+/// today".
+enum ContentRefusal { rules, dailyCap }
+
+/// The backend understood the CONTENT and said no to it — a community post
+/// the rules prefilter refused at the door, or the daily cap. Final: nothing
+/// about the network or the app changes the answer, so no retry is offered
+/// (docs/09 issue 6). Distinct from [BackendRejectedException], which is the
+/// backend refusing the app.
+final class ContentRefusedException implements Exception {
+  const ContentRefusedException(this.reason);
+
+  final ContentRefusal reason;
+}
+
 /// Pushes the device facts the server cannot infer into the server-owned
 /// `users/{uid}` document: timezone, locale, and the push token.
 ///

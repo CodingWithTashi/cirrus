@@ -545,6 +545,11 @@ class RatingStep extends ConsumerWidget {
         // Neither OS reports whether its sheet appeared or what the user did,
         // so a "thanks for rating!" here would be a control that only shows a
         // success snack — about something we could not have observed.
+        //
+        // The same button opens the Play listing on a build that did not come
+        // from Play: Play's sheet is silent for those, which is what the Sep 1
+        // field test saw as "Rate Cirrus does nothing" (docs/09 issue 3).
+        // `LpReview.request` picks the route; this widget does not know it.
         if (state.reviewAvailable)
           LpButton(
             l10n.obRatingCta,
@@ -555,7 +560,7 @@ class RatingStep extends ConsumerWidget {
             },
           )
         else
-          // No sheet is coming — a sideloaded build, a spent quota, or a
+          // Nowhere for a tap to go — no Play Store on the device, or a
           // desktop. A dead button is worse than none, so it is simply not here.
           LpButton(l10n.commonContinue, onTap: vm.next),
         const SizedBox(height: 6),

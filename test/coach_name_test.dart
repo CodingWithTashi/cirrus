@@ -37,11 +37,10 @@ void main() {
     'memoriesForgotten',
     'settingsMemories',
     'memoriesLoading',
-    // The three onboarding keys were only ever checked through `renderAll`,
+    // The two onboarding keys were only ever checked through `renderAll`,
     // so nothing looked at the ARB source of the very screen that offers the
     // rename. Rewriting that copy is exactly when a brand word gets typed in
     // by hand instead of interpolated.
-    'obCoachNameTitle',
     'obCoachNameAsk',
     'obCoachNameKeep',
     'obWhyWordsTitle',
@@ -73,7 +72,6 @@ void main() {
       l10n.memoriesForgotten(name),
       l10n.settingsMemories(name),
       l10n.memoriesLoading(name),
-      l10n.obCoachNameTitle(name),
       l10n.obCoachNameAsk(name),
       l10n.obCoachNameKeep(name),
       l10n.obWhyWordsTitle(name),

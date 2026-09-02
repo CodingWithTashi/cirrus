@@ -41,7 +41,8 @@ lives in `users/{uid}`, which `firestore.rules` makes read-only to clients.
 | `createPost` | callable | Stamps alias, writes `postAuthors`, lands `status: 'pending'` |
 | `syncUserContext` | callable | The app's only write path into `users/{uid}` (tz, locale, FCM token) |
 | `deleteUserData` | callable | Full erasure; posts anonymize to `[departed quitter]` |
-| `moderatePost` | Firestore onCreate | Gemini classification → live/blocked + review queue |
+| `moderatePost` | Firestore onCreate | Gemini classification → live/pending/blocked on the post; live/`held`/blocked on the author's mirror `users/{uid}/posts/{id}` + review queue. Only words aimed at people are ever hidden (Sep 1 policy) |
+| `remoderateHeld` | every 15 min cron | Re-asks the classifier about holds the pipeline itself caused (model down, unparseable verdict — queue rows with `retryable: true`), so an outage delays clean posts by minutes instead of parking them in the founder's queue |
 | `taperRecalc` | hourly cron | Adaptive taper advice (docs/03 §3.3) → `users/{uid}.planAdvice` |
 | `weeklyInsight` | hourly cron | Premium-only Sunday report (docs/04 §5) |
 | `matchedTestimonials` | callable | The two beta-tester quotes for D3, ranked against the answers the caller sends |

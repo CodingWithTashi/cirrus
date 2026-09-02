@@ -195,6 +195,10 @@ export const resolveModeration = onCall(
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: uid,
         resolution: action,
+        // A person has decided. A later report re-opens the row with
+        // reviewed:false, and without this the sweeper would treat an old
+        // outage-hold as its own again and re-classify past the decision.
+        retryable: false,
       },
       {merge: true},
     );

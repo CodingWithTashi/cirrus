@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/models/models.dart';
@@ -144,13 +145,31 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   @override
   Future<String?> addPost(Post post) async {
-    final json = await _functions.call('createPost', {
-      'text': post.text ?? '',
-      'tag': post.tag.name,
-      'alias': post.alias,
-      'avatarEmoji': post.avatarEmoji,
-      'dayN': post.dayN,
-    });
+    final Map<String, dynamic> json;
+    try {
+      json = await _functions.call('createPost', {
+        'text': post.text ?? '',
+        'tag': post.tag.name,
+        'alias': post.alias,
+        'avatarEmoji': post.avatarEmoji,
+        'dayN': post.dayN,
+        // The local id, so a retry of a send whose response was lost lands
+        // on the same server document instead of minting a second post.
+        'clientId': post.id,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      // The server refused the CONTENT — the rules prefilter at the door, or
+      // the daily cap — as opposed to the app or the network, which
+      // `LpFunctions` has already mapped. Final either way; the reason
+      // decides the words (docs/09 issue 6).
+      switch (error.code) {
+        case 'invalid-argument':
+          throw const ContentRefusedException(ContentRefusal.rules);
+        case 'resource-exhausted':
+          throw const ContentRefusedException(ContentRefusal.dailyCap);
+      }
+      rethrow;
+    }
     final id = json['postId'];
     return id is String ? id : null;
   }
@@ -173,7 +192,9 @@ class FirebaseCommunityRepository implements CommunityRepository {
       }
       final status = _statusOf(snap.data()?['status']);
       yield status;
-      if (status != PostStatus.pending) return;
+      // `held` is not final: `remoderateHeld` or the founder flips it later,
+      // and the author should see that land without a restart.
+      if (status != PostStatus.pending && status != PostStatus.held) return;
     }
   }
 
@@ -242,7 +263,10 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   static PostStatus _statusOf(Object? raw) => switch (raw) {
     'live' => PostStatus.live,
+    'held' => PostStatus.held,
     'blocked' => PostStatus.blocked,
+    // Unknown reads as "not visible yet", the conservative direction — and
+    // never as `failed`, which only the local send path may set.
     _ => PostStatus.pending,
   };
 

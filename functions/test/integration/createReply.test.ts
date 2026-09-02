@@ -140,3 +140,14 @@ describe('createReply — validation', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('createReply — refuses rule-breaking text at the door', () => {
+  it('refuses a slur before anything is written', async () => {
+    await expect(
+      createReply.run(request(reply('quit? not with these faggots cheering'))),
+    ).rejects.toMatchObject({code: 'invalid-argument'});
+    expect(
+      (await postsCol().doc(LIVE_POST).collection('replies').get()).empty,
+    ).toBe(true);
+  });
+});

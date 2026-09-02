@@ -183,23 +183,27 @@ export const MODERATION_PROMPT = `Classify this quit-vaping community post. Retu
 {"action":"allow"|"flag"|"hold"|"block","reason":"..."}
 This community exists to encourage people quitting vaping. Judge by that goal.
 Decide by the TARGET of the words, never by profanity alone. Swearing is
-allowed language here: "so fucking proud of myself, day 1" is ALLOW, and so is
-"fuck cravings, not today". Apply the first rule that matches, top to bottom:
-BLOCK (never publish): slurs; hate; harassment; content sexualizing or
-involving minors; encouraging self-harm, vaping, or substance abuse;
+allowed language here: "so fucking proud of myself, day 1" is ALLOW, so is
+"fuck cravings, not today", and so is "fuck this app". Anger at the app, the
+product, the company, the cravings or one's own quit is feedback or venting,
+not harm. Only words aimed at PEOPLE are ever a reason to hide a post.
+Apply the first rule that matches, top to bottom:
+BLOCK (never publish): slurs; hate; harassment; threats; content sexualizing
+or involving minors; encouraging self-harm, vaping, or substance abuse;
 sourcing, selling, or praising vape products or brands; spam/links.
-HOLD (hide until a human reviews): hostility, contempt or profanity AIMED AT a
-person, the app, or the community ("fuck this app", "you're all pathetic");
-mocking or discouraging someone's quit attempt; aggressive negativity with no
-support value. The post's tag never softens this — a hostile rant under a WIN
-tag is still HOLD.
+HOLD (hide until a human reviews): hostility, contempt or mockery AIMED AT a
+person or at the people of this community ("you're all pathetic", "whoever
+wrote that is a liar", "you'll all be vaping again by friday"); mocking or
+discouraging someone's quit attempt. The post's tag never softens this — an
+attack on people under a WIN tag is still HOLD.
 FLAG (publish, but queue for human review): mentions of self-harm or crisis
 (publish — hiding someone in crisis harms them); medical claims; mild
-borderline aggression; off-topic promotion; a celebratory tag (win/milestone)
-on text that is sad or negative but not hostile toward anyone.
-ALLOW: everything else — honest venting about quitting, slips, dark humor, and
-any profanity aimed at oneself, one's cravings, one's own struggle, or nobody
-at all, whether frustrated or celebratory.`;
+borderline aggression toward people; off-topic promotion; a celebratory tag
+(win/milestone) on text that is sad or negative but not hostile toward anyone.
+ALLOW: everything else — honest venting about quitting, slips, dark humor,
+frustration with the app or its features, and any profanity aimed at oneself,
+one's cravings, the app, the product, or nobody at all, whether frustrated or
+celebratory.`;
 
 /** docs/04 §5 — Sunday weekly insight. Returns strict JSON. */
 export function insightPrompt(alias: string, coachName?: string): string {

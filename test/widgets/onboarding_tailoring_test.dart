@@ -161,8 +161,9 @@ void main() {
     testWidgets('offers no rating control when no sheet is coming', (
       tester,
     ) async {
-      // Sideloaded Android, a spent quota, desktop, or a test. A dead button
-      // is worse than none.
+      // No Play Store on the device, desktop, or a test. (A sideloaded build
+      // is no longer this case: it gets the listing instead of the sheet.)
+      // A dead button is worse than none.
       await pump(tester, (vm) => vm.previewStep(ObStep.rating));
 
       expect(find.text(l10n.obRatingCta), findsNothing);
@@ -189,7 +190,7 @@ void main() {
     testWidgets('offers the default without forcing a choice', (tester) async {
       await pump(tester, (vm) => vm.previewStep(ObStep.coachName));
 
-      expect(find.text(l10n.obCoachNameTitle('Ember')), findsOneWidget);
+      expect(find.text(l10n.obCoachNameTitle), findsOneWidget);
       expect(find.text(l10n.obCoachNameKeep('Ember')), findsOneWidget);
       // Four borrowable names, as ARB keys so a locale can swap an
       // unfortunate word.
@@ -236,6 +237,30 @@ void main() {
 
       vm.typeCoachName('  Wren  ');
       expect(vm.chosenCoachName, 'Wren');
+    });
+  });
+
+  group('the why-words placeholder is theirs', () {
+    testWidgets('echoes a why they picked', (tester) async {
+      // The preview draft picked health, money and fitness; fitness is the
+      // most personal of those, so the running line is the one that shows.
+      await pump(tester, (vm) => vm.previewStep(ObStep.whyWords));
+
+      expect(find.text(l10n.obWhyWordsHintFitness), findsOneWidget);
+      expect(find.text(l10n.obWhyWordsHintHealth), findsNothing);
+      expect(find.text(l10n.obWhyWordsHintMoney), findsNothing);
+    });
+
+    testWidgets('a more personal why takes over when it is added', (
+      tester,
+    ) async {
+      await pump(tester, (vm) {
+        vm.previewStep(ObStep.whyWords);
+        vm.toggleWhy(WhyChip.family);
+      });
+
+      expect(find.text(l10n.obWhyWordsHintFamily), findsOneWidget);
+      expect(find.text(l10n.obWhyWordsHintFitness), findsNothing);
     });
   });
 

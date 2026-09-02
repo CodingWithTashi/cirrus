@@ -777,9 +777,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obRatingCta => 'Rate Cirrus';
 
   @override
-  String obCoachNameTitle(String name) {
-    return 'We call it $name.';
-  }
+  String get obCoachNameTitle => 'Meet your coach.';
 
   @override
   String get obCoachNameSubtitle =>
@@ -787,7 +785,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String obCoachNameAsk(String name) {
-    return 'We went with $name because it needed one. Nobody remembers a name someone else picked, though — so if you have a better idea, use it. Whatever you\'d actually text at 2am, mid-argument with yourself in the kitchen.';
+    return 'We call it $name. It answers to anything — pick the name you\'d text at 2am.';
   }
 
   @override
@@ -852,7 +850,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obWhyWordsFieldLabel => 'In your own words';
 
   @override
-  String get obWhyWordsHint => 'so I can run with her without stopping';
+  String get obWhyWordsHintHealth =>
+      'so I stop sounding like a kettle on the stairs';
+
+  @override
+  String get obWhyWordsHintMoney => 'I want my money back. And my mornings.';
+
+  @override
+  String get obWhyWordsHintFreedom =>
+      'because I\'m done with the 11pm gas-station run';
+
+  @override
+  String get obWhyWordsHintFamily =>
+      'my kid found it in my jacket. Never again.';
+
+  @override
+  String get obWhyWordsHintFitness => 'so I can run with her without stopping';
+
+  @override
+  String get obWhyWordsHintAppearance =>
+      'I want the un-tired version of my face back';
 
   @override
   String obWhyWordsNote(String name) {
@@ -898,25 +915,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallTitle => 'Your plan is ready.';
 
   @override
-  String get paywallSubtitle => 'Try everything free for 3 days.';
+  String get paywallSubtitle => 'Try everything free for 7 days.';
 
   @override
-  String get paywallFeatCoach => 'AI coach, unlimited';
+  String get paywallFeatCoach => 'Unlimited AI coach that remembers your why';
 
   @override
-  String get paywallFeatPanic => 'Panic Button + community SOS';
+  String get paywallFeatPanic => 'Panic button: a 60-second craving killer';
 
   @override
-  String get paywallFeatPlan => 'Adaptive quit plan';
+  String get paywallFeatPlan => 'A plan that adapts when you slip';
 
   @override
-  String get paywallFeatForecasts => 'Craving forecasts';
+  String get paywallFeatForecasts => 'Craving forecasts for your danger hours';
 
   @override
-  String get paywallFeatCommunity => 'Community';
+  String get paywallFeatCommunity => 'Community that answers your SOS';
 
   @override
-  String get paywallFeatReports => 'Weekly reports';
+  String get paywallFeatReports => 'Weekly report in your own numbers';
 
   @override
   String get paywallYearly => 'YEARLY';
@@ -947,10 +964,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallAnchor => 'Less than one disposable a week';
 
   @override
-  String get paywallCta => 'Start my free 3 days';
+  String get paywallCta => 'Start my free week';
 
   @override
   String get paywallFreeLink => 'Continue with Free plan →';
+
+  @override
+  String get paywallTimelineToday => 'Today';
+
+  @override
+  String paywallTimelineDay(int n) {
+    return 'Day $n';
+  }
+
+  @override
+  String get paywallTimelineTodayBody => 'Everything unlocked';
+
+  @override
+  String get paywallTimelineRemindBody => 'We remind you';
+
+  @override
+  String paywallTimelineChargeBody(String price) {
+    return 'First charge $price. Cancel before, pay nothing.';
+  }
+
+  @override
+  String paywallPerYear(String price) {
+    return '$price/yr';
+  }
+
+  @override
+  String paywallPerMonth(String price) {
+    return '$price/mo';
+  }
+
+  @override
+  String paywallPerWeek(String price) {
+    return '$price/wk';
+  }
 
   @override
   String get freePlanTitle => 'Free gets you moving.';
@@ -1055,7 +1106,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get day1TourHoursBody =>
-      'Pick the window you struggle in. We show up ten minutes before it, on your phone, without you asking.';
+      'Pick the hour it usually hits. We show up ten minutes before it, on your phone, without you asking.';
 
   @override
   String day1FreedomNote(String date, int days) {
@@ -1237,13 +1288,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'this feeling peaks and passes — most cravings die in 15 min';
 
   @override
-  String get panicBreatheIn => 'In…';
+  String get panicBreatheInstruction => 'Breathe with the circle.';
 
   @override
-  String get panicBreatheHold => 'Hold…';
+  String get panicBreatheIn => 'Breathe in';
 
   @override
-  String get panicBreatheOut => 'Out…';
+  String get panicBreatheHold => 'Hold';
+
+  @override
+  String get panicBreatheOut => 'Breathe out';
 
   @override
   String get panicBreathePattern => 'In 4 · Hold 7 · Out 8';
@@ -1788,10 +1842,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityMuted => 'Muted. You won\'t see their posts anymore.';
 
   @override
-  String get communityAutoFlagged =>
-      'Held for review — brand names and sourcing aren\'t allowed here.';
-
-  @override
   String get communityComposerTitle => 'New post';
 
   @override
@@ -1811,6 +1861,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityKindnessNote =>
       'Be kind — everyone here is mid-fight. No brand names, no where-to-buy.';
+
+  @override
+  String get communityRuleSlur =>
+      'This can\'t be posted — slurs and hate aren\'t allowed here.';
+
+  @override
+  String get communityRuleSourcing =>
+      'Where-to-buy and for-sale talk isn\'t allowed here. Edit it and try again.';
+
+  @override
+  String get communityDailyCapReached =>
+      'That\'s 3 posts today — the cap resets at midnight.';
 
   @override
   String get communityTagRequired =>
@@ -1846,6 +1908,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityStatusBlocked =>
       'Not published — it didn\'t clear the community rules';
+
+  @override
+  String get communityStatusPosting => 'Posting…';
+
+  @override
+  String get communityStatusFailed => 'Didn\'t send — tap to retry';
+
+  @override
+  String get communityStatusCapped =>
+      'Not posted — that\'s 3 today. The cap resets at midnight.';
 
   @override
   String get buddyLinkCopied =>
@@ -2519,15 +2591,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your data stays on your account. The streak keeps burning.';
 
   @override
-  String get settingsDangerHoursTitle => 'Danger hours';
+  String get settingsDangerHoursTitle => 'When do cravings hit hardest?';
 
   @override
   String get settingsDangerHoursNote =>
-      'We nudge you 10 minutes before your window opens. Max 3 pushes a day, quiet hours respected.';
+      'Pick the hour it usually starts. We nudge you 10 minutes before it — one push a day, nothing more.';
+
+  @override
+  String settingsDangerHoursNudge(String time) {
+    return 'One nudge at $time, every day.';
+  }
+
+  @override
+  String get settingsDangerHoursNotifOff =>
+      'Notifications are off, so nothing fires until you turn them on.';
 
   @override
   String settingsQuietHours(String range) {
-    return 'Quiet hours: $range';
+    return 'Never between $range — quiet hours.';
   }
 
   @override
@@ -2545,7 +2626,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'We said we\'d remind you, so: here it is. Keep Premium, or drop to Free — your streak, plan, and history stay either way.';
 
   @override
-  String get trialEndingStatsLabel => 'YOUR 3 DAYS SO FAR';
+  String get trialEndingStatsLabel => 'YOUR WEEK SO FAR';
 
   @override
   String get trialEndingVsDay1 => 'puffs vs day 1';

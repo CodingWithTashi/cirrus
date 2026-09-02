@@ -48,6 +48,7 @@ export const moderateReply = onDocumentCreated(
         kind: 'reply',
         action: verdict.action,
         reason: verdict.reason,
+        retryable: verdict.retryable === true,
         reviewed: false,
         createdAt: FieldValue.serverTimestamp(),
       });
