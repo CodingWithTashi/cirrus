@@ -64,7 +64,10 @@ export const reportPost = onCall(
     if (applied === 'skipped') return {ok: true};
     // The author sees their post go back "in review" rather than watching it
     // silently disappear from everyone else's feed.
-    if (applied === 'hidden') await mirrorPostStatus(postId, 'pending');
+    // `held`, not `pending`, on the mirror: the app renders `pending` as
+    // "Posting…" (still classifying) and only `held` as "In review". See
+    // MIRROR_STATUS in moderatePost.ts.
+    if (applied === 'hidden') await mirrorPostStatus(postId, 'held');
 
     // A report re-opens an existing queue row but never rewrites it: the
     // classifier's `action`/`reason` are the evidence the founder reads, and
@@ -73,13 +76,17 @@ export const reportPost = onCall(
     // of the line.
     const rowRef = moderationDoc(postId);
     if ((await rowRef.get()).exists) {
-      await rowRef.set({reviewed: false}, {merge: true});
+      // ...and takes it out of the sweeper's reach: a report is a human
+      // signal, and a row the cron could re-classify and republish would
+      // undo the auto-hide with nobody having read the reports.
+      await rowRef.set({reviewed: false, retryable: false}, {merge: true});
     } else {
       await rowRef.set({
         postId,
         kind: 'post',
         action: 'flag',
         reason: 'user_report',
+        retryable: false,
         reviewed: false,
         createdAt: FieldValue.serverTimestamp(),
       });

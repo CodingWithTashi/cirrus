@@ -8,6 +8,7 @@ import '../../../core/widgets/lp_buttons.dart';
 import '../../../core/widgets/lp_card.dart';
 import '../../../core/widgets/lp_misc.dart';
 import '../../../domain/logic/why_words.dart';
+import '../../../domain/models/enums.dart';
 import '../onboarding_view_model.dart';
 import 'step_body.dart';
 
@@ -57,6 +58,16 @@ class _WhyWordsStepState extends ConsumerState<WhyWordsStep> {
         : state.coachNameInput.trim();
     final tooLong = WhyWords.validate(state.whyWordsInput) != null;
     final answered = vm.chosenWhyWords != null;
+    // The placeholder echoes a why they picked two screens ago, so the
+    // example reads as a continuation of their own answers (docs/09 issue 2).
+    final hint = switch (WhyWords.hintFor(state.whys)) {
+      WhyChip.health => l10n.obWhyWordsHintHealth,
+      WhyChip.money => l10n.obWhyWordsHintMoney,
+      WhyChip.freedom => l10n.obWhyWordsHintFreedom,
+      WhyChip.family => l10n.obWhyWordsHintFamily,
+      WhyChip.fitness => l10n.obWhyWordsHintFitness,
+      WhyChip.appearance => l10n.obWhyWordsHintAppearance,
+    };
 
     return StepBody(
       title: l10n.obWhyWordsTitle(coachName),
@@ -65,7 +76,7 @@ class _WhyWordsStepState extends ConsumerState<WhyWordsStep> {
         LpField(
           label: l10n.obWhyWordsFieldLabel,
           controller: _field,
-          hint: l10n.obWhyWordsHint,
+          hint: hint,
           // Room for two sentences without a scrollbar appearing mid-thought.
           maxLines: 3,
           // The counter is the honest way to show a limit: a field that

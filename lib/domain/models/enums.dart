@@ -100,7 +100,30 @@ enum PostTag { win, sos, day1, milestone, vent }
 /// posts reach a reader only when `live` (the rules see to that); the AUTHOR
 /// sees their own post in every state, so a held post is a post that says it
 /// is held rather than one that vanishes on the next launch (QA M5).
-enum PostStatus { live, pending, blocked }
+enum PostStatus {
+  live,
+
+  /// The backend has it and has not classified it yet — seconds, normally.
+  /// Rendered "Posting…", never "In review": every post passes through here
+  /// and the old single line made all of them look held (docs/09 issue 6).
+  pending,
+
+  /// The classifier asked for a human. Wire value on the author's mirror
+  /// only; the post itself stays `pending` for the rules.
+  held,
+  blocked,
+
+  /// LOCAL ONLY: the network never carried it. No backend writes this — the
+  /// codec's fallback keeps an unknown wire value from becoming it — and the
+  /// row it renders carries the retry.
+  failed,
+
+  /// LOCAL ONLY: the server refused it as the day's fourth post. Final, and
+  /// not a rules verdict — it reads "not today", never "didn't clear the
+  /// rules". Reachable only when the composer's own cap check undercounts
+  /// (own posts paged out of the feed, or a second device).
+  capped,
+}
 
 enum SubscriptionTier { free, trial, premium }
 

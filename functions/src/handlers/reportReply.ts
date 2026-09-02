@@ -71,7 +71,10 @@ export const reportReply = onCall(
     // evidence or bumps `createdAt` (the oldest-first queue position).
     const rowRef = moderationDoc(replyId);
     if ((await rowRef.get()).exists) {
-      await rowRef.set({reviewed: false}, {merge: true});
+      // ...and takes it out of the sweeper's reach: a report is a human
+      // signal, and a row the cron could re-classify and republish would
+      // undo the auto-hide with nobody having read the reports.
+      await rowRef.set({reviewed: false, retryable: false}, {merge: true});
     } else {
       await rowRef.set({
         postId,
@@ -79,6 +82,7 @@ export const reportReply = onCall(
         kind: 'reply',
         action: 'flag',
         reason: 'user_report',
+        retryable: false,
         reviewed: false,
         createdAt: FieldValue.serverTimestamp(),
       });

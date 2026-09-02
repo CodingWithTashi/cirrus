@@ -18,6 +18,7 @@
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
+import {prefilter} from '../ai/prefilter';
 import {db, FieldValue, postsCol} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
 
@@ -32,6 +33,11 @@ export const createReply = onCall(
 
     const postId = requireText(data['postId'], 'postId', 200);
     const text = requireText(data['text'], 'text', MAX_REPLY_CHARS);
+
+    // Same door as createPost: a slur is refused before anything is written.
+    if (prefilter(text)?.action === 'block') {
+      throw new HttpsError('invalid-argument', 'That breaks the community rules.');
+    }
 
     const parent = await postsCol().doc(postId).get();
     if (!parent.exists) {

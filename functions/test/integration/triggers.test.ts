@@ -39,8 +39,10 @@ async function clearFirestore(): Promise<void> {
   if (!res.ok) throw new Error(`emulator clear failed: ${res.status}`);
 }
 
-const verdict = (action: string, reason = 'because') =>
-  vi.mocked(classify).mockResolvedValue({action, reason} as never);
+const verdict = (action: string, reason = 'because', retryable = false) =>
+  vi.mocked(classify).mockResolvedValue(
+    {action, reason, ...(retryable ? {retryable: true} : {})} as never,
+  );
 
 /**
  * A created-document event carrying a real snapshot from the emulator.
@@ -80,7 +82,9 @@ describe('moderatePost', () => {
     for (const [action, status] of [
       ['allow', 'live'],
       ['flag', 'live'],
-      ['hold', 'pending'],
+      // `held`, not `pending`: the mirror is where "still classifying" and
+      // "a human must look" become different sentences (docs/09 issue 6).
+      ['hold', 'held'],
       ['block', 'blocked'],
     ] as const) {
       await clearFirestore();
@@ -114,6 +118,8 @@ describe('moderatePost', () => {
     expect(flag.get('action')).toBe('block');
     expect(flag.get('reason')).toBe('sourcing');
     expect(flag.get('reviewed')).toBe(false);
+    // A verdict the model chose is never re-asked by the sweeper.
+    expect(flag.get('retryable')).toBe(false);
   });
 
   it('leaves a flagged post visible but queued for review', async () => {
@@ -141,8 +147,8 @@ describe('moderatePost', () => {
     // Fail-closed (S3-8): `hold` covers hostile rants AND every model
     // failure. The post stays invisible, and the queue row is what keeps it
     // from stranding — a pending post with no row is reviewable by nobody.
-    verdict('hold', 'moderation unavailable — held for human review');
-    const ref = await seed('fuck this app');
+    verdict('hold', 'moderation unavailable — held for human review', true);
+    const ref = await seed('day one, terrified');
     await moderatePost.run(await created(ref, {postId: 'p1'}));
 
     expect((await ref.get()).get('status')).toBe('pending');
@@ -150,6 +156,8 @@ describe('moderatePost', () => {
     expect(flag.exists).toBe(true);
     expect(flag.get('action')).toBe('hold');
     expect(flag.get('reviewed')).toBe(false);
+    // ...and marked for `remoderateHeld` to re-ask once the model is back.
+    expect(flag.get('retryable')).toBe(true);
   });
 
   it('hands the classifier the tag alongside the text', async () => {

@@ -61,7 +61,15 @@ class FakeServer {
         () => throw const NoConnectionException(),
       );
     }
-    final result = op();
+    final T result;
+    try {
+      result = op();
+    } on ContentRefusedException catch (refusal) {
+      // A refusal is an answer, so it arrives with the ack's latency like any
+      // other — and nothing was applied, exactly as `createPost` throws
+      // before it writes.
+      return Future<T>.delayed(latency, () => throw refusal);
+    }
     return Future<T>.delayed(latency, () => result);
   }
 
@@ -152,10 +160,21 @@ class FakeServer {
   /// "moderates" it the way production does — synchronously, so the status
   /// a client reads back is the verdict, never the optimistic guess.
   String insertPost(Map<String, dynamic> post) {
+    // Refused at the door, as `createPost` does with the same list: a slur
+    // never lands and never claims a slot (docs/09 issue 6).
+    if (CommunityRules.check(post['text'] as String? ?? '') ==
+        CommunityRuleViolation.slur) {
+      throw const ContentRefusedException(ContentRefusal.rules);
+    }
     final stored = _copy(post)!..remove('isMine');
     final id = stored['id'] as String;
+    // Idempotent on the client's id, as `createPost` is on `clientId`: a
+    // retry of a send that did land does not mint a second post.
+    if (posts.any((p) => p['id'] == id)) return id;
+    // `held`, not `pending`: this is the verdict, not the wait for one. The
+    // real mirror says the same (MIRROR_STATUS in moderatePost.ts).
     stored['status'] = CommunityRules.violates(stored['text'] as String? ?? '')
-        ? 'pending'
+        ? 'held'
         : 'live';
     _postAuthors[id] = _sessionOrGuest();
     posts.insert(0, stored);

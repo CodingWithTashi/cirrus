@@ -205,6 +205,28 @@ void main() {
       expect(decoded.myReactions, {'💪'});
       expect(decoded.status, PostStatus.pending);
     });
+
+    test('every status survives the wire', () {
+      // `held` and `failed` arrived with docs/09 issue 6. Any new enum value
+      // goes through here, or the mirror's verdict decodes as the fallback.
+      for (final status in PostStatus.values) {
+        final post = Post(
+          id: 'p',
+          alias: '@a',
+          avatarEmoji: '🔥',
+          dayN: 1,
+          tag: PostTag.vent,
+          text: 't',
+          createdAt: DateTime(2026, 8, 18),
+          status: status,
+        );
+        expect(
+          PostCodec.decode(PostCodec.encode(post)).status,
+          status,
+          reason: status.name,
+        );
+      }
+    });
   });
 
   group('CoachReplyCodec', () {

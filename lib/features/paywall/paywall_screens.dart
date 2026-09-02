@@ -84,19 +84,37 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     final l10n = context.l10n;
     final settings = ref.watch(settingsStoreProvider);
 
-    Widget feature(String label) => Row(
-      children: [
-        Text('✓', style: LpType.body13(lp.voltText, weight: FontWeight.w700)),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Text(
-            label,
-            style: LpType.caption(lp.textBody),
-            overflow: TextOverflow.ellipsis,
+    // Sep 1 field test (docs/09 issue 4): the eye landed on $39.99 before it
+    // landed on what it buys. The features are the hero now — full-width
+    // rows, benefit first, nothing truncated — and the plans are slim rows
+    // below a trial timeline. The page scrolls; the CTA is pinned.
+    Widget feature(IconData icon, String label) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: lp.voltSoft,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 17, color: lp.voltText),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: LpType.body14(lp.textPrimary))),
+        ],
+      ),
     );
+
+    // What the timeline's Day 7 quotes: the price of the plan they have
+    // selected, from the single source, with its period.
+    final chargePrice = switch (_selected) {
+      _Tier.yearly => l10n.paywallPerYear(LpPricing.yearly),
+      _Tier.monthly => l10n.paywallPerMonth(LpPricing.monthly),
+      _Tier.weekly => l10n.paywallPerWeek(LpPricing.weekly),
+    };
 
     Widget planCard({
       required _Tier tier,
@@ -114,7 +132,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           children: [
             AnimatedContainer(
               duration: LpMotion.fast,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               decoration: BoxDecoration(
                 color: lp.surface,
                 borderRadius: BorderRadius.circular(LpDimens.rCard),
@@ -139,7 +157,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       children: [
                         Text(
                           name,
-                          style: LpType.heading(lp.textPrimary, size: 16),
+                          style: LpType.heading(lp.textPrimary, size: 15),
                         ),
                         if (sub != null) ...[
                           const SizedBox(height: 2),
@@ -154,7 +172,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ],
                     ),
                   ),
-                  Text(price, style: LpType.number(lp.textPrimary, size: 20)),
+                  Text(price, style: LpType.number(lp.textPrimary, size: 18)),
                   const SizedBox(width: 10),
                   AnimatedContainer(
                     duration: LpMotion.fast,
@@ -211,117 +229,228 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.paywallTitle,
-                style: LpType.title(lp.textPrimary, size: 26),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.paywallSubtitle,
-                style: LpType.body13(lp.textSecondary),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(child: feature(l10n.paywallFeatCoach)),
-                  const SizedBox(width: 12),
-                  Expanded(child: feature(l10n.paywallFeatPanic)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(child: feature(l10n.paywallFeatPlan)),
-                  const SizedBox(width: 12),
-                  Expanded(child: feature(l10n.paywallFeatForecasts)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(child: feature(l10n.paywallFeatCommunity)),
-                  const SizedBox(width: 12),
-                  Expanded(child: feature(l10n.paywallFeatReports)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              planCard(
-                tier: _Tier.yearly,
-                name: l10n.paywallYearly,
-                price: LpPricing.yearly,
-                sub: l10n.paywallYearlySub,
-                best: true,
-              ),
-              const SizedBox(height: 9),
-              planCard(
-                tier: _Tier.monthly,
-                name: l10n.paywallMonthly,
-                price: LpPricing.monthly,
-              ),
-              const SizedBox(height: 9),
-              planCard(
-                tier: _Tier.weekly,
-                name: l10n.paywallWeekly,
-                price: LpPricing.weekly,
-                sub: l10n.paywallWeeklySub,
-                subColor: lp.emberText,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: lp.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: lp.border, width: 1.5),
-                ),
-                child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Text(
-                        l10n.paywallTrialReminder,
-                        style: LpType.caption(lp.textBody),
-                      ),
+                    Text(
+                      l10n.paywallTitle,
+                      style: LpType.title(lp.textPrimary, size: 26),
                     ),
-                    Switch(
-                      value: settings.trialReminderOn,
-                      onChanged: (v) => ref
-                          .read(settingsStoreProvider.notifier)
-                          .setTrialReminder(v),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.paywallSubtitle,
+                      style: LpType.body13(lp.textSecondary),
+                    ),
+                    const SizedBox(height: 18),
+                    feature(Icons.auto_awesome, l10n.paywallFeatCoach),
+                    feature(Icons.bolt, l10n.paywallFeatPanic),
+                    feature(Icons.forum_outlined, l10n.paywallFeatCommunity),
+                    feature(Icons.trending_down, l10n.paywallFeatPlan),
+                    feature(Icons.schedule, l10n.paywallFeatForecasts),
+                    feature(Icons.bar_chart, l10n.paywallFeatReports),
+                    const SizedBox(height: 8),
+                    _TrialTimeline(chargePrice: chargePrice),
+                    const SizedBox(height: 18),
+                    planCard(
+                      tier: _Tier.yearly,
+                      name: l10n.paywallYearly,
+                      price: LpPricing.yearly,
+                      sub: l10n.paywallYearlySub,
+                      best: true,
+                    ),
+                    const SizedBox(height: 9),
+                    planCard(
+                      tier: _Tier.monthly,
+                      name: l10n.paywallMonthly,
+                      price: LpPricing.monthly,
+                    ),
+                    const SizedBox(height: 9),
+                    planCard(
+                      tier: _Tier.weekly,
+                      name: l10n.paywallWeekly,
+                      price: LpPricing.weekly,
+                      sub: l10n.paywallWeeklySub,
+                      subColor: lp.emberText,
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: lp.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: lp.border, width: 1.5),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.paywallTrialReminder,
+                              style: LpType.caption(lp.textBody),
+                            ),
+                          ),
+                          Switch(
+                            value: settings.trialReminderOn,
+                            onChanged: (v) => ref
+                                .read(settingsStoreProvider.notifier)
+                                .setTrialReminder(v),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  '${l10n.paywallCancelAnytime} · ${l10n.paywallAnchor}',
-                  style: LpType.caption11(lp.textSecondary),
+            ),
+            // Pinned: the offer and the way out are visible at every scroll
+            // position, on every phone height.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 6, 18, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Text(
+                      '${l10n.paywallCancelAnytime} · ${l10n.paywallAnchor}',
+                      style: LpType.caption11(lp.textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  LpButton(
+                    l10n.paywallCta,
+                    height: 54,
+                    busy: _busy,
+                    onTap: _startTrial,
+                  ),
+                  const SizedBox(height: 6),
+                  LpTextButton(
+                    l10n.paywallFreeLink,
+                    size: 12,
+                    onTap: () => context.push(Routes.paywallFree),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The trial as three beats — today, the reminder, the first charge — so the
+/// reminder toggle explains itself and "cancel before, pay nothing" is said
+/// where the price is.
+///
+/// Copy about the offer, on the same footing as the CTA: the Day-5 push is
+/// the S4-7 `onTrialWillEnd` work and the charge is the store's, so this
+/// strip describes what the user is starting, not something the app has
+/// already done.
+class _TrialTimeline extends StatelessWidget {
+  const _TrialTimeline({required this.chargePrice});
+
+  /// Already carries its period ("$39.99/yr"), for the plan selected above.
+  final String chargePrice;
+
+  static const double _dot = 12;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final steps = [
+      (l10n.paywallTimelineToday, l10n.paywallTimelineTodayBody, true),
+      (l10n.paywallTimelineDay(5), l10n.paywallTimelineRemindBody, false),
+      (
+        l10n.paywallTimelineDay(7),
+        l10n.paywallTimelineChargeBody(chargePrice),
+        false,
+      ),
+    ];
+    return LpCard(
+      subtle: true,
+      radius: LpDimens.rCard,
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 12),
+      child: Column(
+        children: [
+          // The track runs between the first and last dot centres. Positioned
+          // children are excluded from intrinsic sizing, so this is safe
+          // under any ancestor that measures (see the IntrinsicHeight gotcha).
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final sixth = constraints.maxWidth / 6;
+              return SizedBox(
+                height: _dot,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: sixth,
+                      right: sixth,
+                      top: _dot / 2 - 1,
+                      child: Container(height: 2, color: lp.border),
+                    ),
+                    Row(
+                      children: [
+                        for (final (_, _, now) in steps)
+                          Expanded(
+                            child: Center(
+                              child: Container(
+                                width: _dot,
+                                height: _dot,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: now ? lp.volt : lp.surface,
+                                  border: Border.all(
+                                    color: now ? lp.volt : lp.voltText,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const Spacer(),
-              LpButton(
-                l10n.paywallCta,
-                height: 54,
-                busy: _busy,
-                onTap: _startTrial,
-              ),
-              const SizedBox(height: 6),
-              LpTextButton(
-                l10n.paywallFreeLink,
-                size: 12,
-                onTap: () => context.push(Routes.paywallFree),
-              ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (label, body, _) in steps)
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: LpType.caption(
+                          lp.textPrimary,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        body,
+                        textAlign: TextAlign.center,
+                        style: LpType.caption11(lp.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -553,7 +682,7 @@ class _WinbackScreenState extends ConsumerState<WinbackScreen> {
   }
 }
 
-/// D5d — honest trial-ending reminder with the user's own 3-day wins.
+/// D5d — honest trial-ending reminder with the user's own first-week wins.
 class TrialEndingScreen extends ConsumerWidget {
   const TrialEndingScreen({super.key});
 

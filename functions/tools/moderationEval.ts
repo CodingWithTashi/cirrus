@@ -45,13 +45,16 @@ interface Case {
 }
 
 /**
- * The founder's policy (Aug 31 2026, contextual moderation), as cases.
+ * The founder's policy as cases. Aug 31 2026: contextual moderation — the
+ * profanity itself is never the signal, its target is. Sep 1 2026 (docs/09
+ * issue 6): only red flags are ever hidden, and the app is not a person —
+ * "fuck this app" publishes.
  *
  * ALLOW: honest venting about the quit, self-directed profanity — including
- * positive, celebratory profanity. HOLD: profanity or hostility AIMED at
- * people, the app or the community. BLOCK: slurs, sourcing, minors, harm.
- * FLAG: crisis (stays visible), medical claims, celebratory tag on hostile
- * text. The profanity itself is never the signal; its target is.
+ * positive, celebratory profanity — and anger at the app or the product.
+ * HOLD: hostility or mockery AIMED at people (a person, or the community).
+ * BLOCK: slurs, sourcing, minors, harm. FLAG: crisis (stays visible),
+ * medical claims, celebratory tag on sad-but-not-hostile text.
  */
 const CASES: readonly Case[] = [
   // --- the founder's own recorded examples ---------------------------------
@@ -66,8 +69,22 @@ const CASES: readonly Case[] = [
     id: 'fuck-this-app',
     text: 'fuck this app',
     tag: 'win',
+    expect: 'allow',
+    why: 'Sep 1: anger at the app is feedback, not harm — the app is not a person; the tag changes nothing',
+  },
+  {
+    id: 'app-garbage-feedback',
+    text: 'this app is garbage. the panic button did nothing and the coach is a bot.',
+    tag: 'vent',
+    expect: 'allow',
+    why: 'hostile product feedback with nobody targeted — publish it, it is useful',
+  },
+  {
+    id: 'you-all-pathetic',
+    text: "you're all pathetic, no wonder none of you can quit",
+    tag: 'vent',
     expect: 'hold',
-    why: 'the recorded HOLD example: hostility aimed at the app, on a WIN tag',
+    why: 'contempt aimed at the people here',
   },
   {
     id: 'clean-win',
@@ -111,7 +128,7 @@ const CASES: readonly Case[] = [
     text: 'this app is fucking useless and so is everyone posting here',
     tag: 'vent',
     expect: 'hold',
-    why: 'profanity aimed at the app and the community',
+    why: 'the second half targets the people posting here — the app half alone would be ALLOW',
   },
   {
     id: 'mocking-quit',

@@ -84,7 +84,7 @@ abstract final class ReminderPlanner {
 
     final slots = <ReminderSlot>[];
     for (final hour in hours) {
-      final fire = _minus(hour, leadMinutes);
+      final fire = fireTimeFor(hour);
       if (_isQuiet(fire.$1, quietStartHour, quietEndHour)) continue;
       slots.add(
         // id is derived from the hour so rescheduling the same hour replaces
@@ -95,6 +95,28 @@ abstract final class ReminderPlanner {
     }
     return slots;
   }
+
+  /// When a nudge for [hour] actually fires: (hour, minute), [leadMinutes]
+  /// before the top of the hour. Public so the Settings sheet can print the
+  /// exact time it is promising, from the same rule that schedules it.
+  static (int, int) fireTimeFor(int hour) => _minus(hour, leadMinutes);
+
+  /// The start hours a user may choose in Settings: every hour of the day
+  /// whose nudge would NOT fall inside quiet hours, ascending.
+  ///
+  /// The old editor offered a slider from noon to 2am and silently dropped
+  /// the nudge for anything from midnight on — a choice that saved but did
+  /// nothing, which the Sep 1 field test read as "what does this even do?"
+  /// (docs/09 issue 5). Offering only the hours that work, derived from the
+  /// same [_isQuiet] the scheduler applies, means the sheet cannot promise a
+  /// nudge the planner will refuse.
+  static List<int> eligibleStartHours({
+    required int quietStartHour,
+    required int quietEndHour,
+  }) => [
+    for (var hour = 0; hour < 24; hour++)
+      if (!_isQuiet(fireTimeFor(hour).$1, quietStartHour, quietEndHour)) hour,
+  ];
 
   /// [minutes] before [hour]:00, wrapping backwards past midnight.
   static (int, int) _minus(int hour, int minutes) {

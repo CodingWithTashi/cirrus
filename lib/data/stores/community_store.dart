@@ -79,6 +79,11 @@ class CommunityStore extends Notifier<CommunityState> {
   /// Live moderation-state subscriptions for posts written this session.
   final Map<String, StreamSubscription<PostStatus>> _statusSubs = {};
 
+  /// Posts the server refused at the door this session. They read as
+  /// blocked, but `createPost` throws before it claims a cap slot, so the
+  /// composer's cap check must not count them.
+  final Set<String> _refusedAtDoor = {};
+
   bool Function() _alive = () => false;
 
   @override
@@ -121,6 +126,7 @@ class CommunityStore extends Notifier<CommunityState> {
       final posts = await _repo.fetchPosts();
       if (_alive()) {
         state = state.copyWith(posts: posts, status: FeedStatus.ready);
+        _watchUnsettled(posts);
       }
     } on Exception {
       // Offline or backend hiccup — the screen offers "run it back".
@@ -155,10 +161,35 @@ class CommunityStore extends Notifier<CommunityState> {
     return j == null ? 1 : j.plan.dayNumber(DateTime.now()).clamp(1, 9999);
   }
 
-  /// Client-side guard mirroring the moderation policy (docs/03 §9): brand
-  /// praise and sourcing get held. The real Gemini pass is server-side.
+  /// Client-side guard mirroring the moderation policy (docs/03 §9): slurs
+  /// and sourcing are refused in the composer, before the send. The server
+  /// runs the same prefilter at the door, and the model behind it.
   static bool violatesCommunityRules(String text) =>
       CommunityRules.violates(text);
+
+  /// docs/03 §9: three posts a day. The server enforces it in `createPost`;
+  /// the composer checks it first so the fourth post is refused before it is
+  /// written, not after it is sent.
+  static const int dailyPostCap = 3;
+
+  /// The caller's own posts dated today (local calendar day) that claimed a
+  /// server slot: not a failed send, not a cap refusal, and not a post the
+  /// door refused — `createPost` throws before it claims.
+  int get myPostsToday {
+    final now = DateTime.now();
+    return state.posts
+        .where(
+          (p) =>
+              p.isMine &&
+              p.status != PostStatus.failed &&
+              p.status != PostStatus.capped &&
+              !_refusedAtDoor.contains(p.id) &&
+              p.createdAt.year == now.year &&
+              p.createdAt.month == now.month &&
+              p.createdAt.day == now.day,
+        )
+        .length;
+  }
 
   /// Optimistic: the post is in the author's feed at once, marked `pending`
   /// — every post is born pending on the backend and only the server flips
@@ -187,9 +218,23 @@ class CommunityStore extends Notifier<CommunityState> {
     final String? serverId;
     try {
       serverId = await _repo.addPost(local);
+    } on ContentRefusedException catch (refusal) {
+      // The server refused the content itself. Final either way, so no
+      // retry is offered — but the two reasons read differently.
+      switch (refusal.reason) {
+        case ContentRefusal.rules:
+          _refusedAtDoor.add(local.id);
+          _setStatus(local.id, PostStatus.blocked);
+        case ContentRefusal.dailyCap:
+          _setStatus(local.id, PostStatus.capped);
+      }
+      return;
     } on Exception {
-      // Offline or refused: the banner tells the story, the post stays
-      // pending locally — which is the truth, it never reached anyone.
+      // Offline or the app refused: it never reached anyone, and the row
+      // says so with the retry on it — instead of "Posting…" for good,
+      // which is what the Sep 1 field test saw as a stuck screen (docs/09
+      // issue 6c).
+      _setStatus(local.id, PostStatus.failed);
       return;
     }
     if (!_alive()) return;
@@ -202,12 +247,41 @@ class CommunityStore extends Notifier<CommunityState> {
         ],
       );
     }
+    _watch(id);
+  }
+
+  /// Follows the author's mirror row until it settles. `pending` AND `held`
+  /// are open: a held post is what `remoderateHeld` or the founder later
+  /// flips live, and the author should see that land without a restart.
+  void _watch(String id) {
     final stale = _statusSubs.remove(id);
     if (stale != null) unawaited(stale.cancel());
     _statusSubs[id] = _repo.watchPostStatus(id).listen(
       (status) => _setStatus(id, status),
       onError: (Object _) {},
     );
+  }
+
+  /// The author's own posts that came back from the feed still open — held
+  /// for a human, or not yet classified — keep a watch too, so a verdict
+  /// that lands while the app is open shows up without a reload.
+  void _watchUnsettled(List<Post> posts) {
+    for (final post in posts) {
+      if (!post.isMine || _statusSubs.containsKey(post.id)) continue;
+      if (post.status != PostStatus.pending && post.status != PostStatus.held) {
+        continue;
+      }
+      _watch(post.id);
+    }
+  }
+
+  /// Sends a post the network never carried. Only a `failed` post: a pending
+  /// one is already on its way, and a held one is the server's call.
+  void retryPost(String postId) {
+    final post = state.posts.where((p) => p.id == postId).firstOrNull;
+    if (post == null || post.status != PostStatus.failed) return;
+    _setStatus(postId, PostStatus.pending);
+    unawaited(_syncPost(post.copyWith(status: PostStatus.pending)));
   }
 
   void _setStatus(String postId, PostStatus status) {
@@ -221,7 +295,8 @@ class CommunityStore extends Notifier<CommunityState> {
             p,
       ],
     );
-    if (status != PostStatus.pending) {
+    // Only a settled status closes the watch; `held` stays open (see _watch).
+    if (status != PostStatus.pending && status != PostStatus.held) {
       final done = _statusSubs.remove(postId);
       if (done != null) unawaited(done.cancel());
     }

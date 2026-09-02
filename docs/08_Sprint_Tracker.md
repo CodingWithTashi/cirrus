@@ -26,7 +26,7 @@
 | **Revenue goal** | **$44,000/mo net by M6 post-launch** (≈ Apr 15, 2027) | Aug 29, 2026 — supersedes PRD §1's $10K/mo |
 | **Launch date** | **Oct 15, 2026** — soft launch per Doc 6 §1 | Aug 29, 2026 |
 | **Platforms** | **Android at launch; iOS fast-follow** | Aug 29, 2026 - revised. The original "both platforms" call was made before B17 was known: there is no Mac, so iOS cannot be built or submitted at all. Android is already wired (google-services.json, release signing) and is the market Puff Count never entered. |
-| **Pricing** | $2.99/wk · $7.99/mo · $39.99/yr · 3-day trial | Founder-locked, PRD §11 |
+| **Pricing** | $2.99/wk · $7.99/mo · $39.99/yr · **7-day trial** | Founder-locked, PRD §11. Trial length changed 3 → 7 days on Sep 1, 2026 (§7 #14) |
 | **Days remaining to launch** | **47** | as of Aug 29, 2026 |
 
 **The constraint on all new work:** every feature must occupy a stage of the hook loop in Doc 3 §1 — external trigger → internal trigger → ≤1-tap action → variable reward → investment. Features that sit *beside* the loop don't ship.
@@ -65,6 +65,8 @@ Working backwards at PRD §13's own conversion rates:
 | Trial starts / month | **2,896** | ÷ 57.5% trial→paid |
 | Onboarding completions / month | **12,066** | ÷ 24% trial-start rate |
 | **Downloads / month** | **≈ 17,240** | ÷ 70% onboarding completion |
+
+> **Sep 1 note:** the 57.5% trial→paid rate was assumed for a 3-day trial. The trial is now 7 days (§7 #14). A longer trial usually converts a smaller share of starts at a better-retained LTV, so the sub counts above are no longer internally consistent — re-baseline this row from the first four weeks of Play data rather than guessing a new rate.
 
 The 15% Small Business rate holds throughout — $44K/mo is $528K/yr, safely under the $1M cliff where it becomes 30%.
 
@@ -210,7 +212,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S1-1` Add `cloud_functions` + `firebase_app_check` to `pubspec.yaml` (B3)
 - [ ] `S1-2` Register App Check (Play Integrity + App Attest) — every callable has `enforceAppCheck: true`, so without this **every call is rejected**; without it enforced, `aiCoachChat` is a public Gemini proxy
 - [ ] `S1-3` Add `purchases_flutter` (RevenueCat) (B4)
-- [ ] `S1-4` Create products both stores: `weekly_299` · `monthly_799` · `yearly_3999`, 3-day trial on all
+- [ ] `S1-4` Create products both stores: `weekly_299` · `monthly_799` · `yearly_3999`, 7-day trial on all (was 3-day; §7 #14)
 - [ ] `S1-5` **Set RevenueCat `app_user_id` = Firebase uid** — `rcWebhook` writes `users/{app_user_id}` and silently depends on this
 - [ ] `S1-6` Wire real purchase into `PaywallScreen._startTrial()` and the tier CTAs
 - [ ] `S1-7` Real `restorePurchases()` behind both call sites (currently a snackbar)
@@ -307,7 +309,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 
 - [ ] `S6-1` Doc 6 §9 launch-week checklist, all 8 items
 - [ ] `S6-2` 20+ real beta testimonials collected (feeds the D3 screen — must be real, per our own honesty positioning)
-- [ ] `S6-3` Paywall A/B test #1 armed (3-day vs 7-day trial)
+- [ ] `S6-3` Paywall A/B test #1 armed (7-day vs 3-day trial)
 - [ ] `S6-4` Reddit thank-you post to the beta cohort — they carry the first reviews
 - [ ] `S6-5` "We're live" video across all channels + waitlist email
 - [ ] `S6-6` Launch-day monitoring: crash rate, funnel, AI spend, `AI_COST_PANIC` kill-switch ready
@@ -362,6 +364,7 @@ Resolutions already in code (from `CLAUDE.md`) plus contradictions found across 
 | 11 | Name — PRD §15 "OPEN" vs other doc headers vs Firebase "Cirrus" | **RESOLVED Aug 29: Cirrus.** Rename shipped; `docs/01 §15` item 1 is stale |
 | 12 | Firestore model — Doc 5 §6 per-day subcollections vs implemented single `journeys/{uid}` doc | **Single doc stands for MVP** (deliberate, documented in `firebase_common.dart`). Revisit if the 1MB ceiling or multi-device merge becomes real |
 | 13 | Buddy system — Doc 3 §7/§9 assume it; `functions/README.md` says descoped Aug 2026 | **Descoped, and the UI is now removed** (Aug 29). It rendered an invented friend and its ping pinged nobody. The hook stage it held is the community SOS instead: the panic flow opens the composer pre-tagged `sos`, and live SOS posts pin to the feed for an hour. docs/08 §6's referral loop is the planned S8 return of the idea, with a real backend |
+| 14 | Trial length — PRD §11 and Doc 2 say 3 days; founder decision Sep 1, 2026 (docs/09 issue 4) | **7 days.** Paywall copy, `trialEnding*` copy and the S1-4 store products all say 7. The paywall's timeline (Today · Day 5 reminder · Day 7 first charge) is copy about the offer; the Day-5 push itself is S4-7. A/B #1 (S6-3) now tests 7 vs 3 |
 
 ---
 

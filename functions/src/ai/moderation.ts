@@ -26,6 +26,13 @@ export type ModerationAction = 'allow' | 'flag' | 'hold' | 'block';
 export interface Verdict {
   action: ModerationAction;
   reason: string;
+  /**
+   * True only when the hold is the PIPELINE's own failure — the model was
+   * unreachable, or its answer did not parse — so asking again later may
+   * produce a real verdict. `remoderateHeld` re-runs exactly these. A hold
+   * the model chose never carries it: that is a judgment for a human.
+   */
+  retryable?: boolean;
 }
 
 /**
@@ -62,7 +69,11 @@ export async function classify(text: string, tag?: string): Promise<Verdict> {
     return parseVerdict(result.text);
   } catch (error) {
     log.error('moderation.unavailable', {error: String(error)});
-    return {action: 'hold', reason: 'moderation unavailable — held for human review'};
+    return {
+      action: 'hold',
+      reason: 'moderation unavailable — held for human review',
+      retryable: true,
+    };
   }
 }
 
@@ -85,6 +96,6 @@ export function parseVerdict(raw: string): Verdict {
     return {action, reason: typeof reason === 'string' ? reason : ''};
   } catch {
     // Unparseable verdict is not consent — and not publication either.
-    return {action: 'hold', reason: 'unparseable moderation response'};
+    return {action: 'hold', reason: 'unparseable moderation response', retryable: true};
   }
 }

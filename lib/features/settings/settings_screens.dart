@@ -168,8 +168,11 @@ class SettingsScreen extends ConsumerWidget {
                         style: LpType.caption(lp.textSecondary),
                       ),
                       Text(
+                        // The hour they chose. The end hour used to show
+                        // here too, but nothing reads it — the nudge is one
+                        // push before the start (docs/09 issue 5).
                         l10n.settingsDangerHoursEdit(
-                          '${LpFormat.hour(settings.dangerStartHour, locale)} – ${LpFormat.hour(settings.dangerEndHour % 24, locale)}',
+                          LpFormat.hour(settings.dangerStartHour % 24, locale),
                         ),
                         style: LpType.caption(
                           lp.emberText,

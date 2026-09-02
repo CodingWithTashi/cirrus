@@ -142,4 +142,59 @@ void main() {
       expect(slots.length, lessThanOrEqualTo(ReminderPlanner.maxPerDay));
     });
   });
+
+  group('the Settings sheet promises only what will fire', () {
+    // Sep 1 field test (docs/09 issue 5): the old editor let you save a
+    // midnight start whose nudge quiet hours then dropped, and printed a
+    // "max 3 pushes" note that belonged to the detected mode. The sheet now
+    // draws its choices and its exact time from these two helpers, so it
+    // cannot drift from the scheduler.
+    test('fires ten minutes before the hour, wrapping past midnight', () {
+      expect(ReminderPlanner.fireTimeFor(21), (20, 50));
+      expect(ReminderPlanner.fireTimeFor(9), (8, 50));
+      expect(ReminderPlanner.fireTimeFor(0), (23, 50));
+    });
+
+    test('offers 9am through 11pm under the default quiet hours', () {
+      final hours = ReminderPlanner.eligibleStartHours(
+        quietStartHour: 23,
+        quietEndHour: 8,
+      );
+      expect(hours, [for (var h = 9; h <= 23; h++) h]);
+      // 8am is out because its nudge (7:50am) is still inside quiet hours;
+      // midnight is out because 11:50pm is.
+      expect(hours, isNot(contains(8)));
+      expect(hours, isNot(contains(0)));
+    });
+
+    test('every offered hour really schedules, and no other hour does', () {
+      const quietStart = 23;
+      const quietEnd = 8;
+      final offered = ReminderPlanner.eligibleStartHours(
+        quietStartHour: quietStart,
+        quietEndHour: quietEnd,
+      );
+      for (var hour = 0; hour < 24; hour++) {
+        final slots = ReminderPlanner.plan(
+          logs: const [],
+          quietStartHour: quietStart,
+          quietEndHour: quietEnd,
+          notificationsOn: true,
+          overrideHours: [hour],
+        );
+        expect(
+          slots.isNotEmpty,
+          offered.contains(hour),
+          reason: 'hour $hour: offered=${offered.contains(hour)}, slots=$slots',
+        );
+      }
+    });
+
+    test('no quiet hours at all offers the whole day', () {
+      expect(
+        ReminderPlanner.eligibleStartHours(quietStartHour: 0, quietEndHour: 0),
+        hasLength(24),
+      );
+    });
+  });
 }

@@ -89,7 +89,7 @@ class _CoachNameStepState extends ConsumerState<CoachNameStep> {
     final blocked = typed.trim().isNotEmpty && error.isNotEmpty;
 
     return StepBody(
-      title: l10n.obCoachNameTitle(defaultName),
+      title: l10n.obCoachNameTitle,
       subtitle: l10n.obCoachNameSubtitle,
       children: [
         LpNoteCard(l10n.obCoachNameAsk(defaultName)),

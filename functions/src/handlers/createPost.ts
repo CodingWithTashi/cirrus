@@ -11,9 +11,11 @@
  * The post lands as `status: 'pending'` and only `moderatePost` can flip it
  * live — so nothing is ever visible before it has been classified.
  */
+import {createHash} from 'node:crypto';
 import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
+import {prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
@@ -22,6 +24,9 @@ import {POST_TAGS, type PostTag} from '../domain/types';
 
 /** docs/03 §9: text <= 500 chars, one tag required, 3 posts/day. */
 const MAX_POST_CHARS = 500;
+
+/** The app's local post id (`p<micros>`); anything else gets a fresh id. */
+const CLIENT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const DAILY_POST_CAP = 3;
 
 export const createPost = onCall(
@@ -35,6 +40,30 @@ export const createPost = onCall(
     if (tag === null) {
       throw new HttpsError('invalid-argument', 'A post tag is required.');
     }
+
+    // Refused at the door, not after the write: the same deterministic list
+    // `moderatePost` runs first. A slur never lands in Firestore, never
+    // claims a cap slot, and its author hears "no" while the composer is
+    // still open rather than "not published" later (docs/09 issue 6).
+    if (prefilter(text)?.action === 'block') {
+      throw new HttpsError('invalid-argument', 'That breaks the community rules.');
+    }
+
+    // Idempotent on the client's own id, so a retry of a send whose RESPONSE
+    // was lost (the batch committed, the phone never heard) does not mint a
+    // second post or spend a second cap slot. The document id is derived
+    // from uid + clientId, so no caller can address another user's post.
+    const clientId = data['clientId'];
+    const keyed = typeof clientId === 'string' && CLIENT_ID.test(clientId);
+    const post = keyed
+      ? postsCol().doc(
+          createHash('sha256')
+            .update(`${caller.uid}:${clientId}`)
+            .digest('hex')
+            .slice(0, 20),
+        )
+      : postsCol().doc();
+    if (keyed && (await post.get()).exists) return {postId: post.id};
 
     // Transactional, not count-then-write. The aggregate-query version let
     // five concurrent requests all observe "0 posted" and all proceed, which
@@ -50,7 +79,6 @@ export const createPost = onCall(
     }
 
     const alias = typeof data['alias'] === 'string' ? data['alias'] : 'quitter';
-    const post = postsCol().doc();
 
     // A batch, not a transaction: there is nothing to read first, and both
     // writes must still land together or neither does.

@@ -464,16 +464,9 @@
   "obRatingQuote1": "\"The panic button got me through week one. I'd have caved on day 3 without it.\"",
   "obRatingQuote2": "\"First app that didn't talk to me like a doctor or my mom.\"",
   "obRatingCta": "Rate Cirrus",
-  "obCoachNameTitle": "We call it {name}.",
-  "@obCoachNameTitle": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "obCoachNameTitle": "Meet your coach.",
   "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
-  "obCoachNameAsk": "We went with {name} because it needed one. Nobody remembers a name someone else picked, though — so if you have a better idea, use it. Whatever you'd actually text at 2am, mid-argument with yourself in the kitchen.",
+  "obCoachNameAsk": "We call it {name}. It answers to anything — pick the name you'd text at 2am.",
   "@obCoachNameAsk": {
     "placeholders": {
       "name": {
@@ -520,7 +513,12 @@
   },
   "obWhyWordsSubtitle": "Why now? Not the health-class answer — the real one.",
   "obWhyWordsFieldLabel": "In your own words",
-  "obWhyWordsHint": "so I can run with her without stopping",
+  "obWhyWordsHintHealth": "so I stop sounding like a kettle on the stairs",
+  "obWhyWordsHintMoney": "I want my money back. And my mornings.",
+  "obWhyWordsHintFreedom": "because I'm done with the 11pm gas-station run",
+  "obWhyWordsHintFamily": "my kid found it in my jacket. Never again.",
+  "obWhyWordsHintFitness": "so I can run with her without stopping",
+  "obWhyWordsHintAppearance": "I want the un-tired version of my face back",
   "obWhyWordsNote": "{name} will remember this.",
   "@obWhyWordsNote": {
     "placeholders": {
@@ -541,13 +539,13 @@
   "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitle": "Your plan is ready.",
-  "paywallSubtitle": "Try everything free for 3 days.",
-  "paywallFeatCoach": "AI coach, unlimited",
-  "paywallFeatPanic": "Panic Button + community SOS",
-  "paywallFeatPlan": "Adaptive quit plan",
-  "paywallFeatForecasts": "Craving forecasts",
-  "paywallFeatCommunity": "Community",
-  "paywallFeatReports": "Weekly reports",
+  "paywallSubtitle": "Try everything free for 7 days.",
+  "paywallFeatCoach": "Unlimited AI coach that remembers your why",
+  "paywallFeatPanic": "Panic button: a 60-second craving killer",
+  "paywallFeatPlan": "A plan that adapts when you slip",
+  "paywallFeatForecasts": "Craving forecasts for your danger hours",
+  "paywallFeatCommunity": "Community that answers your SOS",
+  "paywallFeatReports": "Weekly report in your own numbers",
   "paywallYearly": "YEARLY",
   "paywallYearlyBadge": "BEST VALUE",
   "paywallYearlySub": "$0.77/week · SAVE 74%",
@@ -557,8 +555,51 @@
   "paywallTrialReminder": "🔔 We'll remind you before your trial ends",
   "paywallCancelAnytime": "Cancel anytime",
   "paywallAnchor": "Less than one disposable a week",
-  "paywallCta": "Start my free 3 days",
+  "paywallCta": "Start my free week",
   "paywallFreeLink": "Continue with Free plan →",
+  "paywallTimelineToday": "Today",
+  "paywallTimelineDay": "Day {n}",
+  "@paywallTimelineDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallTimelineTodayBody": "Everything unlocked",
+  "paywallTimelineRemindBody": "We remind you",
+  "paywallTimelineChargeBody": "First charge {price}. Cancel before, pay nothing.",
+  "@paywallTimelineChargeBody": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPerYear": "{price}/yr",
+  "@paywallPerYear": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPerMonth": "{price}/mo",
+  "@paywallPerMonth": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPerWeek": "{price}/wk",
+  "@paywallPerWeek": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "freePlanTitle": "Free gets you moving.",
   "freePlanSubtitle": "Yours forever. No countdown, no nagging.",
   "freePlanFeat1": "Puff log + streaks",
@@ -604,7 +645,7 @@
     }
   },
   "day1TourHoursTitle": "When do you cave?",
-  "day1TourHoursBody": "Pick the window you struggle in. We show up ten minutes before it, on your phone, without you asking.",
+  "day1TourHoursBody": "Pick the hour it usually hits. We show up ten minutes before it, on your phone, without you asking.",
   "day1FreedomNote": "Freedom Day: {date} · {days} days out · plan armed",
   "@day1FreedomNote": {
     "placeholders": {
@@ -1205,7 +1246,6 @@
   "communityReported": "Reported. We review within 24h — 3 reports auto-hide a post.",
   "communityBlocked": "Blocked. You won't see each other anymore.",
   "communityMuted": "Muted. You won't see their posts anymore.",
-  "communityAutoFlagged": "Held for review — brand names and sourcing aren't allowed here.",
   "communityComposerTitle": "New post",
   "communityComposerPost": "Post",
   "communityPostingAs": "posting as {alias} · day {day} · always anonymous",
@@ -1222,6 +1262,9 @@
   "communityComposerHint": "What's happening in your quit?",
   "communityTagIt": "TAG IT",
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
+  "communityRuleSlur": "This can't be posted — slurs and hate aren't allowed here.",
+  "communityRuleSourcing": "Where-to-buy and for-sale talk isn't allowed here. Edit it and try again.",
+  "communityDailyCapReached": "That's 3 posts today — the cap resets at midnight.",
   "communityTagRequired": "Pick a tag — it routes your post to the right people.",
   "communitySosBanner": "🛡️ {count} people had your back",
   "@communitySosBanner": {
@@ -1245,6 +1288,9 @@
   "communityPosted": "Posted. A quick safety check runs before others can see it.",
   "communityStatusHeld": "In review — only you can see this for now",
   "communityStatusBlocked": "Not published — it didn't clear the community rules",
+  "communityStatusPosting": "Posting…",
+  "communityStatusFailed": "Didn't send — tap to retry",
+  "communityStatusCapped": "Not posted — that's 3 today. The cap resets at midnight.",
   "buddyLinkCopied": "Link copied — quitting hits different with backup.",
   "moneyTitle": "Money back",
   "moneySavedSince": "saved since {date} · {perDay} rolling in daily",
@@ -1727,9 +1773,18 @@
   "settingsSignOut": "Sign out",
   "settingsSignOutConfirmTitle": "Sign out?",
   "settingsSignOutConfirmBody": "Your data stays on your account. The streak keeps burning.",
-  "settingsDangerHoursTitle": "Danger hours",
-  "settingsDangerHoursNote": "We nudge you 10 minutes before your window opens. Max 3 pushes a day, quiet hours respected.",
-  "settingsQuietHours": "Quiet hours: {range}",
+  "settingsDangerHoursTitle": "When do cravings hit hardest?",
+  "settingsDangerHoursNote": "Pick the hour it usually starts. We nudge you 10 minutes before it — one push a day, nothing more.",
+  "settingsDangerHoursNudge": "One nudge at {time}, every day.",
+  "settingsDangerHoursNotifOff": "Notifications are off, so nothing fires until you turn them on.",
+  "@settingsDangerHoursNudge": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsQuietHours": "Never between {range} — quiet hours.",
   "@settingsQuietHours": {
     "placeholders": {
       "range": {
@@ -1741,7 +1796,7 @@
   "trialEndingPush": "your trial ends tomorrow — as promised, here's the heads-up. No surprise charges.",
   "trialEndingTitle": "Trial ends tomorrow.",
   "trialEndingBody": "We said we'd remind you, so: here it is. Keep Premium, or drop to Free — your streak, plan, and history stay either way.",
-  "trialEndingStatsLabel": "YOUR 3 DAYS SO FAR",
+  "trialEndingStatsLabel": "YOUR WEEK SO FAR",
   "trialEndingVsDay1": "puffs vs day 1",
   "trialEndingCravings": "cravings beaten",
   "trialEndingSaved": "saved",

@@ -316,7 +316,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     _stepEnteredAt = DateTime.now();
   }
 
-  /// Warms D3: the tailored quotes, and whether the OS will show its sheet.
+  /// Warms D3: the tailored quotes, and whether the rating CTA has anywhere
+  /// to go (the OS sheet, or the store listing on a non-Play install).
   ///
   /// Both are best-effort and both fail to the same place — bundled quotes and
   /// a hidden CTA — so neither is awaited and neither can block the funnel.
