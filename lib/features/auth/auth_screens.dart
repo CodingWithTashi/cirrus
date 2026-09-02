@@ -18,6 +18,7 @@ import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
+import 'apple_sign_in_button.dart';
 import 'login_defaults.dart';
 import '../../domain/repositories/repositories.dart';
 import '../onboarding/onboarding_view_model.dart';
@@ -43,50 +44,54 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   static bool get _showGoogle =>
       defaultTargetPlatform == TargetPlatform.android;
 
-  Future<void> _signInApple() async {
-    if (_appleBusy) return;
-    setState(() => _appleBusy = true);
-    // A new Apple account onboards; one that already onboarded gets its
-    // journey restored from the backend.
-    final bool restored;
-    try {
-      restored = await ref.read(quitStoreProvider.notifier).signInWithApple();
-    } on SignInCancelledException {
-      // Dismissed the native sheet — not an error.
-      if (!mounted) return;
-      setState(() => _appleBusy = false);
-      return;
-    } on Exception catch (error) {
-      if (!mounted) return;
-      setState(() => _appleBusy = false);
-      await showLpErrorDialog(context, error: error, onRetry: _signInApple);
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _appleBusy = false);
-    context.go(restored ? Routes.home : Routes.onboarding);
-  }
+  Future<void> _signInApple() => _signInWithIdentity(
+    busy: _appleBusy,
+    setBusy: (value) => _appleBusy = value,
+    signIn: ref.read(quitStoreProvider.notifier).signInWithApple,
+    retry: _signInApple,
+  );
 
-  Future<void> _signInGoogle() async {
-    if (_googleBusy) return;
-    setState(() => _googleBusy = true);
-    final bool restored;
+  Future<void> _signInGoogle() => _signInWithIdentity(
+    busy: _googleBusy,
+    setBusy: (value) => _googleBusy = value,
+    signIn: ref.read(quitStoreProvider.notifier).signInWithGoogle,
+    retry: _signInGoogle,
+  );
+
+  /// One flow for both native identity buttons. A new account onboards; one
+  /// that already onboarded gets its journey restored from the backend.
+  ///
+  /// Three outcomes, each with its designated surface: a dismissed sheet is
+  /// not an error and shows nothing; a failure goes to [showLpErrorDialog]
+  /// with a retry; success routes on whether a journey came back. The busy
+  /// flag is released in `finally`, not per branch, so an unexpected `Error`
+  /// — which `on Exception` deliberately leaves to `LpErrors` — can never
+  /// strand the button in its spinner.
+  Future<void> _signInWithIdentity({
+    required bool busy,
+    required ValueSetter<bool> setBusy,
+    required Future<bool> Function() signIn,
+    required Future<void> Function() retry,
+  }) async {
+    if (busy) return;
+    setState(() => setBusy(true));
+    bool? restored;
+    Exception? failure;
     try {
-      restored = await ref.read(quitStoreProvider.notifier).signInWithGoogle();
+      restored = await signIn();
     } on SignInCancelledException {
       // Dismissed the native sheet — not an error.
-      if (!mounted) return;
-      setState(() => _googleBusy = false);
-      return;
     } on Exception catch (error) {
-      if (!mounted) return;
-      setState(() => _googleBusy = false);
-      await showLpErrorDialog(context, error: error, onRetry: _signInGoogle);
-      return;
+      failure = error;
+    } finally {
+      if (mounted) setState(() => setBusy(false));
     }
     if (!mounted) return;
-    setState(() => _googleBusy = false);
-    context.go(restored ? Routes.home : Routes.onboarding);
+    if (failure != null) {
+      await showLpErrorDialog(context, error: failure, onRetry: retry);
+    } else if (restored != null) {
+      context.go(restored ? Routes.home : Routes.onboarding);
+    }
   }
 
   @override
@@ -114,50 +119,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 32),
               if (_showApple) ...[
-                PressScale(
-                  onTap: _appleBusy ? null : _signInApple,
-                  child: Container(
-                    height: LpDimens.ctaHeight,
-                    decoration: BoxDecoration(
-                      // Apple HIG button colors, not theme tokens on purpose:
-                      // white-on-dark / black-on-light, exactly as Apple ships.
-                      color: lp.isDark ? Colors.white : const Color(0xFF111419),
-                      borderRadius: BorderRadius.circular(LpDimens.rButton),
-                    ),
-                    child: _appleBusy
-                        ? Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  lp.isDark ? Colors.black : Colors.white,
-                                ),
-                              ),
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.apple,
-                                size: 24,
-                                color: lp.isDark ? Colors.black : Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.authSignInWithApple,
-                                style: LpType.emphasis(
-                                  lp.isDark
-                                      ? Colors.black
-                                      : const Color(0xFFFDFDFC),
-                                  size: 17,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
+                AppleSignInButton(
+                  l10n.authSignInWithApple,
+                  busy: _appleBusy,
+                  onTap: _signInApple,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -207,18 +172,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _LegalLink(label: l10n.authTerms, url: LpLinks.terms),
-                  Text(
-                    ' · ',
-                    style: LpType.caption(lp.textSecondary),
-                  ),
+                  Text(' · ', style: LpType.caption(lp.textSecondary)),
                   _LegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
                 ],
               ),
+
               // Debug builds only — see the note in Settings. This entry
               // point was the worse of the two: it is reachable before anyone
               // has signed in, so the first thing a new user could do is give
               // themselves somebody else's twelve-day streak.
-
             ],
           ),
         ),
@@ -742,7 +704,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 }
-
 
 /// One of the two legal links in the sign-in footer.
 ///

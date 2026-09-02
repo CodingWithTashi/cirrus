@@ -38,6 +38,8 @@ void main() {
       isA<NoConnectionException>(),
     );
     expect(await mapped('user-cancelled'), isA<SignInCancelledException>());
+    // The literal code the iOS plugin emits when the Apple sheet is dismissed.
+    expect(await mapped('canceled'), isA<SignInCancelledException>());
   });
 
   test('an unknown code still rethrows for the generic surface', () async {

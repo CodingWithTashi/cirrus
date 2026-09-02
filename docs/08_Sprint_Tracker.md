@@ -25,7 +25,7 @@
 |---|---|---|
 | **Revenue goal** | **$44,000/mo net by M6 post-launch** (≈ Apr 15, 2027) | Aug 29, 2026 — supersedes PRD §1's $10K/mo |
 | **Launch date** | **Oct 15, 2026** — soft launch per Doc 6 §1 | Aug 29, 2026 |
-| **Platforms** | **Android at launch; iOS fast-follow** | Aug 29, 2026 - revised. The original "both platforms" call was made before B17 was known: there is no Mac, so iOS cannot be built or submitted at all. Android is already wired (google-services.json, release signing) and is the market Puff Count never entered. |
+| **Platforms** | **Android at launch; iOS fast-follow** | Aug 29, 2026 - revised. The original "both platforms" call was made before B17 was known: at the time there was no Mac, so iOS could not be built or submitted. **Sep 1 2026: a Mac with Xcode 26.3 is on the desk and the iOS build runs on a physical iPhone with Sign in with Apple (B6)** — the launch order stands, the machine constraint is gone. Android is already wired (google-services.json, release signing) and is the market Puff Count never entered. |
 | **Pricing** | $2.99/wk · $7.99/mo · $39.99/yr · 3-day trial | Founder-locked, PRD §11 |
 | **Days remaining to launch** | **47** | as of Aug 29, 2026 |
 
@@ -112,7 +112,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ~~**B3**~~ | [RESOLVED Aug 29] **The client reaches the backend.** `cloud_functions` + `firebase_app_check` added, App Check debug token registered for emulator-5554, `LpFunctions` is the single door (injects IANA timezone + locale, maps wire errors to the domain taxonomy). Proven on device: signing in wrote a real `users/{uid}` doc via the deployed `syncUserContext`. | `tz=America/New_York`, `locale=en-US`, `recalcHourUtc=5` in production Firestore | S1 done |
 | **B4** | **No billing SDK.** No RevenueCat / Superwall / `in_app_purchase`. Paywall is 634 lines of non-transacting UI; "premium" is a client-written enum in the user's *own* Firestore doc; "restore purchases" is a snackbar. | `paywall_screens.dart`, `journey_store.dart:344`, `settings_screens.dart:267` | S1 |
 | ~~**B5**~~ | [RESOLVED Aug 29] Coach and community switch on `backendModeProvider`. `FirebaseCoachRepository` calls `aiCoachChat`; `FirebaseCommunityRepository` reads Firestore (rules expose only live) and writes via `createPost`/`createReply`, with `FieldValue.increment` for reactions and reports. ~~**Open sub-item:** `isMine`/`myReactions` are session-scoped until the `reactions{uid: emoji}` change (S3-7).~~ `myReactions` moved to `reactors/{uid}` (S3-7); **`isMine` resolved Sep 1** — decided by the backend per account through the `users/{uid}/posts` mirror (§21, H3). | `lib/data/stores/providers.dart` | S2-S3 done |
-| **B6** | **iOS cannot build against Firebase.** No `GoogleService-Info.plist`, no `.entitlements`, no URL schemes. **Deferred to the iOS fast-follow** with B17. Note the plist is not actually hard to get - `firebase apps:sdkconfig IOS <appId>` returns it - the blocker is having no machine to build on. | `ios/Runner/` | iOS fast-follow |
+| ~~**B6**~~ | [RESOLVED Sep 1] **iOS builds against Firebase and signs in with Apple.** `ios/Runner/Runner.entitlements` (Sign in with Apple) wired via `CODE_SIGN_ENTITLEMENTS` on all three Runner configs under automatic signing (team `PZFFFQ5T9X`); App Check debug token registered for the **iOS app id** by hand with `firebase appcheck:debugtokens:create` (the two Firebase apps are separate registrations); deployment target 15.0 to match the Firebase 12 pods. **Not needed after all:** `GoogleService-Info.plist` (init goes through `DefaultFirebaseOptions.ios`) and URL schemes (Google is not offered on iOS). Verified on a physical iPhone: Apple sheet → Firebase `apple.com` user → `syncUserContext` wrote `users/{uid}` through App Check. Still open for submission: S0-23 (token revocation on delete), S0-24 (App Attest), push entitlement. | `ios/Runner/Runner.entitlements`, `test/app_smoke_test.dart`, `test/widgets/sign_in_identity_test.dart` | iOS fast-follow — unblocked |
 | ~~**B7**~~ | [RESOLVED Aug 29] Crashlytics on both error paths (async errors recorded non-fatal, so the crash-free gate is not understated); `PushService` registers the FCM token through `syncUserContext` and asks permission only from the D4 CTA; the docs/02 §7 funnel fires with `screen_completed` emitted centrally. **Fully resolved Aug 30:** Amplitude takes the product-analytics slot docs/05 reserved for Mixpanel, behind the `AnalyticsSink` seam — the vocabulary (`domain/analytics/lp_events.dart`) and the vendors (`data/analytics/`) are now separate, and `FanOutAnalytics` sends one event to both Amplitude and Firebase Analytics. Swapping or dropping a vendor is one entry in `analyticsProvider`. Reports from the **release build only** (`kReleaseMode`), so profile runs and `flutter test` stay out of the funnel the drop-off alert reads. | verified on emulator-5554; `test/analytics_test.dart` (9 cases) | S4 done |
 | ~~**B8**~~ | [RESOLVED Aug 29] `SettingsPersistence` stores the whole state object, so a field cannot be saved on write and forgotten on read. Restore is not awaited in `build()`; tests pin it off for determinism. | `test/data/settings_persistence_test.dart`, 5 cases | S4 done |
 | ~~**B9**~~ | [RESOLVED Aug 29] **The crons have rows to page over.** `syncUserContext` now runs on every path that establishes a session (restore, email, Apple, Google, and journey creation, which is where guest onboarding mints its anonymous uid). `users` went from 0 documents to 1 the moment a real sign-in happened. | production Firestore `users/{uid}` | S2 done |
@@ -123,7 +123,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **B14** | **Lock-screen widget absent** though founder-locked for MVP (Doc 3 header). No iOS widget extension target, no Android app widget. | `ios/Runner.xcodeproj` targets, `android/` | S0 decision |
 | ~~**B15**~~ | [RESOLVED Aug 29] **The name is Cirrus** (founder). Renamed test-first: 4 keys x 5 locales, `android:label`, `CFBundleDisplayName`, pubspec. Internal identifiers (`last_puff` package, `LastPuffApp`, `undoLastPuff`) deliberately unchanged - no user sees them. **Bundle IDs unchanged and still a founder call:** moving off `com.quitvape.last_puff` means re-registering both Firebase apps. | `flutter test` 52/52; `test/brand_name_test.dart` guards all 5 locales | S0 done |
 | **B16** | **No CI, no fastlane, no store assets**, default Flutter launcher icons. | repo root, `assets/` | S0 |
-| ~~**B17**~~ | [ANSWERED Aug 29] No macOS/Xcode on the dev machine. **Resolved by descoping iOS from the Oct 15 launch**, not by fixing the machine. iOS becomes a fast-follow and needs a Mac or macOS CI before it can ship. Everything iOS-shaped (B6, plist, entitlements, StoreKit) moves out of S0-S6. | `flutter doctor` on win32 | iOS fast-follow |
+| ~~**B17**~~ | [ANSWERED Aug 29] No macOS/Xcode on the dev machine. **Resolved by descoping iOS from the Oct 15 launch**, not by fixing the machine. iOS becomes a fast-follow and needs a Mac or macOS CI before it can ship. Everything iOS-shaped (B6, plist, entitlements, StoreKit) moves out of S0-S6. **Superseded Sep 1:** the dev machine is now a Mac (Xcode 26.3, iPhone paired wirelessly); iOS builds and runs — see B6. Launch order unchanged. | `flutter doctor` on win32; `flutter devices` on darwin | iOS fast-follow |
 
 ### 🔒 Security & correctness backlog (found in audit, none blocking S0)
 
@@ -167,7 +167,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 **Goal:** clear every hard blocker and start every clock that runs without us.
 
 **Administrative (start Day 1 — these have the longest lead times)**
-- [ ] `S0-1` Apple Developer Program enrollment ($99/yr) — **moved to the iOS fast-follow**; not on the Oct 15 path
+- [x] `S0-1` Apple Developer Program enrollment — done; team `PZFFFQ5T9X` (Individual, paid) signs the iOS build with automatic signing
 - [ ] `S0-2` ~~App Store Connect~~ → **Play Console: banking & tax / merchant setup** ← still the long pole, still blocks all IAP testing
 - [ ] `S0-3` Google Play Console ($25) + merchant account
 - [x] `S0-4` ✅ **Cirrus** (decided Aug 29; rename shipped). Original note: **Name decision (B15):** "LastPuff" vs "Cirrus". Blast radius — ASO title/subtitle/keywords (Doc 6 §4), store listings, domain, TikTok/IG/YT handles, the wordmark concept in Doc 7 §4 (built on the literal "LastPuff" ligature), 3 ARB keys, `AndroidManifest.xml`, `Info.plist`, Firebase display name. **Founder decision.**
@@ -190,10 +190,12 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S0-16` Confirm Firestore location matches `REGION`; set a **GCP budget alert** (README checklist)
 
 **iOS — currently unbuildable against Firebase (B6)**
-- [ ] `S0-17` *(iOS fast-follow)* Add `ios/Runner/GoogleService-Info.plist` — obtainable now via `firebase apps:sdkconfig`
-- [ ] `S0-18` *(iOS fast-follow)* URL schemes for Google Sign-In
-- [ ] `S0-19` *(iOS fast-follow)* `Runner.entitlements` — Sign in with Apple + push
-- [ ] `S0-20` *(iOS fast-follow)* Verify a clean iOS build — **needs a Mac; cannot be done here**
+- [x] `S0-17` ~~Add `ios/Runner/GoogleService-Info.plist`~~ **Not needed:** `main.dart` initializes with `DefaultFirebaseOptions.ios` (`firebase_options.dart`), so there is no plist to ship
+- [x] `S0-18` ~~URL schemes for Google Sign-In~~ **Not needed:** Google is Android-only in the sign-in screen (`_showGoogle`); iOS offers Apple + email
+- [x] `S0-19` `Runner.entitlements` — **Sign in with Apple done (Sep 1)**; `CODE_SIGN_ENTITLEMENTS` on Debug/Release/Profile, automatic signing adds the capability to the App ID on build. Push (`aps-environment`) deliberately not added yet: it needs the Push capability on the App ID and an APNs key in Firebase, and a build fails signing until both exist
+- [x] `S0-20` Clean iOS build verified Sep 1 on a physical iPhone (iOS 18.6, wireless) via `flutter run --dart-define-from-file=.dart_defines.json`: Apple sign-in, App Check token accepted (pinned debug secret), `syncUserContext` wrote `users/{uid}`. Deployment target 15.0 (Firebase 12 pods)
+- [ ] `S0-23` *(iOS submission)* **Revoke the Apple token on account deletion** — App Store 5.1.1(v). `deleteUserData` does not revoke today; the client side is `FirebaseAuth.revokeTokenWithAuthorizationCode`, which needs a fresh authorization code (re-run the Apple sheet at deletion) and the Apple private key configured on the Firebase Apple provider. Not needed for dev-device sign-in
+- [ ] `S0-24` *(iOS submission)* **App Attest for the release build** — `AppleAppAttestProvider` is already the release provider in `app_check_setup.dart`; register the iOS app's Team ID under App Check in the Firebase console and add the App Attest capability before the first TestFlight build, or every callable fails on release
 
 **Foundation**
 - [x] `S0-21` CI running three jobs: Flutter (incl. an l10n-drift check), functions verify, and an emulator job for rules + integration
@@ -1571,7 +1573,7 @@ creates it — a named-but-never-created channel files pushes under
 "Miscellaneous"); `PushService.routeFor`'s allow-list — the one untrusted
 -input parser on the client — got its unit tests. Accepted: a
 revoked-permission sign-out strands the server row until the 60-day prune;
-iOS has no push entitlements because iOS cannot be built at all (no Mac).
+iOS has no push entitlement yet: it now builds (Sep 1), but `aps-environment` needs the Push capability on the App ID and an APNs key in Firebase, which is its own item.
 
 #### Copy and the small debts
 

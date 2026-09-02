@@ -19,12 +19,20 @@ import 'package:flutter/foundation.dart';
 /// machine is already trusted.
 ///
 /// Supply it with `--dart-define=LP_APPCHECK_DEBUG_TOKEN=<uuid>` and register
-/// the same value once:
+/// the same value once **per Firebase app** — the Android and iOS apps are
+/// separate registrations, and a token known to only one of them makes the
+/// other platform's build fail every callable:
 ///
 /// ```
 /// firebase appcheck:debugtokens:create <uuid> --project alastpuff \
 ///   --app 1:826701239342:android:6f8f39f49c52ee24e4bbbf --force
+/// firebase appcheck:debugtokens:create <uuid> --project alastpuff \
+///   --app 1:826701239342:ios:042418c48b5e6f38e4bbbf --force
 /// ```
+///
+/// `tool/device.ps1` does both the define and the registration on Windows. On
+/// macOS run the commands above by hand and launch with
+/// `flutter run --dart-define-from-file=.dart_defines.json`.
 ///
 /// It is a dart-define rather than a constant because a registered debug token
 /// bypasses attestation for the whole project — it is a credential, and
@@ -51,7 +59,8 @@ Future<void> activateAppCheck() async {
       'This build minted a throwaway token that is NOT registered, so'
       ' every callable will be rejected (403) and nothing will reach'
       ' Firestore.\n'
-      'Launch with ./tool/device.ps1 instead of `flutter run`.\n'
+      'Launch with ./tool/device.ps1, or pass'
+      ' --dart-define-from-file=.dart_defines.json.\n'
       '========================================================',
     );
   }
@@ -92,7 +101,7 @@ Future<void> logAppCheckStatus() async {
     final pinned = appCheckDebugToken.isNotEmpty;
     debugPrint(
       'app-check: token acquired (${pinned ? 'pinned debug secret' : 'rotating debug secret — '
-                  'pass --dart-define=LP_APPCHECK_DEBUG_TOKEN to stop the rotation'}).',
+                'pass --dart-define=LP_APPCHECK_DEBUG_TOKEN to stop the rotation'}).',
     );
   } on Object catch (error) {
     debugPrint(
