@@ -1302,13 +1302,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'dieses Gefühl peakt und vergeht — die meisten Cravings sterben in 15 Min.';
 
   @override
-  String get panicBreatheIn => 'Ein…';
+  String get panicBreatheInstruction => 'Atme mit dem Kreis.';
 
   @override
-  String get panicBreatheHold => 'Halten…';
+  String get panicBreatheIn => 'Einatmen';
 
   @override
-  String get panicBreatheOut => 'Aus…';
+  String get panicBreatheHold => 'Halten';
+
+  @override
+  String get panicBreatheOut => 'Ausatmen';
 
   @override
   String get panicBreathePattern => 'Ein 4 · Halten 7 · Aus 8';

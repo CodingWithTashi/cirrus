@@ -798,9 +798,10 @@
     }
   },
   "panicBreatheNote": "this feeling peaks and passes — most cravings die in 15 min",
-  "panicBreatheIn": "In…",
-  "panicBreatheHold": "Hold…",
-  "panicBreatheOut": "Out…",
+  "panicBreatheInstruction": "Breathe with the circle.",
+  "panicBreatheIn": "Breathe in",
+  "panicBreatheHold": "Hold",
+  "panicBreatheOut": "Breathe out",
   "panicBreathePattern": "In 4 · Hold 7 · Out 8",
   "panicCravingTimer": "craving timer · {time} · peaks ~15 min",
   "@panicCravingTimer": {

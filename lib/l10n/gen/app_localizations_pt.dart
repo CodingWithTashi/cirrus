@@ -1297,13 +1297,16 @@ class AppLocalizationsPt extends AppLocalizations {
       'esta sensação atinge o pico e passa — a maioria dos cravings morre em 15 min';
 
   @override
-  String get panicBreatheIn => 'Inspira…';
+  String get panicBreatheInstruction => 'Respira com o círculo.';
 
   @override
-  String get panicBreatheHold => 'Sustém…';
+  String get panicBreatheIn => 'Inspira';
 
   @override
-  String get panicBreatheOut => 'Expira…';
+  String get panicBreatheHold => 'Sustém';
+
+  @override
+  String get panicBreatheOut => 'Expira';
 
   @override
   String get panicBreathePattern => 'Inspira 4 · Sustém 7 · Expira 8';

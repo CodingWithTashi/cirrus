@@ -2282,22 +2282,28 @@ abstract class AppLocalizations {
   /// **'this feeling peaks and passes — most cravings die in 15 min'**
   String get panicBreatheNote;
 
+  /// No description provided for @panicBreatheInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe with the circle.'**
+  String get panicBreatheInstruction;
+
   /// No description provided for @panicBreatheIn.
   ///
   /// In en, this message translates to:
-  /// **'In…'**
+  /// **'Breathe in'**
   String get panicBreatheIn;
 
   /// No description provided for @panicBreatheHold.
   ///
   /// In en, this message translates to:
-  /// **'Hold…'**
+  /// **'Hold'**
   String get panicBreatheHold;
 
   /// No description provided for @panicBreatheOut.
   ///
   /// In en, this message translates to:
-  /// **'Out…'**
+  /// **'Breathe out'**
   String get panicBreatheOut;
 
   /// No description provided for @panicBreathePattern.

@@ -1299,13 +1299,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'cette sensation monte puis passe — la plupart des cravings meurent en 15 min';
 
   @override
-  String get panicBreatheIn => 'Inspire…';
+  String get panicBreatheInstruction => 'Respire avec le cercle.';
 
   @override
-  String get panicBreatheHold => 'Retiens…';
+  String get panicBreatheIn => 'Inspire';
 
   @override
-  String get panicBreatheOut => 'Expire…';
+  String get panicBreatheHold => 'Retiens';
+
+  @override
+  String get panicBreatheOut => 'Expire';
 
   @override
   String get panicBreathePattern => 'Inspire 4 · Retiens 7 · Expire 8';
