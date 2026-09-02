@@ -1,0 +1,16 @@
+# Line-ending policy: LF in the repo and in the working tree, on every OS.
+# The index has always been LF (core.autocrlf on the Windows machine); this
+# stops checkouts from re-introducing CRLF and keeps macOS/Windows diffs clean.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binaries: never converted, never diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.ico binary
+*.jar binary

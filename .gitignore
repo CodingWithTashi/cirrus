@@ -43,7 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/functions/alastpuff-firebase-adminsdk-fbsvc-edb2852a4d.json
+
+# Firebase service-account keys. Deployed functions use Application Default
+# Credentials, so no key is ever needed in git; the glob survives a rotation.
+**/*-adminsdk-*.json
 
 # App Check debug secret (see lib/data/api/firebase/app_check_setup.dart).
 # A registered debug token bypasses attestation for the whole project, so it
@@ -54,3 +57,6 @@ app.*.map.json
 .firebase/
 .appcheck_token.registered*
 .dart_defines.json
+
+# Claude Code per-machine permissions and hooks (local paths, local tooling).
+**/.claude/settings.local.json

@@ -27,7 +27,6 @@ dependencies:
   # firebase_auth's AppleAuthProvider drives the native sheet on iOS.
   google_sign_in: ^7.2.0
 
-  cupertino_icons: ^1.0.8
   cloud_functions: ^6.4.0
   firebase_app_check: ^0.4.7
   flutter_timezone: ^5.1.0
@@ -46,7 +45,6 @@ dependencies:
   # Needed by flutter_local_notifications' zonedSchedule: a repeating daily
   # alarm has to be anchored in a real timezone, or DST silently shifts it.
   timezone: ^0.11.1
-  flutter_launcher_icons: ^0.14.4
   amplitude_flutter: ^4.7.1
   showcaseview: ^5.1.0
   purchases_flutter: ^10.10.1
@@ -62,6 +60,8 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Build-time only: `dart run flutter_launcher_icons` (see the block below).
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
