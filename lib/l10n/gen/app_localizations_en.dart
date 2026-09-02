@@ -81,9 +81,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPrivacy => 'Privacy';
 
   @override
-  String get authRestorePurchase => 'Restore purchase';
-
-  @override
   String get authRegisterTitle => 'Create your account';
 
   @override
@@ -918,9 +915,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallTitleUpgrade => 'Go further with Premium.';
 
   @override
-  String get paywallSubtitle => 'Try everything free for 7 days.';
-
-  @override
   String get paywallFeatCoach => 'Unlimited AI coach that remembers your why';
 
   @override
@@ -943,9 +937,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallYearlyBadge => 'BEST VALUE';
-
-  @override
-  String get paywallYearlySub => '\$0.77/week · SAVE 74%';
 
   @override
   String get paywallMonthly => 'MONTHLY';
@@ -1110,10 +1101,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Craving forecasts for the hours you usually reach for it.';
 
   @override
-  String get premiumPitchHistory =>
-      'Your whole history, not just the last 7 days.';
-
-  @override
   String get premiumFreeHistoryNote => 'Free shows your last 7 days.';
 
   @override
@@ -1127,10 +1114,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get premiumPitchHealth =>
       'The full timeline, from two weeks to a year.';
-
-  @override
-  String get premiumPitchCoach =>
-      'Ember around the clock — 100 messages a day instead of 5.';
 
   @override
   String get freePlanTitle => 'Free gets you moving.';
@@ -2228,8 +2211,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Not posted — that\'s 3 today. The cap resets at midnight.';
 
   @override
-  String get buddyLinkCopied =>
-      'Link copied — quitting hits different with backup.';
+  String get linkCopied => 'Link copied — quitting hits different with backup.';
 
   @override
   String get moneyTitle => 'Money back';
@@ -2834,9 +2816,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSubscription => 'Manage subscription';
 
   @override
-  String get settingsSubscriptionValue => 'Premium · yearly';
-
-  @override
   String get settingsSubscriptionFree => 'Free plan';
 
   @override
@@ -2989,9 +2968,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get frameMapTitle => 'All 52 design frames';
 
   @override
-  String get frameMapOpen => 'Browse all 52 screens →';
-
-  @override
   String get frameMapNote =>
       'Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.';
 
@@ -3059,9 +3035,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moderationLoading => 'Loading the queue…';
-
-  @override
-  String get authWorking => 'One sec…';
 
   @override
   String get slipCurveNoteParty =>

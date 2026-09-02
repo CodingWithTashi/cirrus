@@ -67,7 +67,7 @@ class VoltDot extends StatelessWidget {
   }
 }
 
-/// Wordmark row: glowing dot + "LastPuff".
+/// Wordmark row: glowing dot + the app name (`appName`, "Cirrus").
 class Wordmark extends StatelessWidget {
   const Wordmark({super.key, this.fontSize = 18, this.center = false});
 

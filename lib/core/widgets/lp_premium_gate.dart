@@ -166,35 +166,3 @@ class _LockCard extends StatelessWidget {
     );
   }
 }
-
-/// A small "Premium" pill for a row or a tab that leads somewhere gated —
-/// the honest label, not the gate itself (the destination carries the gate).
-class LpPremiumPill extends StatelessWidget {
-  const LpPremiumPill({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: lp.voltSoft,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.lock_outline, size: 11, color: lp.voltText),
-          const SizedBox(width: 3),
-          Text(
-            context.l10n.premiumLockTitle,
-            style: LpType.micro(
-              lp.voltText,
-              weight: FontWeight.w700,
-            ).copyWith(letterSpacing: 0.8),
-          ),
-        ],
-      ),
-    );
-  }
-}

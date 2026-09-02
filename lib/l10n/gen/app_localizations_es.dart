@@ -81,9 +81,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authPrivacy => 'Privacidad';
 
   @override
-  String get authRestorePurchase => 'Restaurar compra';
-
-  @override
   String get authRegisterTitle => 'Crea tu cuenta';
 
   @override
@@ -924,9 +921,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paywallTitleUpgrade => 'Llega más lejos con Premium.';
 
   @override
-  String get paywallSubtitle => 'Prueba todo gratis durante 7 días.';
-
-  @override
   String get paywallFeatCoach => 'Coach de IA ilimitado que recuerda tu porqué';
 
   @override
@@ -950,9 +944,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallYearlyBadge => 'MEJOR PRECIO';
-
-  @override
-  String get paywallYearlySub => '0,77 \$/semana · AHORRA 74%';
 
   @override
   String get paywallMonthly => 'MENSUAL';
@@ -1117,10 +1108,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Previsiones de antojos para las horas en que sueles recurrir a él.';
 
   @override
-  String get premiumPitchHistory =>
-      'Todo tu historial, no solo los últimos 7 días.';
-
-  @override
   String get premiumFreeHistoryNote =>
       'El plan Gratis muestra tus últimos 7 días.';
 
@@ -1135,10 +1122,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get premiumPitchHealth =>
       'La línea de tiempo completa, de dos semanas a un año.';
-
-  @override
-  String get premiumPitchCoach =>
-      'Ember a todas horas — 100 mensajes al día en vez de 5.';
 
   @override
   String get freePlanTitle => 'Gratis ya te pone en marcha.';
@@ -2243,7 +2226,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se publicó: ya van 3 hoy. El límite se reinicia a medianoche.';
 
   @override
-  String get buddyLinkCopied =>
+  String get linkCopied =>
       'Enlace copiado — dejarlo con refuerzos pega distinto.';
 
   @override
@@ -2852,9 +2835,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSubscription => 'Gestionar suscripción';
 
   @override
-  String get settingsSubscriptionValue => 'Premium · anual';
-
-  @override
   String get settingsSubscriptionFree => 'Plan Gratis';
 
   @override
@@ -3008,9 +2988,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get frameMapTitle => 'Los 52 frames del diseño';
 
   @override
-  String get frameMapOpen => 'Ver las 52 pantallas →';
-
-  @override
   String get frameMapNote =>
       'Cada frame de los cuatro handoffs, a un toque. Las filas cargan el viaje demo o las respuestas del quiz según haga falta.';
 
@@ -3078,9 +3055,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get moderationLoading => 'Cargando la cola…';
-
-  @override
-  String get authWorking => 'Un segundo…';
 
   @override
   String get slipCurveNoteParty =>

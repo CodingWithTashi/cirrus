@@ -167,16 +167,14 @@ void main() {
       expect(find.text(l10n.paywallCta), findsOneWidget);
     });
 
-    test('every locale says seven days and none still says three', () {
+    test('no locale still counts three days', () {
       // The trial length was 3 days in the copy alone — nothing computed it —
       // so the only thing that can drift is a string. Pinned in all five.
       for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
         final arb =
             jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
                 as Map<String, dynamic>;
-        expect(arb['paywallSubtitle'] as String, contains('7'), reason: locale);
         for (final key in [
-          'paywallSubtitle',
           'paywallCta',
           'trialEndingStatsLabel',
         ]) {

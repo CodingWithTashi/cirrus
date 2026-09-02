@@ -236,12 +236,6 @@ abstract class AppLocalizations {
   /// **'Privacy'**
   String get authPrivacy;
 
-  /// No description provided for @authRestorePurchase.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore purchase'**
-  String get authRestorePurchase;
-
   /// No description provided for @authRegisterTitle.
   ///
   /// In en, this message translates to:
@@ -1688,12 +1682,6 @@ abstract class AppLocalizations {
   /// **'Go further with Premium.'**
   String get paywallTitleUpgrade;
 
-  /// No description provided for @paywallSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Try everything free for 7 days.'**
-  String get paywallSubtitle;
-
   /// No description provided for @paywallFeatCoach.
   ///
   /// In en, this message translates to:
@@ -1741,12 +1729,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'BEST VALUE'**
   String get paywallYearlyBadge;
-
-  /// No description provided for @paywallYearlySub.
-  ///
-  /// In en, this message translates to:
-  /// **'\$0.77/week · SAVE 74%'**
-  String get paywallYearlySub;
 
   /// No description provided for @paywallMonthly.
   ///
@@ -1987,12 +1969,6 @@ abstract class AppLocalizations {
   /// **'Craving forecasts for the hours you usually reach for it.'**
   String get premiumPitchForecast;
 
-  /// No description provided for @premiumPitchHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Your whole history, not just the last 7 days.'**
-  String get premiumPitchHistory;
-
   /// No description provided for @premiumFreeHistoryNote.
   ///
   /// In en, this message translates to:
@@ -2016,12 +1992,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The full timeline, from two weeks to a year.'**
   String get premiumPitchHealth;
-
-  /// No description provided for @premiumPitchCoach.
-  ///
-  /// In en, this message translates to:
-  /// **'Ember around the clock — 100 messages a day instead of 5.'**
-  String get premiumPitchCoach;
 
   /// No description provided for @freePlanTitle.
   ///
@@ -3703,11 +3673,11 @@ abstract class AppLocalizations {
   /// **'Not posted — that\'s 3 today. The cap resets at midnight.'**
   String get communityStatusCapped;
 
-  /// No description provided for @buddyLinkCopied.
+  /// No description provided for @linkCopied.
   ///
   /// In en, this message translates to:
   /// **'Link copied — quitting hits different with backup.'**
-  String get buddyLinkCopied;
+  String get linkCopied;
 
   /// No description provided for @moneyTitle.
   ///
@@ -4717,12 +4687,6 @@ abstract class AppLocalizations {
   /// **'Manage subscription'**
   String get settingsSubscription;
 
-  /// No description provided for @settingsSubscriptionValue.
-  ///
-  /// In en, this message translates to:
-  /// **'Premium · yearly'**
-  String get settingsSubscriptionValue;
-
   /// No description provided for @settingsSubscriptionFree.
   ///
   /// In en, this message translates to:
@@ -4987,12 +4951,6 @@ abstract class AppLocalizations {
   /// **'All 52 design frames'**
   String get frameMapTitle;
 
-  /// No description provided for @frameMapOpen.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse all 52 screens →'**
-  String get frameMapOpen;
-
   /// No description provided for @frameMapNote.
   ///
   /// In en, this message translates to:
@@ -5100,12 +5058,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading the queue…'**
   String get moderationLoading;
-
-  /// No description provided for @authWorking.
-  ///
-  /// In en, this message translates to:
-  /// **'One sec…'**
-  String get authWorking;
 
   /// No description provided for @slipCurveNoteParty.
   ///

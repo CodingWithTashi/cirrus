@@ -471,24 +471,6 @@ final class CoachDone extends CoachEvent {
   final CoachReply reply;
 }
 
-/// A milestone badge definition + earned state.
-class QuitBadge {
-  const QuitBadge({
-    required this.id,
-    required this.emoji,
-    required this.earned,
-    this.ember = false,
-  });
-
-  /// Stable id — the UI maps it to a localized name.
-  final String id;
-  final String emoji;
-  final bool earned;
-
-  /// Streak-family badges glow Ember instead of Volt.
-  final bool ember;
-}
-
 /// What the server says about a craving session that just opened
 /// (docs/03 §7, docs/04 §7).
 ///

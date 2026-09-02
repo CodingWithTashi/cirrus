@@ -82,9 +82,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authPrivacy => 'Confidentialité';
 
   @override
-  String get authRestorePurchase => 'Restaurer l\'achat';
-
-  @override
   String get authRegisterTitle => 'Crée ton compte';
 
   @override
@@ -924,9 +921,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get paywallTitleUpgrade => 'Va plus loin avec Premium.';
 
   @override
-  String get paywallSubtitle => 'Essaie tout gratuitement pendant 7 jours.';
-
-  @override
   String get paywallFeatCoach =>
       'Coach IA illimité qui se souvient de ton pourquoi';
 
@@ -951,9 +945,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get paywallYearlyBadge => 'MEILLEUR PRIX';
-
-  @override
-  String get paywallYearlySub => '0,77 \$/sem · -74%';
 
   @override
   String get paywallMonthly => 'MENSUEL';
@@ -1119,10 +1110,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Des prévisions d\'envie pour les heures où tu craques d\'habitude.';
 
   @override
-  String get premiumPitchHistory =>
-      'Tout ton historique, pas seulement les 7 derniers jours.';
-
-  @override
   String get premiumFreeHistoryNote =>
       'Le plan Gratuit montre tes 7 derniers jours.';
 
@@ -1137,10 +1124,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get premiumPitchHealth =>
       'La chronologie complète, de deux semaines à un an.';
-
-  @override
-  String get premiumPitchCoach =>
-      'Ember à toute heure — 100 messages par jour au lieu de 5.';
 
   @override
   String get freePlanTitle => 'Le Gratuit te met en route.';
@@ -2247,7 +2230,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Non publié — ça fait 3 aujourd\'hui. Le compteur repart à minuit.';
 
   @override
-  String get buddyLinkCopied =>
+  String get linkCopied =>
       'Lien copié — arrêter avec du renfort, ça change tout.';
 
   @override
@@ -2858,9 +2841,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsSubscription => 'Gérer l\'abonnement';
 
   @override
-  String get settingsSubscriptionValue => 'Premium · annuel';
-
-  @override
   String get settingsSubscriptionFree => 'Plan Gratuit';
 
   @override
@@ -3014,9 +2994,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get frameMapTitle => 'Les 52 écrans du design';
 
   @override
-  String get frameMapOpen => 'Parcourir les 52 écrans →';
-
-  @override
   String get frameMapNote =>
       'Chaque écran des quatre handoffs, à un tap. Les lignes chargent le parcours démo ou les réponses du quiz si besoin.';
 
@@ -3084,9 +3061,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get moderationLoading => 'Chargement de la file…';
-
-  @override
-  String get authWorking => 'Une seconde…';
 
   @override
   String get slipCurveNoteParty =>

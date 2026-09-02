@@ -302,7 +302,7 @@ class Under18Step extends ConsumerWidget {
               if (opened || !context.mounted) return;
               await Clipboard.setData(ClipboardData(text: copyText));
               if (context.mounted) {
-                showLpSnack(context, context.l10n.buddyLinkCopied);
+                showLpSnack(context, context.l10n.linkCopied);
               }
             },
             child: Container(
