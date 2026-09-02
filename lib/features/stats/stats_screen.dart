@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
@@ -8,6 +12,7 @@ import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
+import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
@@ -16,6 +21,7 @@ import '../day1/day1_spotlight.dart';
 import '../settings/danger_hours_sheet.dart';
 import 'edit_day_sheet.dart';
 import '../../domain/logic/danger_hours.dart';
+import '../../domain/date_key.dart';
 import '../../domain/logic/day_window.dart';
 import '../../domain/logic/dependence_engine.dart';
 import '../../domain/models/journey_state.dart';
@@ -34,6 +40,11 @@ class StatsScreen extends ConsumerStatefulWidget {
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _range = 1; // 0=day, 1=week, 2=month
 
+  /// The range actually rendered: Month is Premium, so a free account (or
+  /// one whose Premium lapsed with Month selected) is clamped to Week.
+  int get _shownRange =>
+      ref.read(isPremiumProvider) ? _range : math.min(_range, 1);
+
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
@@ -48,6 +59,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     // The clock seam, so "what does Stats show on Tue Sep 29 with nothing
     // logged since Sunday" is a widget test.
     final now = snap.now;
+    // Free shows the last 7 days, Premium the whole journey (docs/01 §10).
+    // One list, derived once, so every card below agrees on the window.
+    final premium = ref.watch(isPremiumProvider);
+    final historyFloor = LpDate.addDays(LpDate.dayStart(now), -6);
+    final visibleLogs = premium
+        ? logs
+        : [
+            for (final log in logs)
+              if (!log.date.isBefore(historyFloor)) log,
+          ];
 
     return Scaffold(
       body: SafeArea(
@@ -64,11 +85,27 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     l10n.statsRangeWeek,
                     l10n.statsRangeMonth,
                   ],
-                  selectedIndex: _range,
-                  onChanged: (i) => setState(() => _range = i),
+                  selectedIndex: _shownRange,
+                  onChanged: (i) {
+                    // The month view is Premium. The pill stays visible so the
+                    // feature is not hidden; tapping it opens the door.
+                    if (i == 2 && !premium) {
+                      context.push(Routes.paywallFrom('history'));
+                      return;
+                    }
+                    setState(() => _range = i);
+                  },
                 ),
               ],
             ),
+            if (!premium)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  l10n.premiumFreeHistoryNote,
+                  style: LpType.caption11(lp.textFaint),
+                ),
+              ),
             const SizedBox(height: 14),
             if (logs.length < 2) ...[
               LpCard(
@@ -105,8 +142,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               const SizedBox(height: 10),
               _triggerHoursCard(context, logs, snap.dangerWindow, locale),
               const SizedBox(height: 10),
-              _nicotineCard(context, journey, logs),
+              _nicotineCard(context, journey, visibleLogs),
               const SizedBox(height: 10),
+              // Records are records, not history browsing: a "best day" over
+              // seven days would be a wrong number, not a hidden one.
               _recordsRow(context, journey, logs),
               const SizedBox(height: 12),
               Center(
@@ -131,13 +170,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final lp = context.lp;
     final l10n = context.l10n;
 
-    final (window, label) = switch (_range) {
+    final (window, label) = switch (_shownRange) {
       0 => (1, l10n.statsPuffsToday),
       1 => (7, l10n.statsPuffsThisWeek),
       _ => (30, l10n.statsPuffsThisMonth),
     };
 
-    if (_range == 0) {
+    if (_shownRange == 0) {
       // TODAY by hour — `journey.logFor(now)`, never "the last logged day":
       // that drew Sep 27's 10 AM bucket on a Sep 29 with no puffs (QA L7).
       // Long-press opens today's editor, which is what the caption under the
@@ -236,7 +275,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             hardest: hardest,
             best: best,
             locale: locale,
-            compact: _range == 2,
+            compact: _shownRange == 2,
           ),
           const SizedBox(height: 8),
           Text(
@@ -281,6 +320,25 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       return max;
     }
 
+    final forecast = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        HourHeatmap(
+          heat: [for (final b in buckets) bucketHeat(b)],
+          labels: [for (final b in buckets) LpFormat.hour(b, locale)],
+        ),
+        if (window != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.statsDangerWindow(
+              '${LpFormat.hour(window.$1, locale)}–${LpFormat.hour(window.$2 % 24, locale)}',
+            ),
+            style: LpType.caption11(lp.textSecondary),
+          ),
+        ],
+      ],
+    );
+
     // Frame 38: tapping the heatmap opens the danger-hours editor.
     //
     // Also Day-1 step three's target. This card rather than the Settings row
@@ -299,19 +357,18 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionLabel(l10n.statsTriggerHours),
-              HourHeatmap(
-                heat: [for (final b in buckets) bucketHeat(b)],
-                labels: [for (final b in buckets) LpFormat.hour(b, locale)],
-              ),
-              if (window != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l10n.statsDangerWindow(
-                    '${LpFormat.hour(window.$1, locale)}–${LpFormat.hour(window.$2 % 24, locale)}',
-                  ),
-                  style: LpType.caption11(lp.textSecondary),
-                ),
-              ],
+              // The forecast — a window worth a nudge — is Premium (docs/01
+              // §10). Before one exists (day 1, the tour's target) the heatmap
+              // is only the day's shape and stays open to everyone.
+              if (window != null && !ref.watch(isPremiumProvider))
+                LpPremiumGate(
+                  source: 'forecast',
+                  pitch: l10n.premiumPitchForecast,
+                  compact: true,
+                  child: forecast,
+                )
+              else
+                forecast,
             ],
           ),
         ),

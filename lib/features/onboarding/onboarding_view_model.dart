@@ -39,7 +39,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
 
   /// Riverpod 2's `Ref` has no `mounted`, and both of the async warm-ups here
   /// outlive a fast user: a draft read and a testimonial fetch can both land
-  /// after the notifier is gone (`completeWithTier` invalidates it), and
+  /// after the notifier is gone (`complete` invalidates it), and
   /// writing state then throws.
   bool _disposed = false;
 
@@ -407,12 +407,11 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// draft clears. Profile and plan are captured BEFORE the await — nothing
   /// may touch `state`/`ref` after [Ref.invalidateSelf], which must stay the
   /// final statement.
-  Future<void> completeWithTier(SubscriptionTier tier) async {
+  Future<void> complete() async {
     final (alias, emoji) = _randomAlias();
     final profile = UserProfile(
       alias: alias,
       avatarEmoji: emoji,
-      tier: tier,
       email: state.email,
       gender: state.gender,
       birthYear: state.birthYear,

@@ -92,6 +92,9 @@ class _FailingDelete implements AuthRepository {
   Future<String?> currentUserId() => _inner.currentUserId();
 
   @override
+  Future<String?> ensureSessionId() => _inner.ensureSessionId();
+
+  @override
   Future<JourneyState?> restoreSession() => _inner.restoreSession();
 
   @override

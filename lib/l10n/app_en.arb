@@ -539,6 +539,7 @@
   "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitle": "Your plan is ready.",
+  "paywallTitleUpgrade": "Go further with Premium.",
   "paywallSubtitle": "Try everything free for 7 days.",
   "paywallFeatCoach": "Unlimited AI coach that remembers your why",
   "paywallFeatPanic": "Panic button: a 60-second craving killer",
@@ -568,6 +569,7 @@
   },
   "paywallTimelineTodayBody": "Everything unlocked",
   "paywallTimelineRemindBody": "We remind you",
+  "paywallTimelineNoRemindBody": "Last day to cancel free",
   "paywallTimelineChargeBody": "First charge {price}. Cancel before, pay nothing.",
   "@paywallTimelineChargeBody": {
     "placeholders": {
@@ -600,6 +602,94 @@
       }
     }
   },
+  "paywallDisclosureTrial": "{price} per {period} after your {days}-day free trial. Renews automatically until you cancel — cancel anytime in your {store} subscription settings.",
+  "@paywallDisclosureTrial": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallDisclosure": "{price} per {period}. Renews automatically until you cancel — cancel anytime in your {store} subscription settings.",
+  "@paywallDisclosure": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPeriodWeek": "week",
+  "paywallPeriodMonth": "month",
+  "paywallPeriodYear": "year",
+  "paywallStoreApple": "App Store",
+  "paywallStoreGoogle": "Google Play",
+  "paywallYearlySubLive": "{perWeek}/week · SAVE {percent}%",
+  "@paywallYearlySubLive": {
+    "placeholders": {
+      "perWeek": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallYearlySubPerWeek": "{perWeek}/week",
+  "@paywallYearlySubPerWeek": {
+    "placeholders": {
+      "perWeek": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallCtaTrial": "{days, plural, =1{Start my free day} other{Start my free {days} days}}",
+  "@paywallCtaTrial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallCtaSubscribe": "Start Premium",
+  "paywallSubtitleTrial": "{days, plural, =1{Try everything free for a day.} other{Try everything free for {days} days.}}",
+  "@paywallSubtitleTrial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallSubtitleNoTrial": "Everything unlocked, from today.",
+  "paywallRestore": "Restore purchases",
+  "paywallRestored": "Welcome back — Premium is on.",
+  "paywallRestoreNothing": "Nothing to restore on this store account yet.",
+  "paywallPurchasePending": "Your payment is pending. Premium switches on as soon as the store confirms it.",
+  "paywallPricesUnavailable": "Live prices aren't loading right now — the store shows the exact price before you confirm.",
+  "premiumLockTitle": "Premium",
+  "premiumLockCta": "See Premium",
+  "premiumPitchInsight": "Your weekly report, written from your own numbers.",
+  "premiumPitchForecast": "Craving forecasts for the hours you usually reach for it.",
+  "premiumPitchHistory": "Your whole history, not just the last 7 days.",
+  "premiumFreeHistoryNote": "Free shows your last 7 days.",
+  "premiumPitchCompose": "Posting is part of Premium. Reading and reacting are always free — and so is an SOS.",
+  "premiumPitchPlan": "A plan that adapts when you slip — tonight's adjustment, every night.",
+  "premiumPitchHealth": "The full timeline, from two weeks to a year.",
+  "premiumPitchCoach": "Ember around the clock — 100 messages a day instead of 5.",
   "freePlanTitle": "Free gets you moving.",
   "freePlanSubtitle": "Yours forever. No countdown, no nagging.",
   "freePlanFeat1": "Puff log + streaks",
@@ -854,8 +944,8 @@
     }
   },
   "panicLoopCoachLocked": "you've used today's free AI session",
-  "gameTitle": "Tap every spark",
-  "gameSubtitle": "60 seconds. Thumbs busy, brain busy.",
+  "gameTitle": "Crowd the craving out.",
+  "gameSubtitle": "A craving is mostly a picture in your head. Tap the falling tiles for 60 seconds and it gets less room to grow.",
   "gameTimeLeft": "{seconds}s",
   "@gameTimeLeft": {
     "placeholders": {
@@ -864,6 +954,9 @@
       }
     }
   },
+  "gameNewBest": "new best",
+  "gameRoundDone": "60 seconds done.",
+  "gameAnotherRound": "Still craving — 60 more seconds",
   "survivedPlusOne": "+1 craving beaten",
   "survivedLine1": "That one had nothing on you.",
   "survivedLine2": "The wave broke. You didn't.",
@@ -874,6 +967,23 @@
   "survivedLine7": "That itch just paid your future self.",
   "survivedLine8": "Cold-blooded. In the best way.",
   "survivedTotalLabel": "cravings survived total",
+  "survivedGameTiles": "{count, plural, one{1 tile} other{{count} tiles}}",
+  "@survivedGameTiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "survivedGameNewBest": "NEW BEST",
+  "survivedGameBest": "best {best}",
+  "@survivedGameBest": {
+    "placeholders": {
+      "best": {
+        "type": "int"
+      }
+    }
+  },
   "survivedShare": "Share the W ↗",
   "survivedBack": "Back to today",
   "survivedShareCopied": "Stat card copied — paste it anywhere.",
@@ -923,6 +1033,12 @@
   "errorOfflineBody": "You're offline right now. Nothing's lost — reconnect and we'll pick up right where you left off.",
   "errorGenericTitle": "Well, that glitched",
   "errorGenericBody": "That one's on us, not you. Give it another shot in a sec.",
+  "errorPurchaseNotAllowedTitle": "Purchases are off on this device",
+  "errorPurchaseNotAllowedBody": "This device or account can't buy subscriptions right now — usually parental controls or a store restriction. Nothing was charged.",
+  "errorStoreTitle": "The store didn't answer",
+  "errorStoreBody": "Google Play or the App Store had a moment. Nothing was charged — try again in a minute.",
+  "errorReceiptOwnedTitle": "That subscription belongs to another account",
+  "errorReceiptOwnedBody": "This store account's subscription is linked to a different Cirrus sign-in. Sign in there, or restore from that account.",
   "errorRejectedTitle": "This build got bounced",
   "errorRejectedBody": "Your connection is fine — our end just didn't recognise this app. Nothing you can fix, and nothing you logged is lost.",
   "errorRetry": "Run it back",
@@ -1749,6 +1865,27 @@
   "settingsSubscription": "Manage subscription",
   "settingsSubscriptionValue": "Premium · yearly",
   "settingsSubscriptionFree": "Free plan",
+  "settingsSubscriptionYearly": "Premium · yearly",
+  "settingsSubscriptionMonthly": "Premium · monthly",
+  "settingsSubscriptionWeekly": "Premium · weekly",
+  "settingsSubscriptionPremium": "Premium",
+  "settingsSubscriptionTrial": "Trial · ends {date}",
+  "@settingsSubscriptionTrial": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSubscriptionEnds": "Premium · ends {date}",
+  "@settingsSubscriptionEnds": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsManageUnavailable": "Manage this subscription from the store account that bought it.",
   "settingsNotifications": "Notifications",
   "settingsDangerHours": "Danger hours",
   "settingsDangerHoursEdit": "{range} · edit ›",
@@ -1801,15 +1938,17 @@
   "trialEndingVsDay1": "puffs vs day 1",
   "trialEndingCravings": "cravings beaten",
   "trialEndingSaved": "saved",
-  "trialEndingKeep": "Keep Premium — {price}/yr",
-  "@trialEndingKeep": {
+  "trialEndingKeep": "Keep Premium",
+  "trialEndingSwitchFree": "Switch to Free (keeps your data)",
+  "trialEndsOn": "Your trial ends {date}.",
+  "@trialEndsOn": {
     "placeholders": {
-      "price": {
+      "date": {
         "type": "String"
       }
     }
   },
-  "trialEndingSwitchFree": "Switch to Free (keeps your data)",
+  "trialEndingNotifTitle": "Your trial ends tomorrow",
   "frameMapTitle": "All 52 design frames",
   "frameMapOpen": "Browse all 52 screens →",
   "frameMapNote": "Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.",

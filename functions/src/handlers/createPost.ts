@@ -19,7 +19,7 @@ import {prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
-import {claimDailyPost} from '../lib/usage';
+import {claimDailyPost, tierFor} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
 
 /** docs/03 §9: text <= 500 chars, one tag required, 3 posts/day. */
@@ -41,18 +41,13 @@ export const createPost = onCall(
       throw new HttpsError('invalid-argument', 'A post tag is required.');
     }
 
-    // Refused at the door, not after the write: the same deterministic list
-    // `moderatePost` runs first. A slur never lands in Firestore, never
-    // claims a cap slot, and its author hears "no" while the composer is
-    // still open rather than "not published" later (docs/09 issue 6).
-    if (prefilter(text)?.action === 'block') {
-      throw new HttpsError('invalid-argument', 'That breaks the community rules.');
-    }
-
     // Idempotent on the client's own id, so a retry of a send whose RESPONSE
     // was lost (the batch committed, the phone never heard) does not mint a
     // second post or spend a second cap slot. The document id is derived
     // from uid + clientId, so no caller can address another user's post.
+    // Checked before every gate below: a post that already exists was
+    // admitted when it was made, and its retry must answer the same id even
+    // if the author's entitlement has lapsed since.
     const clientId = data['clientId'];
     const keyed = typeof clientId === 'string' && CLIENT_ID.test(clientId);
     const post = keyed
@@ -64,6 +59,23 @@ export const createPost = onCall(
         )
       : postsCol().doc();
     if (keyed && (await post.get()).exists) return {postId: post.id};
+
+    // Posting is Premium (docs/01 §10: free reads and reacts). An SOS is
+    // never refused for this — nobody is paywalled mid-crisis (docs/07 §8).
+    // Before the prefilter and before the cap, so a refused post never
+    // claims a slot. The composer says the same thing before the send; this
+    // is the backstop for a client that did not.
+    if (tag !== 'sos' && (await tierFor(caller.uid)) === 'free') {
+      throw new HttpsError('permission-denied', 'Posting is part of Premium.');
+    }
+
+    // Refused at the door, not after the write: the same deterministic list
+    // `moderatePost` runs first. A slur never lands in Firestore, never
+    // claims a cap slot, and its author hears "no" while the composer is
+    // still open rather than "not published" later (docs/09 issue 6).
+    if (prefilter(text)?.action === 'block') {
+      throw new HttpsError('invalid-argument', 'That breaks the community rules.');
+    }
 
     // Transactional, not count-then-write. The aggregate-query version let
     // five concurrent requests all observe "0 posted" and all proceed, which

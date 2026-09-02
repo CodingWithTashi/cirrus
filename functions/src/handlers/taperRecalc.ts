@@ -15,6 +15,7 @@ import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {REGION} from '../config';
 import {db, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
+import {tierFor} from '../lib/usage';
 import {decodeJourney, JourneyDecodeError} from '../domain/journeyCodec';
 import {dayKeyIn, hourIn} from '../domain/dateKey';
 import {trailingDays} from '../domain/streakEngine';
@@ -81,6 +82,12 @@ export async function recalcOne(uid: string, timeZone: string): Promise<void> {
     if (error instanceof JourneyDecodeError) return; // not onboarded / malformed
     throw error;
   }
+
+  // The adaptive plan is Premium (docs/01 §10); a free account keeps the
+  // raw curve, and the client shows nothing where the adjustment would be.
+  // Same shape as weeklyInsight's gate, through `tierFor` so `ungated` mode
+  // still advises everyone.
+  if ((await tierFor(uid)) === 'free') return;
 
   const todayKey = dayKeyIn(new Date(), timeZone);
   const day = dayNumber(journey.plan, todayKey);

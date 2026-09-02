@@ -7,7 +7,39 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../utils/l10n_ext.dart';
+import '../utils/lp_links.dart';
 import 'press_scale.dart';
+
+/// An underlined caption that opens a legal page in the browser.
+///
+/// Shared because two screens are required to show the same two links: the
+/// sign-in screen, and the paywall (App Store 3.1.2 and Play's subscriptions
+/// policy both want Terms and Privacy on the surface with the purchase button).
+class LpLegalLink extends StatelessWidget {
+  const LpLegalLink({super.key, required this.label, required this.url});
+
+  final String label;
+  final Uri url;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    // Caption text, finger-sized target.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => LpLinks.open(url),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Text(
+          label,
+          style: LpType.caption(
+            lp.textSecondary,
+          ).copyWith(decoration: TextDecoration.underline),
+        ),
+      ),
+    );
+  }
+}
 
 /// The glowing Volt dot of the wordmark.
 class VoltDot extends StatelessWidget {

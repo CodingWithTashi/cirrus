@@ -11,10 +11,11 @@
  */
 import {onCall} from 'firebase-functions/v2/https';
 import {getAuth} from 'firebase-admin/auth';
-import {REGION} from '../config';
+import {REGION, REVENUECAT_SECRET_API_KEY} from '../config';
 import {db, journeyDoc, postsCol, userDoc} from '../lib/firestore';
 import {requireCaller} from '../lib/guards';
 import {log} from '../lib/logger';
+import {deleteSubscriber} from '../lib/revenuecat';
 
 const DEPARTED_ALIAS = '[departed quitter]';
 
@@ -24,13 +25,22 @@ export const deleteUserData = onCall(
     enforceAppCheck: true,
     memory: '512MiB',
     timeoutSeconds: 300,
+    secrets: [REVENUECAT_SECRET_API_KEY],
   },
   async (request): Promise<{deleted: true}> => {
     const {uid} = requireCaller(request);
 
-    // Order matters: anonymize while we can still find the posts by uid, then
-    // drop the trees, then the auth record last — if anything above throws,
-    // the user still has an account to retry with.
+    // Order matters. The one third-party call goes FIRST: it is idempotent
+    // (404 is done), and a RevenueCat outage must throw before anything here
+    // has changed — not after the posts already read "[departed quitter]"
+    // while the account still exists. The RevenueCat customer is keyed by
+    // this uid and holds purchase history, which the erasure promise covers;
+    // the store subscription itself is untouched, and a later restore on a
+    // new account transfers it (project restore behaviour: transfer). Then
+    // anonymize while we can still find the posts by uid, then drop the
+    // trees, then the auth record last — if anything above throws, the user
+    // still has an account to retry with.
+    await deleteSubscriber(uid);
     await anonymizePosts(uid);
     await anonymizeReplies(uid);
     await db.recursiveDelete(userDoc(uid));

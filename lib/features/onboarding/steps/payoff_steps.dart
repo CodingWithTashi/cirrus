@@ -638,7 +638,7 @@ class NotificationsStep extends ConsumerWidget {
             if (granted) {
               ref.read(userContextRepositoryProvider).sync().ignore();
             }
-            if (context.mounted) context.go(Routes.paywall);
+            if (context.mounted) context.go(Routes.paywallFrom('onboarding'));
           },
         ),
         const SizedBox(height: 4),
@@ -648,7 +648,7 @@ class NotificationsStep extends ConsumerWidget {
             // Skipping never opens the OS dialog, so this is a decline we
             // made ourselves — still a denied outcome for the funnel.
             ref.read(analyticsProvider).notifPrompt(granted: false);
-            context.go(Routes.paywall);
+            context.go(Routes.paywallFrom('onboarding'));
           },
         ),
       ],

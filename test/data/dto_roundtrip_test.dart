@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_fixtures.dart';
 import 'package:last_puff/data/dto/coach_codec.dart';
 import 'package:last_puff/data/dto/community_codec.dart';
+import 'package:last_puff/data/dto/entitlement_codec.dart';
 import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -119,6 +120,31 @@ void main() {
       // decode that threw would take the account down on the next launch.
       final json = JourneyCodec.encode(journey)..remove('day1TourSkipped');
       expect(JourneyCodec.decode(json).day1TourSkipped, isFalse);
+    });
+
+    test('a game best round-trips, and its absence stays absent', () {
+      // The demo journey has never played the game: a seeded best would be an
+      // invented number rendered as the user's own (docs/09 §8), and null is
+      // what the survived screen's honest empty state reads.
+      expect(journey.bestGameScore, isNull);
+      expect(
+        JourneyCodec.encode(journey)['bestGameScore'],
+        isNull,
+        reason: 'a journey that never played must not claim a best',
+      );
+
+      final played = journey.copyWith(bestGameScore: 112);
+      final wire = jsonEncode(JourneyCodec.encode(played));
+      final back = JourneyCodec.decode(jsonDecode(wire) as Map<String, dynamic>);
+      expect(back.bestGameScore, 112);
+      expect(jsonEncode(JourneyCodec.encode(back)), wire);
+    });
+
+    test('a journey written before the game kept score still decodes', () {
+      // Every live journey document predates this field; a missing key is
+      // "never played", not a crash on the next launch.
+      final json = JourneyCodec.encode(journey)..remove('bestGameScore');
+      expect(JourneyCodec.decode(json).bestGameScore, isNull);
     });
 
     test('planAdvice round-trips, and its absence stays absent', () {
@@ -306,6 +332,66 @@ void main() {
       });
 
       expect(decoded.text, isNull);
+    });
+  });
+  group('EntitlementCodec', () {
+    test('an active subscription survives a full JSON round-trip', () {
+      final e = Entitlement(
+        tier: SubscriptionTier.trial,
+        productId: 'cirrus_premium:yearly-399',
+        period: PlanPeriod.yearly,
+        expiresAt: DateTime(2026, 9, 9, 12, 30),
+        willRenew: true,
+        store: BillingStore.playStore,
+        managementUrl: Uri.parse(
+          'https://play.google.com/store/account/subscriptions',
+        ),
+        isSandbox: true,
+      );
+      final wire = jsonEncode(EntitlementCodec.encode(e));
+      final decoded = EntitlementCodec.decode(
+        jsonDecode(wire) as Map<String, dynamic>,
+      );
+      expect(decoded, e);
+      expect(jsonEncode(EntitlementCodec.encode(decoded)), wire);
+    });
+
+    test('the server mirror shape decodes, plan re-derived from the product', () {
+      // What `rcWebhook` writes, with Timestamps already normalized to ISO.
+      final decoded = EntitlementCodec.decode({
+        'tier': 'premium',
+        'productId': 'cirrus_premium:weekly-299',
+        'expiresAt': '2026-09-09T00:00:00.000Z',
+        'willRenew': false,
+        'store': 'playStore',
+      });
+      expect(decoded.tier, SubscriptionTier.premium);
+      expect(decoded.period, PlanPeriod.weekly);
+      expect(decoded.willRenew, isFalse);
+    });
+
+    test('unknown values fail closed, never crash', () {
+      final decoded = EntitlementCodec.decode({
+        'tier': 'platinum_v2',
+        'plan': 'decade',
+        'store': 'galaxy',
+        'expiresAt': 'yesterday-ish',
+      });
+      expect(decoded.tier, SubscriptionTier.free);
+      expect(decoded.period, isNull);
+      expect(decoded.store, isNull);
+      expect(decoded.expiresAt, isNull);
+      expect(EntitlementCodec.decode(const {}), const Entitlement.none());
+    });
+
+    test('a journey written before the tier left the profile still decodes', () {
+      // `profile.tier` used to be a client-written field; old documents
+      // still carry it. It is ignored on the way in and gone on the way out.
+      final json = JourneyCodec.encode(SeedData.journey(DateTime(2026, 8, 18)));
+      (json['profile'] as Map<String, dynamic>)['tier'] = 'premium';
+      final decoded = JourneyCodec.decode(json);
+      final again = JourneyCodec.encode(decoded);
+      expect((again['profile'] as Map<String, dynamic>).containsKey('tier'), isFalse);
     });
   });
 }

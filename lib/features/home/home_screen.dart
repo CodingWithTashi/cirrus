@@ -18,6 +18,7 @@ import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
+import '../../domain/logic/billing_catalog.dart';
 import '../../domain/date_key.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
@@ -154,8 +155,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final settings = ref.watch(settingsStoreProvider);
+    // Docs/02 §4's founding offer. Off until its store offer exists and is
+    // tagged so it cannot leak into the main paywall (tracker S4-7).
     final showFoundingOffer =
-        journey.profile.tier == SubscriptionTier.free && !settings.winbackShown;
+        BillingCatalog.foundingOfferEnabled &&
+        !ref.watch(isPremiumProvider) &&
+        !settings.winbackShown;
 
     return Scaffold(
       body: SafeArea(
@@ -513,7 +518,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // with a hardcoded 3 PM told every day-1 user about a
                         // spike nobody observed — an invented number wearing
                         // the coach's voice.
-                        else if (!_nudgeDismissed && snap.dangerWindow != null)
+                        // …and only for Premium: the nudge IS the craving
+                        // forecast (docs/01 §10). Free users meet the forecast
+                        // behind its gate on Stats, not as a card on Home.
+                        else if (!_nudgeDismissed &&
+                            snap.dangerWindow != null &&
+                            ref.watch(isPremiumProvider))
                           Dismissible(
                             key: const ValueKey('nudge'),
                             onDismissed: (_) =>

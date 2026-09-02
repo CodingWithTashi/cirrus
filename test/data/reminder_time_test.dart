@@ -170,6 +170,9 @@ void main() {
 }
 
 class _RecordingSink implements ReminderSink {
+  @override
+  Stream<ReminderKind> get opened => const Stream.empty();
+
   List<ReminderSlot> last = const [];
 
   @override
@@ -178,6 +181,16 @@ class _RecordingSink implements ReminderSink {
     required String title,
     required String body,
   }) async => last = slots;
+
+  @override
+  Future<void> scheduleOnce(
+    OneShotReminder reminder, {
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancel(int id) async {}
 
   @override
   Future<void> cancelAll() async => last = const [];

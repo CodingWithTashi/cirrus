@@ -47,7 +47,6 @@ void main() {
         profile: const UserProfile(
           alias: '@x',
           avatarEmoji: '🦊',
-          tier: SubscriptionTier.free,
         ),
         plan: plan,
         days: const {},
@@ -68,7 +67,6 @@ void main() {
       profile: const UserProfile(
         alias: '@simfox',
         avatarEmoji: '🦊',
-        tier: SubscriptionTier.premium,
       ),
       plan: plan,
       days: days,

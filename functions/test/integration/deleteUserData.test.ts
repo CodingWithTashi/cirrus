@@ -10,7 +10,7 @@
  */
 import type {CallableRequest} from 'firebase-functions/v2/https';
 import {getAuth} from 'firebase-admin/auth';
-import {beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createPost} from '../../src/handlers/createPost';
 import {createReply} from '../../src/handlers/createReply';
 import {deleteUserData} from '../../src/handlers/deleteUserData';
@@ -46,6 +46,36 @@ async function makeUser(uid: string): Promise<void> {
   }
   await getAuth().createUser({uid, email: `${uid}@cirrus.test`});
 }
+
+// RevenueCat is never reached from a test: the emulator's own fetch (the
+// wipe) passes through, anything at api.revenuecat.com answers 404 (done).
+// Without this, a developer with the real secret exported in their shell
+// would delete these customers against production.
+const realFetch = globalThis.fetch;
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.startsWith('https://api.revenuecat.com/')) {
+        return Promise.resolve(new Response('', {status: 404}));
+      }
+      return realFetch(input, init);
+    }),
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
+
+// The posts these cases create come from free users; under `mirror` they
+// would be refused at the door, so they run under the deployed `ungated`.
+const previousMode = process.env['ENTITLEMENT_MODE'];
+beforeEach(() => {
+  process.env['ENTITLEMENT_MODE'] = 'ungated';
+});
+afterEach(() => {
+  if (previousMode === undefined) delete process.env['ENTITLEMENT_MODE'];
+  else process.env['ENTITLEMENT_MODE'] = previousMode;
+});
 
 beforeEach(async () => {
   await clearFirestore();

@@ -22,7 +22,43 @@ export const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
  */
 export const REVENUECAT_WEBHOOK_TOKEN = defineSecret('REVENUECAT_WEBHOOK_TOKEN');
 
+/**
+ * RevenueCat **v2** secret API key (`sk_…`, dashboard → API keys → "New
+ * secret API key"). The webhook fetches the customer snapshot it mirrors
+ * with it, and `deleteUserData` erases the RevenueCat customer with it, so
+ * it needs `customer_information:customers:read_and_write`,
+ * `customer_information:subscriptions:read`,
+ * `customer_information:entitlements:read`, and
+ * `project_configuration:{products,entitlements}:read`. Never the public
+ * `goog_`/`appl_` SDK keys — those can start a purchase and read nothing,
+ * which is the wrong way round for a server. And never a v1 "legacy" key:
+ * `lib/revenuecat.ts` speaks v2, which answers 401 to one.
+ */
+export const REVENUECAT_SECRET_API_KEY = defineSecret('REVENUECAT_SECRET_API_KEY');
+
+/**
+ * The RevenueCat project every v2 URL is scoped to (`proj…`, dashboard →
+ * Project settings). Configuration, not a secret: it is in every dashboard
+ * URL.
+ */
+export const RC_PROJECT_ID = defineString('RC_PROJECT_ID', {
+  default: 'proj2bbaaf3f',
+  description: 'RevenueCat project id (proj…) for the v2 REST API.',
+});
+
 // --- Tunables --------------------------------------------------------------
+
+/**
+ * Whether SANDBOX purchases flip the entitlement mirror. Play license-tester
+ * and TestFlight purchases are all sandbox and all ours, so 'true' through
+ * beta and QA; set 'false' only if a sandbox grant ever needs to be shut out.
+ * The mirror records `environment` either way, so a sandbox Premium is always
+ * visible for what it is.
+ */
+export const RC_ACCEPT_SANDBOX = defineString('RC_ACCEPT_SANDBOX', {
+  default: 'true',
+  description: "'true' mirrors sandbox purchases too; 'false' ignores them.",
+});
 
 /**
  * Warm instances for the coach. 0 is right for dev; set 1–2 in prod — a cold

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -10,13 +12,30 @@ import '../../../domain/logic/reminder_planner.dart';
 /// DECISIONS can be tested without a platform channel — the decisions are the
 /// part that can be wrong in a way a user notices.
 abstract interface class ReminderSink {
+  /// Replaces the repeating danger-hour schedule (ids 1000–1023) with [slots].
   Future<void> apply(
     List<ReminderSlot> slots, {
     required String title,
     required String body,
   });
 
+  /// One notification at one instant — the trial-ending reminder. Replaces
+  /// any earlier one with the same id.
+  Future<void> scheduleOnce(
+    OneShotReminder reminder, {
+    required String title,
+    required String body,
+  });
+
+  Future<void> cancel(int id);
+
+  /// Everything, both schedules: sign-out and notifications-off.
   Future<void> cancelAll();
+
+  /// Taps on this app's reminders — while it runs, when it is resumed, and
+  /// the tap that cold-started it (reported once the scheduler initialises).
+  /// The sink only reports; routing is the app's decision.
+  Stream<ReminderKind> get opened;
 }
 
 /// Puts [ReminderSlot]s on the device clock.
@@ -43,8 +62,24 @@ class ReminderScheduler implements ReminderSink {
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
+  final _opened = StreamController<ReminderKind>.broadcast();
+
+  @override
+  Stream<ReminderKind> get opened => _opened.stream;
+
+  /// A payload is text the OS hands back; anything not a known kind (an old
+  /// build's notification, a foreign one) is dropped rather than routed.
+  void _report(String? payload) {
+    for (final kind in ReminderKind.values) {
+      if (kind.name == payload) {
+        _opened.add(kind);
+        return;
+      }
+    }
+  }
 
   static const _channelId = 'danger_hours';
+  static const _trialChannelId = 'trial_reminders';
 
   Future<void> _ensureReady() async {
     if (_ready) return;
@@ -69,16 +104,29 @@ class ReminderScheduler implements ReminderSink {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveNotificationResponse: (response) => _report(response.payload),
     );
     _ready = true;
+    // The tap that launched the app arrives here, not through the callback:
+    // the process did not exist when it happened.
+    try {
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (launch != null && launch.didNotificationLaunchApp) {
+        _report(launch.notificationResponse?.payload);
+      }
+    } on Object catch (error) {
+      debugPrint('reminders: launch details failed — $error');
+    }
   }
 
   @override
-  /// Replaces the whole schedule with [slots].
+  /// Replaces the whole danger-hour schedule with [slots].
   ///
   /// Cancel-then-schedule rather than a diff: the plan is at most three
   /// entries, and a diff that goes wrong leaves a user with a notification
-  /// they cannot explain and we cannot find.
+  /// they cannot explain and we cannot find. Only this schedule's own ids,
+  /// though: a `cancelAll()` here used to take the trial-ending reminder down
+  /// with it on every puff-tap resync.
   Future<void> apply(
     List<ReminderSlot> slots, {
     required String title,
@@ -86,7 +134,9 @@ class ReminderScheduler implements ReminderSink {
   }) async {
     try {
       await _ensureReady();
-      await _plugin.cancelAll();
+      for (var hour = 0; hour < 24; hour++) {
+        await _plugin.cancel(id: 1000 + hour);
+      }
       for (final slot in slots) {
         await _plugin.zonedSchedule(
           id: slot.id,
@@ -98,6 +148,7 @@ class ReminderScheduler implements ReminderSink {
           matchDateTimeComponents: DateTimeComponents.time,
           notificationDetails: _details(),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: ReminderKind.danger.name,
         );
       }
     } on Object catch (error) {
@@ -141,6 +192,41 @@ class ReminderScheduler implements ReminderSink {
   }
 
   @override
+  Future<void> scheduleOnce(
+    OneShotReminder reminder, {
+    required String title,
+    required String body,
+  }) async {
+    try {
+      await _ensureReady();
+      await _plugin.cancel(id: reminder.id);
+      await _plugin.zonedSchedule(
+        id: reminder.id,
+        title: title,
+        body: body,
+        // An absolute instant in the device's zone; the planner guarantees it
+        // is in the future, which `zonedSchedule` insists on.
+        scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
+        notificationDetails: _trialDetails(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: ReminderKind.trial.name,
+      );
+    } on Object catch (error) {
+      debugPrint('reminders: one-shot schedule failed — $error');
+    }
+  }
+
+  @override
+  Future<void> cancel(int id) async {
+    try {
+      await _ensureReady();
+      await _plugin.cancel(id: id);
+    } on Object catch (error) {
+      debugPrint('reminders: cancel failed — $error');
+    }
+  }
+
+  @override
   Future<void> cancelAll() async {
     try {
       await _ensureReady();
@@ -156,6 +242,17 @@ class ReminderScheduler implements ReminderSink {
       'Danger-hour reminders',
       channelDescription:
           'A heads-up just before the hours you usually reach for it.',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
+
+  NotificationDetails _trialDetails() => const NotificationDetails(
+    android: AndroidNotificationDetails(
+      _trialChannelId,
+      'Trial reminders',
+      channelDescription: 'The heads-up before a free trial ends.',
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
     ),

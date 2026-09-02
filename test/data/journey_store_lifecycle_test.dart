@@ -55,7 +55,6 @@ void main() {
       profile: const UserProfile(
         alias: '@bravewolf42',
         avatarEmoji: '🐺',
-        tier: SubscriptionTier.trial,
       ),
       plan: QuitPlan(
         method: QuitMethod.taper,
@@ -88,7 +87,6 @@ void main() {
       profile: const UserProfile(
         alias: '@calmotter7',
         avatarEmoji: '🦦',
-        tier: SubscriptionTier.trial,
       ),
       plan: QuitPlan(
         method: QuitMethod.taper,
@@ -141,7 +139,6 @@ void main() {
       profile: const UserProfile(
         alias: '@bravewolf42',
         avatarEmoji: '🐺',
-        tier: SubscriptionTier.trial,
         email: 'new@user.com',
       ),
       plan: QuitPlan(

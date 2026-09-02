@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/backend_mode.dart';
+import 'package:last_puff/data/dto/entitlement_codec.dart';
 import 'package:last_puff/data/network/connectivity.dart';
+import 'package:last_puff/data/stores/entitlement_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
@@ -19,10 +22,18 @@ import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 /// Pass [analytics] to capture the events a flow emits; without it the pinned
 /// fake backend already resolves the seam to `NoopAnalytics`, so no vendor SDK
 /// is ever constructed under `flutter test`.
+///
+/// [premium] (default) is the demo persona: the seeded day-12 journey has
+/// always been a paying user's, and the fake's guest account — the one
+/// `seedDemoJourney()` runs on — starts with no subscription row. It is said
+/// on BOTH sides of the seam: the fake server (what `createPost` would refuse)
+/// and the store (what every gate reads). `premium: false` is the free
+/// account the gates exist for.
 List<Override> fastBackendOverrides({
   bool online = true,
   DateTime? now,
   AnalyticsSink? analytics,
+  bool premium = true,
 }) => [
   if (analytics != null) analyticsProvider.overrideWithValue(analytics),
   backendModeProvider.overrideWithValue(BackendMode.fake),
@@ -37,7 +48,28 @@ List<Override> fastBackendOverrides({
   minuteClockProvider.overrideWith(() => MinuteClock(tick: false)),
   if (now != null) nowProvider.overrideWithValue(() => now),
   if (!online) connectivityProvider.overrideWith(ToggleConnectivity.new),
+  if (premium) ...demoSubscriptionOverrides(),
 ];
+
+/// The demo persona's subscription on both sides of the seam, from ONE row —
+/// so the first `identify()` answers exactly the store's initial value and no
+/// spurious `entitlement_changed` is recorded — and seeded on the guest
+/// account without opening a session (`hasSession` stays false until a
+/// sign-in, as on a fresh install).
+List<Override> demoSubscriptionOverrides() {
+  final row = FakeServer.demoEntitlementJson(DateTime.now());
+  return [
+    fakeServerProvider.overrideWith(
+      (ref) => FakeServer(
+        latency: ref.watch(apiLatencyProvider),
+        isOnline: () => ref.read(connectivityProvider),
+      )..seedGuestEntitlement(row),
+    ),
+    entitlementProvider.overrideWith(
+      () => EntitlementStore(initial: EntitlementCodec.decode(row)),
+    ),
+  ];
+}
 
 /// Starts offline; tests flip it with `set(true)` to simulate the connection
 /// coming back (retry-path coverage).

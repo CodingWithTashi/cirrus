@@ -71,10 +71,21 @@ npm install
 # Secrets live in Google Secret Manager, never in the repo.
 firebase functions:secrets:set GEMINI_API_KEY
 firebase functions:secrets:set REVENUECAT_WEBHOOK_TOKEN
+firebase functions:secrets:set REVENUECAT_SECRET_API_KEY   # dashboard → API keys → New secret API key (sk_…, a v2 key)
 ```
 
+The RevenueCat key must be a **v2** secret key with `customer_information:customers:read_and_write`,
+`customer_information:subscriptions:read`, `customer_information:entitlements:read` and
+`project_configuration:{products,entitlements}:read`. `src/lib/revenuecat.ts` speaks the v2 API
+(`/v2/projects/{RC_PROJECT_ID}/customers/…`); the older `/v1/subscribers` refuses a v2 key with
+403 `7243`, which is how the first device purchase left the mirror empty while the app showed
+Premium. `RC_PROJECT_ID` (`proj…`) is a plain param in `.env.alastpuff`.
+
 Point the RevenueCat dashboard webhook at the deployed `rcWebhook` URL with
-`Authorization: Bearer <REVENUECAT_WEBHOOK_TOKEN>`.
+`Authorization: Bearer <REVENUECAT_WEBHOOK_TOKEN>` (production + sandbox events, all apps —
+the Test Store app included, or a Test Store purchase never reaches the mirror). The webhook
+treats each event as a trigger and mirrors the customer snapshot it fetches with the secret
+key — see `src/lib/revenuecat.ts`.
 
 ## Develop
 
@@ -97,6 +108,12 @@ firebase deploy --only functions
 `predeploy` runs `npm run verify`, so a red test blocks the deploy.
 
 ### Before the first production deploy
+
+- [ ] **Flip `ENTITLEMENT_MODE=mirror`** in `.env.alastpuff` — only once the
+      RevenueCat-enabled client is the live build. Earlier makes every user free
+      with no way to pay; later leaves the coach unmetered.
+- [ ] `RC_ACCEPT_SANDBOX=true` stays on through beta (license testers and
+      TestFlight are all sandbox); the mirror records `environment` either way.
 
 - [ ] **Enable App Check** (Play Integrity + App Attest) and register the apps.
       Every callable sets `enforceAppCheck: true`; without App Check registered,

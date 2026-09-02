@@ -9,7 +9,7 @@
  * that ever inverts, every reader can de-anonymize the whole feed.
  */
 import type {CallableRequest} from 'firebase-functions/v2/https';
-import {beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {createPost} from '../../src/handlers/createPost';
 import {db, myPostsCol, postsCol} from '../../src/lib/firestore';
 
@@ -40,6 +40,18 @@ const post = (text = 'day 12 and still here', tag = 'win') => ({
   avatarEmoji: '\u{1F525}',
   dayN: 12,
   timeZone: 'America/Toronto',
+});
+
+// Posting is Premium under `mirror`; these cases are about anonymity, input
+// and the cap, not the gate, so they run under the deployed `ungated` default.
+// The gate has its own describe below, which sets `mirror` itself.
+const previousMode = process.env['ENTITLEMENT_MODE'];
+beforeEach(() => {
+  process.env['ENTITLEMENT_MODE'] = 'ungated';
+});
+afterEach(() => {
+  if (previousMode === undefined) delete process.env['ENTITLEMENT_MODE'];
+  else process.env['ENTITLEMENT_MODE'] = previousMode;
 });
 
 beforeEach(async () => {
@@ -181,6 +193,60 @@ describe('createPost — refuses rule-breaking text at the door', () => {
     await expect(createPost.run(request(post('fuck this app')))).resolves.toHaveProperty(
       'postId',
     );
+  });
+});
+
+describe('createPost — posting is Premium, an SOS never is', () => {
+  // `tierFor` reads ENTITLEMENT_MODE at call time; the deployed default is
+  // `ungated` (everyone premium), so the gate only exists under `mirror`.
+  const previous = process.env['ENTITLEMENT_MODE'];
+  beforeEach(() => {
+    process.env['ENTITLEMENT_MODE'] = 'mirror';
+  });
+  afterEach(() => {
+    if (previous === undefined) delete process.env['ENTITLEMENT_MODE'];
+    else process.env['ENTITLEMENT_MODE'] = previous;
+  });
+
+  it('refuses a free account with permission-denied and claims no cap slot', async () => {
+    await expect(createPost.run(request(post('a win', 'win')))).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
+    expect((await postsCol().get()).size).toBe(0);
+    expect((await db.collection('users').doc('alice').get()).get('postUsage')).toBeUndefined();
+  });
+
+  it('lets a free account post an SOS', async () => {
+    const {postId} = await createPost.run(request(post('need a hand right now', 'sos')));
+    expect((await postsCol().doc(postId).get()).exists).toBe(true);
+  });
+
+  it('lets an entitled account post anything', async () => {
+    const future = new Date(Date.now() + 86_400_000);
+    for (const [uid, tier] of [
+      ['prem', 'premium'],
+      ['trialist', 'trial'],
+    ] as const) {
+      await db.collection('users').doc(uid).set({
+        entitlement: {tier, productId: 'p', expiresAt: future, updatedAt: new Date()},
+      });
+      const {postId} = await createPost.run(request(post('day 12', 'win'), uid));
+      expect((await postsCol().doc(postId).get()).exists).toBe(true);
+    }
+  });
+
+  it('an expired entitlement is free again', async () => {
+    await db.collection('users').doc('lapsed').set({
+      entitlement: {
+        tier: 'premium',
+        productId: 'p',
+        expiresAt: new Date(Date.now() - 1000),
+        updatedAt: new Date(),
+      },
+    });
+    await expect(createPost.run(request(post('day 12', 'win'), 'lapsed'))).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
   });
 });
 

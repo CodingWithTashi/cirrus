@@ -22,6 +22,7 @@ class JourneyState {
     this.pendingSlipCleanDays,
     this.moodCheckIns = 0,
     this.planAdvice,
+    this.bestGameScore,
   });
 
   final UserProfile profile;
@@ -61,6 +62,14 @@ class JourneyState {
   /// anyone whose plan has already finished.
   final PlanAdvice? planAdvice;
 
+  /// Most tiles caught in one run of the 60-second panic game (docs/09 §8).
+  ///
+  /// Null until a game has actually been played to the end: the survived
+  /// screen and the game's header show nothing rather than "best: 0". A best
+  /// is only ever a number from real play — never seeded, never invented —
+  /// and it only ever goes up (`TileGame.beats`).
+  final int? bestGameScore;
+
   /// Local midnight — the day map's key. Delegates to the one truncation in
   /// the app; the name and its call sites stay put.
   static DateTime dateKey(DateTime d) => LpDate.dayStart(d);
@@ -95,6 +104,7 @@ class JourneyState {
     int? Function()? pendingSlipCleanDays,
     int? moodCheckIns,
     PlanAdvice? Function()? planAdvice,
+    int? bestGameScore,
   }) => JourneyState(
     profile: profile ?? this.profile,
     plan: plan ?? this.plan,
@@ -112,6 +122,8 @@ class JourneyState {
         : this.pendingSlipCleanDays,
     moodCheckIns: moodCheckIns ?? this.moodCheckIns,
     planAdvice: planAdvice != null ? planAdvice() : this.planAdvice,
+    // Plain `??`, not a thunk: a best never needs resetting to null.
+    bestGameScore: bestGameScore ?? this.bestGameScore,
   );
 }
 

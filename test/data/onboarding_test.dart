@@ -16,7 +16,10 @@ import '../helpers.dart';
 /// dropped before they reached Ember.
 void main() {
   ProviderContainer container() {
-    final c = ProviderContainer(overrides: fastBackendOverrides());
+    // A fresh registration: no subscription anywhere until the store says so.
+    final c = ProviderContainer(
+      overrides: fastBackendOverrides(premium: false),
+    );
     addTearDown(c.dispose);
     return c;
   }
@@ -254,7 +257,7 @@ void main() {
       filled(c);
       await c
           .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.trial);
+          .complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.profile.gender, Gender.woman);
@@ -263,7 +266,9 @@ void main() {
       expect(journey.profile.firstPuff, FirstPuffWindow.withinFive);
       expect(journey.profile.whys, contains(WhyChip.health));
       expect(journey.profile.worries, contains(WorryChip.cravings));
-      expect(journey.profile.tier, SubscriptionTier.trial);
+      // Finishing onboarding grants nothing: the tier is the store's to give,
+      // and this account bought nothing.
+      expect(c.read(isPremiumProvider), isFalse);
 
       expect(journey.plan.baselinePuffsPerDay, 200);
       expect(journey.plan.weeklySpend, 45);
@@ -277,7 +282,7 @@ void main() {
       filled(c);
       await c
           .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.trial);
+          .complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.plan.dayNumber(DateTime.now()), 1);
@@ -303,7 +308,7 @@ void main() {
       filled(c);
       await c
           .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.free);
+          .complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.goals, isEmpty);
@@ -317,7 +322,7 @@ void main() {
       filled(c);
       await c
           .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.trial);
+          .complete();
 
       expect(c.read(onboardingProvider).step, ObStep.welcome);
       expect(c.read(onboardingProvider).gender, isNull);

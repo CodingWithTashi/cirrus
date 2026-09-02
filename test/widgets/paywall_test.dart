@@ -9,22 +9,23 @@ import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/core/utils/lp_links.dart';
 import 'package:last_puff/core/utils/lp_pricing.dart';
+import 'package:last_puff/data/api/fake/fake_server.dart';
+import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/logic/billing_catalog.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
 
-/// The four paywall screens, which had no behavioural coverage of any kind.
+/// The four paywall screens around a real store sheet.
 ///
-/// There is no billing SDK yet, so what is testable — and worth testing — is
-/// everything AROUND the transaction: that the prices shown are the single
-/// locked set rather than numbers typed into a layout, that the free path is
-/// reachable rather than a dark pattern, and that choosing a tier actually
-/// changes the state the rest of the app reads.
-///
-/// When RevenueCat lands, these are the tests that should keep passing while
-/// `_startTrial` grows a real round-trip underneath them.
+/// The sheet itself is the fake backend's, scripted through
+/// `FakeServer.nextPurchase`, so every ending a store can hand back — bought,
+/// closed, deferred, refused, offline — is one line here. What is asserted is
+/// everything the app does around it: the prices are the store's, the free
+/// path is reachable, a purchase changes the state the rest of the app reads
+/// and closes the paywall, and nothing is ever claimed that did not happen.
 void main() {
   /// Same rule as `screen_layout_test`: `flutter test` substitutes a fallback
   /// font whose glyphs are square em boxes, so text is far wider here than
@@ -43,9 +44,22 @@ void main() {
     addTearDown(() => FlutterError.onError = prior);
   }
 
-  Future<ProviderContainer> open(WidgetTester tester, String route) async {
+  Future<ProviderContainer> open(
+    WidgetTester tester,
+    String route, {
+    bool online = true,
+    RecordingAnalytics? analytics,
+  }) async {
     ignoreFontWidthOverflow();
-    final container = ProviderContainer(overrides: fastBackendOverrides());
+    final container = ProviderContainer(
+      // Every ending a sheet can hand back starts from a free account; the
+      // one case that wants a subscription already in place puts it there.
+      overrides: fastBackendOverrides(
+        online: online,
+        analytics: analytics,
+        premium: false,
+      ),
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -67,10 +81,14 @@ void main() {
   });
 
   group('the prices on screen', () {
-    testWidgets('are the locked set, from the single source', (tester) async {
-      // Every price in the app comes from `LpPricing`. A literal typed into a
-      // layout is how a store listing and a paywall end up disagreeing, and
-      // the store is the one that wins.
+    testWidgets("are the store's, and the store's are the locked set", (
+      tester,
+    ) async {
+      // Every price on the screen comes from the offering the store served;
+      // the fake store prices its offering from `LpPricing`, so the locked
+      // figures are what appear. A literal typed into a layout is how a store
+      // listing and a paywall end up disagreeing, and the store is the one
+      // that wins.
       await open(tester, Routes.paywall);
 
       expect(find.textContaining(LpPricing.weekly), findsWidgets);
@@ -84,6 +102,30 @@ void main() {
       expect(LpPricing.weekly, r'$2.99');
       expect(LpPricing.monthly, r'$7.99');
       expect(LpPricing.yearly, r'$39.99');
+    });
+
+    testWidgets('the yearly saving is computed, not typed', (tester) async {
+      // 39.99 against 2.99 × 52 is 74%, derived on screen from the two
+      // amounts. The old sub-line was a string that was only true in USD.
+      await open(tester, Routes.paywall);
+      expect(find.textContaining('74%'), findsOneWidget);
+    });
+
+    testWidgets('the disclosure names the selected price and period', (
+      tester,
+    ) async {
+      await open(tester, Routes.paywall);
+      expect(
+        find.textContaining('${LpPricing.yearly} per ${l10n.paywallPeriodYear}'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.text(l10n.paywallWeekly));
+      await tester.tap(find.text(l10n.paywallWeekly));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('${LpPricing.weekly} per ${l10n.paywallPeriodWeek}'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -115,6 +157,14 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('the CTA says a week for the configured length', (
+      tester,
+    ) async {
+      await open(tester, Routes.paywall);
+      expect(find.text(l10n.paywallCta), findsOneWidget);
+      expect(find.text(l10n.paywallCta), findsOneWidget);
     });
 
     test('every locale says seven days and none still says three', () {
@@ -161,42 +211,154 @@ void main() {
     });
   });
 
-  group('choosing a tier', () {
-    testWidgets('upgrading from inside the app sets premium and returns', (
+  group('the store sheet', () {
+    testWidgets('a purchase from inside the app flips the gate and returns', (
       tester,
     ) async {
       // The `_fromOnboarding == false` branch: no journey is created, the
-      // existing one is upgraded and the sheet closes.
-      final container = await open(tester, Routes.home);
-      // The seeded fixture is already premium — the right default for every
-      // other screen, and the wrong starting point for an upgrade.
-      container.read(quitStoreProvider.notifier).setTier(SubscriptionTier.free);
-      await tester.pumpAndSettle();
-      expect(
-        container.read(quitStoreProvider)!.profile.tier,
-        SubscriptionTier.free,
-      );
+      // account becomes entitled and the sheet closes.
+      final analytics = RecordingAnalytics();
+      final container = await open(tester, Routes.home, analytics: analytics);
+      expect(container.read(isPremiumProvider), isFalse);
 
       unawaited(container.read(routerProvider).push(Routes.paywall));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.paywallCta));
       await tester.pumpAndSettle();
 
-      expect(
-        container.read(quitStoreProvider)!.profile.tier,
-        SubscriptionTier.premium,
-      );
+      final entitlement = container.read(entitlementProvider);
+      expect(entitlement.isActive, isTrue);
+      expect(entitlement.period, PlanPeriod.yearly, reason: 'preselected');
       // Popped back to where they came from, rather than stranded on the
-      // paywall they have just paid past. `setTier` rebuilds the router, so
-      // the pop has to hold a reference taken before the state change.
+      // paywall they have just paid past.
       expect(container.read(routerProvider).state.uri.path, Routes.home);
       expect(find.text(l10n.paywallCta), findsNothing);
+      expect(analytics.names, containsAllInOrder(['trial_started', 'purchase_completed']));
     });
 
-    testWidgets('the win-back offer applies once and closes', (tester) async {
+    testWidgets('a closed sheet changes nothing and says nothing', (
+      tester,
+    ) async {
       final container = await open(tester, Routes.home);
-      container.read(quitStoreProvider.notifier).setTier(SubscriptionTier.free);
+      container.read(fakeServerProvider).nextPurchase =
+          FakePurchaseScript.cancelled;
+      unawaited(container.read(routerProvider).push(Routes.paywall));
       await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.paywallCta));
+      await tester.pumpAndSettle();
+
+      expect(container.read(isPremiumProvider), isFalse);
+      expect(container.read(routerProvider).state.uri.path, Routes.paywall);
+      expect(find.text(l10n.paywallCta), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('a deferred payment is not claimed as a purchase', (
+      tester,
+    ) async {
+      final container = await open(tester, Routes.home);
+      container.read(fakeServerProvider).nextPurchase =
+          FakePurchaseScript.pending;
+      unawaited(container.read(routerProvider).push(Routes.paywall));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.paywallCta));
+      await tester.pumpAndSettle();
+
+      expect(container.read(isPremiumProvider), isFalse);
+      expect(find.text(l10n.paywallPurchasePending), findsOneWidget);
+      expect(container.read(routerProvider).state.uri.path, Routes.paywall);
+      // The snack's own fallback timer must run out before the test ends.
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('offline shows the offline copy and retries clean', (
+      tester,
+    ) async {
+      final container = await open(tester, Routes.home, online: false);
+      unawaited(container.read(routerProvider).push(Routes.paywall));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.paywallCta));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.errorOfflineTitle), findsOneWidget);
+      expect(container.read(isPremiumProvider), isFalse);
+
+      (container.read(connectivityProvider.notifier) as ToggleConnectivity)
+          .set(true);
+      await tester.tap(find.text(l10n.errorRetry));
+      await tester.pumpAndSettle();
+
+      expect(container.read(isPremiumProvider), isTrue);
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+    });
+
+    testWidgets('a refusal gets its own copy, and nothing is charged', (
+      tester,
+    ) async {
+      final container = await open(tester, Routes.home);
+      container.read(fakeServerProvider).nextPurchase =
+          FakePurchaseScript.notAllowed;
+      unawaited(container.read(routerProvider).push(Routes.paywall));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.paywallCta));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.errorPurchaseNotAllowedTitle), findsOneWidget);
+      expect(container.read(isPremiumProvider), isFalse);
+    });
+
+    testWidgets('an entitlement arriving under the paywall closes it, once', (
+      tester,
+    ) async {
+      // A renewal on another device, a restore, a purchase that completed
+      // after the sheet was dismissed: the paywall watches the entitlement
+      // and leaves the moment it turns active — a paying user is never left
+      // looking at a paywall for the plan they have. The router's refresh
+      // listener still does not watch the entitlement, so the leave is the
+      // paywall's own single pop and the route can never resurrect.
+      final container = await open(tester, Routes.home);
+      unawaited(container.read(routerProvider).push(Routes.paywall));
+      await tester.pumpAndSettle();
+      expect(container.read(routerProvider).state.uri.path, Routes.paywall);
+
+      container.read(fakeServerProvider).putEntitlement(
+        FakeServer.demoEntitlementJson(DateTime.now()),
+      );
+      // Not awaited directly: the fake's ack is a timer, and timers only run
+      // when the test clock is pumped.
+      unawaited(container.read(entitlementProvider.notifier).restore());
+      await tester.pumpAndSettle();
+
+      expect(container.read(isPremiumProvider), isTrue);
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(container.read(routerProvider).canPop(), isFalse);
+
+      // A second change (a renewal) finds no paywall to pop and pops nothing
+      // else — Home stays exactly where it is.
+      unawaited(container.read(entitlementProvider.notifier).restore());
+      await tester.pumpAndSettle();
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      // The "Premium is active" snack's fallback timer.
+      await tester.pump(const Duration(seconds: 6));
+    });
+  });
+
+  group('the win-back offer', () {
+    test('is gated off until its store offer exists', () {
+      // A $3.99 card over a sheet that charges $7.99 is an invented number in
+      // the other direction (tracker S4-7).
+      expect(BillingCatalog.foundingOfferEnabled, isFalse);
+    });
+
+    testWidgets('its screen still transacts honestly through the store', (
+      tester,
+    ) async {
+      final container = await open(tester, Routes.home);
       unawaited(container.read(routerProvider).push(Routes.winback));
       await tester.pumpAndSettle();
 
@@ -204,10 +366,8 @@ void main() {
       await tester.tap(find.text(l10n.winbackCta));
       await tester.pumpAndSettle();
 
-      expect(
-        container.read(quitStoreProvider)!.profile.tier,
-        SubscriptionTier.premium,
-      );
+      expect(container.read(entitlementProvider).period, PlanPeriod.monthly);
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
     });
   });
 
@@ -249,22 +409,166 @@ void main() {
       }
     });
 
+    testWidgets('are on the paywall too, with Restore beside them', (
+      tester,
+    ) async {
+      // App Store 3.1.2 and Play's subscriptions policy: the surface with the
+      // purchase button carries the legal links and a way to restore.
+      await open(tester, Routes.paywall);
+      for (final label in [
+        l10n.authTerms,
+        l10n.authPrivacy,
+        l10n.paywallRestore,
+      ]) {
+        await tester.ensureVisible(find.text(label));
+        final text = tester.widget<Text>(find.text(label));
+        expect(text.style?.decoration, TextDecoration.underline, reason: label);
+      }
+    });
+
     test('point at the published pages', () {
       expect(LpLinks.privacy.toString(), 'https://alastpuff.web.app/privacy');
       expect(LpLinks.terms.toString(), 'https://alastpuff.web.app/terms');
     });
   });
 
-  group('what it must not claim', () {
-    testWidgets('offers no Restore Purchases while billing does not exist', (
+  group('restore', () {
+    testWidgets('says so when there is nothing to restore', (tester) async {
+      // Two buttons that only showed a success snack were deleted once for
+      // claiming to have restored purchases that could not exist. This one
+      // asks the store, and reports the store's answer either way.
+      final container = await open(tester, Routes.paywall);
+      await tester.ensureVisible(find.text(l10n.paywallRestore));
+      await tester.tap(find.text(l10n.paywallRestore));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.paywallRestoreNothing), findsOneWidget);
+      expect(container.read(isPremiumProvider), isFalse);
+      expect(container.read(routerProvider).state.uri.path, Routes.paywall);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('brings a subscription back and closes the paywall', (
       tester,
     ) async {
-      // Restore is a store requirement the day subscriptions ship, and a lie
-      // until then: there is nothing to restore. Two buttons that only showed
-      // a success snack were deleted for exactly this reason, and this keeps
-      // one from creeping back in ahead of the SDK.
+      final container = await open(tester, Routes.home);
+      container.read(fakeServerProvider).putEntitlement(
+        FakeServer.demoEntitlementJson(DateTime.now()),
+      );
+      unawaited(container.read(routerProvider).push(Routes.paywall));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text(l10n.paywallRestore));
+      await tester.tap(find.text(l10n.paywallRestore));
+      await tester.pumpAndSettle();
+
+      expect(container.read(isPremiumProvider), isTrue);
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      await tester.pump(const Duration(seconds: 5));
+    });
+  });
+
+  group('restore from deeper in the app', () {
+    testWidgets('lands back on the screen under the paywall, once', (
+      tester,
+    ) async {
+      // Settings → paywall → Restore. The entitlement arriving under the
+      // paywall and the restore's own success path used to BOTH leave, and
+      // the second pop took Settings with it.
+      final container = await open(tester, Routes.home);
+      final router = container.read(routerProvider);
+      unawaited(router.push(Routes.settings));
+      await tester.pumpAndSettle();
+      unawaited(router.push(Routes.paywallFrom('settings')));
+      await tester.pumpAndSettle();
+
+      container.read(fakeServerProvider).putEntitlement(
+        FakeServer.demoEntitlementJson(DateTime.now()),
+      );
+      await tester.ensureVisible(find.text(l10n.paywallRestore));
+      await tester.tap(find.text(l10n.paywallRestore));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, Routes.settings);
+      expect(find.text(l10n.paywallRestored), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+    });
+  });
+
+  group('a plan without a trial', () {
+    testWidgets('no reminder row, no timeline, "Start Premium", and a '
+        'trial-less disclosure', (tester) async {
+      final container = ProviderContainer(
+        overrides: fastBackendOverrides(premium: false),
+      );
+      addTearDown(container.dispose);
+      container.read(fakeServerProvider).offeringTrialDays = null;
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const LastPuffApp(),
+        ),
+      );
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      container.read(routerProvider).go(Routes.paywall);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.paywallTrialReminder), findsNothing);
+      expect(find.text(l10n.paywallTimelineToday), findsNothing);
+      expect(find.text(l10n.paywallCtaSubscribe), findsOneWidget);
+      expect(find.textContaining('free trial'), findsNothing);
+    });
+  });
+
+  group('what the cards may claim', () {
+    testWidgets('a returning user reads the upgrade framing, not "your plan '
+        'is ready"', (tester) async {
       await open(tester, Routes.paywall);
-      expect(find.textContaining('Restore'), findsNothing);
+      expect(find.text(l10n.paywallTitleUpgrade), findsOneWidget);
+      expect(find.text(l10n.paywallTitle), findsNothing);
+    });
+
+    testWidgets('the founding-price line is off while the offer is', (
+      tester,
+    ) async {
+      await open(tester, Routes.paywall);
+      expect(BillingCatalog.foundingOfferEnabled, isFalse);
+      expect(find.text(l10n.paywallWeeklySub), findsNothing);
+    });
+
+    testWidgets('a plan the store does not offer gets no card, and the '
+        'selection moves off it', (tester) async {
+      // Seen on the Test Store, which has no weekly product: the weekly card
+      // rendered the typed fallback price next to two live ones.
+      final container = ProviderContainer(
+        overrides: fastBackendOverrides(premium: false),
+      );
+      addTearDown(container.dispose);
+      container.read(fakeServerProvider).offeringPeriods = {
+        PlanPeriod.monthly,
+        PlanPeriod.weekly,
+      };
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const LastPuffApp(),
+        ),
+      );
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      container.read(routerProvider).go(Routes.paywall);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.paywallYearly), findsNothing);
+      expect(find.text(l10n.paywallMonthly), findsOneWidget);
+      expect(find.text(l10n.paywallWeekly), findsOneWidget);
+      // The default selection was yearly; the disclosure now quotes the
+      // first plan that exists, so the sheet and the screen agree.
+      expect(find.textContaining(LpPricing.yearly), findsNothing);
+      expect(find.textContaining(LpPricing.monthly), findsWidgets);
     });
   });
 }

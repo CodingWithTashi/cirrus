@@ -85,7 +85,7 @@ abstract final class ReminderPlanner {
     final slots = <ReminderSlot>[];
     for (final hour in hours) {
       final fire = fireTimeFor(hour);
-      if (_isQuiet(fire.$1, quietStartHour, quietEndHour)) continue;
+      if (isQuiet(fire.$1, quietStartHour, quietEndHour)) continue;
       slots.add(
         // id is derived from the hour so rescheduling the same hour replaces
         // its notification instead of stacking a second one.
@@ -115,7 +115,7 @@ abstract final class ReminderPlanner {
     required int quietEndHour,
   }) => [
     for (var hour = 0; hour < 24; hour++)
-      if (!_isQuiet(fireTimeFor(hour).$1, quietStartHour, quietEndHour)) hour,
+      if (!isQuiet(fireTimeFor(hour).$1, quietStartHour, quietEndHour)) hour,
   ];
 
   /// [minutes] before [hour]:00, wrapping backwards past midnight.
@@ -124,9 +124,84 @@ abstract final class ReminderPlanner {
     return (total ~/ 60, total % 60);
   }
 
-  /// Quiet hours wrap midnight when start > end (the 23→8 default).
-  static bool _isQuiet(int hour, int start, int end) =>
+  /// Quiet hours wrap midnight when start > end (the 23→8 default). Shared
+  /// with [TrialReminderPlanner], so both nudges keep the same nights quiet.
+  static bool isQuiet(int hour, int start, int end) =>
       start == end ? false : (start < end
           ? hour >= start && hour < end
           : hour >= start || hour < end);
+}
+
+/// One nudge at one instant — the trial-ending reminder. Unlike a
+/// [ReminderSlot] it does not repeat, so it is an absolute time, not a
+/// wall-clock hour.
+/// Which reminder a notification tap came from. Carried as the notification's
+/// payload (`kind.name`) and decoded back by the scheduler, so a tap can land
+/// on the screen the reminder was about rather than wherever the app last was.
+enum ReminderKind { danger, trial }
+
+class OneShotReminder {
+  const OneShotReminder({required this.id, required this.at});
+
+  final int id;
+  final DateTime at;
+
+  @override
+  String toString() => 'OneShotReminder($id, ${at.toIso8601String()})';
+}
+
+/// Decides when the honest trial-ending reminder fires (docs/02 §4: "we'll
+/// remind you before your trial ends", toggle ON by default).
+///
+/// Neither RevenueCat nor the stores send a "trial ends soon" event, and the
+/// end is deterministic from the entitlement's expiry, so — like the
+/// danger-hour nudges — it is scheduled on-device. The store's own charge is
+/// what actually happens on the day; this is the heads-up the paywall
+/// promised, one day before it.
+abstract final class TrialReminderPlanner {
+  /// Outside the 1000–1023 range the danger-hour slots use, so a danger-hour
+  /// resync can cancel its own ids without touching this one.
+  static const int id = 2000;
+
+  /// One day before the charge. An absolute duration on purpose: this is
+  /// "24 hours before an instant", not a calendar recurrence, so the DST rule
+  /// for day keys does not apply — and the copy it fires says "tomorrow".
+  static const Duration lead = Duration(hours: 24);
+
+  /// Null when there is nothing honest to schedule: not a trial, no known
+  /// end, the toggle off, or the moment already past (the store's own notice
+  /// is all that is left to say). A fire time inside quiet hours moves to the
+  /// nearest edge that keeps it on the day BEFORE the charge — the copy says
+  /// "tomorrow": the evening band (23:30) pulls back to when quiet began that
+  /// evening; the post-midnight band (03:00) pushes forward to when quiet
+  /// ends that morning. Pulling the morning band back to the previous
+  /// evening used to fire two days before the charge, for every trial that
+  /// ended between midnight and eight.
+  static OneShotReminder? plan({
+    required Entitlement entitlement,
+    required DateTime now,
+    required int quietStartHour,
+    required int quietEndHour,
+    required bool enabled,
+  }) {
+    if (!enabled || !entitlement.isTrial) return null;
+    final ends = entitlement.expiresAt;
+    if (ends == null) return null;
+    var at = ends.subtract(lead);
+    if (ReminderPlanner.isQuiet(at.hour, quietStartHour, quietEndHour)) {
+      // Same calendar day either way, so the "tomorrow" in the copy holds:
+      // back to when quiet began, unless that was yesterday evening (the
+      // wrapped window's morning band), in which case forward to its end.
+      final wraps = quietStartHour > quietEndHour;
+      final morningBand = wraps && at.hour < quietEndHour;
+      at = DateTime(
+        at.year,
+        at.month,
+        at.day,
+        morningBand ? quietEndHour : quietStartHour,
+      );
+    }
+    if (!at.isAfter(now)) return null;
+    return OneShotReminder(id: id, at: at);
+  }
 }

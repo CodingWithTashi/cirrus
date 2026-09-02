@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import '../../../domain/logic/community_rules.dart';
+import '../../../domain/logic/lp_pricing.dart';
+import '../../../domain/models/billing.dart';
 import '../../../domain/repositories/repositories.dart';
 import 'fake_fixtures.dart';
 
@@ -49,6 +51,25 @@ class FakeServer {
 
   final Map<String, int> _reportCounts = {};
 
+  /// account id → entitlement JSON (`EntitlementCodec`). Survives sign-out
+  /// the way journeys do — logging back in restores the subscription — and
+  /// dies with the account.
+  final Map<String, Map<String, dynamic>> _entitlements = {};
+
+  /// Test knob: how the next store sheet "ends". Consumed by the purchase
+  /// that reads it and reset to [FakePurchaseScript.completed], so a
+  /// scripted cancel cannot leak into the next test.
+  FakePurchaseScript nextPurchase = FakePurchaseScript.completed;
+
+  /// Which plans the fake store offers. Tests drop one to stand in for a
+  /// storefront or a store config that lacks it (the Test Store has no
+  /// weekly product, for one).
+  Set<PlanPeriod> offeringPeriods = Set.of(PlanPeriod.values);
+
+  /// The trial the fake store offers on every plan; null is a store (or a
+  /// user) with no introductory offer left.
+  int? offeringTrialDays = LpPricing.trialDays;
+
   String? _sessionAccountId;
 
   /// Applies [op] synchronously, delays only the ack. Offline devices get a
@@ -89,11 +110,30 @@ class FakeServer {
   /// [FakeAuthApi] before this is called.
   void signIn(String email) {
     _sessionAccountId = email;
-    _journeys.putIfAbsent(
-      email,
-      () => FakeFixtures.journeyJson(DateTime.now()),
-    );
+    // The seeded day-12 journey has always been a paying user's; the
+    // subscription behind it is a row here now rather than a field on the
+    // journey — and it comes WITH the seeded journey, never to an account
+    // that onboarded on its own and chose Free. Apple/Google/guest accounts
+    // start free, like a fresh install.
+    if (!_journeys.containsKey(email)) {
+      _journeys[email] = FakeFixtures.journeyJson(DateTime.now());
+      _entitlements.putIfAbsent(
+        email,
+        () => demoEntitlementJson(DateTime.now()),
+      );
+    }
   }
+
+  /// The demo account's standing subscription: premium, yearly, renewing.
+  static Map<String, dynamic> demoEntitlementJson(DateTime now) => {
+    'tier': 'premium',
+    'productId': 'yearly_3999',
+    'plan': 'yearly',
+    'expiresAt': now.add(const Duration(days: 300)).toUtc().toIso8601String(),
+    'willRenew': true,
+    'store': 'other',
+    'isSandbox': true,
+  };
 
   /// Apple accounts onboard like fresh registrations: no journey until
   /// createJourney. Returns the account's journey if one already exists.
@@ -114,9 +154,28 @@ class FakeServer {
     if (id != null) {
       _accounts.remove(id);
       _journeys.remove(id);
+      _entitlements.remove(id);
     }
     _sessionAccountId = null;
   }
+
+  // ---- billing --------------------------------------------------------------
+
+  /// The account a purchase would be filed under — the session, or the guest
+  /// account a pre-auth flow runs on. The fake's stand-in for "mint an
+  /// anonymous uid".
+  String ensureSessionId() => _sessionOrGuest();
+
+  Map<String, dynamic>? entitlementForSession() =>
+      _copy(_entitlements[_sessionOrGuest()]);
+
+  void putEntitlement(Map<String, dynamic> json) =>
+      _entitlements[_sessionOrGuest()] = _copy(json)!;
+
+  /// The guest account's row, written without opening a session — the test
+  /// helper's way of seeding the demo persona before anyone has signed in.
+  void seedGuestEntitlement(Map<String, dynamic> json) =>
+      _entitlements[_guestAccountId] = _copy(json)!;
 
   // ---- journey --------------------------------------------------------------
 
@@ -166,6 +225,14 @@ class FakeServer {
         CommunityRuleViolation.slur) {
       throw const ContentRefusedException(ContentRefusal.rules);
     }
+    // Posting is Premium; an SOS never is (docs/01 §10, docs/07 §8). The same
+    // rule `createPost` enforces with `tierFor`, read here from the fake's
+    // own entitlement row.
+    final tier = entitlementForSession()?['tier'];
+    final entitled = tier == 'premium' || tier == 'trial';
+    if (!entitled && post['tag'] != 'sos') {
+      throw const ContentRefusedException(ContentRefusal.premium);
+    }
     final stored = _copy(post)!..remove('isMine');
     final id = stored['id'] as String;
     // Idempotent on the client's id, as `createPost` is on `clientId`: a
@@ -212,3 +279,7 @@ class FakeServer {
   static List<Map<String, dynamic>> copyList(List<Map<String, dynamic>> list) =>
       (jsonDecode(jsonEncode(list)) as List).cast<Map<String, dynamic>>();
 }
+
+/// How the fake's store sheet "ends" — see [FakeServer.nextPurchase]. One
+/// value per branch the paywall has to handle, so each is one line in a test.
+enum FakePurchaseScript { completed, cancelled, pending, alreadyOwned, notAllowed }

@@ -79,7 +79,7 @@ class CoachStore extends Notifier<CoachState> {
   int get freeMessagesLeftToday {
     final reported = state.messagesLeft;
     if (reported != null) return reported;
-    final premium = ref.read(quitStoreProvider)?.profile.isPremium ?? true;
+    final premium = ref.read(isPremiumProvider);
     if (premium) return 1 << 20;
     final left = freeDailyCap - state.freeUsedToday;
     return left < 0 ? 0 : left;

@@ -227,6 +227,12 @@ class CommunityStore extends Notifier<CommunityState> {
           _setStatus(local.id, PostStatus.blocked);
         case ContentRefusal.dailyCap:
           _setStatus(local.id, PostStatus.capped);
+        case ContentRefusal.premium:
+          // The composer gates this before the send; reaching here means a
+          // client that skipped the gate, and "not published" is the honest
+          // row for it.
+          _refusedAtDoor.add(local.id);
+          _setStatus(local.id, PostStatus.blocked);
       }
       return;
     } on Exception {

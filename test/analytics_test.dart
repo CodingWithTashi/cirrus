@@ -44,13 +44,19 @@ void main() {
         ..planRevealed()
         ..commitHeld()
         ..notifPrompt(granted: true)
-        ..paywallViewed('d5_default')
+        ..paywallViewed('d5_default', source: 'onboarding')
         ..trialStarted('yearly')
         ..freeContinued()
         ..winbackShown()
         ..winbackConverted()
+        ..purchaseCompleted('yearly', trial: true)
+        ..purchaseCancelled('monthly')
+        ..purchaseFailed('offline')
+        ..restoreCompleted(found: false)
+        ..entitlementChanged('trial')
         ..puffLogged()
-        ..cravingSurvived(survived: true);
+        ..cravingSurvived(survived: true)
+        ..gameFinished(score: 112, bestCombo: 40, misses: 3);
 
       expect(a.names, [
         'onboarding_start',
@@ -69,12 +75,28 @@ void main() {
         'free_continued',
         'winback_shown',
         'winback_converted',
+        'purchase_completed',
+        'purchase_cancelled',
+        'purchase_failed',
+        'restore_completed',
+        'entitlement_changed',
         'puff_logged',
         'craving_outcome',
+        'game_finished',
       ]);
+      expect(a.propsOf('purchase_completed'), {
+        'plan': 'yearly',
+        'trial': 'true',
+      });
+      expect(a.propsOf('restore_completed'), {'found': 'false'});
 
       // Property keys are read by the same dashboards.
       expect(a.propsOf('screen_completed'), {'screen_id': 'welcome', 'ms': 1200});
+      expect(a.propsOf('game_finished'), {
+        'score': 112,
+        'best_combo': 40,
+        'misses': 3,
+      });
       expect(a.propsOf('puffs_entered'), {'value': 200, 'badge': 'heavy'});
       expect(a.propsOf('spend_entered'), {'weekly': 45, 'yearly_shown': 2340});
       expect(a.propsOf('pace_chosen'), {'pace_days': 30});
@@ -92,7 +114,7 @@ void main() {
         ..methodChosen('taper')
         ..paceChosen(1)
         ..notifPrompt(granted: false)
-        ..paywallViewed('v')
+        ..paywallViewed('v', source: 's')
         ..trialStarted('t')
         ..cravingSurvived(survived: false);
 

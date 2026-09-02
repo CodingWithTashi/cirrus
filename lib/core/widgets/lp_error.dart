@@ -27,6 +27,20 @@ import 'lp_buttons.dart';
       title: l10n.errorRejectedTitle,
       body: l10n.errorRejectedBody,
     ),
+    // The store said no. Each asks something different of the user, and all
+    // three say the one thing that matters: nothing was charged.
+    PurchaseNotAllowedException() => (
+      title: l10n.errorPurchaseNotAllowedTitle,
+      body: l10n.errorPurchaseNotAllowedBody,
+    ),
+    ReceiptOwnedElsewhereException() => (
+      title: l10n.errorReceiptOwnedTitle,
+      body: l10n.errorReceiptOwnedBody,
+    ),
+    StoreUnavailableException() => (
+      title: l10n.errorStoreTitle,
+      body: l10n.errorStoreBody,
+    ),
     _ => (title: l10n.errorGenericTitle, body: l10n.errorGenericBody),
   };
 }

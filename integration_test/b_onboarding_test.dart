@@ -4,7 +4,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/core/widgets/lp_selectables.dart';
 import 'package:last_puff/core/widgets/numeric_keypad.dart';
 import 'package:last_puff/data/stores/providers.dart';
-import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
 import 'harness.dart';
@@ -167,7 +166,7 @@ void main() {
     expect(journey, isNotNull, reason: 'on screen: ${e2e.texts()}');
     expect(journey!.plan.baselinePuffsPerDay, 200);
     expect(journey.plan.paceDays, greaterThan(0));
-    expect(journey.profile.tier, SubscriptionTier.free);
+    expect(e2e.container.read(isPremiumProvider), isFalse);
     expect(e2e.container.read(todayProvider)!.dayNumber, 1);
   });
 

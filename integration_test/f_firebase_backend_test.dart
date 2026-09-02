@@ -122,7 +122,6 @@ void main() {
           profile: const UserProfile(
             alias: '@e2eotter',
             avatarEmoji: '🦦',
-            tier: SubscriptionTier.free,
           ),
           plan: QuitPlan(
             method: QuitMethod.taper,

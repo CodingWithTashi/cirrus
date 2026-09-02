@@ -327,9 +327,7 @@ void main() {
       filled(c);
 
       await expectLater(
-        c.read(onboardingProvider.notifier).completeWithTier(
-          SubscriptionTier.free,
-        ),
+        c.read(onboardingProvider.notifier).complete(),
         throwsA(anything),
       );
 
@@ -342,7 +340,7 @@ void main() {
       filled(c);
       await c
           .read(onboardingProvider.notifier)
-          .completeWithTier(SubscriptionTier.free);
+          .complete();
 
       expect(await OnboardingDraftPersistence.load(now: now), isNull);
     });

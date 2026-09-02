@@ -498,10 +498,19 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     // Refused before the send, under the text, with the words still there
     // to edit — not "not published" after the pop (docs/09 issue 6). The
     // server runs the same prefilter and the same cap at the door.
+    // Posting is Premium; an SOS never is (docs/01 §10, docs/07 §8). Named
+    // here, under the text, with the door beside it — the server refuses the
+    // same post with `permission-denied` for a client that skips this.
+    final premiumBlocked =
+        !ref.watch(isPremiumProvider) && _tag != null && _tag != PostTag.sos;
     final blocker = switch (CommunityRules.check(_text.text)) {
       CommunityRuleViolation.slur => l10n.communityRuleSlur,
       CommunityRuleViolation.sourcing => l10n.communityRuleSourcing,
-      null => _capReached(ref) ? l10n.communityDailyCapReached : null,
+      null => premiumBlocked
+          ? l10n.premiumPitchCompose
+          : _capReached(ref)
+          ? l10n.communityDailyCapReached
+          : null,
     };
     final canPost =
         _text.text.trim().isNotEmpty && _tag != null && blocker == null;
@@ -643,22 +652,36 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
-                              Icons.block_rounded,
+                              premiumBlocked
+                                  ? Icons.lock_outline
+                                  : Icons.block_rounded,
                               size: 14,
-                              color: lp.dangerText,
+                              color: premiumBlocked
+                                  ? lp.voltText
+                                  : lp.dangerText,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 blocker,
                                 style: LpType.caption11(
-                                  lp.dangerText,
+                                  premiumBlocked ? lp.textBody : lp.dangerText,
                                   weight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
                         ),
+                        if (premiumBlocked)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: LpTextButton(
+                              l10n.premiumLockCta,
+                              onTap: () => context.push(
+                                Routes.paywallFrom('compose'),
+                              ),
+                            ),
+                          ),
                       ],
                       const SizedBox(height: 16),
                       SectionLabel(l10n.communityTagIt),

@@ -44,7 +44,6 @@ void main() {
             profile: const UserProfile(
               alias: '@simfox',
               avatarEmoji: '🦊',
-              tier: SubscriptionTier.premium,
             ),
             plan: QuitPlan(
               method: QuitMethod.taper,

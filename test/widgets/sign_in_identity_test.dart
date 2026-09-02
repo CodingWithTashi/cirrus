@@ -179,4 +179,7 @@ class _ScriptedAuth implements AuthRepository {
 
   @override
   Future<String?> currentUserId() async => null;
+
+  @override
+  Future<String?> ensureSessionId() async => null;
 }

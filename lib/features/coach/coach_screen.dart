@@ -2,13 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
+import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_states.dart';
@@ -293,6 +296,28 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                                       _chipLabel(context, m.chipEcho ?? 0))
                                 : _resolve(context, m, coachName),
                           ),
+                          // The cap message names Premium; this is the door
+                          // it points at (docs/04 §7, `source=coach_cap`).
+                          if (m.role != CoachRole.user &&
+                              m.template == CoachTemplate.capReached &&
+                              !ref.watch(isPremiumProvider)) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 180,
+                                child: LpButton(
+                                  l10n.premiumLockCta,
+                                  height: 40,
+                                  fontSize: 14,
+                                  glow: false,
+                                  onTap: () => context.push(
+                                    Routes.paywallFrom('coach_cap'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                           if (m.showWeekCard && journey != null) ...[
                             const SizedBox(height: 12),
                             _WeekCard(

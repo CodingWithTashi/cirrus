@@ -38,14 +38,24 @@ export interface QuotaClaim {
 export async function tierFor(uid: string): Promise<SubscriptionTier> {
   // Pre-monetization: nothing is locked, so skip the read entirely.
   if (ungated()) return 'premium';
-
   const snap = await userDoc(uid).get();
-  const entitlement = (snap.data() as UserDoc | undefined)?.entitlement;
+  return tierOf(snap.data());
+}
+
+/**
+ * The same reading, for a caller that already holds the document (the
+ * nightly crons page through `users/*` and must not pay a second read per
+ * user). Pure. Does NOT apply the `ungated` short-circuit — that is the
+ * caller's decision, made once per run rather than once per user.
+ */
+export function tierOf(
+  doc: UserDoc | undefined,
+  nowMs: number = Date.now(),
+): SubscriptionTier {
+  const entitlement = doc?.entitlement;
   if (!entitlement) return 'free';
-
   const expiresAt = entitlement.expiresAt;
-  if (expiresAt && expiresAt.toMillis() <= Date.now()) return 'free';
-
+  if (expiresAt && expiresAt.toMillis() <= nowMs) return 'free';
   return entitlement.tier === 'premium' || entitlement.tier === 'trial'
     ? entitlement.tier
     : 'free';

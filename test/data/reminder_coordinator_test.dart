@@ -10,7 +10,12 @@ import 'package:last_puff/domain/models/models.dart';
 /// Records what it was asked to schedule, so the coordinator's decisions can
 /// be asserted without touching the platform.
 class _FakeSink implements ReminderSink {
+  @override
+  Stream<ReminderKind> get opened => const Stream.empty();
+
   final List<List<ReminderSlot>> applied = [];
+  final List<OneShotReminder> scheduledOnce = [];
+  final List<int> cancelled = [];
   int cancels = 0;
 
   @override
@@ -19,6 +24,16 @@ class _FakeSink implements ReminderSink {
     required String title,
     required String body,
   }) async => applied.add(slots);
+
+  @override
+  Future<void> scheduleOnce(
+    OneShotReminder reminder, {
+    required String title,
+    required String body,
+  }) async => scheduledOnce.add(reminder);
+
+  @override
+  Future<void> cancel(int id) async => cancelled.add(id);
 
   @override
   Future<void> cancelAll() async => cancels++;
@@ -158,5 +173,94 @@ void main() {
     );
 
     expect(sink.applied.last, isEmpty);
+  });
+  group('the trial-ending reminder', () {
+    final now = DateTime(2026, 8, 20, 12);
+    final trial = Entitlement(
+      tier: SubscriptionTier.trial,
+      period: PlanPeriod.yearly,
+      expiresAt: DateTime(2026, 8, 27, 15),
+      willRenew: true,
+    );
+    const paid = Entitlement(tier: SubscriptionTier.premium);
+
+    Future<void> syncWith(
+      ReminderCoordinator c, {
+      JourneyState? journey,
+      Entitlement entitlement = const Entitlement.none(),
+      SettingsState settings = const SettingsState(),
+    }) => c.sync(
+      journey: journey ?? journeyWith({21: 30}),
+      settings: settings,
+      title: title,
+      body: body,
+      entitlement: entitlement,
+      trialTitle: 'Your trial ends tomorrow',
+      trialBody: 'as promised',
+      now: () => now,
+    );
+
+    test('is scheduled once, a day before the trial ends', () async {
+      final sink = _FakeSink();
+      final c = ReminderCoordinator(sink);
+      await syncWith(c, entitlement: trial);
+      expect(sink.scheduledOnce.single.id, 2000);
+      expect(sink.scheduledOnce.single.at, DateTime(2026, 8, 26, 15));
+
+      // Nothing changed: the OS is not touched again.
+      await syncWith(c, entitlement: trial);
+      expect(sink.scheduledOnce, hasLength(1));
+      expect(sink.cancelled, isEmpty);
+    });
+
+    test('a danger-hour resync never touches it', () async {
+      // The bug this guards: `apply()` used to cancel everything, so the next
+      // puff tap after a trial started silently deleted its reminder.
+      final sink = _FakeSink();
+      final c = ReminderCoordinator(sink);
+      await syncWith(c, entitlement: trial);
+      await syncWith(c, journey: journeyWith({9: 30}), entitlement: trial);
+      expect(sink.applied, hasLength(2), reason: 'the danger plan changed');
+      expect(sink.scheduledOnce, hasLength(1));
+      expect(sink.cancelled, isEmpty);
+      expect(sink.cancels, 0);
+    });
+
+    test('is withdrawn when the trial converts or the toggle goes off', () async {
+      final sink = _FakeSink();
+      final c = ReminderCoordinator(sink);
+      await syncWith(c, entitlement: trial);
+      await syncWith(c, entitlement: paid);
+      expect(sink.cancelled, [2000]);
+
+      final off = _FakeSink();
+      final c2 = ReminderCoordinator(off);
+      await syncWith(
+        c2,
+        entitlement: trial,
+        settings: const SettingsState(trialReminderOn: false),
+      );
+      expect(off.scheduledOnce, isEmpty);
+    });
+
+    test('is never scheduled for a paid or free account', () async {
+      final sink = _FakeSink();
+      await syncWith(ReminderCoordinator(sink), entitlement: paid);
+      await syncWith(ReminderCoordinator(sink));
+      expect(sink.scheduledOnce, isEmpty);
+    });
+
+    test('signing out clears both schedules together', () async {
+      final sink = _FakeSink();
+      final c = ReminderCoordinator(sink);
+      await syncWith(c, entitlement: trial);
+      await c.sync(
+        journey: null,
+        settings: const SettingsState(),
+        title: title,
+        body: body,
+      );
+      expect(sink.cancels, 1);
+    });
   });
 }

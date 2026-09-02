@@ -44,6 +44,16 @@ abstract interface class AuthRepository {
   /// the next person's events attributed to the previous one. It is NOT a
   /// permission check — nothing is authorized by this value.
   Future<String?> currentUserId();
+
+  /// The account id a purchase is filed under, **minting a guest account when
+  /// there is none** — the pre-journey onboarding path, where the paywall is
+  /// reached before any session exists.
+  ///
+  /// Exists because the billing identity and the server's entitlement mirror
+  /// are both keyed by this id: a purchase made before it existed would be
+  /// filed under a throwaway id nobody can ever read back. Null only where
+  /// the backend has no stable id at all.
+  Future<String?> ensureSessionId();
 }
 
 /// Persistence of the quit journey itself.
@@ -206,6 +216,52 @@ abstract interface class ServerStateRepository {
   Future<WeeklyInsight?> latestInsight();
 }
 
+/// Subscriptions: what is on sale, what this account owns, and the two
+/// actions a store lets a user take (buy, restore).
+///
+/// In production this is RevenueCat over the platform store; on the fake
+/// backend it is an entitlement row on `FakeServer` with the same latency and
+/// offline behaviour as everything else there. Either way the answer to "is
+/// this person premium?" that the SERVER acts on is its own mirror
+/// (`users/{uid}.entitlement`, written by the RevenueCat webhook) — the client
+/// reads this contract to render screens, never to be believed.
+abstract interface class BillingRepository {
+  /// The current offering, or null when nothing could be loaded — offline,
+  /// store down, SDK not configured. Not an error: the paywall falls back to
+  /// its fixed copy and the store sheet remains the price of record.
+  Future<BillingOffering?> offerings();
+
+  /// The last entitlement this backend reported, without a round-trip: the
+  /// SDK's on-disk cache, the fake's stored row. Null before any answer.
+  Entitlement? get cached;
+
+  /// Every change to the entitlement, starting with the current value when
+  /// one is known. Purchases, renewals, expiries and restores all land here,
+  /// including ones that happened on another device.
+  Stream<Entitlement> changes();
+
+  /// Binds the billing identity to the account, so a purchase is filed under
+  /// the same uid the server's mirror is keyed by. Null uid means the backend
+  /// has no stable id (fake): bind to its current session instead. Answers
+  /// the bound account's entitlement. Throws [NoConnectionException].
+  Future<Entitlement> identify(String? uid);
+
+  /// Unbinds on sign-out and account deletion. Never throws — someone who
+  /// tapped "sign out" is not kept signed in by a billing SDK.
+  Future<void> reset();
+
+  /// Opens the store's payment sheet for the package [planId]. Cancelling
+  /// and a deferred payment are outcomes, not errors; a refusal throws a
+  /// [BillingException], the wire throws [NoConnectionException]. A
+  /// [PurchaseCompleted] is only ever answered once the entitlement is active.
+  Future<PurchaseOutcome> purchase(String planId);
+
+  /// Asks the store for anything this store account already owns. An answer
+  /// with `isActive == false` means nothing was found — a normal result the
+  /// caller says out loud, not a failure.
+  Future<Entitlement> restore();
+}
+
 sealed class AuthException implements Exception {
   const AuthException();
 }
@@ -229,6 +285,30 @@ final class WeakPasswordException extends AuthException {
 /// views reset their busy flag and stay put — never a dialog.
 final class SignInCancelledException extends AuthException {
   const SignInCancelledException();
+}
+
+/// The store said no. Each case has its own copy in `lpErrorCopy`, because
+/// they ask different things of the user; none of them charged anything.
+sealed class BillingException implements Exception {
+  const BillingException();
+}
+
+/// This device or account may not buy — parental controls, a store account
+/// restriction. The user's setting to change, not our failure.
+final class PurchaseNotAllowedException extends BillingException {
+  const PurchaseNotAllowedException();
+}
+
+/// The store or the billing backend could not complete the request, or the
+/// SDK was never configured for this build. Try again later.
+final class StoreUnavailableException extends BillingException {
+  const StoreUnavailableException();
+}
+
+/// The store account's subscription is bound to a different app account.
+/// Only reachable when the project's restore behaviour is not "transfer".
+final class ReceiptOwnedElsewhereException extends BillingException {
+  const ReceiptOwnedElsewhereException();
 }
 
 /// The device can't reach the backend (airplane mode, dead wifi, tunnel…).
@@ -256,7 +336,14 @@ final class BackendRejectedException implements Exception {
 /// Why the backend said no to a piece of content. The two read differently
 /// on screen: a rules refusal is "not published", a cap refusal is "not
 /// today".
-enum ContentRefusal { rules, dailyCap }
+enum ContentRefusal {
+  rules,
+  dailyCap,
+
+  /// Posting is Premium (docs/01 §10: free reads and reacts). An SOS post is
+  /// never refused for this — nobody is paywalled mid-crisis (docs/07 §8).
+  premium,
+}
 
 /// The backend understood the CONTENT and said no to it — a community post
 /// the rules prefilter refused at the door, or the daily cap. Final: nothing

@@ -263,6 +263,7 @@
   "obNotifBullet3": "Rien d'autre — jamais de marketing",
   "obNotifCta": "Activer le renfort",
   "paywallTitle": "Ton plan est prêt.",
+  "paywallTitleUpgrade": "Va plus loin avec Premium.",
   "paywallSubtitle": "Essaie tout gratuitement pendant 7 jours.",
   "paywallFeatCoach": "Coach IA illimité qui se souvient de ton pourquoi",
   "paywallFeatPanic": "Bouton panique : tue l'envie en 60 secondes",
@@ -285,10 +286,99 @@
   "paywallTimelineDay": "Jour {n}",
   "paywallTimelineTodayBody": "Tout est débloqué",
   "paywallTimelineRemindBody": "On te prévient",
+  "paywallTimelineNoRemindBody": "Dernier jour pour annuler gratuitement",
   "paywallTimelineChargeBody": "Premier prélèvement : {price}. Annule avant, tu ne paies rien.",
   "paywallPerYear": "{price}/an",
   "paywallPerMonth": "{price}/mois",
   "paywallPerWeek": "{price}/sem",
+  "paywallDisclosureTrial": "{price} par {period} après ton essai gratuit de {days} jours. Renouvellement automatique jusqu'à annulation — annule à tout moment dans tes abonnements {store}.",
+  "@paywallDisclosureTrial": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallDisclosure": "{price} par {period}. Renouvellement automatique jusqu'à annulation — annule à tout moment dans tes abonnements {store}.",
+  "@paywallDisclosure": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPeriodWeek": "semaine",
+  "paywallPeriodMonth": "mois",
+  "paywallPeriodYear": "an",
+  "paywallStoreApple": "App Store",
+  "paywallStoreGoogle": "Google Play",
+  "paywallYearlySubLive": "{perWeek}/semaine · ÉCONOMISE {percent}%",
+  "@paywallYearlySubLive": {
+    "placeholders": {
+      "perWeek": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallYearlySubPerWeek": "{perWeek}/semaine",
+  "@paywallYearlySubPerWeek": {
+    "placeholders": {
+      "perWeek": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallCtaTrial": "{days, plural, =1{Commencer ma journée gratuite} other{Commencer mes {days} jours gratuits}}",
+  "@paywallCtaTrial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallCtaSubscribe": "Commencer Premium",
+  "paywallSubtitleTrial": "{days, plural, =1{Essaie tout gratuitement pendant un jour.} other{Essaie tout gratuitement pendant {days} jours.}}",
+  "@paywallSubtitleTrial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallSubtitleNoTrial": "Tout débloqué, dès aujourd'hui.",
+  "paywallRestore": "Restaurer les achats",
+  "paywallRestored": "Content de te revoir — Premium est activé.",
+  "paywallRestoreNothing": "Rien à restaurer sur ce compte de boutique pour l'instant.",
+  "paywallPurchasePending": "Ton paiement est en attente. Premium s'activera dès que la boutique l'aura confirmé.",
+  "paywallPricesUnavailable": "Les prix en direct ne se chargent pas pour le moment — la boutique affiche le prix exact avant confirmation.",
+  "premiumLockTitle": "Premium",
+  "premiumLockCta": "Voir Premium",
+  "premiumPitchInsight": "Ton rapport hebdo, écrit à partir de tes propres chiffres.",
+  "premiumPitchForecast": "Des prévisions d'envie pour les heures où tu craques d'habitude.",
+  "premiumPitchHistory": "Tout ton historique, pas seulement les 7 derniers jours.",
+  "premiumFreeHistoryNote": "Le plan Gratuit montre tes 7 derniers jours.",
+  "premiumPitchCompose": "Publier fait partie de Premium. Lire et réagir restent gratuits — et un SOS aussi.",
+  "premiumPitchPlan": "Un plan qui s'adapte quand tu craques — l'ajustement du soir, chaque soir.",
+  "premiumPitchHealth": "La chronologie complète, de deux semaines à un an.",
+  "premiumPitchCoach": "Ember à toute heure — 100 messages par jour au lieu de 5.",
   "freePlanTitle": "Le Gratuit te met en route.",
   "freePlanSubtitle": "À toi pour toujours. Pas de compte à rebours, pas de harcèlement.",
   "freePlanFeat1": "Journal de taffes + séries",
@@ -388,9 +478,12 @@
   "panicLoopCoach": "Parler au coach",
   "panicLoopCoachSub": "il sait que c'est ton pattern de stress de {hour}",
   "panicLoopCoachLocked": "tu as utilisé ta session IA gratuite du jour",
-  "gameTitle": "Attrape chaque étincelle",
-  "gameSubtitle": "60 secondes. Pouces occupés, cerveau occupé.",
+  "gameTitle": "Ne laisse pas de place au craving.",
+  "gameSubtitle": "Un craving, c'est surtout une image dans ta tête. Tape les tuiles qui tombent pendant 60 secondes et elle a moins de place pour grandir.",
   "gameTimeLeft": "{seconds}s",
+  "gameNewBest": "nouveau record",
+  "gameRoundDone": "60 secondes faites.",
+  "gameAnotherRound": "Toujours envie — 60 secondes de plus",
   "survivedPlusOne": "+1 craving vaincu",
   "survivedLine1": "Celui-là n'avait aucune chance contre toi.",
   "survivedLine2": "La vague s'est brisée. Pas toi.",
@@ -401,6 +494,9 @@
   "survivedLine7": "Cette envie vient de payer ton futur toi.",
   "survivedLine8": "Sang-froid. Dans le bon sens.",
   "survivedTotalLabel": "cravings survécus au total",
+  "survivedGameTiles": "{count, plural, one{1 tuile} other{{count} tuiles}}",
+  "survivedGameNewBest": "NOUVEAU RECORD",
+  "survivedGameBest": "record {best}",
   "survivedShare": "Partager la win ↗",
   "survivedBack": "Retour à aujourd'hui",
   "survivedShareCopied": "Carte copiée — colle-la où tu veux.",
@@ -422,6 +518,12 @@
   "errorOfflineBody": "Tu es hors ligne. Rien n'est perdu — reconnecte-toi et on reprend exactement où tu en étais.",
   "errorGenericTitle": "Bon, ça a buggé",
   "errorGenericBody": "C'est nous, pas toi. Réessaie dans un instant.",
+  "errorPurchaseNotAllowedTitle": "Les achats sont désactivés sur cet appareil",
+  "errorPurchaseNotAllowedBody": "Cet appareil ou ce compte ne peut pas acheter d'abonnement pour le moment — généralement un contrôle parental ou une restriction de la boutique. Rien n'a été débité.",
+  "errorStoreTitle": "La boutique n'a pas répondu",
+  "errorStoreBody": "Google Play ou l'App Store a eu un raté. Rien n'a été débité — réessaie dans une minute.",
+  "errorReceiptOwnedTitle": "Cet abonnement appartient à un autre compte",
+  "errorReceiptOwnedBody": "L'abonnement de ce compte de boutique est lié à une autre connexion Cirrus. Connecte-toi avec celle-ci, ou restaure depuis ce compte.",
   "errorRejectedTitle": "Cette version a été refusée",
   "errorRejectedBody": "Ta connexion va bien — c'est notre côté qui n'a pas reconnu l'appli. Rien à faire de ton côté, et rien n'est perdu.",
   "errorRetry": "On retente",
@@ -704,6 +806,27 @@
   "settingsSubscription": "Gérer l'abonnement",
   "settingsSubscriptionValue": "Premium · annuel",
   "settingsSubscriptionFree": "Plan Gratuit",
+  "settingsSubscriptionYearly": "Premium · annuel",
+  "settingsSubscriptionMonthly": "Premium · mensuel",
+  "settingsSubscriptionWeekly": "Premium · hebdomadaire",
+  "settingsSubscriptionPremium": "Premium",
+  "settingsSubscriptionTrial": "Essai · se termine le {date}",
+  "@settingsSubscriptionTrial": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSubscriptionEnds": "Premium · se termine le {date}",
+  "@settingsSubscriptionEnds": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsManageUnavailable": "Gère cet abonnement depuis le compte de boutique qui l'a acheté.",
   "settingsNotifications": "Notifications",
   "settingsDangerHours": "Heures à risque",
   "settingsDangerHoursEdit": "{range} · modifier ›",
@@ -735,8 +858,17 @@
   "trialEndingVsDay1": "taffes vs jour 1",
   "trialEndingCravings": "cravings vaincus",
   "trialEndingSaved": "économisés",
-  "trialEndingKeep": "Garder Premium — {price}/an",
+  "trialEndingKeep": "Garder Premium",
   "trialEndingSwitchFree": "Passer en Gratuit (tes données restent)",
+  "trialEndsOn": "Ton essai se termine le {date}.",
+  "@trialEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trialEndingNotifTitle": "Ton essai se termine demain",
   "frameMapTitle": "Les 52 écrans du design",
   "frameMapOpen": "Parcourir les 52 écrans →",
   "frameMapNote": "Chaque écran des quatre handoffs, à un tap. Les lignes chargent le parcours démo ou les réponses du quiz si besoin.",

@@ -13,7 +13,7 @@
  * overwrote it before D+1 ever arrived, so the client's limit came from a
  * window it never matched.
  */
-import {beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {recalcOne} from '../../src/handlers/taperRecalc';
 import {journeyDoc, userDoc} from '../../src/lib/firestore';
 import {limitFor} from '../../src/domain/taperEngine';
@@ -82,8 +82,52 @@ async function seedJourney(uid: string, ratio: number): Promise<void> {
   });
 }
 
+describe('taperRecalc.recalcOne — the adaptive plan is Premium', () => {
+  const previous = process.env['ENTITLEMENT_MODE'];
+  beforeEach(async () => {
+    await clearFirestore();
+    process.env['ENTITLEMENT_MODE'] = 'mirror';
+  });
+  afterEach(() => {
+    if (previous === undefined) delete process.env['ENTITLEMENT_MODE'];
+    else process.env['ENTITLEMENT_MODE'] = previous;
+  });
+
+  it('writes nothing for a free account', async () => {
+    await seedJourney('free-fran', 1.4);
+    await recalcOne('free-fran', 'UTC');
+    expect((await userDoc('free-fran').get()).get('planAdvice')).toBeUndefined();
+  });
+
+  it('advises an entitled account exactly as before', async () => {
+    await userDoc('paid-pat').set({
+      entitlement: {
+        tier: 'trial',
+        productId: 'p',
+        expiresAt: new Date(Date.now() + 86_400_000),
+        updatedAt: new Date(),
+      },
+    });
+    await seedJourney('paid-pat', 1.4);
+    await recalcOne('paid-pat', 'UTC');
+    const advice = (await userDoc('paid-pat').get()).get('planAdvice');
+    expect(advice.adherence).toBe('struggling');
+    expect(advice.forDay).toBe(dayKey(0));
+  });
+});
+
 describe('taperRecalc.recalcOne', () => {
-  beforeEach(clearFirestore);
+  // The adaptive plan is Premium under `mirror`; these cases are about WHICH
+  // day is advised, so they run under the deployed `ungated` default.
+  const previousMode = process.env['ENTITLEMENT_MODE'];
+  beforeEach(async () => {
+    await clearFirestore();
+    process.env['ENTITLEMENT_MODE'] = 'ungated';
+  });
+  afterEach(() => {
+    if (previousMode === undefined) delete process.env['ENTITLEMENT_MODE'];
+    else process.env['ENTITLEMENT_MODE'] = previousMode;
+  });
 
   it('advises the day it stamps, not the day after', async () => {
     // On track: the advice is the curve value, so the assertion is purely

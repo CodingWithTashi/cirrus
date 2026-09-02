@@ -919,6 +919,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get paywallTitle => 'O teu plano está pronto.';
 
   @override
+  String get paywallTitleUpgrade => 'Vai mais longe com o Premium.';
+
+  @override
   String get paywallSubtitle => 'Experimenta tudo grátis durante 7 dias.';
 
   @override
@@ -991,6 +994,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get paywallTimelineRemindBody => 'Avisamos-te';
 
   @override
+  String get paywallTimelineNoRemindBody => 'Último dia para cancelar grátis';
+
+  @override
   String paywallTimelineChargeBody(String price) {
     return 'Primeira cobrança: $price. Cancela antes e não pagas nada.';
   }
@@ -1009,6 +1015,130 @@ class AppLocalizationsPt extends AppLocalizations {
   String paywallPerWeek(String price) {
     return '$price/sem';
   }
+
+  @override
+  String paywallDisclosureTrial(
+    String price,
+    String period,
+    int days,
+    String store,
+  ) {
+    return '$price por $period após o teu teste grátis de $days dias. Renova automaticamente até cancelares — cancela quando quiseres nas tuas subscrições $store.';
+  }
+
+  @override
+  String paywallDisclosure(String price, String period, String store) {
+    return '$price por $period. Renova automaticamente até cancelares — cancela quando quiseres nas tuas subscrições $store.';
+  }
+
+  @override
+  String get paywallPeriodWeek => 'semana';
+
+  @override
+  String get paywallPeriodMonth => 'mês';
+
+  @override
+  String get paywallPeriodYear => 'ano';
+
+  @override
+  String get paywallStoreApple => 'App Store';
+
+  @override
+  String get paywallStoreGoogle => 'Google Play';
+
+  @override
+  String paywallYearlySubLive(String perWeek, int percent) {
+    return '$perWeek/semana · POUPA $percent%';
+  }
+
+  @override
+  String paywallYearlySubPerWeek(String perWeek) {
+    return '$perWeek/semana';
+  }
+
+  @override
+  String paywallCtaTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Começar os meus $days dias grátis',
+      one: 'Começar o meu dia grátis',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paywallCtaSubscribe => 'Começar Premium';
+
+  @override
+  String paywallSubtitleTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Experimenta tudo grátis durante $days dias.',
+      one: 'Experimenta tudo grátis durante um dia.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paywallSubtitleNoTrial => 'Tudo desbloqueado, a partir de hoje.';
+
+  @override
+  String get paywallRestore => 'Restaurar compras';
+
+  @override
+  String get paywallRestored => 'Bem-vindo de volta — o Premium está ativo.';
+
+  @override
+  String get paywallRestoreNothing =>
+      'Ainda não há nada para restaurar nesta conta da loja.';
+
+  @override
+  String get paywallPurchasePending =>
+      'O teu pagamento está pendente. O Premium ativa-se assim que a loja o confirmar.';
+
+  @override
+  String get paywallPricesUnavailable =>
+      'Os preços em direto não estão a carregar — a loja mostra-te o preço exato antes de confirmares.';
+
+  @override
+  String get premiumLockTitle => 'Premium';
+
+  @override
+  String get premiumLockCta => 'Ver Premium';
+
+  @override
+  String get premiumPitchInsight =>
+      'O teu relatório semanal, escrito com os teus próprios números.';
+
+  @override
+  String get premiumPitchForecast =>
+      'Previsões de vontade para as horas em que costumas ceder.';
+
+  @override
+  String get premiumPitchHistory =>
+      'Todo o teu histórico, não só os últimos 7 dias.';
+
+  @override
+  String get premiumFreeHistoryNote =>
+      'O plano Grátis mostra os teus últimos 7 dias.';
+
+  @override
+  String get premiumPitchCompose =>
+      'Publicar faz parte do Premium. Ler e reagir são sempre grátis — e um SOS também.';
+
+  @override
+  String get premiumPitchPlan =>
+      'Um plano que se adapta quando escorregas — o ajuste desta noite, todas as noites.';
+
+  @override
+  String get premiumPitchHealth =>
+      'A linha do tempo completa, de duas semanas a um ano.';
+
+  @override
+  String get premiumPitchCoach =>
+      'Ember a qualquer hora — 100 mensagens por dia em vez de 5.';
 
   @override
   String get freePlanTitle => 'O Grátis já te põe em marcha.';
@@ -1384,15 +1514,25 @@ class AppLocalizationsPt extends AppLocalizations {
       'já usaste a tua sessão de IA gratuita de hoje';
 
   @override
-  String get gameTitle => 'Apanha cada faísca';
+  String get gameTitle => 'Tira espaço ao craving.';
 
   @override
-  String get gameSubtitle => '60 segundos. Polegares ocupados, cabeça ocupada.';
+  String get gameSubtitle =>
+      'Um craving é sobretudo uma imagem na tua cabeça. Toca nas peças que caem durante 60 segundos e ele fica com menos espaço para crescer.';
 
   @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
+
+  @override
+  String get gameNewBest => 'novo recorde';
+
+  @override
+  String get gameRoundDone => '60 segundos feitos.';
+
+  @override
+  String get gameAnotherRound => 'Ainda com craving — mais 60 segundos';
 
   @override
   String get survivedPlusOne => '+1 craving vencido';
@@ -1424,6 +1564,25 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get survivedTotalLabel => 'cravings superados no total';
+
+  @override
+  String survivedGameTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count peças',
+      one: '1 peça',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get survivedGameNewBest => 'NOVO RECORDE';
+
+  @override
+  String survivedGameBest(int best) {
+    return 'recorde $best';
+  }
 
   @override
   String get survivedShare => 'Partilhar a vitória ↗';
@@ -1507,6 +1666,28 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'A culpa é nossa, não tua. Tenta outra vez daqui a nada.';
+
+  @override
+  String get errorPurchaseNotAllowedTitle =>
+      'As compras estão desativadas neste dispositivo';
+
+  @override
+  String get errorPurchaseNotAllowedBody =>
+      'Este dispositivo ou conta não pode comprar subscrições agora — normalmente por controlo parental ou uma restrição da loja. Não foi cobrado nada.';
+
+  @override
+  String get errorStoreTitle => 'A loja não respondeu';
+
+  @override
+  String get errorStoreBody =>
+      'O Google Play ou a App Store tiveram um momento. Não foi cobrado nada — tenta outra vez daqui a um minuto.';
+
+  @override
+  String get errorReceiptOwnedTitle => 'Essa subscrição pertence a outra conta';
+
+  @override
+  String get errorReceiptOwnedBody =>
+      'A subscrição desta conta da loja está ligada a outro início de sessão do Cirrus. Inicia sessão lá, ou restaura a partir dessa conta.';
 
   @override
   String get errorRejectedTitle => 'Esta versão foi recusada';
@@ -2548,6 +2729,32 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsSubscriptionFree => 'Plano Grátis';
 
   @override
+  String get settingsSubscriptionYearly => 'Premium · anual';
+
+  @override
+  String get settingsSubscriptionMonthly => 'Premium · mensal';
+
+  @override
+  String get settingsSubscriptionWeekly => 'Premium · semanal';
+
+  @override
+  String get settingsSubscriptionPremium => 'Premium';
+
+  @override
+  String settingsSubscriptionTrial(String date) {
+    return 'Teste · termina a $date';
+  }
+
+  @override
+  String settingsSubscriptionEnds(String date) {
+    return 'Premium · termina a $date';
+  }
+
+  @override
+  String get settingsManageUnavailable =>
+      'Gere esta subscrição a partir da conta da loja que a comprou.';
+
+  @override
   String get settingsNotifications => 'Notificações';
 
   @override
@@ -2654,12 +2861,18 @@ class AppLocalizationsPt extends AppLocalizations {
   String get trialEndingSaved => 'poupado';
 
   @override
-  String trialEndingKeep(String price) {
-    return 'Manter Premium — $price/ano';
-  }
+  String get trialEndingKeep => 'Manter Premium';
 
   @override
   String get trialEndingSwitchFree => 'Passar ao Grátis (os dados ficam)';
+
+  @override
+  String trialEndsOn(String date) {
+    return 'O teu teste termina a $date.';
+  }
+
+  @override
+  String get trialEndingNotifTitle => 'O teu teste termina amanhã';
 
   @override
   String get frameMapTitle => 'Os 52 frames do design';

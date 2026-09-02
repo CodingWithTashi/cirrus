@@ -64,8 +64,13 @@ extension LpEvents on AnalyticsSink {
 
   // --- paywall -------------------------------------------------------------
 
-  void paywallViewed(String variant) =>
-      track(AnalyticsEvent('paywall_viewed', {'variant': variant}));
+  /// [variant] is the A/B layout slot docs/06 §3 reads; [source] is what put
+  /// the person on the paywall — `onboarding`, `launch`, `settings`,
+  /// `coach_cap`, `insight`, `forecast`, `history`, `compose`, `panic`,
+  /// `push` — so a conversion rate can be read per door, not just per layout.
+  void paywallViewed(String variant, {required String source}) => track(
+    AnalyticsEvent('paywall_viewed', {'variant': variant, 'source': source}),
+  );
 
   void trialStarted(String tier) =>
       track(AnalyticsEvent('trial_started', {'tier': tier}));
@@ -76,6 +81,38 @@ extension LpEvents on AnalyticsSink {
 
   void winbackConverted() => track(const AnalyticsEvent('winback_converted'));
 
+  // --- billing -------------------------------------------------------------
+  // Not in docs/02 §7, whose funnel stops at `trial_started` (fired at intent,
+  // before the store sheet). These are the outcomes of that sheet. Revenue
+  // itself is not tracked here: RevenueCat forwards it to Amplitude keyed on
+  // the same user id, and two sources of one number always disagree.
+
+  /// The store took the payment and the entitlement is active.
+  void purchaseCompleted(String plan, {required bool trial}) => track(
+    AnalyticsEvent('purchase_completed', {
+      'plan': plan,
+      'trial': trial.toString(),
+    }),
+  );
+
+  /// The sheet was dismissed. Distinct from `free_continued`, which is the
+  /// user choosing the free path on purpose.
+  void purchaseCancelled(String plan) =>
+      track(AnalyticsEvent('purchase_cancelled', {'plan': plan}));
+
+  /// [code] is the exception's taxonomy name (`offline`, `store`,
+  /// `not_allowed`, `receipt_owned`, `other`) — never the raw store message.
+  void purchaseFailed(String code) =>
+      track(AnalyticsEvent('purchase_failed', {'code': code}));
+
+  void restoreCompleted({required bool found}) =>
+      track(AnalyticsEvent('restore_completed', {'found': found.toString()}));
+
+  /// The tier changed from anything other than a purchase on this device:
+  /// a renewal, an expiry, a restore, a change made on another device.
+  void entitlementChanged(String tier) =>
+      track(AnalyticsEvent('entitlement_changed', {'tier': tier}));
+
   // --- the habit loop ------------------------------------------------------
 
   /// Not in docs/02 §7, but the north star is Weekly Active Quitters — users
@@ -84,4 +121,21 @@ extension LpEvents on AnalyticsSink {
 
   void cravingSurvived({required bool survived}) =>
       track(AnalyticsEvent('craving_outcome', {'survived': survived.toString()}));
+
+  /// The 60-second panic game ran to the end (docs/09 §8). Not in docs/02
+  /// §7 either: the tempo ramp is tuned off this. A median score close to
+  /// the tile count says the ramp is too slow; misses climbing through the
+  /// stages say the steps are too steep. Numbers only — no lane data, no
+  /// timings.
+  void gameFinished({
+    required int score,
+    required int bestCombo,
+    required int misses,
+  }) => track(
+    AnalyticsEvent('game_finished', {
+      'score': score,
+      'best_combo': bestCombo,
+      'misses': misses,
+    }),
+  );
 }

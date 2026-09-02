@@ -17,6 +17,7 @@ class SettingsState {
     this.quietEndHour = 8,
     this.trialReminderOn = true,
     this.winbackShown = false,
+    this.launchPaywallShownDay,
   });
 
   final ThemeMode themeMode;
@@ -39,6 +40,11 @@ class SettingsState {
   /// The founding offer fires once, then never again (Run 1 frame 22).
   final bool winbackShown;
 
+  /// Local day key (`yyyy-MM-dd`) of the last launch on which a free user was
+  /// shown the paywall. Docs/02 §5 allows one upgrade prompt a day and never
+  /// an interstitial beyond that; this is how "one a day" is counted.
+  final String? launchPaywallShownDay;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
     Locale? Function()? locale,
@@ -48,6 +54,7 @@ class SettingsState {
     bool? dangerHoursCustom,
     bool? trialReminderOn,
     bool? winbackShown,
+    String? launchPaywallShownDay,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
     locale: locale != null ? locale() : this.locale,
@@ -59,6 +66,7 @@ class SettingsState {
     quietEndHour: quietEndHour,
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
     winbackShown: winbackShown ?? this.winbackShown,
+    launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
   );
 }
 
@@ -117,4 +125,9 @@ class SettingsStore extends Notifier<SettingsState> {
       _commit(state.copyWith(trialReminderOn: on));
 
   void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
+
+  /// Records that today's launch paywall was shown, so it is not shown again
+  /// before the next local day.
+  void markLaunchPaywallShown(String dayKey) =>
+      _commit(state.copyWith(launchPaywallShownDay: dayKey));
 }

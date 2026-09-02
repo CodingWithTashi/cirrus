@@ -144,11 +144,34 @@ export const testimonialsCol = (): CollectionReference =>
 
 // --- Shape of the server-owned document -------------------------------------
 
-/** Mirror of RevenueCat. The ONLY thing the coach trusts for tier. */
+/**
+ * Mirror of RevenueCat. The ONLY thing the server trusts for tier (`tierFor`
+ * / `tierOf`). Written solely by `rcWebhook`, as a whole snapshot of the
+ * customer (never an event-by-event delta), so every write is idempotent —
+ * and ordered by [snapshotAt], so two deliveries for one customer cannot
+ * land the older read last. Server-only: the app's tier is RevenueCat's own
+ * customer record via the SDK, never this row.
+ */
 export interface Entitlement {
   readonly tier: SubscriptionTier;
+  /** RevenueCat's product id: `yearly_3999`, `cirrus_premium:weekly-299`. */
   readonly productId?: string | null;
+  /** `domain/plans.ts` reading of [productId]; null for anything uncatalogued. */
+  readonly plan?: 'yearly' | 'monthly' | 'weekly' | null;
   readonly expiresAt?: Timestamp | null;
+  /** False once cancelled or in billing retry; access runs to [expiresAt]. */
+  readonly willRenew?: boolean;
+  /** `play_store` | `app_store` | `test_store` | `promotional` | … as
+   * RevenueCat v2 names them. */
+  readonly store?: string | null;
+  readonly environment?: 'SANDBOX' | 'PRODUCTION' | null;
+  /** The store's own manage-subscription page for this purchase. */
+  readonly managementUrl?: string | null;
+  /** The webhook event that produced this write — the retry dedupe key. */
+  readonly lastEventId?: string | null;
+  readonly lastEventType?: string | null;
+  /** When the snapshot behind this row was read (ms). Newer reads win. */
+  readonly snapshotAt?: number;
   readonly updatedAt?: Timestamp;
 }
 

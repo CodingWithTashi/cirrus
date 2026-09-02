@@ -10,6 +10,8 @@ import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../domain/logic/billing_catalog.dart';
+import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
@@ -35,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
     final locale = context.localeTag;
     final settings = ref.watch(settingsStoreProvider);
     final journey = ref.watch(quitStoreProvider);
-    final tier = journey?.profile.tier ?? SubscriptionTier.free;
+    final entitlement = ref.watch(entitlementProvider);
 
     String appearanceValue() => switch (settings.themeMode) {
       ThemeMode.system => l10n.settingsAppearanceSystem,
@@ -126,19 +128,36 @@ class SettingsScreen extends ConsumerWidget {
             row(
               emoji: '💳',
               label: l10n.settingsSubscription,
-              value: tier == SubscriptionTier.free
-                  ? l10n.settingsSubscriptionFree
-                  : l10n.settingsSubscriptionValue,
-              // Free tier sees the founding offer exactly once (frame 22);
-              // after that, the regular paywall.
-              onTap: () => context.push(
-                tier != SubscriptionTier.free
-                    ? Routes.trialEnding
-                    : settings.winbackShown
-                    ? Routes.paywall
-                    : Routes.winback,
-              ),
+              value: _subscriptionValue(l10n, entitlement, locale),
+              // Free → the paywall (the founding offer, once, when it is
+              // enabled — frame 22). Trial → the trial-ending screen. Paid →
+              // the store's own manage page: cancelling and switching plans
+              // happen there and nowhere else, which is also what both stores
+              // require an app to offer.
+              onTap: () {
+                if (!entitlement.isActive) {
+                  context.push(
+                    BillingCatalog.foundingOfferEnabled && !settings.winbackShown
+                        ? Routes.winback
+                        : Routes.paywallFrom('settings'),
+                  );
+                } else if (entitlement.isTrial) {
+                  context.push(Routes.trialEnding);
+                } else {
+                  _manageSubscription(context, entitlement);
+                }
+              },
             ),
+            // Restore is a store requirement the day subscriptions ship
+            // (S1-7): a reinstall or a new phone must be able to find a
+            // subscription the store account already owns.
+            if (!entitlement.isActive)
+              row(
+                emoji: '↩️',
+                label: l10n.paywallRestore,
+                value: '',
+                onTap: () => _restorePurchases(context, ref),
+              ),
             row(
               emoji: '🔔',
               label: l10n.settingsNotifications,
@@ -281,11 +300,8 @@ class SettingsScreen extends ConsumerWidget {
                 value: '',
                 onTap: () => context.push(Routes.moderation),
               ),
-            // Support and Restore Purchases both used to live here and both
-            // only showed a snack. There is no support channel yet, and no
-            // billing SDK at all (docs/08 B4) — so "Restored" was claiming to
-            // have restored purchases that cannot exist. Restore is REQUIRED
-            // the day subscriptions ship (S1-7); it returns with them.
+            // Support used to live here and only showed a snack; there is no
+            // support channel yet. Restore Purchases is back above, real.
             const SizedBox(height: 10),
             Center(
               child: LpTextButton(
@@ -294,12 +310,13 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => _confirmSignOut(context, ref),
               ),
             ),
-            Center(
-              child: Text(
-                l10n.appVersionFooter('1.0.0'),
-                style: LpType.caption11(lp.textFaint),
+            if (ref.watch(appVersionProvider).valueOrNull case final version?)
+              Center(
+                child: Text(
+                  l10n.appVersionFooter(version),
+                  style: LpType.caption11(lp.textFaint),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -626,4 +643,61 @@ void _showRenameCoachSheet(BuildContext context, WidgetRef ref) {
       },
     ),
   );
+}
+
+/// The subscription row's value, from the entitlement alone — never from a
+/// plan name the app wrote down for itself.
+String _subscriptionValue(
+  AppLocalizations l10n,
+  Entitlement entitlement,
+  String locale,
+) {
+  if (!entitlement.isActive) return l10n.settingsSubscriptionFree;
+  final ends = entitlement.expiresAt;
+  if (entitlement.isTrial) {
+    return ends == null
+        ? l10n.settingsSubscriptionPremium
+        : l10n.settingsSubscriptionTrial(LpFormat.mediumDate(ends, locale));
+  }
+  if (!entitlement.willRenew && ends != null) {
+    return l10n.settingsSubscriptionEnds(LpFormat.mediumDate(ends, locale));
+  }
+  return switch (entitlement.period) {
+    PlanPeriod.yearly => l10n.settingsSubscriptionYearly,
+    PlanPeriod.monthly => l10n.settingsSubscriptionMonthly,
+    PlanPeriod.weekly => l10n.settingsSubscriptionWeekly,
+    null => l10n.settingsSubscriptionPremium,
+  };
+}
+
+/// Opens the store's manage-subscription page. Null when the store gave us
+/// none — a family-shared or promotional grant — and the honest answer then
+/// is to say where it can be managed, not to fake a page.
+void _manageSubscription(BuildContext context, Entitlement entitlement) {
+  final url = entitlement.managementUrl;
+  if (url == null) {
+    showLpSnack(context, context.l10n.settingsManageUnavailable);
+    return;
+  }
+  LpLinks.open(url).ignore();
+}
+
+/// One restore at a time: two quick taps must not run two.
+bool _restoreInFlight = false;
+
+Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+  if (_restoreInFlight) return;
+  _restoreInFlight = true;
+  final l10n = context.l10n;
+  try {
+    final restored = await ref.read(entitlementProvider.notifier).restore();
+    if (!context.mounted) return;
+    showLpSnack(
+      context,
+      restored.isActive ? l10n.paywallRestored : l10n.paywallRestoreNothing,
+    );
+  } on Exception catch (error) {
+    if (!context.mounted) return;
+    await showLpErrorDialog(context, error: error);
+  }
 }

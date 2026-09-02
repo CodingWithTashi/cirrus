@@ -8,6 +8,7 @@ import '../../domain/logic/dependence_engine.dart';
 import '../../domain/logic/money_engine.dart';
 import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
+import '../../domain/logic/tile_game.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/analytics/lp_events.dart';
@@ -66,12 +67,22 @@ class JourneyStore extends Notifier<JourneyState?> {
     ref.read(userContextRepositoryProvider).sync(fcmToken: token).ignore();
   }
 
+  /// Binds the store identity to the account, so a purchase is filed under
+  /// the same uid the server's entitlement mirror is keyed by. Same shape as
+  /// [_identifyForAnalytics], for the same reason: the notifier is captured
+  /// before the await.
+  void _bindBilling() {
+    final billing = ref.read(entitlementProvider.notifier);
+    _auth.currentUserId().then(billing.bindSession).ignore();
+  }
+
   /// Everything a freshly-established session should pull from the server.
   /// One call so a new session path cannot wire half of it.
   void _onSessionEstablished() {
     _syncUserContext();
     pullPlanAdvice();
     _identifyForAnalytics();
+    _bindBilling();
   }
 
   /// Reads the nightly taper verdict from the server-owned user document and
@@ -220,8 +231,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     state = null;
     // Before the sign-out call, so the identity is unbound even if the ack
     // never lands. On a shared phone the alternative is the next person's
-    // events arriving under the last person's user id.
+    // events arriving under the last person's user id — and, for billing,
+    // the next person inheriting the last one's Premium.
     ref.read(analyticsProvider).reset();
+    ref.read(entitlementProvider.notifier).unbind().ignore();
     // Release the push registration BEFORE the credential goes, and chain the
     // two rather than firing both: `syncUserContext` is a callable, so it
     // carries the caller's ID token, and a release that raced past
@@ -248,6 +261,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   Future<void> deleteAccount() async {
     await _auth.deleteAccount();
     ref.read(analyticsProvider).reset();
+    ref.read(entitlementProvider.notifier).unbind().ignore();
     // The server side of the push registry died with `recursiveDelete`; this
     // is the local half — without it the device keeps a live FCM token bound
     // to an account that no longer exists. After the await on purpose: a
@@ -471,6 +485,18 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
+  /// A run of the 60-second panic game finished with [score] tiles caught.
+  /// Returns true when that is a new personal best — the first real score is
+  /// one by definition — and records it; anything else leaves the journey
+  /// untouched. Zero never becomes a best: `TileGame.beats` keeps the honest
+  /// empty state until someone has actually caught something.
+  bool recordGameScore(int score) {
+    final s = state;
+    if (s == null || !TileGame.beats(score, s.bestGameScore)) return false;
+    _commit(s.copyWith(bestGameScore: score));
+    return true;
+  }
+
   void recordSlipTrigger(SlipTrigger trigger) {
     final s = state;
     if (s == null) return;
@@ -608,11 +634,6 @@ class JourneyStore extends Notifier<JourneyState?> {
     return true;
   }
 
-  void setTier(SubscriptionTier tier) {
-    final s = state;
-    if (s == null) return;
-    _commit(s.copyWith(profile: s.profile.copyWith(tier: tier)));
-  }
 
   /// Awards a badge from another feature (community, buddy…).
   void awardBadge(String id) {

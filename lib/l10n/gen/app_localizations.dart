@@ -1682,6 +1682,12 @@ abstract class AppLocalizations {
   /// **'Your plan is ready.'**
   String get paywallTitle;
 
+  /// No description provided for @paywallTitleUpgrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Go further with Premium.'**
+  String get paywallTitleUpgrade;
+
   /// No description provided for @paywallSubtitle.
   ///
   /// In en, this message translates to:
@@ -1814,6 +1820,12 @@ abstract class AppLocalizations {
   /// **'We remind you'**
   String get paywallTimelineRemindBody;
 
+  /// No description provided for @paywallTimelineNoRemindBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Last day to cancel free'**
+  String get paywallTimelineNoRemindBody;
+
   /// No description provided for @paywallTimelineChargeBody.
   ///
   /// In en, this message translates to:
@@ -1837,6 +1849,179 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{price}/wk'**
   String paywallPerWeek(String price);
+
+  /// No description provided for @paywallDisclosureTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} per {period} after your {days}-day free trial. Renews automatically until you cancel — cancel anytime in your {store} subscription settings.'**
+  String paywallDisclosureTrial(
+    String price,
+    String period,
+    int days,
+    String store,
+  );
+
+  /// No description provided for @paywallDisclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} per {period}. Renews automatically until you cancel — cancel anytime in your {store} subscription settings.'**
+  String paywallDisclosure(String price, String period, String store);
+
+  /// No description provided for @paywallPeriodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'week'**
+  String get paywallPeriodWeek;
+
+  /// No description provided for @paywallPeriodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'month'**
+  String get paywallPeriodMonth;
+
+  /// No description provided for @paywallPeriodYear.
+  ///
+  /// In en, this message translates to:
+  /// **'year'**
+  String get paywallPeriodYear;
+
+  /// No description provided for @paywallStoreApple.
+  ///
+  /// In en, this message translates to:
+  /// **'App Store'**
+  String get paywallStoreApple;
+
+  /// No description provided for @paywallStoreGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play'**
+  String get paywallStoreGoogle;
+
+  /// No description provided for @paywallYearlySubLive.
+  ///
+  /// In en, this message translates to:
+  /// **'{perWeek}/week · SAVE {percent}%'**
+  String paywallYearlySubLive(String perWeek, int percent);
+
+  /// No description provided for @paywallYearlySubPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{perWeek}/week'**
+  String paywallYearlySubPerWeek(String perWeek);
+
+  /// No description provided for @paywallCtaTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Start my free day} other{Start my free {days} days}}'**
+  String paywallCtaTrial(int days);
+
+  /// No description provided for @paywallCtaSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Premium'**
+  String get paywallCtaSubscribe;
+
+  /// No description provided for @paywallSubtitleTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Try everything free for a day.} other{Try everything free for {days} days.}}'**
+  String paywallSubtitleTrial(int days);
+
+  /// No description provided for @paywallSubtitleNoTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything unlocked, from today.'**
+  String get paywallSubtitleNoTrial;
+
+  /// No description provided for @paywallRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get paywallRestore;
+
+  /// No description provided for @paywallRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back — Premium is on.'**
+  String get paywallRestored;
+
+  /// No description provided for @paywallRestoreNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to restore on this store account yet.'**
+  String get paywallRestoreNothing;
+
+  /// No description provided for @paywallPurchasePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment is pending. Premium switches on as soon as the store confirms it.'**
+  String get paywallPurchasePending;
+
+  /// No description provided for @paywallPricesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Live prices aren\'t loading right now — the store shows the exact price before you confirm.'**
+  String get paywallPricesUnavailable;
+
+  /// No description provided for @premiumLockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get premiumLockTitle;
+
+  /// No description provided for @premiumLockCta.
+  ///
+  /// In en, this message translates to:
+  /// **'See Premium'**
+  String get premiumLockCta;
+
+  /// No description provided for @premiumPitchInsight.
+  ///
+  /// In en, this message translates to:
+  /// **'Your weekly report, written from your own numbers.'**
+  String get premiumPitchInsight;
+
+  /// No description provided for @premiumPitchForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'Craving forecasts for the hours you usually reach for it.'**
+  String get premiumPitchForecast;
+
+  /// No description provided for @premiumPitchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Your whole history, not just the last 7 days.'**
+  String get premiumPitchHistory;
+
+  /// No description provided for @premiumFreeHistoryNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Free shows your last 7 days.'**
+  String get premiumFreeHistoryNote;
+
+  /// No description provided for @premiumPitchCompose.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting is part of Premium. Reading and reacting are always free — and so is an SOS.'**
+  String get premiumPitchCompose;
+
+  /// No description provided for @premiumPitchPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'A plan that adapts when you slip — tonight\'s adjustment, every night.'**
+  String get premiumPitchPlan;
+
+  /// No description provided for @premiumPitchHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'The full timeline, from two weeks to a year.'**
+  String get premiumPitchHealth;
+
+  /// No description provided for @premiumPitchCoach.
+  ///
+  /// In en, this message translates to:
+  /// **'Ember around the clock — 100 messages a day instead of 5.'**
+  String get premiumPitchCoach;
 
   /// No description provided for @freePlanTitle.
   ///
@@ -2435,13 +2620,13 @@ abstract class AppLocalizations {
   /// No description provided for @gameTitle.
   ///
   /// In en, this message translates to:
-  /// **'Tap every spark'**
+  /// **'Crowd the craving out.'**
   String get gameTitle;
 
   /// No description provided for @gameSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'60 seconds. Thumbs busy, brain busy.'**
+  /// **'A craving is mostly a picture in your head. Tap the falling tiles for 60 seconds and it gets less room to grow.'**
   String get gameSubtitle;
 
   /// No description provided for @gameTimeLeft.
@@ -2449,6 +2634,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{seconds}s'**
   String gameTimeLeft(int seconds);
+
+  /// No description provided for @gameNewBest.
+  ///
+  /// In en, this message translates to:
+  /// **'new best'**
+  String get gameNewBest;
+
+  /// No description provided for @gameRoundDone.
+  ///
+  /// In en, this message translates to:
+  /// **'60 seconds done.'**
+  String get gameRoundDone;
+
+  /// No description provided for @gameAnotherRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Still craving — 60 more seconds'**
+  String get gameAnotherRound;
 
   /// No description provided for @survivedPlusOne.
   ///
@@ -2509,6 +2712,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'cravings survived total'**
   String get survivedTotalLabel;
+
+  /// No description provided for @survivedGameTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 tile} other{{count} tiles}}'**
+  String survivedGameTiles(int count);
+
+  /// No description provided for @survivedGameNewBest.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW BEST'**
+  String get survivedGameNewBest;
+
+  /// No description provided for @survivedGameBest.
+  ///
+  /// In en, this message translates to:
+  /// **'best {best}'**
+  String survivedGameBest(int best);
 
   /// No description provided for @survivedShare.
   ///
@@ -2635,6 +2856,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That one\'s on us, not you. Give it another shot in a sec.'**
   String get errorGenericBody;
+
+  /// No description provided for @errorPurchaseNotAllowedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases are off on this device'**
+  String get errorPurchaseNotAllowedTitle;
+
+  /// No description provided for @errorPurchaseNotAllowedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device or account can\'t buy subscriptions right now — usually parental controls or a store restriction. Nothing was charged.'**
+  String get errorPurchaseNotAllowedBody;
+
+  /// No description provided for @errorStoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The store didn\'t answer'**
+  String get errorStoreTitle;
+
+  /// No description provided for @errorStoreBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play or the App Store had a moment. Nothing was charged — try again in a minute.'**
+  String get errorStoreBody;
+
+  /// No description provided for @errorReceiptOwnedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'That subscription belongs to another account'**
+  String get errorReceiptOwnedTitle;
+
+  /// No description provided for @errorReceiptOwnedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This store account\'s subscription is linked to a different Cirrus sign-in. Sign in there, or restore from that account.'**
+  String get errorReceiptOwnedBody;
 
   /// No description provided for @errorRejectedTitle.
   ///
@@ -4328,6 +4585,48 @@ abstract class AppLocalizations {
   /// **'Free plan'**
   String get settingsSubscriptionFree;
 
+  /// No description provided for @settingsSubscriptionYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium · yearly'**
+  String get settingsSubscriptionYearly;
+
+  /// No description provided for @settingsSubscriptionMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium · monthly'**
+  String get settingsSubscriptionMonthly;
+
+  /// No description provided for @settingsSubscriptionWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium · weekly'**
+  String get settingsSubscriptionWeekly;
+
+  /// No description provided for @settingsSubscriptionPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get settingsSubscriptionPremium;
+
+  /// No description provided for @settingsSubscriptionTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Trial · ends {date}'**
+  String settingsSubscriptionTrial(String date);
+
+  /// No description provided for @settingsSubscriptionEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium · ends {date}'**
+  String settingsSubscriptionEnds(String date);
+
+  /// No description provided for @settingsManageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage this subscription from the store account that bought it.'**
+  String get settingsManageUnavailable;
+
   /// No description provided for @settingsNotifications.
   ///
   /// In en, this message translates to:
@@ -4517,14 +4816,26 @@ abstract class AppLocalizations {
   /// No description provided for @trialEndingKeep.
   ///
   /// In en, this message translates to:
-  /// **'Keep Premium — {price}/yr'**
-  String trialEndingKeep(String price);
+  /// **'Keep Premium'**
+  String get trialEndingKeep;
 
   /// No description provided for @trialEndingSwitchFree.
   ///
   /// In en, this message translates to:
   /// **'Switch to Free (keeps your data)'**
   String get trialEndingSwitchFree;
+
+  /// No description provided for @trialEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trial ends {date}.'**
+  String trialEndsOn(String date);
+
+  /// No description provided for @trialEndingNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trial ends tomorrow'**
+  String get trialEndingNotifTitle;
 
   /// No description provided for @frameMapTitle.
   ///

@@ -67,6 +67,9 @@ class _RecordingAuth implements AuthRepository {
   Future<String?> currentUserId() async => 'uid-1';
 
   @override
+  Future<String?> ensureSessionId() async => 'uid-1';
+
+  @override
   Future<JourneyState?> restoreSession() async {
     _calls.add('auth.restoreSession');
     return restored;

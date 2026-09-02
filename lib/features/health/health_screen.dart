@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../core/widgets/lp_premium_gate.dart';
 import '../../data/stores/providers.dart';
 
 /// Frame 39 — health recovery timeline, honestly anchored to the last
@@ -52,6 +55,28 @@ class HealthScreen extends ConsumerWidget {
     );
     if (hereIndex == -1) hereIndex = milestones.length;
 
+    // Free sees the first week of milestones; the rest of the year is Premium
+    // (docs/01 §10 "basic milestones" vs "full timeline"). The gated nodes
+    // still render — blurred — so the road ahead is visible, not hidden. The
+    // node the user is AT is always theirs to see, however far along: a week
+    // puff-free must not blur its own "you are here".
+    final freeNodes = math.max(7, hereIndex + 1);
+    final premium = ref.watch(isPremiumProvider);
+    Widget node(int i, (Duration, String, String, bool) milestone) =>
+        _TimelineNode(
+          title: i == hereIndex
+              ? l10n.healthYouAreHere(milestone.$2)
+              : milestone.$2,
+          body: milestone.$3,
+          state: i < hereIndex
+              ? _NodeState.done
+              : i == hereIndex
+              ? _NodeState.current
+              : _NodeState.locked,
+          trophy: milestone.$4,
+          isLast: i == milestones.length - 1,
+        );
+
     return Scaffold(
       appBar: AppBar(
         leading: BackChevron(onTap: () => context.pop()),
@@ -71,19 +96,23 @@ class HealthScreen extends ConsumerWidget {
               style: LpType.body13(lp.textSecondary),
             ),
             const SizedBox(height: 22),
-            for (final (i, milestone) in milestones.indexed)
-              _TimelineNode(
-                title: i == hereIndex
-                    ? l10n.healthYouAreHere(milestone.$2)
-                    : milestone.$2,
-                body: milestone.$3,
-                state: i < hereIndex
-                    ? _NodeState.done
-                    : i == hereIndex
-                    ? _NodeState.current
-                    : _NodeState.locked,
-                trophy: milestone.$4,
-                isLast: i == milestones.length - 1,
+            for (final (i, milestone) in milestones.indexed.take(freeNodes))
+              node(i, milestone),
+            if (premium)
+              for (final (i, milestone) in milestones.indexed.skip(freeNodes))
+                node(i, milestone)
+            else if (milestones.length > freeNodes)
+              LpPremiumGate(
+                source: 'health',
+                pitch: l10n.premiumPitchHealth,
+                lockAlignment: Alignment.topCenter,
+                child: Column(
+                  children: [
+                    for (final (i, milestone)
+                        in milestones.indexed.skip(freeNodes))
+                      node(i, milestone),
+                  ],
+                ),
               ),
             const SizedBox(height: 8),
             LpNoteCard(l10n.healthUnlockNote),

@@ -3,29 +3,37 @@
  *
  * This endpoint is the ONLY writer of `users/{uid}.entitlement`, and that
  * field is the ONLY thing the coach trusts when choosing a tier. The app's
- * own `profile.tier` is a display value; believing it would let a repackaged
- * client grant itself Premium and unlimited model calls.
+ * own view of its tier comes from the RevenueCat SDK's customer record; the
+ * server never believes anything the app says about it.
  *
  * Unauthenticated by nature (RevenueCat calls it), so the shared secret in
  * the Authorization header is the whole security boundary.
+ *
+ * The event is a TRIGGER, not the truth. For every customer it names — the
+ * `app_user_id`, plus both sides of a TRANSFER — the handler fetches the
+ * current subscriber snapshot from RevenueCat and writes THAT. So a late,
+ * duplicated or reordered delivery cannot revoke a paying user, CANCELLATION
+ * keeps access until expiry because the snapshot says so, BILLING_ISSUE keeps
+ * access through the grace period because the snapshot says so, and the
+ * event-type switch this replaced (with its five known holes) is gone.
  */
+import {timingSafeEqual} from 'node:crypto';
+import {getAuth} from 'firebase-admin/auth';
 import {onRequest} from 'firebase-functions/v2/https';
-import {REGION, REVENUECAT_WEBHOOK_TOKEN} from '../config';
-import {FieldValue, Timestamp, userDoc} from '../lib/firestore';
+import {
+  RC_ACCEPT_SANDBOX,
+  REGION,
+  REVENUECAT_SECRET_API_KEY,
+  REVENUECAT_WEBHOOK_TOKEN,
+} from '../config';
+import {FieldValue, Timestamp, type UserDoc, db, userDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
-
-/** Event types that mean "this user currently has access". */
-const GRANTING = new Set([
-  'INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION',
-  'NON_RENEWING_PURCHASE', 'SUBSCRIPTION_EXTENDED', 'TRANSFER',
-]);
-/** Event types that revoke access immediately. */
-const REVOKING = new Set(['EXPIRATION', 'REFUND', 'SUBSCRIPTION_PAUSED']);
+import {fetchSubscriber, RevenueCatUnavailable} from '../lib/revenuecat';
 
 export const rcWebhook = onRequest(
   {
     region: REGION,
-    secrets: [REVENUECAT_WEBHOOK_TOKEN],
+    secrets: [REVENUECAT_WEBHOOK_TOKEN, REVENUECAT_SECRET_API_KEY],
     memory: '256MiB',
     cors: false,
   },
@@ -34,9 +42,7 @@ export const rcWebhook = onRequest(
       res.status(405).send('method not allowed');
       return;
     }
-    // Constant-time-ish comparison is overkill for a bearer token of this
-    // shape, but rejecting before any parsing is not.
-    if (req.get('authorization') !== `Bearer ${REVENUECAT_WEBHOOK_TOKEN.value()}`) {
+    if (!authorized(req.get('authorization'))) {
       log.warn('rcWebhook.unauthorized', {ip: req.ip});
       res.status(401).send('unauthorized');
       return;
@@ -48,54 +54,157 @@ export const rcWebhook = onRequest(
       return;
     }
     const e = event as Record<string, unknown>;
-    const uid = typeof e['app_user_id'] === 'string' ? e['app_user_id'] : null;
     const type = typeof e['type'] === 'string' ? e['type'] : '';
+    const eventId = typeof e['id'] === 'string' ? e['id'] : null;
+    const uids = affectedUids(e);
 
-    if (uid === null) {
+    // RevenueCat's dashboard "send test event" names a customer that does not
+    // exist; nothing to mirror, and answering 200 is what lights it green.
+    if (type === 'TEST') {
+      log.info('rcWebhook.test_event');
+      res.status(200).send('ok');
+      return;
+    }
+    if (uids.length === 0) {
       res.status(400).send('missing app_user_id');
       return;
     }
-
-    // CANCELLATION means "will not renew", NOT "access ends now" — the user
-    // keeps Premium until expiry. Treating it as revocation is the classic
-    // way to enrage a paying customer.
-    if (type === 'CANCELLATION') {
-      log.info('rcWebhook.cancellation_noted', {uid});
+    if (e['environment'] === 'SANDBOX' && RC_ACCEPT_SANDBOX.value() !== 'true') {
+      log.info('rcWebhook.sandbox_ignored', {type, uids});
       res.status(200).send('ok');
       return;
     }
 
-    if (GRANTING.has(type)) {
-      const expiresMs =
-        typeof e['expiration_at_ms'] === 'number' ? e['expiration_at_ms'] : null;
-      const isTrial = e['period_type'] === 'TRIAL';
-      await userDoc(uid).set(
-        {
-          entitlement: {
-            tier: isTrial ? 'trial' : 'premium',
-            productId: typeof e['product_id'] === 'string' ? e['product_id'] : null,
-            expiresAt: expiresMs === null ? null : Timestamp.fromMillis(expiresMs),
-            updatedAt: FieldValue.serverTimestamp(),
+    const acceptSandbox = RC_ACCEPT_SANDBOX.value() === 'true';
+    for (const uid of uids) {
+      // Only a Firebase-shaped uid can be one of ours. Anything else — a
+      // custom id from another integration, a malformed value — is skipped
+      // before it can reach `getUser` (which throws `invalid-uid`, not
+      // `user-not-found`, for an overlong id) or a document path.
+      if (!UID.test(uid)) {
+        log.warn('rcWebhook.invalid_uid', {type, length: uid.length});
+        continue;
+      }
+      // A RevenueCat-anonymous id, or an account `deleteUserData` already
+      // erased: never re-create a `users/{uid}` for either.
+      if (!(await userExists(uid))) {
+        log.warn('rcWebhook.orphan', {uid, type});
+        continue;
+      }
+      const ref = userDoc(uid);
+      const current = ((await ref.get()).data() as UserDoc | undefined)
+        ?.entitlement;
+      if (eventId !== null && current?.lastEventId === eventId) {
+        log.info('rcWebhook.duplicate', {uid, type, eventId});
+        continue;
+      }
+
+      // Stamped BEFORE the read: two deliveries for one customer can run at
+      // once (RevenueCat dispatches BILLING_ISSUE / CANCELLATION / EXPIRATION
+      // together), and the one that read earlier must not land later.
+      const fetchedAtMs = Date.now();
+      let snapshot;
+      try {
+        snapshot = await fetchSubscriber(uid, {acceptSandbox});
+      } catch (error) {
+        // A non-2xx makes RevenueCat retry (5, 10, 20, 40, 80 min) — the
+        // right outcome for a snapshot we could not read, whatever stopped
+        // us: a status, a timeout, a missing project id.
+        const known = error instanceof RevenueCatUnavailable;
+        log.error('rcWebhook.revenuecat_unavailable', {
+          uid,
+          type,
+          status: known ? error.status : -1,
+          reason: known ? error.reason : String(error),
+        });
+        res.status(500).send('revenuecat unavailable');
+        return;
+      }
+
+      const written = await db.runTransaction(async (tx) => {
+        const current = ((await tx.get(ref)).data() as UserDoc | undefined)
+          ?.entitlement;
+        if ((current?.snapshotAt ?? 0) > fetchedAtMs) return false;
+        tx.set(
+          ref,
+          {
+            entitlement: {
+              tier: snapshot.tier,
+              productId: snapshot.productId,
+              plan: snapshot.plan,
+              expiresAt:
+                snapshot.expiresAtMs === null
+                  ? null
+                  : Timestamp.fromMillis(snapshot.expiresAtMs),
+              willRenew: snapshot.willRenew,
+              store: snapshot.store,
+              environment: snapshot.environment,
+              managementUrl: snapshot.managementUrl,
+              lastEventId: eventId,
+              lastEventType: type,
+              snapshotAt: fetchedAtMs,
+              updatedAt: FieldValue.serverTimestamp(),
+            },
           },
-        },
-        {merge: true},
-      );
-    } else if (REVOKING.has(type)) {
-      await userDoc(uid).set(
-        {
-          entitlement: {
-            tier: 'free',
-            expiresAt: null,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-        },
-        {merge: true},
-      );
+          {merge: true},
+        );
+        return true;
+      });
+      if (written) {
+        log.info('rcWebhook.mirrored', {uid, type, tier: snapshot.tier});
+      } else {
+        log.info('rcWebhook.stale_snapshot', {uid, type});
+      }
     }
 
-    log.info('rcWebhook.handled', {uid, type});
-    // Always 200 on a handled-or-ignored event: a non-2xx makes RevenueCat
-    // retry, and an unknown future event type is not a failure.
+    // 200 on handled-or-ignored: an unknown future event type is not a
+    // failure, and only a snapshot we could not read is worth a retry.
     res.status(200).send('ok');
   },
 );
+
+/** Firebase Auth uids: 1–128 chars of `[A-Za-z0-9_-]`. */
+const UID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Constant-time compare of the whole `Bearer <token>` header. An unset token
+ * (an emulator without the secret, a mis-bound deploy) closes the endpoint
+ * rather than opening it to `Authorization: Bearer `.
+ */
+function authorized(header: string | undefined): boolean {
+  const token = REVENUECAT_WEBHOOK_TOKEN.value();
+  if (!token) return false;
+  const expected = Buffer.from(`Bearer ${token}`);
+  const given = Buffer.from(header ?? '');
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/**
+ * Every customer the event is about. `app_user_id` is absent on TRANSFER,
+ * which carries only `transferred_from` / `transferred_to` — both sides get
+ * re-read, so the old owner loses access in the same request the new one
+ * gains it.
+ */
+function affectedUids(e: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const one = e['app_user_id'];
+  if (typeof one === 'string' && one.length > 0) out.add(one);
+  for (const key of ['transferred_from', 'transferred_to']) {
+    const many = e[key];
+    if (!Array.isArray(many)) continue;
+    for (const v of many) {
+      if (typeof v === 'string' && v.length > 0) out.add(v);
+    }
+  }
+  return [...out];
+}
+
+async function userExists(uid: string): Promise<boolean> {
+  try {
+    await getAuth().getUser(uid);
+    return true;
+  } catch (error) {
+    if ((error as {code?: string}).code === 'auth/user-not-found') return false;
+    throw error;
+  }
+}

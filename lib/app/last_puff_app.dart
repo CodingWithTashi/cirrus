@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/widgets/lp_error.dart';
 import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
 import '../data/backend_mode.dart';
 import '../data/stores/providers.dart';
+import '../domain/logic/reminder_planner.dart';
+import '../domain/models/models.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
 import 'theme/lp_theme.dart';
@@ -57,17 +60,78 @@ class LastPuffApp extends ConsumerWidget {
 /// Syncing happens after the frame so a rebuild triggered by logging a puff
 /// never blocks on a platform channel; [ReminderCoordinator] then drops the
 /// call entirely when the plan has not actually changed.
-class _ReminderSync extends ConsumerWidget {
+class _ReminderSync extends ConsumerStatefulWidget {
   const _ReminderSync({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReminderSync> createState() => _ReminderSyncState();
+}
+
+class _ReminderSyncState extends ConsumerState<_ReminderSync> {
+  StreamSubscription<ReminderKind>? _taps;
+  late final GoRouter _router;
+
+  /// A tap that arrived while the splash still owned the first screen. The
+  /// splash ends with a `go` that replaces the stack, so anything pushed
+  /// before it is gone; the tap waits for the splash to decide, then lands.
+  ReminderKind? _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = ref.read(routerProvider)..routerDelegate.addListener(_flush);
+    _taps = ref.read(reminderCoordinatorProvider)?.opened.listen((kind) {
+      _pending = kind;
+      _flush();
+    });
+  }
+
+  void _flush() {
+    final kind = _pending;
+    if (kind == null) return;
+    final path = _router.state.uri.path;
+    if (path == Routes.splash) return;
+    _pending = null;
+    // A signed-out phone (the splash landed on sign-in): nothing to land on,
+    // and a push here would stack a second sign-in under the redirect.
+    if (ref.read(quitStoreProvider) == null) return;
+    switch (kind) {
+      case ReminderKind.trial:
+        // The reminder is about the trial: land where it says when the trial
+        // ends and where to manage it. Already converted or lapsed by the
+        // time of the tap → Settings shows the plan as it now stands.
+        final tier = ref.read(entitlementProvider).tier;
+        final target = tier == SubscriptionTier.trial
+            ? Routes.trialEnding
+            : Routes.settings;
+        if (path != target) _router.push(target);
+      case ReminderKind.danger:
+        // The nudge is about the hour ahead; Home is where it is lived. The
+        // redirect still sends a signed-out phone to sign-in.
+        _router.go(Routes.home);
+    }
+  }
+
+  @override
+  void dispose() {
+    _router.routerDelegate.removeListener(_flush);
+    _taps?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.child;
     final coordinator = ref.watch(reminderCoordinatorProvider);
     if (coordinator != null) {
       final journey = ref.watch(quitStoreProvider);
       final settings = ref.watch(settingsStoreProvider);
+      // The trial-ending reminder follows the entitlement: scheduled the
+      // moment a trial starts, withdrawn the moment it converts or ends.
+      final entitlement = ref.watch(entitlementProvider);
+      final now = ref.read(nowProvider);
       final l10n = AppLocalizations.of(context);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         coordinator
@@ -76,6 +140,10 @@ class _ReminderSync extends ConsumerWidget {
               settings: settings,
               title: l10n.dangerReminderTitle,
               body: l10n.dangerReminderBody,
+              entitlement: entitlement,
+              trialTitle: l10n.trialEndingNotifTitle,
+              trialBody: l10n.trialEndingPush,
+              now: now,
             )
             .ignore();
       });

@@ -40,6 +40,11 @@ abstract final class Routes {
   static const forgot = '/auth/forgot';
   static const onboarding = '/onboarding';
   static const paywall = '/paywall';
+
+  /// The paywall, tagged with the door it was reached through — the
+  /// `paywall_viewed.source` analytics dimension. A query parameter rather
+  /// than `extra` so it survives a restart and a push can carry it.
+  static String paywallFrom(String source) => '$paywall?source=$source';
   static const paywallFree = '/paywall/free';
   static const winback = '/paywall/winback';
   static const trialEnding = '/paywall/trial-ending';
@@ -173,7 +178,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.onboarding,
         builder: (_, _) => const OnboardingFlow(),
       ),
-      GoRoute(path: Routes.paywall, builder: (_, _) => const PaywallScreen()),
+      GoRoute(
+        path: Routes.paywall,
+        builder: (_, state) => PaywallScreen(
+          source: state.uri.queryParameters['source'] ?? 'direct',
+        ),
+      ),
       GoRoute(
         path: Routes.paywallFree,
         builder: (_, _) => const FreePlanScreen(),
@@ -256,8 +266,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.game, builder: (_, _) => const TapGameScreen()),
       GoRoute(
         path: Routes.survived,
-        pageBuilder: (_, _) => CustomTransitionPage(
-          child: const SurvivedScreen(),
+        // The game hands its result over in the query string
+        // (`GameOutcome.toQuery`); "it passed" arrives with none.
+        pageBuilder: (_, state) => CustomTransitionPage(
+          child: SurvivedScreen(
+            game: GameOutcome.fromQuery(state.uri.queryParameters),
+          ),
           transitionDuration: const Duration(milliseconds: 300),
           transitionsBuilder: (_, animation, _, child) =>
               FadeTransition(opacity: animation, child: child),

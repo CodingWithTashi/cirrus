@@ -107,6 +107,9 @@ class _RefusingAuth implements AuthRepository {
   Future<String?> currentUserId() async => null;
 
   @override
+  Future<String?> ensureSessionId() async => null;
+
+  @override
   Future<void> deleteAccount() async {}
 
   @override

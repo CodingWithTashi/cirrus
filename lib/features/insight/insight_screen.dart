@@ -9,6 +9,7 @@ import '../../domain/date_key.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/widgets/lp_charts.dart';
+import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/logic/danger_hours.dart';
@@ -119,8 +120,14 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                 ],
               ),
             ),
+            // Premium (docs/01 §10, docs/04 §5): a free user sees the report
+            // area — a past report's headline and body, or the pending card —
+            // blurred under the gate, never a mock-up.
             Expanded(
-              child: cards.isEmpty
+              child: LpPremiumGate(
+                source: 'insight',
+                pitch: l10n.premiumPitchInsight,
+                child: cards.isEmpty
                   ? _PendingReport(
                       coachName:
                           ref.watch(coachNameProvider) ?? l10n.coachName,
@@ -138,6 +145,7 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                         ),
                       ),
                     ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 20, top: 4),

@@ -75,7 +75,6 @@ abstract final class SeedData {
       profile: const UserProfile(
         alias: '@quietfox',
         avatarEmoji: '🦊',
-        tier: SubscriptionTier.premium,
         email: 'maya@quitmail.com',
         gender: Gender.woman,
         birthYear: 2003,

@@ -73,10 +73,12 @@ class FirebaseAuthRepository implements AuthRepository {
   /// `canceled`, which [guardAuth] maps to [SignInCancelledException].
   @override
   Future<JourneyState?> signInWithApple() => guardAuth(() async {
-    final cred = await _auth.signInWithProvider(
-      AppleAuthProvider()
-        ..addScope('email')
-        ..addScope('name'),
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    final cred = await _linkOrSignIn(
+      link: (guest) => guest.linkWithProvider(provider),
+      signIn: () => _auth.signInWithProvider(provider),
     );
     return fetchJourney(_db, cred.user!.uid);
   });
@@ -88,11 +90,47 @@ class FirebaseAuthRepository implements AuthRepository {
       serverClientId: _googleServerClientId,
     ));
     final account = await google.authenticate();
-    final cred = await _auth.signInWithCredential(
-      GoogleAuthProvider.credential(idToken: account.authentication.idToken),
+    final credential = GoogleAuthProvider.credential(
+      idToken: account.authentication.idToken,
+    );
+    final cred = await _linkOrSignIn(
+      link: (guest) => guest.linkWithCredential(credential),
+      signIn: () => _auth.signInWithCredential(credential),
     );
     return fetchJourney(_db, cred.user!.uid);
   });
+
+  /// Upgrades a guest to the identity rather than replacing them — the same
+  /// rule [register] applies to email, for the same reason: guest onboarding
+  /// runs on an anonymous uid, and everything written under it (the journey,
+  /// the coach transcript, `users/{uid}`, and now the subscription and the
+  /// server's entitlement mirror) is keyed by that uid. Signing in as a
+  /// different uid strands all of it; a purchase made as a guest would then
+  /// be Premium on an account nobody can reach.
+  ///
+  /// When the identity already belongs to a real account, linking is refused
+  /// (`credential-already-in-use`, or `email-already-in-use` for Apple) and
+  /// this falls back to a plain sign-in — that person is returning, not
+  /// upgrading, and their own account is the one that should win.
+  Future<UserCredential> _linkOrSignIn({
+    required Future<UserCredential> Function(User guest) link,
+    required Future<UserCredential> Function() signIn,
+  }) async {
+    final current = _auth.currentUser;
+    if (current == null || !current.isAnonymous) return signIn();
+    try {
+      return await link(current);
+    } on FirebaseAuthException catch (error) {
+      const returning = {
+        'credential-already-in-use',
+        'email-already-in-use',
+        'account-exists-with-different-credential',
+        'provider-already-linked',
+      };
+      if (!returning.contains(error.code)) rethrow;
+      return signIn();
+    }
+  }
 
   @override
   Future<void> register({required String email, required String password}) =>
@@ -170,4 +208,14 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<String?> currentUserId() async => _auth.currentUser?.uid;
+
+  /// Mints the anonymous account the guest path otherwise gets from
+  /// `FirebaseJourneyRepository.create()` — but BEFORE the paywall, so the
+  /// purchase is filed under the uid the journey and the server's mirror will
+  /// use. `create()` keeps its own fallback; after this it is a no-op.
+  @override
+  Future<String?> ensureSessionId() => guardAuth(() async {
+    final user = _auth.currentUser ?? (await _auth.signInAnonymously()).user!;
+    return user.uid;
+  });
 }

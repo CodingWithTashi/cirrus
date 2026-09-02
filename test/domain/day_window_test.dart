@@ -23,7 +23,6 @@ void main() {
       profile: const UserProfile(
         alias: '@x',
         avatarEmoji: '🦊',
-        tier: SubscriptionTier.free,
       ),
       plan: plan,
       days: {
@@ -108,7 +107,6 @@ void main() {
       profile: const UserProfile(
         alias: '@x',
         avatarEmoji: '🦊',
-        tier: SubscriptionTier.free,
       ),
       plan: plan,
       days: days,

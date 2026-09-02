@@ -57,4 +57,7 @@ class FakeAuthApi implements AuthApi {
 
   @override
   Future<void> deleteAccount() => _server.respond(_server.deleteAccount);
+
+  @override
+  Future<String> ensureSession() => _server.respond(_server.ensureSessionId);
 }

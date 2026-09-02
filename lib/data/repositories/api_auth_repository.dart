@@ -56,4 +56,9 @@ class ApiAuthRepository implements AuthRepository {
   /// `NoopAnalytics` on this backend anyway.
   @override
   Future<String?> currentUserId() async => null;
+
+  /// The fake's account id, which never leaves the process: it keys the
+  /// entitlement row on `FakeServer` and nothing else.
+  @override
+  Future<String?> ensureSessionId() => _api.ensureSession();
 }

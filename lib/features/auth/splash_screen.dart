@@ -10,6 +10,8 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/date_key.dart';
+import '../../domain/logic/launch_paywall_policy.dart';
 
 /// Frame 25 — Volt glow breathes, wordmark fades up, auto-advances ~1.5s.
 class SplashScreen extends ConsumerStatefulWidget {
@@ -40,8 +42,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       ref.read(quitStoreProvider.notifier).restoreSession(),
     ]);
     if (!mounted) return;
-    final hasJourney = ref.read(quitStoreProvider) != null;
-    context.go(hasJourney ? Routes.home : Routes.auth);
+    final journey = ref.read(quitStoreProvider);
+    if (journey == null) {
+      context.go(Routes.auth);
+      return;
+    }
+    // The once-a-day launch paywall for free users (LaunchPaywallPolicy).
+    // The billing backend gets a short, bounded wait to answer for this
+    // session; if it has not, the policy treats the tier as unknown and shows
+    // nothing — a paying user must never see a paywall for their own plan.
+    final entitlements = ref.read(entitlementProvider.notifier);
+    await entitlements.settled.timeout(
+      const Duration(milliseconds: 2500),
+      onTimeout: () {},
+    );
+    if (!mounted) return;
+    final now = ref.read(nowProvider)();
+    final today = LpDate.dayKey(now);
+    final show = LaunchPaywallPolicy.shouldShow(
+      hasJourney: true,
+      planDay: journey.plan.dayNumber(now),
+      settled: entitlements.isSettled,
+      isPremium: ref.read(isPremiumProvider),
+      lastShownDay: ref.read(settingsStoreProvider).launchPaywallShownDay,
+      today: today,
+    );
+    context.go(Routes.home);
+    if (show) {
+      ref.read(settingsStoreProvider.notifier).markLaunchPaywallShown(today);
+      unawaited(context.push(Routes.paywallFrom('launch')));
+    }
   }
 
   @override

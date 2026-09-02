@@ -4,13 +4,13 @@ library;
 import '../date_key.dart';
 import 'enums.dart';
 
+export 'billing.dart';
 export 'enums.dart';
 
 class UserProfile {
   const UserProfile({
     required this.alias,
     required this.avatarEmoji,
-    required this.tier,
     this.email,
     this.gender,
     this.birthYear,
@@ -25,7 +25,6 @@ class UserProfile {
 
   final String alias;
   final String avatarEmoji;
-  final SubscriptionTier tier;
   final String? email;
   final Gender? gender;
   final int? birthYear;
@@ -62,12 +61,9 @@ class UserProfile {
   /// which is the copy that counts.
   final String? whyWords;
 
-  bool get isPremium => tier != SubscriptionTier.free;
-
   UserProfile copyWith({
     String? alias,
     String? avatarEmoji,
-    SubscriptionTier? tier,
     String? email,
     Set<WhyChip>? whys,
     Set<WorryChip>? worries,
@@ -76,7 +72,6 @@ class UserProfile {
   }) => UserProfile(
     alias: alias ?? this.alias,
     avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-    tier: tier ?? this.tier,
     email: email ?? this.email,
     gender: gender,
     birthYear: birthYear,

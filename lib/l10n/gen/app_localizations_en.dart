@@ -915,6 +915,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallTitle => 'Your plan is ready.';
 
   @override
+  String get paywallTitleUpgrade => 'Go further with Premium.';
+
+  @override
   String get paywallSubtitle => 'Try everything free for 7 days.';
 
   @override
@@ -984,6 +987,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallTimelineRemindBody => 'We remind you';
 
   @override
+  String get paywallTimelineNoRemindBody => 'Last day to cancel free';
+
+  @override
   String paywallTimelineChargeBody(String price) {
     return 'First charge $price. Cancel before, pay nothing.';
   }
@@ -1002,6 +1008,129 @@ class AppLocalizationsEn extends AppLocalizations {
   String paywallPerWeek(String price) {
     return '$price/wk';
   }
+
+  @override
+  String paywallDisclosureTrial(
+    String price,
+    String period,
+    int days,
+    String store,
+  ) {
+    return '$price per $period after your $days-day free trial. Renews automatically until you cancel — cancel anytime in your $store subscription settings.';
+  }
+
+  @override
+  String paywallDisclosure(String price, String period, String store) {
+    return '$price per $period. Renews automatically until you cancel — cancel anytime in your $store subscription settings.';
+  }
+
+  @override
+  String get paywallPeriodWeek => 'week';
+
+  @override
+  String get paywallPeriodMonth => 'month';
+
+  @override
+  String get paywallPeriodYear => 'year';
+
+  @override
+  String get paywallStoreApple => 'App Store';
+
+  @override
+  String get paywallStoreGoogle => 'Google Play';
+
+  @override
+  String paywallYearlySubLive(String perWeek, int percent) {
+    return '$perWeek/week · SAVE $percent%';
+  }
+
+  @override
+  String paywallYearlySubPerWeek(String perWeek) {
+    return '$perWeek/week';
+  }
+
+  @override
+  String paywallCtaTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Start my free $days days',
+      one: 'Start my free day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paywallCtaSubscribe => 'Start Premium';
+
+  @override
+  String paywallSubtitleTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Try everything free for $days days.',
+      one: 'Try everything free for a day.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paywallSubtitleNoTrial => 'Everything unlocked, from today.';
+
+  @override
+  String get paywallRestore => 'Restore purchases';
+
+  @override
+  String get paywallRestored => 'Welcome back — Premium is on.';
+
+  @override
+  String get paywallRestoreNothing =>
+      'Nothing to restore on this store account yet.';
+
+  @override
+  String get paywallPurchasePending =>
+      'Your payment is pending. Premium switches on as soon as the store confirms it.';
+
+  @override
+  String get paywallPricesUnavailable =>
+      'Live prices aren\'t loading right now — the store shows the exact price before you confirm.';
+
+  @override
+  String get premiumLockTitle => 'Premium';
+
+  @override
+  String get premiumLockCta => 'See Premium';
+
+  @override
+  String get premiumPitchInsight =>
+      'Your weekly report, written from your own numbers.';
+
+  @override
+  String get premiumPitchForecast =>
+      'Craving forecasts for the hours you usually reach for it.';
+
+  @override
+  String get premiumPitchHistory =>
+      'Your whole history, not just the last 7 days.';
+
+  @override
+  String get premiumFreeHistoryNote => 'Free shows your last 7 days.';
+
+  @override
+  String get premiumPitchCompose =>
+      'Posting is part of Premium. Reading and reacting are always free — and so is an SOS.';
+
+  @override
+  String get premiumPitchPlan =>
+      'A plan that adapts when you slip — tonight\'s adjustment, every night.';
+
+  @override
+  String get premiumPitchHealth =>
+      'The full timeline, from two weeks to a year.';
+
+  @override
+  String get premiumPitchCoach =>
+      'Ember around the clock — 100 messages a day instead of 5.';
 
   @override
   String get freePlanTitle => 'Free gets you moving.';
@@ -1373,15 +1502,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panicLoopCoachLocked => 'you\'ve used today\'s free AI session';
 
   @override
-  String get gameTitle => 'Tap every spark';
+  String get gameTitle => 'Crowd the craving out.';
 
   @override
-  String get gameSubtitle => '60 seconds. Thumbs busy, brain busy.';
+  String get gameSubtitle =>
+      'A craving is mostly a picture in your head. Tap the falling tiles for 60 seconds and it gets less room to grow.';
 
   @override
   String gameTimeLeft(int seconds) {
     return '${seconds}s';
   }
+
+  @override
+  String get gameNewBest => 'new best';
+
+  @override
+  String get gameRoundDone => '60 seconds done.';
+
+  @override
+  String get gameAnotherRound => 'Still craving — 60 more seconds';
 
   @override
   String get survivedPlusOne => '+1 craving beaten';
@@ -1412,6 +1551,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get survivedTotalLabel => 'cravings survived total';
+
+  @override
+  String survivedGameTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tiles',
+      one: '1 tile',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get survivedGameNewBest => 'NEW BEST';
+
+  @override
+  String survivedGameBest(int best) {
+    return 'best $best';
+  }
 
   @override
   String get survivedShare => 'Share the W ↗';
@@ -1495,6 +1653,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'That one\'s on us, not you. Give it another shot in a sec.';
+
+  @override
+  String get errorPurchaseNotAllowedTitle => 'Purchases are off on this device';
+
+  @override
+  String get errorPurchaseNotAllowedBody =>
+      'This device or account can\'t buy subscriptions right now — usually parental controls or a store restriction. Nothing was charged.';
+
+  @override
+  String get errorStoreTitle => 'The store didn\'t answer';
+
+  @override
+  String get errorStoreBody =>
+      'Google Play or the App Store had a moment. Nothing was charged — try again in a minute.';
+
+  @override
+  String get errorReceiptOwnedTitle =>
+      'That subscription belongs to another account';
+
+  @override
+  String get errorReceiptOwnedBody =>
+      'This store account\'s subscription is linked to a different Cirrus sign-in. Sign in there, or restore from that account.';
 
   @override
   String get errorRejectedTitle => 'This build got bounced';
@@ -2532,6 +2712,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSubscriptionFree => 'Free plan';
 
   @override
+  String get settingsSubscriptionYearly => 'Premium · yearly';
+
+  @override
+  String get settingsSubscriptionMonthly => 'Premium · monthly';
+
+  @override
+  String get settingsSubscriptionWeekly => 'Premium · weekly';
+
+  @override
+  String get settingsSubscriptionPremium => 'Premium';
+
+  @override
+  String settingsSubscriptionTrial(String date) {
+    return 'Trial · ends $date';
+  }
+
+  @override
+  String settingsSubscriptionEnds(String date) {
+    return 'Premium · ends $date';
+  }
+
+  @override
+  String get settingsManageUnavailable =>
+      'Manage this subscription from the store account that bought it.';
+
+  @override
   String get settingsNotifications => 'Notifications';
 
   @override
@@ -2638,12 +2844,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trialEndingSaved => 'saved';
 
   @override
-  String trialEndingKeep(String price) {
-    return 'Keep Premium — $price/yr';
-  }
+  String get trialEndingKeep => 'Keep Premium';
 
   @override
   String get trialEndingSwitchFree => 'Switch to Free (keeps your data)';
+
+  @override
+  String trialEndsOn(String date) {
+    return 'Your trial ends $date.';
+  }
+
+  @override
+  String get trialEndingNotifTitle => 'Your trial ends tomorrow';
 
   @override
   String get frameMapTitle => 'All 52 design frames';

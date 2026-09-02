@@ -171,9 +171,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _LegalLink(label: l10n.authTerms, url: LpLinks.terms),
+                  LpLegalLink(label: l10n.authTerms, url: LpLinks.terms),
                   Text(' · ', style: LpType.caption(lp.textSecondary)),
-                  _LegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
+                  LpLegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
                 ],
               ),
 
@@ -710,23 +710,3 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 /// Underlined rather than merely tinted: these have to be recognisable as
 /// links to a store reviewer looking for them, and colour alone is not enough
 /// for someone who cannot distinguish it.
-class _LegalLink extends StatelessWidget {
-  const _LegalLink({required this.label, required this.url});
-
-  final String label;
-  final Uri url;
-
-  @override
-  Widget build(BuildContext context) {
-    final lp = context.lp;
-    return GestureDetector(
-      onTap: () => LpLinks.open(url),
-      child: Text(
-        label,
-        style: LpType.caption(
-          lp.textSecondary,
-        ).copyWith(decoration: TextDecoration.underline),
-      ),
-    );
-  }
-}

@@ -14,6 +14,7 @@ import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/logic/taper_engine.dart';
@@ -116,6 +117,16 @@ class PlanScreen extends ConsumerWidget {
               if (advice != null) ...[
                 const SizedBox(height: 12),
                 _AdaptiveCard(advice: advice),
+              ] else if (!ref.watch(isPremiumProvider)) ...[
+                // The nightly adjustment is Premium (docs/01 §10); the server
+                // computes none for a free account, so there is nothing to
+                // blur — the door alone, honestly labelled.
+                const SizedBox(height: 12),
+                LpPremiumGate(
+                  source: 'plan',
+                  pitch: l10n.premiumPitchPlan,
+                  compact: true,
+                ),
               ],
               const SizedBox(height: 16),
               SectionLabel(

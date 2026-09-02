@@ -12,6 +12,16 @@ abstract final class LpFormat {
     return f.format(amount);
   }
 
+  /// An amount in a specific currency — the store's, for a derived figure
+  /// beside a store price (the yearly card's per-week line). [money] is USD
+  /// by construction; a store price in EUR must not be divided into dollars.
+  static String moneyIn(num amount, String locale, String currencyCode) =>
+      NumberFormat.simpleCurrency(
+        locale: locale,
+        name: currencyCode,
+        decimalDigits: 2,
+      ).format(amount);
+
   static String integer(num value, String locale) =>
       NumberFormat.decimalPattern(locale).format(value.round());
 

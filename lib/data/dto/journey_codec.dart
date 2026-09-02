@@ -24,6 +24,7 @@ abstract final class JourneyCodec {
     'pendingSlipCleanDays': s.pendingSlipCleanDays,
     'moodCheckIns': s.moodCheckIns,
     'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
+    'bestGameScore': s.bestGameScore,
   };
 
   static JourneyState decode(Map<String, dynamic> json) => JourneyState(
@@ -58,12 +59,14 @@ abstract final class JourneyCodec {
     planAdvice: json['planAdvice'] == null
         ? null
         : decodeAdvice(json['planAdvice'] as Map<String, dynamic>),
+    // Missing on every journey written before the game kept score, and null
+    // is the honest answer there: nothing has been played yet.
+    bestGameScore: json['bestGameScore'] as int?,
   );
 
   static Map<String, dynamic> encodeProfile(UserProfile p) => {
     'alias': p.alias,
     'avatarEmoji': p.avatarEmoji,
-    'tier': p.tier.name,
     'email': p.email,
     'gender': p.gender?.name,
     'birthYear': p.birthYear,
@@ -79,11 +82,6 @@ abstract final class JourneyCodec {
   static UserProfile decodeProfile(Map<String, dynamic> json) => UserProfile(
     alias: json['alias'] as String,
     avatarEmoji: json['avatarEmoji'] as String,
-    tier: enumByName(
-      SubscriptionTier.values,
-      json['tier'],
-      SubscriptionTier.free,
-    ),
     email: json['email'] as String?,
     gender: enumByNameOrNull(Gender.values, json['gender']),
     birthYear: json['birthYear'] as int?,

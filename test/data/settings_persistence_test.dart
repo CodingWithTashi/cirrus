@@ -32,10 +32,12 @@ void main() {
       dangerEndHour: 23,
       trialReminderOn: false,
       winbackShown: true,
+      launchPaywallShownDay: '2026-09-02',
     );
 
     await SettingsPersistence.save(saved);
     final loaded = await SettingsPersistence.load();
+    expect(loaded.launchPaywallShownDay, '2026-09-02');
 
     expect(loaded.themeMode, ThemeMode.dark);
     expect(loaded.locale?.languageCode, 'fr');

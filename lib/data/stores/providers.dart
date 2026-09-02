@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../domain/logic/coach_name.dart';
 import '../../domain/models/journey_state.dart';
@@ -26,6 +27,7 @@ import '../repositories/api_auth_repository.dart';
 import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
+import '../repositories/fake_billing_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
 import '../api/firebase/reminder_scheduler.dart';
 import 'reminder_coordinator.dart';
@@ -38,8 +40,10 @@ import '../repositories/firebase_server_state_repository.dart';
 import '../repositories/firebase_coach_name_repository.dart';
 import '../repositories/firebase_testimonials_repository.dart';
 import '../repositories/firebase_user_context_repository.dart';
+import '../repositories/revenuecat_billing_repository.dart';
 import 'coach_store.dart';
 import 'community_store.dart';
+import 'entitlement_store.dart';
 import 'journey_store.dart';
 import 'moderation_store.dart';
 import 'settings_store.dart';
@@ -228,6 +232,20 @@ final coachRepositoryProvider = Provider<CoachRepository>(
   },
 );
 
+/// Subscriptions: RevenueCat over the platform store on mobile, an
+/// entitlement row on `FakeServer` everywhere else. `RevenueCatBillingRepository`
+/// is the only file importing `purchases_flutter`, so this switch is the whole
+/// vendor seam.
+final billingRepositoryProvider = Provider<BillingRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => FakeBillingRepository(
+      ref.watch(fakeServerProvider),
+      now: ref.watch(nowProvider),
+    ),
+    BackendMode.firebase => RevenueCatBillingRepository(),
+  },
+);
+
 // ---- view-model layer -------------------------------------------------------
 // Composition root of the stores. Views read state through these providers
 // and issue commands through the `.notifier`.
@@ -235,6 +253,31 @@ final coachRepositoryProvider = Provider<CoachRepository>(
 final quitStoreProvider = NotifierProvider<JourneyStore, JourneyState?>(
   JourneyStore.new,
 );
+
+/// What this account is entitled to — the client's tier, and the ONLY place
+/// it lives. See `EntitlementStore` for why it must never feed the router's
+/// refresh listener.
+final entitlementProvider = NotifierProvider<EntitlementStore, Entitlement>(
+  EntitlementStore.new,
+);
+
+/// The premium gate every screen reads. A bool, never a loading state: gates
+/// decide synchronously, from the cached entitlement, the way
+/// `quitStoreProvider` already does for the journey.
+final isPremiumProvider = Provider<bool>(
+  (ref) => ref.watch(entitlementProvider).isActive,
+);
+
+/// The plans on sale, priced by the store. Null when they cannot be loaded —
+/// the paywall then shows its fixed copy. Auto-disposed so a paywall opened
+/// a day later asks the store again.
+final offeringsProvider = FutureProvider.autoDispose<BillingOffering?>((ref) {
+  // Watched for the dependency: a paywall opened offline shows its fixed
+  // copy, and the moment the connection is back it asks the store again
+  // rather than sitting on a null until the user leaves and returns.
+  ref.watch(connectivityProvider);
+  return ref.watch(billingRepositoryProvider).offerings();
+});
 
 /// Today's date, as a local midnight, ticked over when the day actually turns.
 ///
@@ -371,3 +414,18 @@ final coachMemoriesProvider = FutureProvider.autoDispose<List<CoachMemory>>(
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(
   SettingsStore.new,
 );
+
+/// The installed build's version, `1.0.3 (4)`, read once from the platform.
+///
+/// Null until known and null where the platform cannot say (`flutter test`
+/// has no plugin registry), so the Settings footer renders nothing rather
+/// than a number typed into source — which is how it read "1.0.0" for three
+/// releases.
+final appVersionProvider = FutureProvider<String?>((ref) async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    return '${info.version} (${info.buildNumber})';
+  } on Object {
+    return null;
+  }
+});

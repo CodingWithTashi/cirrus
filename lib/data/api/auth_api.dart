@@ -31,4 +31,8 @@ abstract interface class AuthApi {
 
   /// Deletes the account and its journey server-side.
   Future<void> deleteAccount();
+
+  /// The account id a purchase is filed under, opening a guest session when
+  /// there is none yet.
+  Future<String> ensureSession();
 }

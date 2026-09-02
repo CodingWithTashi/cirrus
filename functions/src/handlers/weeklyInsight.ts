@@ -16,7 +16,7 @@ import {ModelUnavailableError} from '../ai/model';
 import {db, FieldValue, insightDoc, journeyDoc} from '../lib/firestore';
 import {log} from '../lib/logger';
 import {sendToUser} from '../lib/push';
-import {ungated} from '../lib/usage';
+import {tierOf, ungated} from '../lib/usage';
 import {decodeJourney} from '../domain/journeyCodec';
 import {dayKeyIn} from '../domain/dateKey';
 import {dangerHours, trailingDays} from '../domain/streakEngine';
@@ -60,11 +60,11 @@ export const weeklyInsight = onSchedule(
 
       for (const doc of page.docs) {
         const data = doc.data() as UserDoc;
-        // Bypasses tierFor to avoid a second read per user, so it needs the
-        // ungated check explicitly.
-        if (!ungated() && (data.entitlement?.tier === 'free' || !data.entitlement)) {
-          continue;
-        }
+        // The same reading `tierFor` makes, on the document already in hand
+        // (no second read per user); `ungated` applies once per run. A lapsed
+        // `expiresAt` is free here too — the two crons and the coach must
+        // agree on who is premium.
+        if (!ungated() && tierOf(data) === 'free') continue;
         const tz = data.tz ?? 'UTC';
         const today = new Date();
         // Only fire on the user's local Sunday.
