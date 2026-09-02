@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/features/onboarding/onboarding_flow.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import 'helpers.dart';
@@ -43,6 +44,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Sign in with Apple'), findsOneWidget);
       expect(find.text('Sign in with Google'), findsNothing);
+
+      // A fresh Apple account has no journey, so the fake backend routes to
+      // onboarding. Bounded pumps: the welcome step animates forever, so
+      // pumpAndSettle would never return.
+      await tester.tap(find.text('Sign in with Apple'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(OnboardingFlow), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

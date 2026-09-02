@@ -38,16 +38,24 @@ only passes on a device whose debug token is registered:
 
 ```
 firebase appcheck:debugtokens:create <token> --project alastpuff \
-  --app 1:826701239342:android:6f8f39f49c52ee24e4bbbf --force
+  --app 1:826701239342:android:6f8f39f49c52ee24e4bbbf --force   # Android
+firebase appcheck:debugtokens:create <token> --project alastpuff \
+  --app 1:826701239342:ios:042418c48b5e6f38e4bbbf --force       # iOS
 ```
 
-The token is printed to logcat on every launch
-(`adb logcat | grep "debug token"`) and **rotates on every reinstall**.
+The two Firebase apps are separate registrations. The token is **pinned**
+via `--dart-define=LP_APPCHECK_DEBUG_TOKEN` (read from the gitignored
+`.appcheck_token`), so it no longer rotates per install — `tool/device.ps1`
+(Windows) passes the define and registers the token; on macOS run the
+commands above by hand and pass `--dart-define-from-file=.dart_defines.json`
+to `flutter test integration_test`. Without the define the build mints a
+throwaway token that is unregistered by construction.
 
 Register it **before** the first run. The client backs off after repeated
-rejections (`Too many attempts`) and then keeps failing even once the
-token is valid — at which point the only way out is a reinstall, which
-rotates the token again.
+rejections (`Too many attempts`) and keeps failing even once the token is
+valid — the only way out is a reinstall (`adb uninstall com.quitvape.last_puff`
+/ `xcrun devicectl device uninstall app --device <udid> com.quitvape.lastPuff`),
+which `device.ps1` does for you after registering.
 
 ## Harness notes
 

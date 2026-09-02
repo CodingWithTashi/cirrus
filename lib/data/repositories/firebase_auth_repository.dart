@@ -60,9 +60,24 @@ class FirebaseAuthRepository implements AuthRepository {
     return fetchJourney(_db, cred.user!.uid);
   });
 
+  /// Apple hands over the name and email ONLY on the first authorization for
+  /// this app, and only for the scopes asked for. A provider with no scopes
+  /// leaves Firebase with an account that has no email at all, which also
+  /// defeats one-account-per-email detection: a user who registered by email
+  /// and later taps Apple would silently get a second account. A "Hide My
+  /// Email" relay address is fine — it is stable per user.
+  ///
+  /// No package needed: firebase_auth's iOS plugin drives the native sheet,
+  /// mints and hashes the nonce, and folds the full name into the credential
+  /// so Firebase sets `displayName` itself. A dismissed sheet arrives as
+  /// `canceled`, which [guardAuth] maps to [SignInCancelledException].
   @override
   Future<JourneyState?> signInWithApple() => guardAuth(() async {
-    final cred = await _auth.signInWithProvider(AppleAuthProvider());
+    final cred = await _auth.signInWithProvider(
+      AppleAuthProvider()
+        ..addScope('email')
+        ..addScope('name'),
+    );
     return fetchJourney(_db, cred.user!.uid);
   });
 

@@ -77,6 +77,36 @@ void main() {
     expect(c2.read(quitStoreProvider)?.profile.alias, '@bravewolf42');
   });
 
+  test('signInWithApple onboards first, restores after', () async {
+    final c = harness();
+    final store = c.read(quitStoreProvider.notifier);
+    expect(await store.signInWithApple(), isFalse);
+    expect(c.read(quitStoreProvider), isNull);
+
+    // Onboarding completes → the backend creates the journey.
+    await store.startJourney(
+      profile: const UserProfile(
+        alias: '@calmotter7',
+        avatarEmoji: '🦦',
+        tier: SubscriptionTier.trial,
+      ),
+      plan: QuitPlan(
+        method: QuitMethod.taper,
+        paceDays: 30,
+        startDate: DateTime(2026, 8, 18),
+        baselinePuffsPerDay: 200,
+        weeklySpend: 45,
+        strength: NicStrength.mg50,
+      ),
+    );
+    store.signOut();
+
+    // A second app session: the Apple account's journey comes back.
+    final c2 = harness();
+    expect(await c2.read(quitStoreProvider.notifier).signInWithApple(), isTrue);
+    expect(c2.read(quitStoreProvider)?.profile.alias, '@calmotter7');
+  });
+
   test('mutations sync write-behind and survive logout → login', () async {
     final c1 = harness();
     final store1 = c1.read(quitStoreProvider.notifier);
