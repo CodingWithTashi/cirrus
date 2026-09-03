@@ -15,6 +15,12 @@ import 'package:flutter_test/flutter_test.dart';
 /// consulted on that branch. The two `uses-permission` lines were pure
 /// declaration: they bought nothing at runtime and cost the release.
 ///
+/// The same console asks a second question, about a permission that arrives
+/// the other way round: `com.google.android.gms.permission.AD_ID` is in the
+/// merged manifest because `firebase_analytics` merges it in, not because
+/// this app asked for one. It is removed rather than declared, in the
+/// manifest AND in the Amplitude SDK that would otherwise send it.
+///
 /// The other half is the mirror image — a manifest entry that IS load-bearing
 /// and was missing. Since v16 the plugin declares only `POST_NOTIFICATIONS`
 /// and `VIBRATE` in its own manifest, so the two receivers `AlarmManager`
@@ -30,10 +36,22 @@ void main() {
   /// The `uses-permission` entries only. Matching on the raw string would
   /// let the comment that explains WHY the exact-alarm permissions are gone
   /// fail the test for naming them.
-  final declared = RegExp(r'<uses-permission[^>]*android:name="([^"]+)"')
-      .allMatches(manifest)
-      .map((m) => m.group(1)!)
-      .toSet();
+  ///
+  /// A `tools:node="remove"` entry is the opposite of a declaration — it is
+  /// how the app strips a permission a *library* merged in — so the two are
+  /// kept apart. Folding them together would let the AD_ID removal read as an
+  /// AD_ID declaration, which is the exact claim this file exists to deny.
+  final tags = RegExp(
+    r'<uses-permission([^>]*)>',
+  ).allMatches(manifest).map((m) => m.group(1)!).toList();
+
+  String nameOf(String tag) =>
+      RegExp(r'android:name="([^"]+)"').firstMatch(tag)!.group(1)!;
+
+  bool isRemoval(String tag) => tag.contains('tools:node="remove"');
+
+  final declared = tags.where((t) => !isRemoval(t)).map(nameOf).toSet();
+  final removed = tags.where(isRemoval).map(nameOf).toSet();
 
   bool declaresPermission(String name) =>
       declared.contains('android.permission.$name');
@@ -82,6 +100,43 @@ void main() {
 
     test('still asks for the runtime notification grant', () {
       expect(declaresPermission('POST_NOTIFICATIONS'), isTrue);
+    });
+
+    test('removes the advertising ID instead of declaring it', () {
+      // Play's console asks: "Your manifest file includes the AD_ID
+      // permission ... answer 'yes' or remove this permission." Nothing in
+      // this app reads an advertising ID; firebase_analytics merges the
+      // permission in transitively via play-services-measurement-api. Founder
+      // decision Sep 2 2026: remove it, so the Data Safety form for an app
+      // about quitting nicotine carries no advertising identifier.
+      //
+      // These must be REMOVALS, never declarations — the distinction the
+      // `declared`/`removed` split above exists to keep.
+      expect(removed, contains('com.google.android.gms.permission.AD_ID'));
+      expect(removed, contains('android.permission.ACCESS_ADSERVICES_AD_ID'));
+      expect(declared, isNot(contains('com.google.android.gms.permission.AD_ID')));
+      expect(
+        declared,
+        isNot(contains('android.permission.ACCESS_ADSERVICES_AD_ID')),
+      );
+      // `tools:node` is inert without the namespace, and its absence fails
+      // silently: the merger keeps the library's permission and the console
+      // asks again on the next upload.
+      expect(manifest.contains('xmlns:tools="http://schemas.android.com/tools"'), isTrue);
+    });
+
+    test('no SDK asks for the advertising ID the manifest removes', () {
+      // The other half of the same decision, and the half a manifest cannot
+      // reach. Amplitude's `TrackingOptions.adid` defaults to TRUE, so the
+      // Android SDK attaches an advertising ID to every event unless it is
+      // turned off here — and the ads-identifier library firebase_analytics
+      // drags in is what would let it succeed. Play's warning names this case
+      // explicitly ("verify if any third-party SDK code in your app uses
+      // advertising ID").
+      final sink = File(
+        'lib/data/analytics/amplitude_analytics.dart',
+      ).readAsStringSync();
+      expect(sink.contains('TrackingOptions(adid: false)'), isTrue);
     });
   });
 }

@@ -1794,3 +1794,99 @@ A throwaway account (`qa-notif-sep2@…`) through the real 21-step onboarding, n
 **Founder decision (Sep 2 2026): keep it inexact, 10-minute lead, "around {time}" copy.** Put to the founder with the device evidence above and the correction that the two exact-alarm permissions are different doors: `USE_EXACT_ALARM` is closed to us, but `SCHEDULE_EXACT_ALARM` is not — Play's own policy names it as the fallback for apps that miss the calendar/alarm-clock bar. It was declined on cost, not availability: it is denied by default on Android 14+, the only way to get it is to send the user to Settings → Special app access → Alarms & reminders, it stays revocable so the inexact path ships anyway, and it re-opens a policy argument for a quit-vaping nudge. The no-permission lever, if the timing ever needs to improve, is `ReminderPlanner.leadMinutes` — an inexact alarm can run late but never early, so a longer lead moves the entire landing zone earlier. Do not re-litigate this without new evidence.
 
 **One test fixed on the way past.** `premium_gate_test`'s "the craving-forecast nudge is a Premium card" was red, and it was not this change: it reads the real wall clock. Home picks one card from a priority chain and `showMoodPrompt` is `mood == null && now.hour >= 18`; the seeded fixture logs no mood for today, so from 6pm local BOTH tiers rendered the mood prompt, neither rendered the nudge, and the difference the test asserts was 0. It passed every morning and failed every evening. The case now checks a mood in first. `flutter test` 867 green, `flutter analyze` clean. Worth a product look separately: the craving-forecast card is suppressed by the mood prompt from 6pm — which is when danger hours usually are.
+
+
+## 17. THE SECOND CONSOLE QUESTION (Sep 2) — the advertising ID we never asked for
+
+Play's console, on the same upload that carried the exact-alarm fix:
+
+> Your manifest file includes the `com.google.android.gms.permission.AD_ID`
+> permission. This means your app declares the use of advertising ID. Answer
+> 'yes' or remove this permission from your manifest.
+
+The founder's reaction was the right one — *we are not using it, so why the
+error?* — and it is the reaction the warning is designed to catch. Its own
+text says so: "verify if any third-party SDK code in your app uses advertising
+ID ... the permission from the SDK's library manifest will be merged with your
+app's main manifest by default, even if you don't explicitly declare it."
+
+**It was real, twice over.** `android/app/src/main/AndroidManifest.xml` never
+named it, but the merger blame report did (`manifest-merger-release-report.txt:1255`):
+
+```
+uses-permission#com.google.android.gms.permission.AD_ID
+ADDED from  [com.google.android.gms:play-services-measurement-api:23.2.0]
+MERGED from [com.google.android.gms:play-services-measurement-impl:23.2.0]
+MERGED from [com.google.android.gms:play-services-ads-identifier:18.0.0]
+MERGED from [com.google.android.gms:play-services-measurement-sdk-api:23.2.0]
+```
+
+That chain is `firebase_analytics`. And it was not theoretical — dumping the
+permission strings out of the AAB Play already had confirmed
+`com.google.android.gms.permission.AD_ID` and `ACCESS_ADSERVICES_AD_ID` were
+both shipping.
+
+**The half a manifest cannot answer.** Reading the Amplitude SDK on the way
+past: `TrackingOptions.adid` defaults to **`true`**, so the Android SDK
+attaches an advertising ID to every event unless told not to — and the
+`play-services-ads-identifier` library Firebase drags onto the classpath is
+exactly what lets it succeed. Removing the permission alone would have left an
+SDK asking for an identifier we had just told Play we do not use. (Amplitude
+contributes no permission of its own; `useAdvertisingIdForDeviceId` already
+defaults to `false`. `adid` is the one that does not.)
+
+**Founder decision (Sep 2 2026): remove it, do not declare it.** The
+advertising ID buys Google Ads audience export and ads attribution. docs/05's
+attribution row defers an MMP to "month 3+ ... don't pay for one before you
+run paid traffic", and docs/08's launch engine is organic TikTok, creator
+deals, Apple Search Ads (iOS, so IDFA) and SEO — so at launch it buys nothing.
+It costs something, though: an app about quitting nicotine would have to
+disclose an advertising identifier on the Play Data Safety form. Everything we
+actually read off Firebase Analytics — funnels, retention, Remote Config
+targeting, Crashlytics audiences — works without it.
+
+One decision, two files:
+
+| File | Change |
+|---|---|
+| `AndroidManifest.xml` | `xmlns:tools`, then `tools:node="remove"` on `com.google.android.gms.permission.AD_ID` and `android.permission.ACCESS_ADSERVICES_AD_ID` |
+| `data/analytics/amplitude_analytics.dart` | `trackingOptions: TrackingOptions(adid: false)` |
+
+`ACCESS_ADSERVICES_ATTRIBUTION` deliberately stays: it is the Privacy Sandbox
+measurement API, it is not an identifier, and Play neither restricts it nor
+asks about it.
+
+**Verified in the artifact, not the source.** Rebuilt `app-release.aab` and
+dumped its permissions — the only honest check, since the whole bug was a
+source manifest that told the truth about a bundle that did not:
+
+```
+INTERNET · POST_NOTIFICATIONS · RECEIVE_BOOT_COMPLETED · ACCESS_NETWORK_STATE
+WAKE_LOCK · VIBRATE · USE_BIOMETRIC · USE_FINGERPRINT · BIND_JOB_SERVICE · DUMP
+ACCESS_ADSERVICES_ATTRIBUTION · BIND_GET_INSTALL_REFERRER_SERVICE
+READ_GSERVICES · REVOCATION_NOTIFICATION
+```
+
+No `AD_ID`, no `ACCESS_ADSERVICES_AD_ID` — and no `SCHEDULE_EXACT_ALARM` or
+`USE_EXACT_ALARM` either, which answers the second thing the founder was still
+seeing in the console: **§16's fix is in the bundle; the console was reporting
+an older upload.** Play's sensitive-permission check reads across *all active*
+releases in *every* track, so one stale internal- or closed-testing bundle
+keeps the warning up long after production is clean. That is `B18`'s open
+founder item, unchanged: re-upload to every track, clear the App content
+exact-alarm declaration, deactivate old releases.
+
+**The test grew a distinction it did not have.** `android_manifest_test.dart`
+collected every `<uses-permission>` into one `declared` set — which would have
+read the AD_ID *removal* as an AD_ID *declaration*, the exact claim the file
+exists to deny. It now splits `declared` from `removed` on `tools:node`,
+asserts the two AD_ID entries are removals, asserts `xmlns:tools` is present
+(without the namespace `tools:node` is inert and fails **silently** — the
+merger just keeps the library's permission and the console asks again), and
+pins `TrackingOptions(adid: false)` in the sink so the two halves cannot drift
+apart. 4 tests -> 6. `flutter test` 869 green, `flutter analyze` clean.
+
+**Founder-side, both console questions:** answer **No** to the advertising-ID
+question, keep the Data Safety form free of an advertising identifier (pairs
+with `S4-9`, which already owes it a third-party-analytics disclosure), and
+re-upload this bundle to every active track.

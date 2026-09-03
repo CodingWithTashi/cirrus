@@ -3,6 +3,7 @@ import 'package:amplitude_flutter/autocapture/autocapture.dart';
 import 'package:amplitude_flutter/configuration.dart';
 import 'package:amplitude_flutter/events/base_event.dart';
 import 'package:amplitude_flutter/observers/amplitude_navigator_observer.dart';
+import 'package:amplitude_flutter/tracking_options.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/analytics/analytics.dart';
@@ -39,6 +40,18 @@ final class AmplitudeAnalytics implements AnalyticsSink {
               // app reads a coordinate, and "we never sell your data" starts
               // with not collecting it.
               locationListening: false,
+              // `TrackingOptions.adid` defaults to TRUE, so the Android SDK
+              // attaches an advertising ID to every event it sends — and it
+              // can, because firebase_analytics drags
+              // play-services-ads-identifier onto the classpath whether we
+              // want it or not. That is the "verify if any third-party SDK
+              // uses advertising ID" half of Play's console question, and it
+              // is the half a manifest cannot answer: the AD_ID permission is
+              // removed in AndroidManifest.xml, but an SDK asking for an
+              // identifier we told Play we do not use is the wrong shape even
+              // when the platform hands it back zeroed. One decision, two
+              // files; android_manifest_test.dart pins both ends.
+              trackingOptions: TrackingOptions(adid: false),
             ),
           );
 

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Connectivity probe + the (future) real backend. Debug/profile builds
          inherit this from Flutter's tooling manifests; release needs it here. -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -22,6 +23,41 @@
     <!-- Lets the plugin re-arm pending reminders after a reboot or an app
          update. A normal permission; Play does not restrict it. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- The advertising ID, removed rather than declared. NOTHING in this app
+         reads one: firebase_analytics pulls it in transitively
+         (play-services-measurement-api -> the AD_ID permission, and
+         play-services-ads-identifier alongside it), so Play's console asks
+         "your app declares the advertising ID, confirm or remove" about a
+         permission no line of our code uses.
+
+         Removing it costs nothing we have. The advertising ID buys Google Ads
+         audience export and ads attribution; docs/05's attribution row defers
+         an MMP to "month 3+ ... don't pay for one before you run paid
+         traffic", and docs/08's launch engine is organic TikTok, creator
+         deals, Apple Search Ads (iOS/IDFA) and SEO. Everything we actually
+         read off Firebase Analytics - funnels, retention, Remote Config
+         targeting, Crashlytics audiences - works without it.
+
+         It buys a cost, though: an app about quitting nicotine would have to
+         disclose an advertising identifier on the Play Data Safety form.
+         "We never sell your data" starts with not collecting it - the same
+         reason locationListening is off in AmplitudeAnalytics.
+
+         The other half of this decision is in that file: Amplitude's
+         TrackingOptions.adid defaults to TRUE, so the SDK attaches an
+         advertising ID to every Android event, and the ads-identifier library
+         Firebase drags in is what lets it succeed. The permission and that
+         flag are one decision in two files; android_manifest_test.dart pins
+         both. ACCESS_ADSERVICES_ATTRIBUTION stays - it is the Privacy Sandbox
+         measurement API, is not an identifier, and Play restricts neither it
+         nor asks about it. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove"/>
     <application
         android:label="Cirrus"
         android:name="${applicationName}"
