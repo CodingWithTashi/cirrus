@@ -189,55 +189,54 @@ class _AppShellState extends ConsumerState<AppShell> {
               // tooltip: back to the checklist, ticking nothing.
               child: locked
                   ? _TourExit(
-                      onTap: () =>
-                          ref.read(day1TourProvider.notifier).pause(),
+                      onTap: () => ref.read(day1TourProvider.notifier).pause(),
                     )
                   : Row(
-                children: [
-                  tab(branch: 0, icon: Icons.circle, label: l10n.navHome),
-                  tab(
-                    branch: 1,
-                    icon: Icons.bar_chart_rounded,
-                    label: l10n.navStats,
-                  ),
-                  PressScale(
-                    // The second, unmarked way to log a puff. Not on screen
-                    // at all during the walkthrough (the bar is the exit
-                    // then): step one teaches the Home button, and a user
-                    // who found this instead would tick the box without
-                    // meeting the control being taught.
-                    onTap: quickLog,
-                    onHoldStart: startHold,
-                    onHoldEnd: endHold,
-                    haptic: false,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: lp.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: lp.border, width: 1.5),
-                      ),
-                      child: Icon(
-                        Icons.add_rounded,
-                        color: lp.voltText,
-                        size: 24,
-                      ),
+                      children: [
+                        tab(branch: 0, icon: Icons.circle, label: l10n.navHome),
+                        tab(
+                          branch: 1,
+                          icon: Icons.bar_chart_rounded,
+                          label: l10n.navStats,
+                        ),
+                        PressScale(
+                          // The second, unmarked way to log a puff. Not on screen
+                          // at all during the walkthrough (the bar is the exit
+                          // then): step one teaches the Home button, and a user
+                          // who found this instead would tick the box without
+                          // meeting the control being taught.
+                          onTap: quickLog,
+                          onHoldStart: startHold,
+                          onHoldEnd: endHold,
+                          haptic: false,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: lp.surface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: lp.border, width: 1.5),
+                            ),
+                            child: Icon(
+                              Icons.add_rounded,
+                              color: lp.voltText,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        tab(
+                          branch: 2,
+                          icon: Icons.diamond_outlined,
+                          label: l10n.navCommunity,
+                        ),
+                        tab(
+                          branch: 3,
+                          icon: Icons.auto_awesome,
+                          label: l10n.navCoach,
+                        ),
+                      ],
                     ),
-                  ),
-                  tab(
-                    branch: 2,
-                    icon: Icons.diamond_outlined,
-                    label: l10n.navCommunity,
-                  ),
-                  tab(
-                    branch: 3,
-                    icon: Icons.auto_awesome,
-                    label: l10n.navCoach,
-                  ),
-                ],
-              ),
             ),
           ),
         ),

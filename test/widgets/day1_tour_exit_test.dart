@@ -117,9 +117,7 @@ void main() {
     );
   });
 
-  testWidgets('the exit is not on screen once the app is open', (
-    tester,
-  ) async {
+  testWidgets('the exit is not on screen once the app is open', (tester) async {
     final container = await failOnStepTwo(tester);
     await tester.tap(find.text(l10n.day1TourBack));
     await tester.pumpAndSettle();

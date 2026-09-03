@@ -70,7 +70,10 @@ void main() {
   test('the budget is a beat, not a cold start', () {
     // Long enough for a warm callable on a slow mobile link; short enough
     // that nobody reads it as a hang. Move it deliberately, with a reason.
-    expect(JourneyStore.coachNameBudget.inMilliseconds, inInclusiveRange(1000, 2000));
+    expect(
+      JourneyStore.coachNameBudget.inMilliseconds,
+      inInclusiveRange(1000, 2000),
+    );
   });
 }
 

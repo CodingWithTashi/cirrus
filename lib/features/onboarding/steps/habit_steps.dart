@@ -447,15 +447,16 @@ class SpendStep extends ConsumerWidget {
                       Text(
                         kicker,
                         textAlign: TextAlign.center,
-                        style: density.isCompact
-                            ? LpType.body13(
-                                lp.textPrimary,
-                                weight: FontWeight.w600,
-                              )
-                            : LpType.body14(
-                                lp.textPrimary,
-                                weight: FontWeight.w600,
-                              ),
+                        style: density.pick(
+                          LpType.body14(
+                            lp.textPrimary,
+                            weight: FontWeight.w600,
+                          ),
+                          LpType.body13(
+                            lp.textPrimary,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -517,9 +518,10 @@ class SpendStep extends ConsumerWidget {
       ),
       child: Text(
         label,
-        style: density.isCompact
-            ? LpType.caption11(lp.textSecondary)
-            : LpType.caption(lp.textSecondary),
+        style: density.pick(
+          LpType.caption(lp.textSecondary),
+          LpType.caption11(lp.textSecondary),
+        ),
       ),
     );
   }

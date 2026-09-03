@@ -28,13 +28,13 @@ class OnboardingFlow extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
     final lp = context.lp;
 
-    // The progress bar counts the twelve quiz questions; the chevron exists on
-    // every step with a previous one. They used to be the same condition,
-    // which made the Phase D screens forward-only on iOS — there is no system
-    // back there, so the chevron is the only back (see
-    // `OnboardingState.canGoBack`).
+    // The header exists for the chevron; the progress bar joins it on the
+    // twelve quiz questions. The two used to be one condition, which made the
+    // Phase D screens forward-only on iOS — there is no system back there, so
+    // the chevron is the only back (see `OnboardingState.canGoBack`; every
+    // quiz step can go back, which `onboarding_back_test` pins).
     final progress = state.progress;
-    final showHeader = progress != null || state.canGoBack;
+    final showHeader = state.canGoBack;
 
     final step = switch (state.step) {
       ObStep.welcome => const WelcomeStep(),
@@ -82,17 +82,11 @@ class OnboardingFlow extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(12, 4, 20, 8),
                   child: Row(
                     children: [
-                      // The chevron's slot stays reserved when it is absent,
-                      // so the bar never shifts and the header keeps one
-                      // height across every step that shows it.
-                      if (state.canGoBack)
-                        BackChevron(
-                          onTap: () {
-                            if (!vm.back()) exitFlow();
-                          },
-                        )
-                      else
-                        const SizedBox(width: 40, height: 40),
+                      BackChevron(
+                        onTap: () {
+                          if (!vm.back()) exitFlow();
+                        },
+                      ),
                       if (progress != null) ...[
                         const SizedBox(width: 4),
                         Expanded(

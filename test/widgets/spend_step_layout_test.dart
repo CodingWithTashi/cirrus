@@ -118,22 +118,21 @@ void main() {
       expect(
         scrollable.position.maxScrollExtent,
         0,
-        reason: 'the step needs ${scrollable.position.maxScrollExtent.round()}'
+        reason:
+            'the step needs ${scrollable.position.maxScrollExtent.round()}'
             ' px more than $name has — Continue is below the fold',
       );
 
       final cta = tester.getRect(find.text(l10n.commonContinue));
       expect(cta.bottom, lessThanOrEqualTo(size.height - padding.bottom));
       // And the whole keypad above it, including its last row.
-      expect(
-        tester.getRect(find.text('0')).bottom,
-        lessThan(cta.top),
-      );
+      expect(tester.getRect(find.text('0')).bottom, lessThan(cta.top));
     });
   }
 
-  testWidgets('a 6.1" iPhone draws the compact hero; a Pixel keeps the frame',
-      (tester) async {
+  testWidgets('a 6.1" iPhone draws the compact hero; a Pixel keeps the frame', (
+    tester,
+  ) async {
     // The mechanism, so a future size tweak that quietly stops triggering
     // compact on the phone that needed it fails here rather than in the field.
     final (size, padding) = phones['iPhone 15']!;

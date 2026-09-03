@@ -79,6 +79,20 @@ void main() {
     }
   });
 
+  test('every quiz step can go back, so no progress bar loses its header', () {
+    // `OnboardingFlow` shows the header iff `canGoBack` and draws the
+    // progress bar inside it. A quiz step that could not go back would lose
+    // its bar along with the chevron — this pins the invariant the flow
+    // relies on instead of reserving an empty chevron slot for a case that
+    // cannot occur.
+    for (final step in ObStep.values) {
+      final state = OnboardingState(step: step);
+      if (state.progress != null) {
+        expect(state.canGoBack, isTrue, reason: step.name);
+      }
+    }
+  });
+
   testWidgets('a quiz step keeps its progress beside the chevron', (
     tester,
   ) async {

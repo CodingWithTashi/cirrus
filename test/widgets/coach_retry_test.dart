@@ -107,16 +107,18 @@ void main() {
     final store = container.read(coachStoreProvider.notifier);
     final msgs = container.read(coachStoreProvider).messages;
     // Swap the wire failure for the refusal, in place.
-    store.state = container.read(coachStoreProvider).copyWith(
-      messages: [
-        ...msgs.sublist(0, msgs.length - 1),
-        CoachMessage.ember(
-          id: 'refused',
-          template: CoachTemplate.backendRejected,
-          sentAt: DateTime.now(),
-        ),
-      ],
-    );
+    store.state = container
+        .read(coachStoreProvider)
+        .copyWith(
+          messages: [
+            ...msgs.sublist(0, msgs.length - 1),
+            CoachMessage.ember(
+              id: 'refused',
+              template: CoachTemplate.backendRejected,
+              sentAt: DateTime.now(),
+            ),
+          ],
+        );
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.coachBackendRejected), findsOneWidget);
