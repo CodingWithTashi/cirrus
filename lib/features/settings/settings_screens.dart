@@ -300,8 +300,43 @@ class SettingsScreen extends ConsumerWidget {
                 value: '',
                 onTap: () => context.push(Routes.moderation),
               ),
-            // Support used to live here and only showed a snack; there is no
-            // support channel yet. Restore Purchases is back above, real.
+            // The app used to be an island: no way to reach the site, the
+            // policy, the terms or a person from anywhere inside it. Support
+            // used to sit here and only show a snack, so it was deleted — this
+            // one opens a real mail app AND prints the address underneath, so a
+            // device with no mail client still leaves the reader somewhere to
+            // write. A row that can only fail silently is worse than no row.
+            row(
+              emoji: '🌐',
+              label: l10n.settingsWebsite,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.website).ignore(),
+            ),
+            row(
+              emoji: '🔒',
+              label: l10n.settingsPrivacyPolicy,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.privacy).ignore(),
+            ),
+            row(
+              emoji: '📄',
+              label: l10n.settingsTermsOfUse,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.terms).ignore(),
+            ),
+            row(
+              emoji: '✉️',
+              label: l10n.settingsSupport,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.support).ignore(),
+              below: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  LpLinks.supportEmail,
+                  style: LpType.caption(lp.textSecondary),
+                ),
+              ),
+            ),
             const SizedBox(height: 10),
             Center(
               child: LpTextButton(

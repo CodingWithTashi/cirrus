@@ -5,6 +5,7 @@ standfirst: Five categories, ranked worst to least-bad on peer-reviewed data. Pl
 publishedAt: 2026-07-05
 tags: ['vape safety', 'research', '#vapesafety', '#vapedangers', '#quitvaping', '#cirrusquit']
 draft: false
+ctaAngle: "Which device is worst matters less than how much of it you actually get through."
 medical: true
 author: Gurmey
 authorTitle: Content Writer

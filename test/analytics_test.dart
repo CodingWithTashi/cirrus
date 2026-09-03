@@ -50,6 +50,12 @@ void main() {
         ..freeContinued()
         ..winbackShown()
         ..winbackConverted()
+        ..gateShown('insight')
+        ..gateTapped('insight')
+        ..day1Viewed()
+        ..day1TaskDone('log_puff')
+        ..day1Completed()
+        ..day1Skipped(1)
         ..purchaseCompleted('yearly', trial: true)
         ..purchaseCancelled('monthly')
         ..purchaseFailed('offline')
@@ -83,6 +89,17 @@ void main() {
         'free_continued',
         'winback_shown',
         'winback_converted',
+        // The eleven gates only ever reported the doors that were tapped, so
+        // a gate nobody opened read the same as a gate nobody saw.
+        'gate_shown',
+        'gate_tapped',
+        // The Day-1 checklist gates every new account and emitted nothing at
+        // all, which left activation — the biggest drop-off in the app —
+        // entirely unmeasured.
+        'day1_viewed',
+        'day1_task_done',
+        'day1_completed',
+        'day1_skipped',
         'purchase_completed',
         'purchase_cancelled',
         'purchase_failed',
@@ -98,6 +115,12 @@ void main() {
         'trial': 'true',
       });
       expect(a.propsOf('restore_completed'), {'found': 'false'});
+      expect(a.propsOf('gate_shown'), {'source': 'insight'});
+      expect(a.propsOf('gate_tapped'), {'source': 'insight'});
+      // The task name is a wire value spelled out in JourneyStore, not
+      // `Day1TourStep.name` — renaming that enum must not reclassify history.
+      expect(a.propsOf('day1_task_done'), {'task': 'log_puff'});
+      expect(a.propsOf('day1_skipped'), {'done': 1});
 
       // Property keys are read by the same dashboards.
       expect(a.propsOf('screen_completed'), {'screen_id': 'welcome', 'ms': 1200});

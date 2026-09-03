@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.quitvape.last_puff",
+      "sha256_cert_fingerprints": [
+        "76:30:44:E5:2C:ED:B5:9D:88:9B:5E:9F:B6:0D:E2:92:FB:3C:32:A6:84:30:D1:63:BE:A1:19:50:0B:F8:F9:F7",
+        "8E:44:EA:A9:1D:36:63:69:5C:90:3F:56:39:D5:82:88:4B:F8:CF:15:A9:50:29:C9:94:51:41:76:00:56:FE:91"
+      ]
+    }
+  }
+]

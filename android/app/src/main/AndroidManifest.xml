@@ -89,6 +89,60 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Android App Links, verified against
+                 https://cirrusquit.com/.well-known/assetlinks.json (served with
+                 an application/json Content-Type by the site's public/_headers).
+
+                 THE PATHS ARE SCOPED ON PURPOSE. Claiming the whole host would
+                 be actively harmful in two ways:
+                   * lp_links.dart opens https://cirrusquit.com/privacy in a
+                     browser. Under an unscoped claim that intent comes straight
+                     back to us, so "Privacy policy" inside the app would
+                     re-open the app - an unescapable loop, on a screen every
+                     Play reviewer opens.
+                   * every shared blog URL would open the app instead of the
+                     article, taking the SEO traffic away from the very people
+                     most likely to pass a link on.
+
+                 The apex host ONLY: www.cirrusquit.com 301s to the apex, and
+                 Google's Digital Asset Links verifier does not follow
+                 redirects, so declaring both hosts fails verification for the
+                 whole set rather than just the www one.
+
+                 Verify with:
+                   adb shell pm get-app-links com.quitvape.last_puff -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="cirrusquit.com"
+                    android:pathPrefix="/download"/>
+                <!-- /go/* is NOT claimed yet, deliberately. The site serves no
+                     such path (it would 404 for anyone without the app) and
+                     nothing in the app routes an incoming link yet, so
+                     claiming it would be a door with nothing behind it -
+                     the same defect as the dead store links in the blog.
+                     It goes back the moment LpDeepLinks and the /go/ page
+                     exist, and android_manifest_test.dart pins that pairing. -->
+            </intent-filter>
+            <!-- Flutter's own deep-link handling is OFF: go_router's routes are
+                 internal paths (/home, /paywall), and the engine would push the
+                 incoming web path straight at the router - so cirrusquit.com/
+                 download becomes a go_router lookup for "/download", which does
+                 not exist and lands on RouteNotFoundScreen. It would also skip
+                 the redirect guards that send an unauthenticated visitor to
+                 /auth and hold a day-one account on /day1. Incoming links get
+                 mapped explicitly instead.
+
+                 This MUST sit inside <activity>: Flutter reads it with
+                 getActivityInfo(GET_META_DATA), so in <application> it is
+                 silently ignored - and since Flutter 3.24 deep linking
+                 defaults to ON as soon as an autoVerify filter exists, which
+                 is precisely the case above. android_manifest_test.dart
+                 asserts the placement, not just the presence. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
         </activity>
         <!-- Background FCM pushes land in this channel. It is CREATED by
              PushService.ensureAndroidChannel() at startup — the manifest only

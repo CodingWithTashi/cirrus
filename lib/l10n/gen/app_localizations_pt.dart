@@ -891,7 +891,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Um toque antes das tuas horas de perigo e outro em cada marco.';
+      'Nada de spam. Um toque antes das tuas horas de perigo e outro antes de o teste acabar.';
 
   @override
   String get obNotifPreviewTime => 'Sex 21:54';
@@ -904,7 +904,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get obNotifBullet1 => 'Aviso de horas de perigo (tu defines as horas)';
 
   @override
-  String get obNotifBullet2 => 'Celebrações de sequências e marcos';
+  String get obNotifBullet2 =>
+      'Um aviso antes de o teste acabar — sem cobranças surpresa';
 
   @override
   String get obNotifBullet3 => 'Mais nada — marketing nunca';
@@ -917,6 +918,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Vai mais longe com o Premium.';
+
+  @override
+  String get paywallRevealLabel => 'O TEU PLANO';
 
   @override
   String get paywallFeatCoach =>
@@ -2879,6 +2883,18 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get settingsPrivacyNote =>
       'Nunca vendemos os teus dados. Zero rastreadores. Nunca.';
+
+  @override
+  String get settingsWebsite => 'Site';
+
+  @override
+  String get settingsPrivacyPolicy => 'Política de privacidade';
+
+  @override
+  String get settingsTermsOfUse => 'Termos de uso';
+
+  @override
+  String get settingsSupport => 'Falar com o suporte';
 
   @override
   String get settingsDeleteEverything => 'Apagar tudo';

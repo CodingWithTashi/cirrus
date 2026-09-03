@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCta from '../../components/PostCta.astro';
 import WaitlistForm from '../../components/WaitlistForm.astro';
 import { SITE_TITLE } from '../../consts';
 import { getPublishedPosts, formatDate, readingTime } from '../../lib/posts';
@@ -31,14 +32,27 @@ const {
   heroImage,
   heroImageAlt,
   heroImageCaption,
+  ctaAngle,
 } = post.data;
 
-// Onward links. Posts sharing a tag first, then the most recent, capped at three.
-// Without these the cluster is a set of dead ends and nothing passes relevance
-// between the posts.
+// Onward links. Posts sharing the most TOPICAL tags first, then the most recent,
+// capped at four. Without these the cluster is a set of dead ends and nothing
+// passes relevance between the posts.
+//
+// `#`-prefixed tags are social hashtags, not topics, and every post carries
+// `#cirrusquit` — so matching on the raw list made "shares a tag" mean "is any
+// other post", and the whole ranking silently collapsed to publication order.
+// Harmless at six posts; actively wrong as the clusters grow.
+const topical = (tags: string[]) => tags.filter((t) => !t.startsWith('#'));
+
 const related = await (async () => {
+  const mine = new Set(topical(post.data.tags));
   const others = (await getPublishedPosts()).filter((p) => p.id !== post.id);
-  const shared = others.filter((p) => p.data.tags.some((t) => post.data.tags.includes(t)));
+  const shared = others
+    .map((p) => ({ p, score: topical(p.data.tags).filter((t) => mine.has(t)).length }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.p);
   return [...new Set([...shared, ...others])].slice(0, 4);
 })();
 
@@ -260,6 +274,7 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
   {
     related.length > 0 && (
       <aside class="post-side" aria-labelledby="related-h">
+        <PostCta slug={post.id} angle={ctaAngle} />
         <div class="related">
           <h2 id="related-h">Keep reading</h2>
           <ul class="related__list">

@@ -298,6 +298,9 @@ class JourneyStore extends Notifier<JourneyState?> {
     // logPuff, so a new entry point can't ship unmeasured. Once per tap, not
     // per puff: the metric counts logging behaviour, not inventory.
     ref.read(analyticsProvider).puffLogged();
+    // The first puff ever logged also ticks Day-1 task zero below, whether or
+    // not the checklist was the thing that sent them here.
+    _reportDay1Task(s, 0);
     final when = at ?? _now;
     final key = JourneyState.dateKey(when);
     var updated =
@@ -597,17 +600,54 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   // ---- misc -----------------------------------------------------------------
 
+  /// The Day-1 task names as the dashboard sees them.
+  ///
+  /// Spelled out rather than taken from `Day1TourStep.name` on purpose: the
+  /// enum is a UI concern and renaming it would silently reclassify every row
+  /// already recorded, the same way renaming `CoachRole.ember` would.
+  static const _day1TaskNames = ['log_puff', 'meet_coach', 'danger_hours'];
+
+  /// Reports a Day-1 task the first time it is ticked, and the completion of
+  /// the list when the third one lands.
+  ///
+  /// It lives in the store because two different paths tick a task — the
+  /// checklist buttons and the very first LOG PUFF tap — so activation is
+  /// counted identically however it happened, and a new entry point cannot
+  /// ship unmeasured. Guarded on the before-state, so the second puff of the
+  /// day never re-reports task zero.
+  void _reportDay1Task(JourneyState before, int index) {
+    if (index < 0 || index >= _day1TaskNames.length) return;
+    if (before.day1TasksDone.contains(index)) return;
+
+    final analytics = ref.read(analyticsProvider);
+    analytics.day1TaskDone(_day1TaskNames[index]);
+    if (before.day1TasksDone.length + 1 >= _day1TaskNames.length) {
+      analytics.day1Completed();
+    }
+  }
+
   /// They chose not to be walked through setup. Ticks nothing — see
   /// [JourneyState.day1TourSkipped].
   void skipDay1Tour() {
     final s = state;
     if (s == null) return;
+    // How far they got before leaving is the whole point: abandoning at zero
+    // and abandoning at two are different problems.
+    //
+    // Reported only on the transition. The screen hides the skip link once it
+    // has been taken, so a second call should not happen — but the guard lives
+    // here rather than relying on that, because a skip counted twice quietly
+    // inflates the one rate this event exists to measure.
+    if (!s.day1TourSkipped) {
+      ref.read(analyticsProvider).day1Skipped(s.day1TasksDone.length);
+    }
     _commit(s.copyWith(day1TourSkipped: true));
   }
 
   void completeDay1Task(int index) {
     final s = state;
     if (s == null) return;
+    _reportDay1Task(s, index);
     _commit(s.copyWith(day1TasksDone: {...s.day1TasksDone, index}));
   }
 

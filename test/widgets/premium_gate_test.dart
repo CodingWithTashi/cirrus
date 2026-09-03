@@ -47,11 +47,15 @@ void main() {
     WidgetTester tester,
     String route, {
     bool premium = false,
+    RecordingAnalytics? analytics,
     List<Override> overrides = const [],
   }) async {
     ignoreFontWidthOverflow();
     final container = ProviderContainer(
-      overrides: [...fastBackendOverrides(premium: premium), ...overrides],
+      overrides: [
+        ...fastBackendOverrides(premium: premium, analytics: analytics),
+        ...overrides,
+      ],
     );
     addTearDown(container.dispose);
     await tester.pumpWidget(
@@ -124,6 +128,61 @@ void main() {
       await open(tester, Routes.health);
       expect(find.byType(AbsorbPointer), findsWidgets);
       expect(find.text(l10n.premiumPitchHealth), findsOneWidget);
+    });
+  });
+
+  group('what the funnel can see', () {
+    testWidgets('a gate reports one impression per mount, then its tap', (
+      tester,
+    ) async {
+      // Before this, `paywall_viewed` fired only on a tap, so a door nobody
+      // opened was indistinguishable from a door nobody was ever shown — and
+      // those have opposite fixes (bad copy vs bad placement). The impression
+      // is the denominator that tells them apart.
+      final analytics = RecordingAnalytics();
+      final container = await open(
+        tester,
+        Routes.insight,
+        analytics: analytics,
+      );
+
+      expect(
+        analytics.names.where((n) => n == 'gate_shown').length,
+        1,
+        reason: 'one mount is one impression, however many rebuilds follow',
+      );
+      expect(analytics.propsOf('gate_shown'), {'source': 'insight'});
+      expect(analytics.names, isNot(contains('gate_tapped')));
+
+      await reveal(tester, find.text(l10n.premiumLockCta));
+      await tester.tap(find.text(l10n.premiumLockCta));
+      await tester.pumpAndSettle();
+
+      // The pair the conversion of this door is computed from, both carrying
+      // the same source as the paywall they opened.
+      //
+      // `lastWhere`, not `propsOf`: a free account has already been shown the
+      // once-a-day launch paywall on the splash, so the first `paywall_viewed`
+      // of the session is `launch` and has nothing to do with this gate.
+      expect(analytics.propsOf('gate_tapped'), {'source': 'insight'});
+      expect(
+        analytics.events.lastWhere((e) => e.name == 'paywall_viewed').props['source'],
+        'insight',
+      );
+      expectPaywallFrom(container, 'insight');
+    });
+
+    testWidgets('a paying account is never counted as having seen a gate', (
+      tester,
+    ) async {
+      final analytics = RecordingAnalytics();
+      await open(
+        tester,
+        Routes.insight,
+        premium: true,
+        analytics: analytics,
+      );
+      expect(analytics.names, isNot(contains('gate_shown')));
     });
   });
 

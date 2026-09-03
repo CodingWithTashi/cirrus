@@ -82,6 +82,48 @@ extension LpEvents on AnalyticsSink {
 
   void winbackConverted() => track(const AnalyticsEvent('winback_converted'));
 
+  // --- premium gates -------------------------------------------------------
+
+  /// A locked surface rendered, with the [source] its door would carry.
+  ///
+  /// `paywall_viewed` fires only after a TAP, so without this the view→tap rate
+  /// of the eleven gates is unknowable: the funnel can say which door was
+  /// walked through, never which door was seen and ignored. Those are different
+  /// problems with different fixes — a gate nobody taps is bad copy, a gate
+  /// nobody sees is bad placement.
+  ///
+  /// Fires once per mount, never per rebuild, or a scrolling list would report
+  /// impressions in the thousands.
+  void gateShown(String source) =>
+      track(AnalyticsEvent('gate_shown', {'source': source}));
+
+  /// The lock card or its CTA was tapped. `paywall_viewed` follows with the
+  /// same `source`, so the two divide cleanly.
+  void gateTapped(String source) =>
+      track(AnalyticsEvent('gate_tapped', {'source': source}));
+
+  // --- day-one activation --------------------------------------------------
+
+  /// The Day-1 checklist appeared.
+  ///
+  /// The router redirects every root tab here while the list is unfinished, so
+  /// this is the gate every new account must pass — and it emitted nothing at
+  /// all, which left the largest single drop-off risk in the app completely
+  /// dark. Install→activation could not be computed.
+  void day1Viewed() => track(const AnalyticsEvent('day1_viewed'));
+
+  /// One task ticked. [task] is `log_puff`, `meet_coach` or `danger_hours`.
+  void day1TaskDone(String task) =>
+      track(AnalyticsEvent('day1_task_done', {'task': task}));
+
+  /// All three ticked.
+  void day1Completed() => track(const AnalyticsEvent('day1_completed'));
+
+  /// "Skip setup for now" was taken, with how many tasks were done first —
+  /// abandoning at zero and abandoning at two are not the same event.
+  void day1Skipped(int done) =>
+      track(AnalyticsEvent('day1_skipped', {'done': done}));
+
   // --- billing -------------------------------------------------------------
   // Not in docs/02 §7, whose funnel stops at `trial_started` (fired at intent,
   // before the store sheet). These are the outcomes of that sheet. Revenue

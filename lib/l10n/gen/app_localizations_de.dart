@@ -895,7 +895,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Kein Spam. Ein Stups vor deinen Gefahrenstunden, einer bei jedem Meilenstein.';
+      'Kein Spam. Ein Stups vor deinen Gefahrenstunden, einer bevor dein Test endet.';
 
   @override
   String get obNotifPreviewTime => 'Fr 21:54';
@@ -908,7 +908,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get obNotifBullet1 => 'Gefahrenstunden-Warnung (du setzt die Zeiten)';
 
   @override
-  String get obNotifBullet2 => 'Serien- und Meilenstein-Feiern';
+  String get obNotifBullet2 =>
+      'Eine Erinnerung, bevor dein Test endet — keine Überraschungsabbuchung';
 
   @override
   String get obNotifBullet3 => 'Sonst nichts – nie Marketing';
@@ -921,6 +922,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Komm weiter mit Premium.';
+
+  @override
+  String get paywallRevealLabel => 'DEIN PLAN';
 
   @override
   String get paywallFeatCoach => 'Unbegrenzter KI-Coach, der dein Warum kennt';
@@ -2889,6 +2893,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get settingsPrivacyNote =>
       'Wir verkaufen nie deine Daten. Keine Tracker. Niemals.';
+
+  @override
+  String get settingsWebsite => 'Website';
+
+  @override
+  String get settingsPrivacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get settingsTermsOfUse => 'Nutzungsbedingungen';
+
+  @override
+  String get settingsSupport => 'Support kontaktieren';
 
   @override
   String get settingsDeleteEverything => 'Alles löschen';

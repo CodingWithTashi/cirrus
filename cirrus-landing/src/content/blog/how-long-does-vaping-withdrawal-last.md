@@ -5,6 +5,7 @@ standfirst: Symptoms start within a day, peak sooner than most people expect, an
 publishedAt: 2026-08-25
 tags: ['quitting vaping', 'research', '#quitvaping', '#vapewithdrawal', '#nicotinefree', '#cirrusquit']
 draft: false
+ctaAngle: "The peak lands on day two or three. Cirrus is built for that week, not for a countdown."
 medical: true
 author: Gurmey
 authorTitle: Content Writer

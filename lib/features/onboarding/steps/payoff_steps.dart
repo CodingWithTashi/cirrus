@@ -22,8 +22,7 @@ import '../../../core/widgets/lp_charts.dart';
 import '../../../core/widgets/lp_misc.dart';
 import '../../../core/widgets/progress_ring.dart';
 import '../../../core/widgets/rolling_number.dart';
-import '../../../domain/logic/money_engine.dart';
-import '../../../domain/logic/taper_engine.dart';
+import '../../../domain/logic/plan_reveal.dart';
 import '../onboarding_view_model.dart';
 import '../tailoring.dart';
 import 'step_body.dart';
@@ -40,8 +39,13 @@ class RevealStep extends ConsumerWidget {
     final state = ref.watch(onboardingProvider);
     final vm = ref.read(onboardingProvider.notifier);
     final plan = vm.draftPlan();
-    final projectedSaved = MoneyEngine.projectedToFreedom(plan, 0);
-    final puffsAvoided = TaperEngine.projectedPuffsAvoided(plan);
+    // One source for the four figures, shared with the paywall's proof card, so
+    // the two screens can never quote different numbers at the same person.
+    //
+    // Null only if puffs/day were somehow unanswered, which the flow prevents —
+    // the block below is then simply absent. An honest gap beats a Freedom Day
+    // computed from a baseline of zero.
+    final reveal = PlanReveal.of(plan, now: ref.read(nowProvider)());
 
     return StepBody(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -51,99 +55,105 @@ class RevealStep extends ConsumerWidget {
           style: LpType.title(lp.textPrimary, size: 32),
         ),
         const SizedBox(height: 18),
-        LpCard(
-          radius: LpDimens.rCardLg,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        if (reveal != null) ...[
+          LpCard(
+            radius: LpDimens.rCardLg,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TaperCurveChart(
+                  samples: reveal.curve,
+                  height: 104,
+                  animate: true,
+                  milestones: [(0.1, lp.ember), (0.23, lp.oxygen)],
+                ),
+                const SizedBox(height: 10),
+                _milestone(
+                  context,
+                  lp.ember,
+                  l10n.commonDayN(3),
+                  l10n.obRevealMilestone3,
+                ),
+                _milestone(
+                  context,
+                  lp.oxygen,
+                  l10n.commonDayN(7),
+                  l10n.obRevealMilestone7,
+                ),
+                _milestone(
+                  context,
+                  lp.ember,
+                  l10n.commonDayN(reveal.totalDays),
+                  l10n.obRevealMilestoneFreedom(
+                    LpFormat.shortDate(reveal.freedomDate, locale),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              TaperCurveChart(
-                samples: TaperEngine.normalizedCurve(plan),
-                height: 104,
-                animate: true,
-                milestones: [(0.1, lp.ember), (0.23, lp.oxygen)],
+              Expanded(
+                child: _statCard(
+                  context,
+                  RollingNumber(
+                    reveal.projectedSaved,
+                    format: (v) => LpFormat.money(v, locale),
+                    style: LpType.number(lp.voltText, size: 30).copyWith(
+                      shadows: [
+                        Shadow(
+                          color: lp.volt.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  l10n.obRevealSavedLabel,
+                ),
               ),
-              const SizedBox(height: 10),
-              _milestone(
-                context,
-                lp.ember,
-                l10n.commonDayN(3),
-                l10n.obRevealMilestone3,
-              ),
-              _milestone(
-                context,
-                lp.oxygen,
-                l10n.commonDayN(7),
-                l10n.obRevealMilestone7,
-              ),
-              _milestone(
-                context,
-                lp.ember,
-                l10n.commonDayN(plan.totalDays),
-                l10n.obRevealMilestoneFreedom(
-                  LpFormat.shortDate(plan.freedomDate, locale),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statCard(
+                  context,
+                  // Frame 16: counters roll up staggered — this one lands second.
+                  RollingNumber(
+                    reveal.puffsAvoided,
+                    duration: const Duration(milliseconds: 1400),
+                    curve: const Interval(0.4, 1, curve: LpMotion.emphasized),
+                    format: (v) => LpFormat.integer(v, locale),
+                    style: LpType.number(lp.voltText, size: 30).copyWith(
+                      shadows: [
+                        Shadow(
+                          color: lp.volt.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  l10n.obRevealPuffsLabel,
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _statCard(
-                context,
-                RollingNumber(
-                  projectedSaved,
-                  format: (v) => LpFormat.money(v, locale),
-                  style: LpType.number(lp.voltText, size: 30).copyWith(
-                    shadows: [
-                      Shadow(
-                        color: lp.volt.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
-                ),
-                l10n.obRevealSavedLabel,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _statCard(
-                context,
-                // Frame 16: counters roll up staggered — this one lands second.
-                RollingNumber(
-                  puffsAvoided,
-                  duration: const Duration(milliseconds: 1400),
-                  curve: const Interval(0.4, 1, curve: LpMotion.emphasized),
-                  format: (v) => LpFormat.integer(v, locale),
-                  style: LpType.number(lp.voltText, size: 30).copyWith(
-                    shadows: [
-                      Shadow(
-                        color: lp.volt.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
-                ),
-                l10n.obRevealPuffsLabel,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // What the projected saving actually buys. A different figure from the
-        // spend screen's, and by now every answer exists, so the catalogue can
-        // draw on their reasons too — the two screens never repeat each other.
-        if (ObTailoring.revealComparison(context, state, projectedSaved)
-            case final line?) ...[
-          Text(
-            line,
-            textAlign: TextAlign.center,
-            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
-          ),
           const SizedBox(height: 12),
+          // What the projected saving actually buys. A different figure from the
+          // spend screen's, and by now every answer exists, so the catalogue can
+          // draw on their reasons too — the two screens never repeat each other.
+          if (ObTailoring.revealComparison(
+                context,
+                state,
+                reveal.projectedSaved,
+              )
+              case final line?) ...[
+            Text(
+              line,
+              textAlign: TextAlign.center,
+              style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+          ],
         ],
         LpCard(
           radius: LpDimens.rInput,

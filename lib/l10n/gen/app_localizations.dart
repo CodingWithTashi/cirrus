@@ -1631,7 +1631,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Not spam. One nudge before your danger hours, one when you hit a milestone.'**
+  /// **'Not spam. One nudge before your danger hours, and one before your trial ends.'**
   String get obNotifSubtitle;
 
   /// No description provided for @obNotifPreviewTime.
@@ -1655,7 +1655,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet2.
   ///
   /// In en, this message translates to:
-  /// **'Streak + milestone celebrations'**
+  /// **'A heads-up before your trial ends — no surprise charges'**
   String get obNotifBullet2;
 
   /// No description provided for @obNotifBullet3.
@@ -1681,6 +1681,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go further with Premium.'**
   String get paywallTitleUpgrade;
+
+  /// No description provided for @paywallRevealLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR PLAN'**
+  String get paywallRevealLabel;
 
   /// No description provided for @paywallFeatCoach.
   ///
@@ -4764,6 +4770,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We never sell your data. No ad trackers. Ever.'**
   String get settingsPrivacyNote;
+
+  /// No description provided for @settingsWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get settingsWebsite;
+
+  /// No description provided for @settingsPrivacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsPrivacyPolicy;
+
+  /// No description provided for @settingsTermsOfUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get settingsTermsOfUse;
+
+  /// No description provided for @settingsSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get settingsSupport;
 
   /// No description provided for @settingsDeleteEverything.
   ///

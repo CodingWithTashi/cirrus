@@ -1,0 +1,94 @@
+---
+// The stable destination for every "get the app" link on this site and off it.
+//
+// It exists so that prose — blog posts, a TikTok bio, a Reddit comment — never
+// has to contain a play.google.com URL. Markdown cannot read PLAY_STORE_URL, so
+// a hard-coded store link in a post goes stale silently; two of them already did,
+// pointing at a listing that was not public yet. This page is the indirection.
+//
+// It is indexable on purpose: "cirrus quit vaping app download" is a brand
+// navigational query and this is the page that should answer it.
+//
+// ONE QUERY, ONE PAGE: the home FAQ owns "Is Cirrus free?" and "When is Cirrus
+// available, and is it on iPhone?". This page summarises both in the visitor's
+// path and links home rather than re-answering them, and it deliberately emits
+// no FAQPage schema of its own.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import WaitlistForm from '../components/WaitlistForm.astro';
+import { SITE_TITLE, LAUNCH_PLATFORM } from '../consts';
+import { STORE_LIVE, playUrl } from '../lib/store';
+---
+
+<BaseLayout
+  title="Get Cirrus"
+  description="How to get Cirrus, the quit vaping app that counts your real puffs and tapers them to zero. Android first, iPhone to follow, free tier that keeps working."
+  breadcrumbs={[{ label: 'Get the app' }]}
+>
+  <div class="wrap page">
+    <h1>Get {SITE_TITLE}</h1>
+
+    <p class="lede">
+      A puff counter that tapers you down instead of demanding you stop dead. One bad Tuesday
+      shouldn't cost you three weeks.
+    </p>
+
+    {
+      STORE_LIVE ? (
+        <>
+          <p>
+            {/* TODO: swap for the official Google Play badge SVG once the asset is in
+                public/. A text button is compliant in the meantime; a recoloured or
+                redrawn badge would not be. */}
+            <a class="btn btn-primary" href={playUrl('download-page')} rel="noopener">
+              Get it free on Google Play
+            </a>
+          </p>
+          {/* The waitlist does not retire when Android ships — it becomes the
+              iPhone list. Roughly half of this site's readers are on iOS, that
+              build is months away, and sending them to an Android-only button
+              with no alternative is how you lose the half of the audience you
+              already paid to reach. */}
+          <p>
+            On iPhone? It genuinely isn't built yet. Leave your email and you'll hear the day it
+            lands on your platform — that's the only thing we'll ever send you.
+          </p>
+          <WaitlistForm
+            source="download-ios"
+            id="download-ios-waitlist"
+            label="On iPhone"
+            cta="Tell me when iOS lands"
+          />
+        </>
+      ) : (
+        <>
+          <p>
+            It isn't on the store yet — and we'd rather say that than take a pre-order for
+            something you can't open. Leave your email and you'll hear the day it lands on your
+            platform. That's the only thing we'll ever send you.
+          </p>
+          <WaitlistForm source="download" id="download-waitlist" cta="Tell me when it's out" />
+        </>
+      )
+    }
+
+    <h2>What you get</h2>
+    <p>
+      The free tier keeps working forever: puff logging, streaks, money saved, your daily limit,
+      the community, and a few coach messages a day. Paid unlocks the adaptive plan and unlimited
+      coaching. There's no lockout, we never sell your data, and there are no ad trackers in the
+      app — we removed the advertising ID rather than switching it off.
+    </p>
+
+    <h2>Which phone</h2>
+    <p>
+      {LAUNCH_PLATFORM} first. iPhone is a fast-follow, and it genuinely isn't built yet. If
+      you're on iPhone the waitlist is the right move — it's the same list, and you'll get one
+      email when your version is ready.
+    </p>
+
+    <p>
+      Not sure yet? <a href="/">See what a year of vaping is costing you</a> — it takes about ten
+      seconds and it needs no signup.
+    </p>
+  </div>
+</BaseLayout>

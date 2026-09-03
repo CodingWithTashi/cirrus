@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
-import 'package:last_puff/core/utils/lp_links.dart';
+import 'package:last_puff/core/utils/lp_format.dart';
+import 'package:last_puff/domain/logic/plan_reveal.dart';
 import 'package:last_puff/core/utils/lp_pricing.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/network/connectivity.dart';
@@ -185,6 +186,55 @@ void main() {
           );
         }
       }
+    });
+  });
+
+  group('the plan they already built', () {
+    testWidgets('their own Freedom Day and numbers sit above the features', (
+      tester,
+    ) async {
+      // Onboarding step 16 computed all of this and then dropped it four
+      // screens before the ask. These are the user's own figures, read from
+      // the same PlanReveal the reveal screen uses — never re-derived here,
+      // because two derivations are how one person gets shown two different
+      // Freedom Days.
+      final container = await open(tester, Routes.paywall);
+      final journey = container.read(quitStoreProvider)!;
+      final reveal = PlanReveal.of(
+        journey.plan,
+        now: container.read(nowProvider)(),
+      )!;
+
+      expect(find.text(l10n.paywallRevealLabel), findsOneWidget);
+      expect(
+        find.text(
+          l10n.obRevealMilestoneFreedom(
+            LpFormat.shortDate(reveal.freedomDate, 'en'),
+          ),
+        ),
+        findsOneWidget,
+        reason: 'the date must be theirs, not a placeholder',
+      );
+      expect(
+        find.text(LpFormat.integer(reveal.puffsAvoided, 'en')),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.obRevealPuffsLabel), findsOneWidget);
+    });
+
+    testWidgets('the proof outranks the generic feature list', (tester) async {
+      // Order is the whole point: their numbers, then what Premium adds, then
+      // the price. This runs with the Sep 1 "features out-rank pricing"
+      // decision rather than against it.
+      await open(tester, Routes.paywall);
+
+      final proofY = tester
+          .getTopLeft(find.text(l10n.paywallRevealLabel))
+          .dy;
+      final featureY = tester
+          .getTopLeft(find.text(l10n.paywallFeatCoach))
+          .dy;
+      expect(proofY, lessThan(featureY));
     });
   });
 
@@ -424,10 +474,8 @@ void main() {
       }
     });
 
-    test('point at the published pages', () {
-      expect(LpLinks.privacy.toString(), 'https://alastpuff.web.app/privacy');
-      expect(LpLinks.terms.toString(), 'https://alastpuff.web.app/terms');
-    });
+    // The URLs themselves are pinned in test/core/lp_links_test.dart, which
+    // also guards against the old Firebase host coming back anywhere in lib/.
   });
 
   group('restore', () {

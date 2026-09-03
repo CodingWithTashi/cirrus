@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/domain/logic/reminder_planner.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 /// The honesty rule, applied to copy (QA observations, Aug 31 2026).
@@ -31,6 +32,59 @@ void main() {
             value.contains(word),
             isFalse,
             reason: '$locale/$key still says "$word": $value',
+          );
+        }
+      }
+    }
+  });
+
+  /// The permission screen may only promise reminders the app actually schedules.
+  ///
+  /// `obNotifBullet2` sold "Streak + milestone celebrations" in five languages,
+  /// and the subtitle promised "one when you hit a milestone", while
+  /// `ReminderKind` was `{danger, trial}`. Seventeen badges unlocked in total
+  /// silence. It is the same failure as the buddy copy above — a screen selling
+  /// a feature that does not exist — except this one spends a system permission
+  /// prompt on the strength of it, and you only get asked once.
+  ///
+  /// Keyed off the enum so it retires itself: the day a `milestone` reminder
+  /// ships, this stops forbidding the word and the copy can come back.
+  test('the notification permission screen only promises reminders that exist', () {
+    const promises = <String, Map<String, String>>{
+      'milestone': {
+        'en': 'milestone',
+        'es': 'hito',
+        'fr': 'étape',
+        'de': 'meilenstein',
+        'pt': 'marco',
+      },
+      'streakRisk': {
+        'en': 'streak',
+        'es': 'racha',
+        'fr': 'série',
+        'de': 'serie',
+        'pt': 'sequência',
+      },
+    };
+
+    final scheduled = ReminderKind.values.map((k) => k.name).toSet();
+
+    for (final promise in promises.entries) {
+      if (scheduled.contains(promise.key)) continue; // it is real now; say so freely
+
+      for (final locale in locales) {
+        final strings = arb(locale);
+        for (final entry in strings.entries) {
+          if (!entry.key.startsWith('obNotif')) continue;
+          final value = entry.value;
+          if (value is! String) continue;
+
+          expect(
+            value.toLowerCase().contains(promise.value[locale]!),
+            isFalse,
+            reason:
+                '$locale/${entry.key} promises a ${promise.key} reminder, and '
+                'ReminderKind has no such value: $value',
           );
         }
       }

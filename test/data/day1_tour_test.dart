@@ -18,8 +18,10 @@ import '../helpers.dart';
 
 void main() {
   /// A container on a fresh day-1 journey: nothing done, nothing skipped.
-  ProviderContainer freshDay1() {
-    final container = ProviderContainer(overrides: fastBackendOverrides());
+  ProviderContainer freshDay1({RecordingAnalytics? analytics}) {
+    final container = ProviderContainer(
+      overrides: fastBackendOverrides(analytics: analytics),
+    );
     addTearDown(container.dispose);
     final store = container.read(quitStoreProvider.notifier)..seedDemoJourney();
     store.replaceForTest(
@@ -31,6 +33,67 @@ void main() {
   }
 
   Day1TourStep? stepOf(ProviderContainer c) => c.read(day1TourStepProvider);
+
+  /// Activation was completely dark. The checklist gates every new account —
+  /// the router redirects each root tab to it until it is finished or skipped —
+  /// and it emitted no events at all, including the skip. So the single biggest
+  /// drop-off risk in the app could not be measured, and install→activation
+  /// could not be computed.
+  group('what the funnel can see', () {
+    int count(RecordingAnalytics a, String name) =>
+        a.names.where((n) => n == name).length;
+
+    test('each task reports once, and the third reports completion', () {
+      final analytics = RecordingAnalytics();
+      final store = freshDay1(analytics: analytics).read(
+        quitStoreProvider.notifier,
+      );
+
+      store.completeDay1Task(1);
+      expect(analytics.propsOf('day1_task_done'), {'task': 'meet_coach'});
+      expect(analytics.names, isNot(contains('day1_completed')));
+
+      // Re-ticking a done task is not a second activation.
+      store.completeDay1Task(1);
+      expect(count(analytics, 'day1_task_done'), 1);
+
+      store.completeDay1Task(2);
+      store.completeDay1Task(0);
+      expect(count(analytics, 'day1_task_done'), 3);
+      expect(count(analytics, 'day1_completed'), 1);
+    });
+
+    test('the first puff ticks task zero however it was logged', () {
+      // The checklist is not the only path: logging a puff from Home ticks
+      // task zero too. Reporting lives in the store precisely so both routes
+      // are counted the same and a new entry point cannot ship unmeasured.
+      final analytics = RecordingAnalytics();
+      final store = freshDay1(analytics: analytics).read(
+        quitStoreProvider.notifier,
+      );
+
+      store.logPuff();
+      expect(analytics.propsOf('day1_task_done'), {'task': 'log_puff'});
+
+      store.logPuff();
+      expect(
+        count(analytics, 'day1_task_done'),
+        1,
+        reason: 'the second puff of the day is not a second activation',
+      );
+    });
+
+    test('skipping reports how far they got first', () {
+      // Abandoning at zero and abandoning at two are different problems.
+      final analytics = RecordingAnalytics();
+      final store = freshDay1(analytics: analytics).read(
+        quitStoreProvider.notifier,
+      )..completeDay1Task(0);
+
+      store.skipDay1Tour();
+      expect(analytics.propsOf('day1_skipped'), {'done': 1});
+    });
+  });
 
   group('starting', () {
     test('nothing is spotlighted until the walkthrough is started', () {

@@ -893,7 +893,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Un aviso antes de tus horas de peligro y otro cuando logras un hito.';
+      'Nada de spam. Un aviso antes de tus horas de peligro y otro antes de que acabe tu prueba.';
 
   @override
   String get obNotifPreviewTime => 'Vie 21:54';
@@ -906,7 +906,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get obNotifBullet1 => 'Aviso de horas de peligro (tú pones las horas)';
 
   @override
-  String get obNotifBullet2 => 'Celebraciones de rachas e hitos';
+  String get obNotifBullet2 =>
+      'Un aviso antes de que acabe tu prueba: sin cargos sorpresa';
 
   @override
   String get obNotifBullet3 => 'Nada más: cero marketing, nunca';
@@ -919,6 +920,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Llega más lejos con Premium.';
+
+  @override
+  String get paywallRevealLabel => 'TU PLAN';
 
   @override
   String get paywallFeatCoach => 'Coach de IA ilimitado que recuerda tu porqué';
@@ -2880,6 +2884,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsPrivacyNote =>
       'Nunca vendemos tus datos. Sin rastreadores. Jamás.';
+
+  @override
+  String get settingsWebsite => 'Sitio web';
+
+  @override
+  String get settingsPrivacyPolicy => 'Política de privacidad';
+
+  @override
+  String get settingsTermsOfUse => 'Términos de uso';
+
+  @override
+  String get settingsSupport => 'Contactar con soporte';
 
   @override
   String get settingsDeleteEverything => 'Borrarlo todo';

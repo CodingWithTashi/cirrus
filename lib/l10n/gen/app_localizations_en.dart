@@ -887,7 +887,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Not spam. One nudge before your danger hours, one when you hit a milestone.';
+      'Not spam. One nudge before your danger hours, and one before your trial ends.';
 
   @override
   String get obNotifPreviewTime => 'Fri 9:54 PM';
@@ -900,7 +900,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obNotifBullet1 => 'Danger-hour heads-up (you set the hours)';
 
   @override
-  String get obNotifBullet2 => 'Streak + milestone celebrations';
+  String get obNotifBullet2 =>
+      'A heads-up before your trial ends — no surprise charges';
 
   @override
   String get obNotifBullet3 => 'Nothing else — no marketing, ever';
@@ -913,6 +914,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Go further with Premium.';
+
+  @override
+  String get paywallRevealLabel => 'YOUR PLAN';
 
   @override
   String get paywallFeatCoach => 'Unlimited AI coach that remembers your why';
@@ -2861,6 +2865,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsPrivacyNote =>
       'We never sell your data. No ad trackers. Ever.';
+
+  @override
+  String get settingsWebsite => 'Website';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get settingsTermsOfUse => 'Terms of use';
+
+  @override
+  String get settingsSupport => 'Contact support';
 
   @override
   String get settingsDeleteEverything => 'Delete everything';

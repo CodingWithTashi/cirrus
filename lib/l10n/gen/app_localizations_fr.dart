@@ -893,7 +893,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Pas de spam. Un rappel avant tes heures à risque, un autre à chaque étape franchie.';
+      'Pas de spam. Un rappel avant tes heures à risque, un autre avant la fin de ton essai.';
 
   @override
   String get obNotifPreviewTime => 'Ven 21:54';
@@ -906,7 +906,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get obNotifBullet1 => 'Alerte heures à risque (tu choisis les heures)';
 
   @override
-  String get obNotifBullet2 => 'Célébrations de séries + étapes';
+  String get obNotifBullet2 =>
+      'Un rappel avant la fin de ton essai — aucun prélèvement surprise';
 
   @override
   String get obNotifBullet3 => 'Rien d\'autre — jamais de marketing';
@@ -919,6 +920,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Va plus loin avec Premium.';
+
+  @override
+  String get paywallRevealLabel => 'TON PLAN';
 
   @override
   String get paywallFeatCoach =>
@@ -2886,6 +2890,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get settingsPrivacyNote =>
       'On ne vend jamais tes données. Zéro traqueur. Jamais.';
+
+  @override
+  String get settingsWebsite => 'Site web';
+
+  @override
+  String get settingsPrivacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get settingsTermsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get settingsSupport => 'Contacter le support';
 
   @override
   String get settingsDeleteEverything => 'Tout supprimer';

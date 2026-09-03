@@ -23,6 +23,8 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../core/widgets/lp_charts.dart';
+import '../../domain/logic/plan_reveal.dart';
 import '../../domain/logic/billing_catalog.dart';
 import '../../domain/logic/pricing_math.dart';
 import '../../domain/models/models.dart';
@@ -501,6 +503,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     const SizedBox(height: 4),
                     Text(subtitle, style: LpType.body13(lp.textSecondary)),
                     const SizedBox(height: 18),
+                    // Their own plan, above the generic list. This runs WITH
+                    // the Sep 1 decision that features out-rank pricing
+                    // (docs/09 #4), not against it: the order is now their
+                    // numbers, then what Premium adds, then the price.
+                    const _PlanRevealCard(),
                     feature(Icons.auto_awesome, l10n.paywallFeatCoach),
                     feature(Icons.bolt, l10n.paywallFeatPanic),
                     feature(Icons.forum_outlined, l10n.paywallFeatCommunity),
@@ -662,6 +669,115 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 /// Copy about the offer, on the same footing as the CTA. The reminder beat is
 /// the day before the charge: that is when the on-device reminder fires, and
 /// its own copy says "ends tomorrow". The charge is the store's.
+/// The user's own plan, on the screen that asks them for money.
+///
+/// Onboarding step 16 computes a Freedom Day, a projected saving, the puffs a
+/// taper removes and the shape of the curve — then the paywall four screens
+/// later opened with six generic feature rows and a price, and none of it
+/// followed. This is the strongest thing the funnel knows about a person, and
+/// it was being dropped immediately before the ask.
+///
+/// Every figure comes from [PlanReveal], the same source `RevealStep` reads, so
+/// the two screens cannot quote different numbers at the same person.
+class _PlanRevealCard extends ConsumerWidget {
+  const _PlanRevealCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final locale = context.localeTag;
+
+    // A returning free user has a real journey. During onboarding the journey
+    // does not exist yet — it is created by `complete()` on this very screen —
+    // so the draft is the only source there is. The `??` is lazy, so a signed-in
+    // user never touches the onboarding provider at all.
+    final journey = ref.watch(quitStoreProvider);
+    final plan =
+        journey?.plan ?? ref.read(onboardingProvider.notifier).draftPlan();
+    final reveal = PlanReveal.of(plan, now: ref.read(nowProvider)());
+
+    // Nothing honest to show: the launch paywall can open before any journey
+    // or any answers exist. An empty state beats a Freedom Day derived from a
+    // baseline of zero, which would be inventing the user's own data.
+    if (reveal == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: LpCard(
+        radius: LpDimens.rCardLg,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.paywallRevealLabel,
+              style: LpType.caption11(
+                lp.voltText,
+                weight: FontWeight.w600,
+              ).copyWith(letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 8),
+            // Static, unlike the reveal screen's. The curve already drew itself
+            // once; replaying it here would read as decoration rather than as
+            // the plan they just committed to.
+            TaperCurveChart(samples: reveal.curve, height: 54, animate: false),
+            const SizedBox(height: 10),
+            Text(
+              l10n.obRevealMilestoneFreedom(
+                LpFormat.shortDate(reveal.freedomDate, locale),
+              ),
+              style: LpType.caption(lp.textPrimary, weight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                // Spend is a required onboarding answer, so this is present on
+                // every real path — but "$0 saved" is honest and useless, so
+                // the tile simply goes away rather than showing a zero.
+                if (reveal.hasSaving) ...[
+                  Expanded(
+                    child: _stat(
+                      context,
+                      LpFormat.money(reveal.projectedSaved, locale),
+                      l10n.obRevealSavedLabel,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: _stat(
+                    context,
+                    LpFormat.integer(reveal.puffsAvoided, locale),
+                    l10n.obRevealPuffsLabel,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String value, String label) {
+    final lp = context.lp;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: LpType.number(lp.voltText, size: 22)),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: LpType.caption11(lp.textSecondary),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
 class _TrialTimeline extends StatelessWidget {
   const _TrialTimeline({
     required this.chargePrice,
