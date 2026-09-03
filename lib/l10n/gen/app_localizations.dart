@@ -4858,7 +4858,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDangerHoursNudge.
   ///
   /// In en, this message translates to:
-  /// **'One nudge at {time}, every day.'**
+  /// **'One nudge around {time}, every day.'**
   String settingsDangerHoursNudge(String time);
 
   /// No description provided for @settingsDangerHoursNotifOff.

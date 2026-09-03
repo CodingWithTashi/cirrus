@@ -68,7 +68,7 @@ Organic quitting content is allowed, but: don't glamorize devices (no hero shots
 
 ## 5. WEB & SEO (the QUITTR "insane ROI" channel — start now, pays in January)
 
-- One-page site: hero, 3 feature blocks, honest stats, App Store button, email waitlist (pre-Oct).
+- One-page site on **cirrusquit.com** (the brand domain; built as `cirrus-landing`, Astro on Cloudflare Pages): hero, 3 feature blocks, honest stats, App Store button, email waitlist (pre-Oct).
 - 6 posts before December (one/week, write with AI, edit with your voice): "How to quit vaping in 30 days (realistic plan)" · "How many puffs are in a disposable, really?" · "Vaping cost calculator" (interactive — link magnet) · "Why day 3 is the hardest" · "Cold turkey vs tapering off vaping" · "Best quit-vaping apps 2027 (honest comparison)" — yes, include competitors; comparison posts rank and convert.
 - All posts internal-link to the App Store; the calculator page doubles as TikTok bio link.
 

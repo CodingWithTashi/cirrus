@@ -5,10 +5,22 @@
     <!-- Android 13+ requires a runtime grant before any notification can be
          shown. Asked from the onboarding D4 screen, never cold. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Danger-hour reminders are scheduled on-device at exact local times
-         (docs/03 SS8); without this they drift with Doze. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- Danger-hour and trial reminders are scheduled on-device (docs/03 SS8)
+         as INEXACT alarms, deliberately. The two exact-alarm permissions are
+         NOT the same door. USE_EXACT_ALARM is closed to us - calendar and
+         alarm-clock apps only - and the Sep 2026 submission was rejected for
+         declaring it. SCHEDULE_EXACT_ALARM is open (Play names it as the
+         fallback), but it is denied by default on Android 14+, the only way
+         to get it is to send the user to Settings > Special app access >
+         Alarms & reminders, and it stays revocable - so the inexact path
+         ships either way. Founder decision Sep 2 2026: we do not take it.
+         The nudge fires 10 minutes ahead of the risky hour
+         (ReminderPlanner.leadMinutes), and an inexact alarm may run late but
+         NEVER early, so the timing lever is a longer lead, not a permission.
+         Neither goes back in without revisiting that decision;
+         test/android_manifest_test.dart fails if one returns. -->
+    <!-- Lets the plugin re-arm pending reminders after a reboot or an app
+         update. A normal permission; Play does not restrict it. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="Cirrus"
@@ -49,6 +61,27 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="messages" />
+
+        <!-- flutter_local_notifications delivers every scheduled notification
+             to ScheduledNotificationReceiver via AlarmManager, and since the
+             plugin's v16 it declares NOTHING but POST_NOTIFICATIONS and
+             VIBRATE in its own manifest - these two receivers are the host
+             app's job. Without them the alarm is set, no error is logged, and
+             the notification simply never appears; the boot receiver is what
+             re-arms the pending ones after a restart. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

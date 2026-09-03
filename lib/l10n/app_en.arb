@@ -1993,7 +1993,7 @@
   "settingsSignOutConfirmBody": "Your data stays on your account. The streak keeps burning.",
   "settingsDangerHoursTitle": "When do cravings hit hardest?",
   "settingsDangerHoursNote": "Pick the hour it usually starts. We nudge you 10 minutes before it — one push a day, nothing more.",
-  "settingsDangerHoursNudge": "One nudge at {time}, every day.",
+  "settingsDangerHoursNudge": "One nudge around {time}, every day.",
   "settingsDangerHoursNotifOff": "Notifications are off, so nothing fires until you turn them on.",
   "@settingsDangerHoursNudge": {
     "placeholders": {

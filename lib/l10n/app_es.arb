@@ -865,7 +865,7 @@
   "settingsSignOutConfirmBody": "Tus datos se quedan en tu cuenta. La racha sigue ardiendo.",
   "settingsDangerHoursTitle": "¿A qué hora pegan más fuerte los antojos?",
   "settingsDangerHoursNote": "Elige la hora a la que suelen empezar. Te avisamos 10 minutos antes: un aviso al día, nada más.",
-  "settingsDangerHoursNudge": "Un aviso a las {time}, todos los días.",
+  "settingsDangerHoursNudge": "Un aviso alrededor de las {time}, todos los días.",
   "settingsDangerHoursNotifOff": "Las notificaciones están desactivadas, así que no llegará nada hasta que las actives.",
   "settingsQuietHours": "Nunca entre {range}: horas de silencio.",
   "trialEndingPushTime": "ahora",

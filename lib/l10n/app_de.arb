@@ -865,7 +865,7 @@
   "settingsSignOutConfirmBody": "Deine Daten bleiben auf deinem Konto. Die Serie brennt weiter.",
   "settingsDangerHoursTitle": "Wann ist das Verlangen am stärksten?",
   "settingsDangerHoursNote": "Wähl die Stunde, in der es meistens losgeht. Wir stupsen dich 10 Minuten vorher – ein Push am Tag, mehr nicht.",
-  "settingsDangerHoursNudge": "Ein Stups um {time}, jeden Tag.",
+  "settingsDangerHoursNudge": "Ein Stups gegen {time}, jeden Tag.",
   "settingsDangerHoursNotifOff": "Benachrichtigungen sind aus – es kommt nichts, bis du sie einschaltest.",
   "settingsQuietHours": "Nie zwischen {range} – Ruhezeit.",
   "trialEndingPushTime": "jetzt",

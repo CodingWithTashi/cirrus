@@ -865,7 +865,7 @@
   "settingsSignOutConfirmBody": "Os teus dados ficam na tua conta. A sequência continua a arder.",
   "settingsDangerHoursTitle": "A que horas a vontade aperta mais?",
   "settingsDangerHoursNote": "Escolhe a hora a que costuma começar. Avisamos-te 10 minutos antes — um aviso por dia, nada mais.",
-  "settingsDangerHoursNudge": "Um aviso às {time}, todos os dias.",
+  "settingsDangerHoursNudge": "Um aviso por volta das {time}, todos os dias.",
   "settingsDangerHoursNotifOff": "As notificações estão desligadas, por isso nada chega até as ligares.",
   "settingsQuietHours": "Nunca entre {range} — horas de silêncio.",
   "trialEndingPushTime": "agora",

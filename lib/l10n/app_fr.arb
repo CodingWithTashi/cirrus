@@ -865,7 +865,7 @@
   "settingsSignOutConfirmBody": "Tes données restent sur ton compte. La série continue de brûler.",
   "settingsDangerHoursTitle": "À quelle heure les envies frappent-elles le plus fort ?",
   "settingsDangerHoursNote": "Choisis l'heure où ça commence d'habitude. On te prévient 10 minutes avant — une notif par jour, pas plus.",
-  "settingsDangerHoursNudge": "Une notif à {time}, tous les jours.",
+  "settingsDangerHoursNudge": "Une notif vers {time}, tous les jours.",
   "settingsDangerHoursNotifOff": "Les notifications sont désactivées : rien ne partira tant que tu ne les actives pas.",
   "settingsQuietHours": "Jamais entre {range} — heures calmes.",
   "trialEndingPushTime": "maintenant",

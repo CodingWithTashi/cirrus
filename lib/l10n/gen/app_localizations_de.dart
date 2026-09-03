@@ -2940,7 +2940,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String settingsDangerHoursNudge(String time) {
-    return 'Ein Stups um $time, jeden Tag.';
+    return 'Ein Stups gegen $time, jeden Tag.';
   }
 
   @override

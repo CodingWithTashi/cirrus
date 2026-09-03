@@ -14,7 +14,7 @@ abstract final class BillingOptions {
   static const String revenueCatAndroidKey = 'goog_YbVeOXatLVCFndkdKhZrLLEEaWh';
 
   /// "Cirrus (App Store)" in the RevenueCat project — `appl_…`.
-  static const String revenueCatAppleKey = '';
+  static const String revenueCatAppleKey = 'appl_wRTolaSncAoYAESfVMtusgPvJel';
 
   /// RevenueCat's Test Store — a store RevenueCat simulates itself, with no
   /// Google or Apple behind it. Purchases made against it are sandbox events

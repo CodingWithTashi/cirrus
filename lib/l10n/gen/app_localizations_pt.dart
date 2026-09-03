@@ -2930,7 +2930,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String settingsDangerHoursNudge(String time) {
-    return 'Um aviso às $time, todos os dias.';
+    return 'Um aviso por volta das $time, todos os dias.';
   }
 
   @override

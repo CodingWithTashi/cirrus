@@ -186,10 +186,24 @@ void main() {
     ) async {
       // The nudge IS the forecast. Counted rather than matched on copy: its
       // title and body are interpolated, and Home has other dismissibles.
-      await open(tester, Routes.home, premium: true);
-      final withPremium = find.byType(Dismissible).evaluate().length;
-      await open(tester, Routes.home);
-      final withFree = find.byType(Dismissible).evaluate().length;
+      //
+      // The mood check-in is what makes the count deterministic. Home picks
+      // ONE card from a priority chain — slip, then mood prompt, then the
+      // nudge — and `showMoodPrompt` is `mood == null && now.hour >= 18`
+      // against the real wall clock. The seeded day-12 fixture logs no mood
+      // for today, so from 6pm local BOTH tiers rendered the mood prompt and
+      // neither rendered the nudge: the difference was 0 and this test failed
+      // every evening and passed every morning. Checking a mood in first puts
+      // the chain on the branch the test is actually about.
+      Future<int> dismissibles({required bool premium}) async {
+        final container = await open(tester, Routes.home, premium: premium);
+        container.read(quitStoreProvider.notifier).checkInMood(Mood.okay);
+        await tester.pumpAndSettle();
+        return find.byType(Dismissible).evaluate().length;
+      }
+
+      final withPremium = await dismissibles(premium: true);
+      final withFree = await dismissibles(premium: false);
       expect(withPremium - withFree, 1);
     });
 
