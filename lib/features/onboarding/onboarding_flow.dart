@@ -28,7 +28,13 @@ class OnboardingFlow extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
     final lp = context.lp;
 
-    final showHeader = state.progress != null;
+    // The progress bar counts the twelve quiz questions; the chevron exists on
+    // every step with a previous one. They used to be the same condition,
+    // which made the Phase D screens forward-only on iOS — there is no system
+    // back there, so the chevron is the only back (see
+    // `OnboardingState.canGoBack`).
+    final progress = state.progress;
+    final showHeader = progress != null || state.canGoBack;
 
     final step = switch (state.step) {
       ObStep.welcome => const WelcomeStep(),
@@ -76,25 +82,30 @@ class OnboardingFlow extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(12, 4, 20, 8),
                   child: Row(
                     children: [
-                      BackChevron(
-                        onTap: () {
-                          if (!vm.back()) exitFlow();
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: GlowProgressBar(
-                          value: state.progress!.$1 / state.progress!.$2,
+                      // The chevron's slot stays reserved when it is absent,
+                      // so the bar never shifts and the header keeps one
+                      // height across every step that shows it.
+                      if (state.canGoBack)
+                        BackChevron(
+                          onTap: () {
+                            if (!vm.back()) exitFlow();
+                          },
+                        )
+                      else
+                        const SizedBox(width: 40, height: 40),
+                      if (progress != null) ...[
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: GlowProgressBar(
+                            value: progress.$1 / progress.$2,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        context.l10n.obProgressOf(
-                          state.progress!.$1,
-                          state.progress!.$2,
+                        const SizedBox(width: 12),
+                        Text(
+                          context.l10n.obProgressOf(progress.$1, progress.$2),
+                          style: LpType.displaySmall(lp.textSecondary),
                         ),
-                        style: LpType.displaySmall(lp.textSecondary),
-                      ),
+                      ],
                     ],
                   ),
                 ),

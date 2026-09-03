@@ -139,6 +139,35 @@ class CoachStore extends Notifier<CoachState> {
   Future<void> sendChip(CoachChip chip, {int? panicIntensity}) =>
       _handle(chip: chip, panicIntensity: panicIntensity);
 
+  /// One of the two lines the client writes for a reply that never came.
+  static bool isFailure(CoachMessage m) =>
+      m.role == CoachRole.ember &&
+      (m.template == CoachTemplate.connectionLost ||
+          m.template == CoachTemplate.backendRejected);
+
+  /// Re-asks the question a trailing failure line answered.
+  ///
+  /// Both bubbles come down first, so the thread reads as the question asked
+  /// once and Ember answering it — not as the same words twice with an
+  /// apology between them. The refund the failure path already made stands;
+  /// this is a fresh attempt at the same message, not a second one.
+  ///
+  /// A no-op unless the thread ends in exactly that pair: nothing here can
+  /// re-send a message that was answered.
+  Future<void> retryLast() async {
+    final messages = state.messages;
+    if (state.isTyping || messages.length < 2) return;
+    final failure = messages.last;
+    final asked = messages[messages.length - 2];
+    if (!isFailure(failure) || asked.role != CoachRole.user) return;
+    state = state.copyWith(messages: messages.sublist(0, messages.length - 2));
+    final chip = asked.chipEcho;
+    await _handle(
+      userText: chip == null ? asked.text : null,
+      chip: chip == null ? null : CoachChip.values[chip],
+    );
+  }
+
   Future<void> _handle({
     String? userText,
     CoachChip? chip,

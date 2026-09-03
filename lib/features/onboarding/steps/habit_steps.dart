@@ -376,112 +376,151 @@ class SpendStep extends ConsumerWidget {
     // have told us so far. Null when nothing fits — an honest blank.
     final kicker = ObTailoring.spendComparison(context, state);
 
-    return StepBody(
-      title: l10n.obSpendTitle,
-      children: [
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                LpFormat.money(weekly, locale),
-                style: LpType.numberHero(lp.textPrimary, size: 72),
-              ),
-              const SizedBox(width: 6),
-              const BlinkingCaret(height: 52),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: Text(
-            l10n.obSpendPerWeek,
-            style: LpType.body14(lp.textSecondary),
-          ),
-        ),
-        const SizedBox(height: 20),
-        AnimatedOpacity(
-          duration: LpMotion.fast,
-          opacity: weekly > 0 ? 1 : 0,
-          child: LpCard(
-            padding: const EdgeInsets.all(20),
-            radius: LpDimens.rCard,
-            child: Column(
-              children: [
-                Text(l10n.obSpendThats, style: LpType.body13(lp.textSecondary)),
-                const SizedBox(height: 6),
-                RollingNumber(
-                  state.yearlySpend,
-                  hapticOnLand: true,
-                  format: (v) => l10n.obSpendPerYear(LpFormat.money(v, locale)),
-                  style: LpType.number(lp.voltText, size: 40).copyWith(
-                    shadows: [
-                      Shadow(
-                        color: lp.volt.withValues(alpha: 0.4),
-                        blurRadius: 36,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (kicker != null)
+    // The tallest keypad step, and the one that did not fit a 6.1" iPhone:
+    // the yearly card and the three chips sit between the hero and the keypad,
+    // and at the frames' sizes they pushed Continue below the fold. Every
+    // fixed size below is read off the step's own height (see StepDensity) —
+    // the same elements, drawn shorter when the phone is.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final density = StepDensity.of(constraints);
+        final d = density.pick<double>;
+        return StepBody(
+          title: l10n.obSpendTitle,
+          titleGap: d(26, 14),
+          padding: EdgeInsets.fromLTRB(20, 4, 20, d(24, 16)),
+          children: [
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    kicker,
-                    style: LpType.body14(
-                      lp.textPrimary,
-                      weight: FontWeight.w600,
+                    LpFormat.money(weekly, locale),
+                    style: LpType.numberHero(lp.textPrimary, size: d(72, 60)),
+                  ),
+                  const SizedBox(width: 6),
+                  BlinkingCaret(height: d(52, 44)),
+                ],
+              ),
+            ),
+            SizedBox(height: d(8, 6)),
+            Center(
+              child: Text(
+                l10n.obSpendPerWeek,
+                style: LpType.body14(lp.textSecondary),
+              ),
+            ),
+            SizedBox(height: d(20, 12)),
+            AnimatedOpacity(
+              duration: LpMotion.fast,
+              opacity: weekly > 0 ? 1 : 0,
+              child: LpCard(
+                padding: EdgeInsets.symmetric(
+                  horizontal: d(20, 16),
+                  vertical: d(20, 14),
+                ),
+                radius: LpDimens.rCard,
+                child: Column(
+                  children: [
+                    Text(
+                      l10n.obSpendThats,
+                      style: LpType.body13(lp.textSecondary),
+                    ),
+                    const SizedBox(height: 6),
+                    RollingNumber(
+                      state.yearlySpend,
+                      hapticOnLand: true,
+                      format: (v) =>
+                          l10n.obSpendPerYear(LpFormat.money(v, locale)),
+                      style: LpType.number(lp.voltText, size: d(40, 32))
+                          .copyWith(
+                            shadows: [
+                              Shadow(
+                                color: lp.volt.withValues(alpha: 0.4),
+                                blurRadius: 36,
+                              ),
+                            ],
+                          ),
+                    ),
+                    SizedBox(height: d(10, 8)),
+                    if (kicker != null)
+                      Text(
+                        kicker,
+                        textAlign: TextAlign.center,
+                        style: density.isCompact
+                            ? LpType.body13(
+                                lp.textPrimary,
+                                weight: FontWeight.w600,
+                              )
+                            : LpType.body14(
+                                lp.textPrimary,
+                                weight: FontWeight.w600,
+                              ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: d(12, 10)),
+            if (weekly > 0)
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: d(8, 6),
+                children: [
+                  _chip(
+                    context,
+                    density,
+                    l10n.obSpendPerMonthChip(
+                      LpFormat.money(weekly * 52 / 12, locale),
                     ),
                   ),
-              ],
+                  _chip(
+                    context,
+                    density,
+                    l10n.obSpendPerDayChip(
+                      LpFormat.money(weekly / 7, locale, cents: true),
+                    ),
+                  ),
+                  _chip(context, density, l10n.obSpendYourMath),
+                ],
+              ),
+            const Spacer(),
+            NumericKeypad(
+              onDigit: vm.typeSpendDigit,
+              onBackspace: vm.backspaceSpend,
+              keyHeight: d(50, 44),
+              gap: d(8, 6),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (weekly > 0)
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _chip(
-                context,
-                l10n.obSpendPerMonthChip(
-                  LpFormat.money(weekly * 52 / 12, locale),
-                ),
-              ),
-              _chip(
-                context,
-                l10n.obSpendPerDayChip(
-                  LpFormat.money(weekly / 7, locale, cents: true),
-                ),
-              ),
-              _chip(context, l10n.obSpendYourMath),
-            ],
-          ),
-        const Spacer(),
-        NumericKeypad(
-          onDigit: vm.typeSpendDigit,
-          onBackspace: vm.backspaceSpend,
-        ),
-        const SizedBox(height: 14),
-        LpButton(
-          l10n.commonContinue,
-          onTap: state.canContinue ? vm.next : null,
-        ),
-      ],
+            SizedBox(height: d(14, 10)),
+            LpButton(
+              l10n.commonContinue,
+              onTap: state.canContinue ? vm.next : null,
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _chip(BuildContext context, String label) {
+  Widget _chip(BuildContext context, StepDensity density, String label) {
     final lp = context.lp;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+      padding: EdgeInsets.symmetric(
+        horizontal: density.pick<double>(13, 11),
+        vertical: density.pick<double>(7, 5),
+      ),
       decoration: BoxDecoration(
         color: lp.surface,
         borderRadius: BorderRadius.circular(LpDimens.rChip),
         border: Border.all(color: lp.border, width: 1.5),
       ),
-      child: Text(label, style: LpType.caption(lp.textSecondary)),
+      child: Text(
+        label,
+        style: density.isCompact
+            ? LpType.caption11(lp.textSecondary)
+            : LpType.caption(lp.textSecondary),
+      ),
     );
   }
 }

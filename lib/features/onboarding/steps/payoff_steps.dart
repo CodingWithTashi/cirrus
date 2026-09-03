@@ -270,7 +270,11 @@ class _CommitStepState extends ConsumerState<CommitStep>
     ref.read(onboardingProvider.notifier).markCommitted();
     setState(() {});
     Timer(const Duration(milliseconds: 1400), () {
-      if (mounted) ref.read(onboardingProvider.notifier).next();
+      if (!mounted) return;
+      // The header chevron works during the celebration too. If they used it,
+      // this timer must not advance whatever step they went back to.
+      if (ref.read(onboardingProvider).step != ObStep.commit) return;
+      ref.read(onboardingProvider.notifier).next();
     });
   }
 
