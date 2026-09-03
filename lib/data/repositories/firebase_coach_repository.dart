@@ -32,16 +32,19 @@ class FirebaseCoachRepository implements CoachRepository {
     // composer. It is deliberately NOT used to skip the call: the server owns
     // the quota, answers `capReached` without spending a model call, and is
     // the only side that can be trusted about it.
-    final events = _functions.stream('aiCoachChat', {
+    final payload = <String, Object?>{
       'text': ?text,
       'chip': ?chip?.name,
       'panicIntensity': ?panicIntensity,
-    });
+    };
+    final events = _functions.stream('aiCoachChat', payload);
 
     var sawResult = false;
+    var sawChunk = false;
     await for (final event in events) {
       final chunk = event.chunk;
       if (chunk != null) {
+        sawChunk = true;
         yield CoachChunk(chunk);
         continue;
       }
@@ -51,10 +54,22 @@ class FirebaseCoachRepository implements CoachRepository {
         yield CoachDone(CoachReplyCodec.decode(result));
       }
     }
+    if (sawResult) return;
     // A stream that ends without an envelope delivered no reply, however much
     // prose it emitted. Failing loudly keeps the store on its one fallback
     // path instead of leaving a half-written bubble on screen forever.
-    if (!sawResult) throw const NoConnectionException();
+    if (sawChunk) throw const NoConnectionException();
+    // Ended before a single word. On Android the plugin's stream handler
+    // answers every failure this way — `onError` just closes the stream, the
+    // reason never reaches Dart — so this branch cannot tell an App Check
+    // refusal from a dead link, and it used to call both "you're offline".
+    // Ask the same function again over the plain call: the server answers
+    // the whole envelope when the client does not stream, and that path
+    // keeps its error codes, so a refusal surfaces as the refusal it is.
+    // Nothing was streamed, so nothing is answered twice; the server has not
+    // spent a model call on a request it rejected at the door.
+    final result = await _functions.call('aiCoachChat', payload);
+    yield CoachDone(CoachReplyCodec.decode(result));
   }
 
   /// Read straight from Firestore rather than through a callable.

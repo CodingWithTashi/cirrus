@@ -170,6 +170,25 @@ class OnboardingState {
     return i == -1 ? null : (i + 1, _progressSteps.length);
   }
 
+  /// Whether this step offers a way to the previous one.
+  ///
+  /// iOS has no system back: no hardware key, and no edge swipe either, since
+  /// the whole funnel is one route whose steps swap in place. On an iPhone the
+  /// on-screen chevron IS back, so it has to exist on every step that has a
+  /// previous one — not only on the twelve that carry a progress bar, which is
+  /// what left the Phase D screens (reveal, coach name, why-words, commit,
+  /// rating, notifications) forward-only on every iPhone.
+  ///
+  /// The three exceptions each have a reason: welcome is the entry (leaving it
+  /// means leaving the funnel, which is the sign-in screen's business),
+  /// under-18 carries its own "let me fix that", and building is an animation
+  /// that advances itself — a back pressed under it would be undone a second
+  /// later.
+  bool get canGoBack => switch (step) {
+    ObStep.welcome || ObStep.under18 || ObStep.building => false,
+    _ => true,
+  };
+
   bool get canContinue => switch (step) {
     ObStep.gender => gender != null,
     ObStep.birthYear => birthAnswered,

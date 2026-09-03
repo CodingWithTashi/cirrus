@@ -6,5 +6,17 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<!-- App Check. Release builds activate AppleAppAttestProvider
+	     (lib/data/api/firebase/app_check_setup.dart), and App Attest refuses to
+	     mint a key for a binary without this entitlement, so without it every
+	     callable on a TestFlight/App Store build is rejected as
+	     `unauthenticated` — coach, panic, community, user sync, all at once.
+	     Debug builds use the pinned debug token and never touch this.
+	     TestFlight and the App Store run App Attest in production regardless
+	     of the value; the value only matters for ad-hoc release installs. The
+	     iOS app must also have App Attest configured under Firebase console →
+	     App Check (Team ID PZFFFQ5T9X). -->
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>production</string>
 </dict>
 </plist>

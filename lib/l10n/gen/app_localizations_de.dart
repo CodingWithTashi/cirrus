@@ -1218,6 +1218,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get day1Skip => 'Einrichtung vorerst überspringen';
 
   @override
+  String get day1TourBack => 'Zurück zur Einrichtung';
+
+  @override
   String get day1TourLogTitle => 'Das ist die ganze App.';
 
   @override
