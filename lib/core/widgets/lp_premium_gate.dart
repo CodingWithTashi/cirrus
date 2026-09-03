@@ -70,6 +70,16 @@ class LpPremiumGate extends ConsumerStatefulWidget {
 class _LpPremiumGateState extends ConsumerState<LpPremiumGate> {
   bool _reported = false;
 
+  /// Where this reader is in their own quit, or null before a journey exists.
+  ///
+  /// Read, never watched: it is a dimension on an event that fires once, and
+  /// watching it would rebuild every gate in the app on every puff tap.
+  int? get _planDay {
+    final journey = ref.read(quitStoreProvider);
+    if (journey == null) return null;
+    return journey.plan.dayNumber(ref.read(nowProvider)());
+  }
+
   /// Reports that this door was put in front of someone, once per mount.
   ///
   /// Without it the funnel can only see doors that were *tapped*
@@ -79,9 +89,14 @@ class _LpPremiumGateState extends ConsumerState<LpPremiumGate> {
   ///
   /// Honest about what it counts: "this gate built", not "this gate entered
   /// the viewport". A gate below the fold in a scrolling column still counts.
-  /// True visibility would need a detector on all eleven of them; built-versus-
+  /// True visibility would need a detector on every one of them; built-versus-
   /// tapped is the ratio actually worth having, and this is a good enough
   /// denominator for it.
+  ///
+  /// Consequence for reading the dashboard: compare a door to ITSELF over
+  /// time. The level of `gate_tapped/gate_shown` is not comparable across
+  /// doors of different placement, because the denominators are inflated by
+  /// different unknown amounts.
   ///
   /// Deferred a frame because `build` must stay free of side effects and a
   /// sink can reach a platform channel.
@@ -89,7 +104,10 @@ class _LpPremiumGateState extends ConsumerState<LpPremiumGate> {
     if (_reported) return;
     _reported = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(analyticsProvider).gateShown(widget.source);
+      if (!mounted) return;
+      ref
+          .read(analyticsProvider)
+          .gateShown(widget.source, planDay: _planDay);
     });
   }
 

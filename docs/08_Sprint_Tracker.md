@@ -82,7 +82,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | # | Lever | Effect | Where it's worked |
 |---|---|---|---|
 | 1 | **Churn 30% → 20%** | Cuts required downloads by ~a third (17.2K → 11.5K/mo) | S7, S10 — the single highest-value work post-launch |
-| 2 | **Tier mix / price ladder** | $3.99/wk test; fix the "$7.99/mo is 38% cheaper than 4× weekly" cannibalization (PRD §11) | S11 |
+| 2 | **Tier mix / price ladder** | **Annual first: $59.99/yr for new users** (§7 #28 — $39.99 is a *low-priced* annual in H&F terms, $17 install LTV vs $70), *then* the $3.99/wk test; fix the "$7.99/mo is 38% cheaper than 4× weekly" cannibalization (PRD §11) | S11 |
 | 3 | **Trial→paid** | Superwall tests 1, 5, 6 (Doc 2 §6) | S7 |
 | 4 | **Download volume** | Most expensive lever; the one the docs lean on hardest | S8, S9 |
 
@@ -226,6 +226,13 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [x] `S1-10` Native paywall — the Cirrus paywall IS the paywall (founder pick Sep 2: no RevenueCat Paywalls, no Superwall); when the offering cannot load it shows the locked prices under a caption saying the store shows the exact price
 - [ ] `S1-11` Sandbox purchase + restore verified **on both platforms** — blocked on docs/10 §14's dashboard steps (public key, webhook secret, secret key, Play license tester)
 
+**The `ENTITLEMENT_MODE=mirror` flip (added Sep 3 — `docs/12 §4.4`).** Production is still `ungated`, so `tierFor()` returns `premium` for everyone and **every server limit is inert**: the beta cohort has an uncapped coach, unlimited panic AI and open posting. Flipping the param imposes 5 msgs/day, 1 panic AI session/day and SOS-only posting on **every account at once**. Four things must be true first.
+
+- [ ] `S1-12` **Founder-grant path** — a server-only `entitlement` write with a far-future `expiresAt` and `source: 'founder_grant'` that `snapshotOf` leaves alone on the next webhook reconcile. Without it the flip revokes the "50 free lifetime spots" promised in docs/06 §3 to the exact cohort carrying our first reviews. **Blocks `S1-15`.**
+- [ ] `S1-13` **Purchase→mirror latency.** A purchase makes the client premium instantly (`EntitlementStore`) while `users/{uid}` lags a webhook round-trip, so a fresh subscriber can be refused by `createPost` or metered by `aiCoachChat`. Refresh the mirror on purchase, or retry the first refused callable. A reachable bug the moment `mirror` lands
+- [ ] `S1-14` **Grace periods + dunning on**, verified against a forced Play billing failure. **31% of all Play cancellations are involuntary billing failures** (RevenueCat 2026) vs 14% on the App Store, and 15–20% of that is recoverable with no new users — the highest-ROI Android retention work available. `tierOf()` fails closed on `expiresAt`, so prove the "later of `expires_at` and `ends_at`" rule covers grace before trusting it
+- [ ] `S1-15` **Flip `ENTITLEMENT_MODE=mirror`** — only after `S1-11`…`S1-14`. Then watch `limit_reached` and `entitlement_changed` for 48h
+
 **Exit criteria:** a sandbox purchase on iOS *and* Android flips `users/{uid}.entitlement`, and the app reflects premium within 60s. Restore works from a clean install.
 
 ---
@@ -307,6 +314,27 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [ ] `S5-11` Repoint `lp_links.dart` to `cirrusquit.com/privacy` and `/terms` (the app still links `alastpuff.web.app`, pinned by `paywall_test.dart`), ship it, 301 the Firebase copies to the apex, then retire `hosting/` and the `hosting` block in `firebase.json` — two live copies of legal text will drift
 - [ ] `S5-12` Coach copy audit for Quit Buddies leftovers — `prompts.ts` ("text your buddy" in the CRAVING protocol) and `coachReplyParty` ("text me or your buddy") read as generic English but name a removed feature; founder's call, and a prompt change goes through `npm run eval:coach`
 
+**Monetisation redesign (added Sep 3 — `docs/12`, founder decisions §1).** Three gates loosen, one door dies, one is added; the D5 hard paywall is untouched because the evidence supports it. Ordered by expected conversion per hour: `S5-16` first, then `S5-17`, then `S5-15`.
+
+- [x] `S5-16` **`limit_reached{capability, tier, used, limit}`** fired from the coach cap, the community refusals (`permission-denied`, `resource-exhausted`) and the panic narrowing. **The highest-value change on this board per hour of work** — today every *server* wall is silent, so the three highest-intent moments in the product are invisible and "hit a wall" cannot be distinguished from "saw a gate". Everything else here is a guess until it exists. `lib/domain/analytics/lp_events.dart`, `coach_store.dart`, `community_store.dart`, the panic VM · pinned by `test/analytics_test.dart`
+- [x] `S5-17` **Add the missing `nudge` door.** A free user with a real `dangerWindow` currently sees *nothing* on Home — no card, no lock (`home_screen.dart:526`). Compact `LpPremiumGate(source: 'nudge')` naming their own honest weekday + hour, advice blurred. Must sit after the mood prompt in Home's priority chain, and the fixture goes on the branch under test — never the wall clock. `test/widgets/premium_gate_test.dart`
+- [x] `S5-18` **Paywall measurement:** `plan_selected`, `paywall_dismissed`, `plan_day` on `gate_shown`/`paywall_viewed`, a real `variant` (it is the constant `'d5_default'` today, so docs/02 §6's whole A/B roadmap is unreadable), and tag the untagged **twelfth** door — `Routes.paywall` is in `PushService._allowedRoutes` and reports `source: 'direct'`, indistinguishable from the debug frame map. Rebuild the Amplitude chart before launch, not after
+- [x] `S5-19` **Launch-paywall discipline** — plan days {3, 7, 14, 30} only, four showings ever, plus a lifetime cap. It is the one door docs/02 §5 forbids in its own words ("never interstitial spam") and it sits in the worst-converting placement band (0.76–0.89% vs D5's 1.35%). A new persisted field is exactly the shape of B8, so it lands in `SettingsPersistence`'s whole-object save. `lib/domain/logic/launch_paywall_policy.dart`
+- [x] `S5-15` **Community: 1 free post/day, any tag; Premium 3/day; SOS refused for no tier and spending its OWN allowance** (`users/{uid}.sosUsage`, `DAILY_SOS_POSTS=5`). Deliberate deviation from "uncapped": a live SOS pins to the top of the feed for an hour, so an unbounded one is a pinning megaphone — 5/day is generous enough that no real crisis meets it, and a spent ordinary allowance can never refuse a call for help. Replying is already free (`createReply.ts` has no tier check), so gating thread-starting is arbitrary — and free users' posts *are* what Premium users pay for. Server cap becomes tier-dependent (`createPost.ts:68` → `FREE_DAILY_POSTS`/`PREMIUM_DAILY_POSTS` params); composer reframes to a remaining-post count. Moderation cost stays bounded at 1/day/account behind the deterministic prefilter. `functions/test/integration/createPost.test.ts`
+- [x] `S5-14` **Stats history 7 → 30 days free.** The taper program is 30 days (`P=30`), so a 7-day window cannot show a taper working — and the data is already in the user's own journey doc. Month pill and forecast heatmap stay Premium, so the `history` door survives with a better story. `stats_screen.dart:64–74` + `premiumPitch*` in 5 ARBs
+- [x] `S5-13` **Delete the `panic` door.** `aiAvailable == false` routes to the coach with the panic intensity (spending a coach message if any remain), then to the SOS composer — **never the paywall**. Breathing, games, timer and SOS already never block; this closes the last gap in "never paywall anyone mid-crisis". `panic_screens.dart:698` · `test/widgets/panic_session_test.dart`
+- [x] `S5-21` **On-device coverage for the new surfaces** — `integration_test/i_monetisation_test.dart`. The widget suite pins each gate on its own; only a device sees the keep-alive shell, a pushed paywall whose `dispose` now does work, and a panic flow that animates forever. It caught nothing new, which is the point: it is the regression net for the four surfaces this sprint moved
+- [~] `S5-20` **`premiumPitchHealth` copy ×5** — it said "from two weeks to a year", which is right *under* two weeks and drifts for anyone further along (nothing already reached is ever gated, so 100 days puff-free already owns the three-month node); it names the first node actually locked for that reader now. **And cut both widget claims from the live Play listing (`B21`)** — advertising a non-existent feature *inside* the FREE FOREVER promise is the bait-and-switch clause in Apple 3.1.2(a), not just an ASO problem. **Store change.**
+
+**All eight landed Sep 3 2026** (`docs/12 §5b`). `flutter analyze` clean · `flutter test` **943** · `npm run verify` **205** · `npm run test:integration` **265** · `npm run test:rules` **47** · **on-device 47/47 on a Pixel 8** (Android 17), the whole `integration_test` directory plus a new `i_monetisation_test.dart` (5 cases: the `nudge` door opens and closes back onto Home, Stats' 30-day window and its `history` door, a free account's post-then-door, an SOS still open with the ordinary allowance spent, and the panic flow never reaching a paywall). `S5-20` is half open: the app copy shipped, the **Play listing edit (`B21`) is founder-side**.
+
+Three live bugs were found and fixed on the way, none of them on the plan:
+- **`coachCapReached` hardcoded "5"**, so a Premium user who had spent **100** messages was told "that's my 5 free messages" — and offered no upsell, because the CTA is free-only. It interpolates the server's own limit now, with a separate non-selling premium variant.
+- **`freePlanFeat4` advertised "1 Panic Button session a day".** The panic *button* has never been limited — `usage.ts` says so outright — only its AI layer. In a cessation app that could stop somebody reopening the one screen built for a crisis.
+- **A deploy-time param resolves to 0 when nothing sets it**, and an allowance of 0 is a total outage that looks like a policy (docs/10 §5's coach-limit trap). `allowance()` in `config.ts` now refuses a non-positive value and falls back to `ALLOWANCE_DEFAULTS` — **including on the coach path, which was live and unguarded**. `functions/test/allowance.test.ts`.
+
+A self-review pass over the diff found four more, all in the new code and all fixed: a **lost `paywall_viewed`** (the report is deferred a frame, but the "reported" flag was set synchronously, so a pop inside that frame skipped both paths), **`ref` in `dispose()`** on the same path — the gotcha this repo has scars from, and untested — a **coach wall mislabelled free** when the backend sent no tier, and a **mutating read** in the fake (`_sessionOrGuest()` binds a guest session as a side effect). See `docs/12 §5b`.
+
 **Exit criteria:** both submissions in review · crash-free ≥ 99.5% · acceptance checklist green.
 
 ---
@@ -317,7 +345,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 
 - [ ] `S6-1` Doc 6 §9 launch-week checklist, all 8 items
 - [ ] `S6-2` 20+ real beta testimonials collected (feeds the D3 screen — must be real, per our own honesty positioning)
-- [ ] `S6-3` Paywall A/B test #1 armed (7-day vs 3-day trial)
+- [x] ~~`S6-3` Paywall A/B test #1 armed (7-day vs 3-day trial)~~ **DROPPED Sep 3 (`docs/12 §5`).** RevenueCat 2026 puts trial→paid at **25.5% for ≤4-day trials against 37.4% at 5–9 days**, and Health & Fitness has already converged (54% of the category runs 5–9 days). Running it means serving ≥1,000 people — docs/02 §6's own ship rule — the arm the population data says is ~12 points worse, to answer a question 115,000 apps already answered. **Replaced by the S11 ladder tests, reordered: annual price before weekly.** A/B budget goes where the win rates are — plan duration 58.7%, price 45.5%, visual/copy only 34.6%
 - [ ] `S6-4` Reddit thank-you post to the beta cohort — they carry the first reviews
 - [ ] `S6-5` "We're live" video across all channels + waitlist email
 - [ ] `S6-6` Launch-day monitoring: crash rate, funnel, AI spend, `AI_COST_PANIC` kill-switch ready
@@ -334,7 +362,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 | **S8 V1.1** | Nov 16 – Dec 20 | Lock-screen + home widget (if slipped from MVP); **referral loop**; weekly AI insight; 6 SEO posts + the cost calculator live | 100+ video library; ASO climbing |
 | **S9 THE WAVE** | Dec 21 – Jan 31 | "Quitters of January" challenge; creator deals live Dec 27 ($3/1K guaranteed views, start with 5); Apple Search Ads from Dec 26 at $20/day, kill anything >$6 CPI | **$44K/mo run-rate** |
 | **S10 Defend** | Feb 1 – Mar 15 | Hold through the seasonal trough. Churn work, annual-mix push, FR/DE/PT ASO — **the app is already fully translated**, so this is listing work only | Churn ≤ 20% |
-| **S11 Scale** | Mar 16 – Apr 15 | Price ladder ($3.99/wk new users, grandfather existing); cigarette + pouch modes; B2B pilot | **M6: $44K/mo net sustained** |
+| **S11 Scale** | Mar 16 – Apr 15 | Price ladder — **$59.99/yr for new users first, then $3.99/wk**, grandfathering existing (§7 #28); cigarette + pouch modes; B2B pilot | **M6: $44K/mo net sustained** |
 
 **Kill criterion (Doc 6 §8):** if by Dec 1 we've posted 100+ videos with <1K downloads, the content angle is wrong — not the market. Shift weight to the best-performing format. *"January is the judge."*
 
@@ -381,6 +409,12 @@ Resolutions already in code (from `CLAUDE.md`) plus contradictions found across 
 | 20 | Blocks vs Tetris — the studied game is Tetris; its look is protected expression (Tetris Holding v. Xio Interactive, 2012) | **Own expression.** 8×14 board, six 3/4/5-cell pieces drawn as rounded pebbles in palette tones, no ghost, no preview, no garbage, no lock recolour, no game-over (the board breathes). The word never appears in code, copy, docs or the listing |
 | 21 | `onTrialWillEnd` (Doc 5 §7) | **Descoped.** RevenueCat sends no such event and neither store does; the reminder is deterministic from the entitlement's expiry, so it is scheduled on-device like the danger hours (`TrialReminderPlanner`) |
 | 22 | Premium coach model — S2-9 (Aug 29) pinned `gemini-3.7-flash`; `.env.alastpuff` and `config.ts` say 3.6 | **`gemini-3.6-flash`** (re-pinned Aug 30, docs/10 §11.10). 3.7 cannot stop thinking — `thinkingBudget: 0` is accepted and ignored, `MINIMAL` is rejected, the floor is LOW at a variable 400–2,000 thought tokens — and thoughts spend inside `maxOutputTokens`, so every premium reply truncated mid-word. 3.6 at `thinkingLevel: MINIMAL` thinks zero tokens. `.env.alastpuff` rule 4: a non-lite id must be able to stop thinking |
+| 23 | Community posting — docs/01 §10 says free is "Read + react", docs/03 §9 says a flat "cap 3 posts/day", and the shipped build refused every non-SOS post server-side | **An allowance, not a wall, and no longer flat: 1 ordinary post/day free, 3 for Premium, and an SOS refused for neither tier from its OWN counter** (`users/{uid}.sosUsage`, default 5). Founder, Sep 3 2026 — `docs/12 §4.1`, shipped `S5-15`. Not literally "uncapped" for SOS: a live one pins to the top of the feed for an hour, so an unbounded allowance is a pinning megaphone; a spent ordinary allowance can never refuse a call for help, which is the rule that actually mattered. Free users' posts are what Premium users pay for, so gating supply starves demand — and **replying was already free** (`createReply.ts` has no tier check), which made the asymmetry arbitrary. Two free competitors (Escape the Vape, Quash) give community away entirely |
+| 24 | Free stats history — docs/01 §10 says 7 days | **30 days** (founder, Sep 3 2026). The taper program is 30 days (`P=30`), so a 7-day window cannot show a taper working, and the data is already in the user's own journey doc. The Month pill and the forecast heatmap stay Premium, so the `history` door survives |
+| 25 | "Upgrade prompts … max 1/day" (docs/02 §5) vs eleven doors with no throttle | **Restated, not enforced as written.** A lock card is honest labelling on a screen the user chose to open and always renders. The one *unrequested* prompt is the launch paywall — which is also the "interstitial spam" docs/02 §5 forbids — so it is capped to plan days **{3, 7, 14, 30}**, four showings ever (`S5-19`) |
+| 26 | The `panic` door — docs/04 §7 says the panic answer "only ever narrows the AI option, which becomes the paywall route" | **No paywall mid-craving, ever.** A spent panic quota falls through to the coach on the remaining free messages, then to the SOS composer (`S5-13`). Breathing, games, timer and SOS never blocked; this closes the last gap in the founder's own hard constraint |
+| 27 | Trial length A/B — docs/02 §6 test 1 (3-day vs 7-day) | **Retired unrun** (`docs/12 §5`). 5–9-day trials convert 37.4% against 25.5% at ≤4 days (RevenueCat 2026), and H&F is 54% on 5–9 days. Testing it would serve ≥1,000 users the known-worse arm |
+| 28 | Price ladder order — docs/08 §2 lever 2 leads with "$3.99/wk test" | **Annual price first: $59.99/yr for new users, grandfathering existing.** $39.99/yr sits in Adapty's *low-priced* annual band ($17 install LTV vs $70 for high-priced — a 4.1× spread) and annual holds 61% of H&F revenue at 19.9% Day-380 retention; weekly is the worst-retaining plan we sell (5.5%) |
 
 ---
 
@@ -427,7 +461,7 @@ D1 ≥ 45% · D7 ≥ 25% · D30 ≥ 12% · craving-survived rate ≥ 70% · stor
 
 ### Current gates (Sep 2, 2026)
 
-`flutter analyze` clean · `flutter test` **863** · `npm run verify` **198** · `npm run test:integration` **260** · `npm run test:rules` **47** · `eval:coach` 19/19 on both pinned models · `eval:moderation` 85/85 (docs/10 §13–§15). Every earlier count lives in the log; this line is the current one.
+`flutter analyze` clean · `flutter test` **934** · `npm run verify` **205** · `npm run test:integration` **265** · `npm run test:rules` **47** · `eval:coach` 19/19 on both pinned models · `eval:moderation` 85/85 (docs/10 §13–§15). Every earlier count lives in the log; this line is the current one.
 
 ### The $44K tracking line
 
@@ -442,6 +476,8 @@ D1 ≥ 45% · D7 ≥ 25% · D30 ≥ 12% · craving-survived rate ≥ 70% · stor
 ---
 
 **Session history lives in `docs/10_Build_Log.md`** — dated, append-only; cite as `docs/10 §N`.
+
+**Tier decisions live in `docs/12_Monetisation_Study.md`** (Sep 3, 2026) — the verified door inventory, the sourced conversion evidence, and the free/premium matrix. §7 rows 23–28 above are its resolutions; when this board and `docs/01 §10` / `docs/02 §4–5` disagree on what is free, docs/12 is the reason.
 
 *Built from a full repo audit on Aug 29, 2026. Every ✅ and every blocker in §3 carries its evidence. Anything unverified is marked ❓ and treated as not done.*
 

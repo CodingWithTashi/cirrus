@@ -65,6 +65,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       settled: entitlements.isSettled,
       isPremium: ref.read(isPremiumProvider),
       lastShownDay: ref.read(settingsStoreProvider).launchPaywallShownDay,
+      shownCount: ref.read(settingsStoreProvider).launchPaywallShownCount,
       today: today,
     );
     context.go(Routes.home);

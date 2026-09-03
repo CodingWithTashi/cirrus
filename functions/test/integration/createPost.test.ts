@@ -9,7 +9,12 @@
  * that ever inverts, every reader can de-anonymize the whole feed.
  */
 import type {CallableRequest} from 'firebase-functions/v2/https';
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {
+  DAILY_SOS_POSTS,
+  FREE_DAILY_POSTS,
+  PREMIUM_DAILY_POSTS,
+} from '../../src/config';
 import {createPost} from '../../src/handlers/createPost';
 import {db, myPostsCol, postsCol} from '../../src/lib/firestore';
 
@@ -53,6 +58,17 @@ afterEach(() => {
   if (previousMode === undefined) delete process.env['ENTITLEMENT_MODE'];
   else process.env['ENTITLEMENT_MODE'] = previousMode;
 });
+
+// Deploy-time params resolve to 0 with no `.env` loaded, and an allowance of
+// 0 refuses every post before any of these assertions is reached — the same
+// trap that made the coach answer `capReached` to everybody. Pinned to the
+// production values so the tests read as the deployed behaviour.
+beforeEach(() => {
+  vi.spyOn(FREE_DAILY_POSTS, 'value').mockReturnValue(1);
+  vi.spyOn(PREMIUM_DAILY_POSTS, 'value').mockReturnValue(3);
+  vi.spyOn(DAILY_SOS_POSTS, 'value').mockReturnValue(5);
+});
+afterEach(() => vi.restoreAllMocks());
 
 beforeEach(async () => {
   await clearFirestore();
@@ -196,9 +212,14 @@ describe('createPost — refuses rule-breaking text at the door', () => {
   });
 });
 
-describe('createPost — posting is Premium, an SOS never is', () => {
+describe('createPost — posting is an allowance, not a wall', () => {
+  // docs/12 §4.1. Posting used to be refused outright for a free account,
+  // which left the feature we call our moat read-only for exactly the people
+  // a subscriber pays to read — while replying stayed free, so the line was
+  // arbitrary as well as costly. A free account posts once a day now.
+  //
   // `tierFor` reads ENTITLEMENT_MODE at call time; the deployed default is
-  // `ungated` (everyone premium), so the gate only exists under `mirror`.
+  // `ungated` (everyone premium), so tiering only exists under `mirror`.
   const previous = process.env['ENTITLEMENT_MODE'];
   beforeEach(() => {
     process.env['ENTITLEMENT_MODE'] = 'mirror';
@@ -208,30 +229,56 @@ describe('createPost — posting is Premium, an SOS never is', () => {
     else process.env['ENTITLEMENT_MODE'] = previous;
   });
 
-  it('refuses a free account with permission-denied and claims no cap slot', async () => {
-    await expect(createPost.run(request(post('a win', 'win')))).rejects.toMatchObject({
+  it('gives a free account its one post a day', async () => {
+    const {postId} = await createPost.run(request(post('a win', 'win')));
+    expect((await postsCol().doc(postId).get()).exists).toBe(true);
+    expect(
+      (await db.collection('users').doc('alice').get()).get('postUsage'),
+    ).toMatchObject({count: 1});
+  });
+
+  it('refuses the second with the upgrade-shaped code, spending no slot', async () => {
+    await createPost.run(request(post('a win', 'win')));
+    await expect(createPost.run(request(post('another', 'win')))).rejects.toMatchObject({
+      // `permission-denied`, not `resource-exhausted`: a subscription WOULD
+      // have let this through, and the client turns exactly this code into a
+      // door. It cannot make that call itself without trusting its own tier.
       code: 'permission-denied',
     });
-    expect((await postsCol().get()).size).toBe(0);
-    expect((await db.collection('users').doc('alice').get()).get('postUsage')).toBeUndefined();
+    expect((await postsCol().get()).size).toBe(1);
+    expect(
+      (await db.collection('users').doc('alice').get()).get('postUsage'),
+    ).toMatchObject({count: 1});
   });
 
-  it('lets a free account post an SOS', async () => {
-    const {postId} = await createPost.run(request(post('need a hand right now', 'sos')));
-    expect((await postsCol().doc(postId).get()).exists).toBe(true);
-  });
-
-  it('lets an entitled account post anything', async () => {
+  it('refuses a subscriber past THREE with no upgrade to offer', async () => {
     const future = new Date(Date.now() + 86_400_000);
-    for (const [uid, tier] of [
-      ['prem', 'premium'],
-      ['trialist', 'trial'],
-    ] as const) {
-      await db.collection('users').doc(uid).set({
-        entitlement: {tier, productId: 'p', expiresAt: future, updatedAt: new Date()},
-      });
-      const {postId} = await createPost.run(request(post('day 12', 'win'), uid));
-      expect((await postsCol().doc(postId).get()).exists).toBe(true);
+    await db.collection('users').doc('prem').set({
+      entitlement: {tier: 'premium', productId: 'p', expiresAt: future, updatedAt: new Date()},
+    });
+    for (let i = 0; i < 3; i++) {
+      await expect(
+        createPost.run(request(post(`win ${i}`, 'win'), 'prem')),
+      ).resolves.toBeDefined();
+    }
+    await expect(
+      createPost.run(request(post('one too many', 'win'), 'prem')),
+    ).rejects.toMatchObject({
+      // Nothing to sell them — they already bought it. "Come back tomorrow",
+      // and no door.
+      code: 'resource-exhausted',
+    });
+  });
+
+  it('lets a trial post like a subscriber', async () => {
+    const future = new Date(Date.now() + 86_400_000);
+    await db.collection('users').doc('trialist').set({
+      entitlement: {tier: 'trial', productId: 'p', expiresAt: future, updatedAt: new Date()},
+    });
+    for (let i = 0; i < 3; i++) {
+      await expect(
+        createPost.run(request(post(`win ${i}`, 'win'), 'trialist')),
+      ).resolves.toBeDefined();
     }
   });
 
@@ -244,8 +291,58 @@ describe('createPost — posting is Premium, an SOS never is', () => {
         updatedAt: new Date(),
       },
     });
-    await expect(createPost.run(request(post('day 12', 'win'), 'lapsed'))).rejects.toMatchObject({
-      code: 'permission-denied',
+    await createPost.run(request(post('day 12', 'win'), 'lapsed'));
+    await expect(
+      createPost.run(request(post('day 12 again', 'win'), 'lapsed')),
+    ).rejects.toMatchObject({code: 'permission-denied'});
+  });
+});
+
+describe('createPost — an SOS spends its own allowance', () => {
+  const previous = process.env['ENTITLEMENT_MODE'];
+  beforeEach(() => {
+    process.env['ENTITLEMENT_MODE'] = 'mirror';
+  });
+  afterEach(() => {
+    if (previous === undefined) delete process.env['ENTITLEMENT_MODE'];
+    else process.env['ENTITLEMENT_MODE'] = previous;
+  });
+
+  it('is never refused for tier', async () => {
+    const {postId} = await createPost.run(request(post('need a hand right now', 'sos')));
+    expect((await postsCol().doc(postId).get()).exists).toBe(true);
+  });
+
+  it('survives a spent ordinary allowance', async () => {
+    // The rule this protects: nobody is told they are out of posts while
+    // asking for help. A shared counter would have refused this.
+    await createPost.run(request(post('a win', 'win')));
+    await expect(createPost.run(request(post('another', 'win')))).rejects.toThrow();
+
+    await expect(
+      createPost.run(request(post('please talk to me', 'sos'))),
+    ).resolves.toBeDefined();
+  });
+
+  it('does not spend the ordinary allowance either', async () => {
+    await createPost.run(request(post('help', 'sos')));
+    // The free post is still there to use.
+    await expect(createPost.run(request(post('a win', 'win')))).resolves.toBeDefined();
+    const user = await db.collection('users').doc('alice').get();
+    expect(user.get('sosUsage')).toMatchObject({count: 1});
+    expect(user.get('postUsage')).toMatchObject({count: 1});
+  });
+
+  it('is still bounded — a pinned post is not an unlimited megaphone', async () => {
+    // SOS posts pin to the top of the feed for an hour, so "uncapped" would
+    // hand anyone who wanted one a permanent billboard.
+    for (let i = 0; i < 5; i++) {
+      await expect(createPost.run(request(post(`help ${i}`, 'sos')))).resolves.toBeDefined();
+    }
+    await expect(createPost.run(request(post('help 6', 'sos')))).rejects.toMatchObject({
+      // Not `permission-denied`: no subscription buys more of these, so
+      // there is no door to offer.
+      code: 'resource-exhausted',
     });
   });
 });

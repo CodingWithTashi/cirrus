@@ -138,30 +138,45 @@ export async function countPanicSession(
 }
 
 /**
- * Claims one community post against the day's allowance (docs/03 §9).
+ * Which allowance a post spends. An SOS has its own (docs/12 §4.1) so that
+ * spending your ordinary posts can never refuse a call for help, and a
+ * pinned-for-an-hour SOS still cannot be posted without limit.
+ */
+export type PostBucket = 'postUsage' | 'sosUsage';
+
+/**
+ * Claims one community post against the day's allowance (docs/03 §9,
+ * docs/12 §4.1).
  *
  * Replaces createPost's original count-then-write, which was decorative under
  * concurrency: five requests arriving together all read "0 posted" and all
  * proceeded. Same transactional counter as the coach and panic quotas.
  *
  * This also moves the cap from a rolling trailing-24h window to a per-local-day
- * one, which is what docs/03 §9 actually says ("3 posts/day") and matches how
- * every other quota in the app rolls over.
+ * one, which is what docs/03 §9 actually says and matches how every other
+ * quota in the app rolls over.
+ *
+ * [bucket] names the field, so the two allowances share one transactional
+ * implementation and cannot drift apart the way two copies would. It is
+ * REQUIRED, with no default: the whole point of the split is that an SOS and
+ * an ordinary post are different, and a default would let a future caller
+ * quietly spend the wrong one.
  */
 export async function claimDailyPost(
   uid: string,
   todayKey: string,
   limit: number,
+  bucket: PostBucket,
 ): Promise<QuotaClaim> {
   return db.runTransaction(async (tx) => {
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
-    const usage = (snap.data() as UserDoc | undefined)?.postUsage;
+    const usage = (snap.data() as UserDoc | undefined)?.[bucket];
     const used = usage && usage.day === todayKey ? usage.count : 0;
 
     if (used >= limit) return {allowed: false, used, limit};
 
-    tx.set(ref, {postUsage: {day: todayKey, count: used + 1}}, {merge: true});
+    tx.set(ref, {[bucket]: {day: todayKey, count: used + 1}}, {merge: true});
     return {allowed: true, used: used + 1, limit};
   });
 }

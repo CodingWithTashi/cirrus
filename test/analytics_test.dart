@@ -45,13 +45,16 @@ void main() {
         ..planRevealed()
         ..commitHeld()
         ..notifPrompt(granted: true)
-        ..paywallViewed('d5_default', source: 'onboarding')
+        ..paywallViewed('d5_default', source: 'onboarding', planDay: 12)
+        ..planSelected('yearly', source: 'onboarding')
+        ..paywallDismissed(source: 'launch', plan: 'weekly')
         ..trialStarted('yearly')
         ..freeContinued()
         ..winbackShown()
         ..winbackConverted()
-        ..gateShown('insight')
+        ..gateShown('insight', planDay: 3)
         ..gateTapped('insight')
+        ..limitReached(LpLimit.coach, premium: false, used: 5, limit: 5)
         ..day1Viewed()
         ..day1TaskDone('log_puff')
         ..day1Completed()
@@ -85,6 +88,10 @@ void main() {
         'commit_held',
         'notif_prompt',
         'paywall_viewed',
+        // What people CONSIDER vs what they buy, and leaving the paywall
+        // itself — `purchase_cancelled` only ever saw the store sheet.
+        'plan_selected',
+        'paywall_dismissed',
         'trial_started',
         'free_continued',
         'winback_shown',
@@ -93,6 +100,10 @@ void main() {
         // a gate nobody opened read the same as a gate nobody saw.
         'gate_shown',
         'gate_tapped',
+        // A gate is a door we chose to show; a limit is a wall somebody hit.
+        // Every server-enforced wall used to be silent, so "ran out of coach
+        // messages" read exactly like "never opened the coach".
+        'limit_reached',
         // The Day-1 checklist gates every new account and emitted nothing at
         // all, which left activation — the biggest drop-off in the app —
         // entirely unmeasured.
@@ -115,8 +126,27 @@ void main() {
         'trial': 'true',
       });
       expect(a.propsOf('restore_completed'), {'found': 'false'});
-      expect(a.propsOf('gate_shown'), {'source': 'insight'});
+      expect(a.propsOf('gate_shown'), {'source': 'insight', 'plan_day': 3});
+      expect(a.propsOf('paywall_viewed'), {
+        'variant': 'd5_default',
+        'source': 'onboarding',
+        'plan_day': 12,
+      });
+      expect(a.propsOf('plan_selected'), {
+        'period': 'yearly',
+        'source': 'onboarding',
+      });
+      expect(a.propsOf('paywall_dismissed'), {
+        'source': 'launch',
+        'plan': 'weekly',
+      });
       expect(a.propsOf('gate_tapped'), {'source': 'insight'});
+      expect(a.propsOf('limit_reached'), {
+        'capability': 'coach',
+        'tier': 'free',
+        'used': 5,
+        'limit': 5,
+      });
       // The task name is a wire value spelled out in JourneyStore, not
       // `Day1TourStep.name` — renaming that enum must not reclassify history.
       expect(a.propsOf('day1_task_done'), {'task': 'log_puff'});
@@ -153,8 +183,17 @@ void main() {
         ..methodChosen('taper')
         ..paceChosen(1)
         ..notifPrompt(granted: false)
-        ..paywallViewed('v', source: 's')
+        ..paywallViewed('v', source: 's', planDay: 1)
+        ..planSelected('weekly', source: 's')
+        ..paywallDismissed(source: 's', plan: 'yearly')
         ..trialStarted('t')
+        // Every capability's wire value goes through the snake_case check —
+        // three of the four are multi-word, and `.name` would have shipped
+        // camelCase into a snake_case vocabulary.
+        ..limitReached(LpLimit.coach, premium: true)
+        ..limitReached(LpLimit.communityPost, premium: false)
+        ..limitReached(LpLimit.communityCap, premium: true, used: 3)
+        ..limitReached(LpLimit.panicAi, premium: false, used: 2)
         ..cravingSurvived(survived: false);
 
       final snake = RegExp(r'^[a-z][a-z0-9_]*$');
@@ -166,6 +205,35 @@ void main() {
           expect(key.length, lessThanOrEqualTo(40), reason: '${event.name}.$key');
         }
       }
+      // Not just the keys: a capability lands in the dashboard as a VALUE,
+      // and a camelCase one there is as unreadable as a camelCase key.
+      for (final capability in LpLimit.values) {
+        expect(capability.wire, matches(snake), reason: capability.name);
+      }
+      expect(
+        {for (final c in LpLimit.values) c.wire},
+        hasLength(LpLimit.values.length),
+        reason: 'two capabilities sharing a wire value would merge in the chart',
+      );
+    });
+
+    // `used`/`limit` are omitted, never zero-filled: a client guess sitting in
+    // the same column as the server's fact is worse than an absent number.
+    test('an unreported count is absent rather than invented', () {
+      final a = RecordingAnalytics()
+        ..limitReached(LpLimit.communityPost, premium: false);
+      expect(a.propsOf('limit_reached'), {
+        'capability': 'community_post',
+        'tier': 'free',
+      });
+    });
+
+    // A trial is on the premium allowance, so it must not read as a free user
+    // hitting a free wall — that would understate paid-tier friction.
+    test('tier reports the allowance in force, not the entitlement', () {
+      final a = RecordingAnalytics()
+        ..limitReached(LpLimit.coach, premium: true, used: 100, limit: 100);
+      expect(a.propsOf('limit_reached'), containsPair('tier', 'premium'));
     });
   });
 

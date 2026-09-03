@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/community_rules.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
@@ -167,20 +168,22 @@ class CommunityStore extends Notifier<CommunityState> {
   static bool violatesCommunityRules(String text) =>
       CommunityRules.violates(text);
 
-  /// docs/03 §9: three posts a day. The server enforces it in `createPost`;
-  /// the composer checks it first so the fourth post is refused before it is
-  /// written, not after it is sent.
-  static const int dailyPostCap = 3;
-
-  /// The caller's own posts dated today (local calendar day) that claimed a
-  /// server slot: not a failed send, not a cap refusal, and not a post the
-  /// door refused — `createPost` throws before it claims.
-  int get myPostsToday {
+  /// The caller's own posts dated today (local calendar day) in one allowance
+  /// bucket, counting only those that claimed a server slot: not a failed
+  /// send, not a cap refusal, and not a post the door refused —
+  /// `createPost` throws before it claims.
+  ///
+  /// [sos] picks the bucket, because the server keeps two (docs/12 §4.1):
+  /// spending your ordinary posts must never refuse a call for help, so a
+  /// composer that counted them together would grey out the one control
+  /// somebody in trouble needs. The allowance itself is [LpAllowances].
+  int myPostsToday({required bool sos}) {
     final now = DateTime.now();
     return state.posts
         .where(
           (p) =>
               p.isMine &&
+              (p.tag == PostTag.sos) == sos &&
               p.status != PostStatus.failed &&
               p.status != PostStatus.capped &&
               !_refusedAtDoor.contains(p.id) &&
@@ -220,17 +223,22 @@ class CommunityStore extends Notifier<CommunityState> {
       serverId = await _repo.addPost(local);
     } on ContentRefusedException catch (refusal) {
       // The server refused the content itself. Final either way, so no
-      // retry is offered — but the two reasons read differently.
+      // retry is offered — but the three reasons read differently, and two of
+      // them are allowances rather than content judgements.
       switch (refusal.reason) {
         case ContentRefusal.rules:
+          // Not a limit: nothing about this post would be allowed at any tier,
+          // so it belongs to moderation, not the funnel.
           _refusedAtDoor.add(local.id);
           _setStatus(local.id, PostStatus.blocked);
         case ContentRefusal.dailyCap:
+          _reportLimit(LpLimit.communityCap);
           _setStatus(local.id, PostStatus.capped);
         case ContentRefusal.premium:
           // The composer gates this before the send; reaching here means a
           // client that skipped the gate, and "not published" is the honest
           // row for it.
+          _reportLimit(LpLimit.communityPost);
           _refusedAtDoor.add(local.id);
           _setStatus(local.id, PostStatus.blocked);
       }
@@ -255,6 +263,15 @@ class CommunityStore extends Notifier<CommunityState> {
     }
     _watch(id);
   }
+
+  /// One wall met, reported once.
+  ///
+  /// Neither refusal carries a count on the wire — the cap is a server
+  /// constant and the tier refusal has nothing to count — so `used`/`limit`
+  /// are deliberately omitted rather than filled with the client's guess.
+  void _reportLimit(LpLimit capability) => ref
+      .read(analyticsProvider)
+      .limitReached(capability, premium: ref.read(isPremiumProvider));
 
   /// Follows the author's mirror row until it settles. `pending` AND `held`
   /// are open: a held post is what `remoderateHeld` or the founder later

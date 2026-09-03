@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../../domain/logic/allowances.dart';
 import '../../../domain/models/journey_state.dart';
 import '../../../domain/models/models.dart';
 import '../../../domain/repositories/repositories.dart';
@@ -36,20 +37,33 @@ class FakeCoachApi implements CoachApi {
     }
 
     final chip = enumByNameOrNull(CoachChip.values, request['chip']);
-    final template = (request['capped'] as bool? ?? false)
+    final capped = request['capped'] as bool? ?? false;
+    final template = capped
         ? CoachTemplate.capReached
         : chip != null
         ? _forChip(chip)
         : _pick(request['text'] as String? ?? '');
     _lastTemplate = template;
 
-    final reply = CoachReply(
-      template: template,
-      args: _args(),
-      showWeekCard:
-          template == CoachTemplate.progress1 ||
-          template == CoachTemplate.progress2,
-    );
+    // `aiCoachChat` answers a cap with `args: {limit}` and NOTHING else — the
+    // allowance it just enforced. The generic card must not be used here: its
+    // `limit` is the day's PUFF allowance, a different number entirely, and
+    // sending it would make the cap bubble quote the taper curve at someone
+    // who ran out of messages.
+    final reply = capped
+        ? CoachReply(
+            template: template,
+            args: {'limit': LpAllowances.freeCoachMessages},
+            messagesLeft: 0,
+            isFreeTier: true,
+          )
+        : CoachReply(
+            template: template,
+            args: _args(),
+            showWeekCard:
+                template == CoachTemplate.progress1 ||
+                template == CoachTemplate.progress2,
+          );
     return Future.delayed(thinking, () => CoachReplyCodec.encode(reply));
   }
 

@@ -682,17 +682,46 @@
   "premiumLockCta": "See Premium",
   "premiumPitchInsight": "Your weekly report, written from your own numbers.",
   "premiumPitchForecast": "Craving forecasts for the hours you usually reach for it.",
-  "premiumFreeHistoryNote": "Free shows your last 7 days.",
-  "premiumPitchCompose": "Posting is part of Premium. Reading and reacting are always free — and so is an SOS.",
+  "premiumFreeHistoryNote": "Free shows your last {days} days.",
+  "@premiumFreeHistoryNote": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "premiumPitchCompose": "That's your post for today. Premium posts {limit} times a day — and an SOS is always free.",
+  "@premiumPitchCompose": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "premiumPitchPlan": "A plan that adapts when you slip — tonight's adjustment, every night.",
-  "premiumPitchHealth": "The full timeline, from two weeks to a year.",
+  "premiumPitchHealth": "The rest of your timeline: from {from} to a year.",
+  "@premiumPitchHealth": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumPitchNudge": "A {hour} spike is due. Premium forecasts your risky hours before they land.",
+  "@premiumPitchNudge": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
   "freePlanTitle": "Free gets you moving.",
   "freePlanSubtitle": "Yours forever. No countdown, no nagging.",
   "freePlanFeat1": "Puff log + streaks",
   "freePlanFeat2": "Money-saved ticker",
   "freePlanFeat3": "5 coach messages a day",
-  "freePlanFeat4": "1 Panic Button session a day",
-  "freePlanFeat5": "Community (read + react)",
+  "freePlanFeat4": "Panic Button, any time you need it",
+  "freePlanFeat5": "Community — read, react, one post a day",
   "freePlanUpgradeNote": "Upgrade any time — your streak and history come with you.",
   "freePlanCta": "Start with Free",
   "winbackBadge": "ONE-TIME FOUNDING OFFER",
@@ -939,7 +968,7 @@
       }
     }
   },
-  "panicLoopCoachLocked": "you've used today's free AI session",
+  "panicLoopCoachDaily": "Ember's here — this one uses a daily message",
   "gameTitle": "Crowd the craving out.",
   "gameTimeLeft": "{seconds}s",
   "@gameTimeLeft": {
@@ -1107,7 +1136,22 @@
       }
     }
   },
-  "coachCapReached": "That's my 5 free messages for today — I'll be back at midnight. Want me around 24/7? That's what Premium is.",
+  "coachCapReached": "That's my {limit} free messages for today — I'll be back at midnight. Want me around 24/7? That's what Premium is.",
+  "@coachCapReached": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "coachCapReachedPremium": "That's {limit} messages today — you've really used me, and I'm glad. I'll be back at midnight.",
+  "@coachCapReachedPremium": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "coachConnectionLost": "Signal dropped mid-thought 😅 I'm still right here — say that again once you're back online?",
   "coachBackendRejected": "Okay, that's on our end — the server didn't recognise this app, so I never got your message. Not your connection, not you. We're on it.",
   "errorOfflineBanner": "offline — logs still count, we'll sync later",
@@ -1463,7 +1507,14 @@
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
   "communityRuleSlur": "This can't be posted — slurs and hate aren't allowed here.",
   "communityRuleSourcing": "Where-to-buy and for-sale talk isn't allowed here. Edit it and try again.",
-  "communityDailyCapReached": "That's 3 posts today — the cap resets at midnight.",
+  "communityDailyCapReached": "That's {limit} today — the counter resets at midnight.",
+  "@communityDailyCapReached": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "communityTagRequired": "Pick a tag — it routes your post to the right people.",
   "communitySosBanner": "🛡️ {count} people had your back",
   "@communitySosBanner": {

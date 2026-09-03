@@ -217,6 +217,12 @@ export interface UserDoc {
   readonly panicUsage?: DailyCounter;
   /** docs/03 §9 community post cap. Same shape, same rollover rule. */
   readonly postUsage?: DailyCounter;
+  /**
+   * SOS posts today. A SEPARATE counter from [postUsage] on purpose (docs/12
+   * §4.1): spending your ordinary posts must never be able to refuse a call
+   * for help, and vice versa.
+   */
+  readonly sosUsage?: DailyCounter;
   readonly planAdvice?: {
     readonly forDay: string;
     readonly limit: number;

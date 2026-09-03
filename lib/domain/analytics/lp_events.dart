@@ -1,6 +1,34 @@
 import '../logic/games/game_id.dart';
 import 'analytics.dart';
 
+/// The server-enforced allowances a person can run out of.
+///
+/// Only limits the BACKEND refuses belong here. A client-side gate reports
+/// `gate_shown`/`gate_tapped` instead — it is a locked surface, not a wall
+/// somebody walked into. The two are different events on purpose: a gate is
+/// something we chose to show, a limit is something the user hit.
+///
+/// The wire value is explicit rather than `.name`, because three of the four
+/// are multi-word and `.name` would put camelCase in a snake_case vocabulary.
+/// Renaming a Dart constant then cannot reclassify a dashboard's history.
+enum LpLimit {
+  /// The daily coach allowance (docs/04 §7).
+  coach('coach'),
+
+  /// Posting refused for tier — a free account on a non-SOS tag.
+  communityPost('community_post'),
+
+  /// The daily post cap, which applies to both tiers.
+  communityCap('community_cap'),
+
+  /// `panicSession` narrowed the AI option for the rest of the day.
+  panicAi('panic_ai');
+
+  const LpLimit(this.wire);
+
+  final String wire;
+}
+
 /// The funnel instrumentation from docs/02 §7.
 ///
 /// The point of this file is a single alert: **any onboarding screen losing
@@ -65,13 +93,54 @@ extension LpEvents on AnalyticsSink {
 
   // --- paywall -------------------------------------------------------------
 
-  /// [variant] is the A/B layout slot docs/06 §3 reads; [source] is what put
-  /// the person on the paywall — `onboarding`, `launch`, `settings`,
-  /// `coach_cap`, `insight`, `forecast`, `history`, `compose`, `panic`,
-  /// `push` — so a conversion rate can be read per door, not just per layout.
-  void paywallViewed(String variant, {required String source}) => track(
-    AnalyticsEvent('paywall_viewed', {'variant': variant, 'source': source}),
+  /// [variant] is what was actually rendered — the A/B slot docs/06 §3 reads,
+  /// and, until an arm exists, the real difference between a paywall showing
+  /// live store prices and one showing the typed fallbacks under their
+  /// "prices unavailable" caption. That second case happens in production and
+  /// converts differently, and it used to be invisible: the dimension was the
+  /// constant `d5_default`, so every chart cut by it had one bucket.
+  ///
+  /// [source] is what put the person on the paywall — `onboarding`, `launch`,
+  /// `settings`, `coach_cap`, `insight`, `forecast`, `health`, `plan`,
+  /// `history`, `compose`, `nudge`, `push` — so a conversion rate can be read
+  /// per door, not just per layout.
+  ///
+  /// [planDay] is where they were in their own quit when the door opened. A
+  /// day-3 gate and a day-40 gate are different products of different
+  /// motivations, and they used to be the same row. Null before a journey
+  /// exists (the D5 paywall, which every account meets at the same moment).
+  void paywallViewed(
+    String variant, {
+    required String source,
+    int? planDay,
+  }) => track(
+    AnalyticsEvent('paywall_viewed', {
+      'variant': variant,
+      'source': source,
+      'plan_day': ?planDay,
+    }),
   );
+
+  /// A plan card was chosen on the paywall. [period] is `weekly`/`monthly`/
+  /// `yearly`.
+  ///
+  /// The gap between what people *consider* and what they buy is the whole
+  /// question behind the price-ladder work, and `trial_started` only ever
+  /// reported the winner.
+  void planSelected(String period, {required String source}) => track(
+    AnalyticsEvent('plan_selected', {'period': period, 'source': source}),
+  );
+
+  /// The paywall was left without buying and without taking the free path.
+  ///
+  /// `purchase_cancelled` only fires once the STORE sheet has opened, so
+  /// backing out of the paywall itself was invisible — and for the launch
+  /// paywall, which nobody asked for, that is the number that says whether it
+  /// is a door or a nag. [plan] is what was selected when they left.
+  void paywallDismissed({required String source, required String plan}) =>
+      track(
+        AnalyticsEvent('paywall_dismissed', {'source': source, 'plan': plan}),
+      );
 
   void trialStarted(String tier) =>
       track(AnalyticsEvent('trial_started', {'tier': tier}));
@@ -86,21 +155,58 @@ extension LpEvents on AnalyticsSink {
 
   /// A locked surface rendered, with the [source] its door would carry.
   ///
-  /// `paywall_viewed` fires only after a TAP, so without this the view→tap rate
-  /// of the eleven gates is unknowable: the funnel can say which door was
-  /// walked through, never which door was seen and ignored. Those are different
-  /// problems with different fixes — a gate nobody taps is bad copy, a gate
-  /// nobody sees is bad placement.
+  /// `paywall_viewed` fires only after a TAP, so without this a gate's view→tap
+  /// rate is unknowable: the funnel can say which door was walked through,
+  /// never which door was seen and ignored. Those are different problems with
+  /// different fixes — a gate nobody taps is bad copy, a gate nobody sees is
+  /// bad placement.
   ///
   /// Fires once per mount, never per rebuild, or a scrolling list would report
   /// impressions in the thousands.
-  void gateShown(String source) =>
-      track(AnalyticsEvent('gate_shown', {'source': source}));
+  ///
+  /// [planDay] is where the reader was in their own quit. Same reason as
+  /// `paywall_viewed`: a gate on day 3 and a gate on day 40 are different
+  /// questions, and they used to land in the same row.
+  void gateShown(String source, {int? planDay}) => track(
+    AnalyticsEvent('gate_shown', {'source': source, 'plan_day': ?planDay}),
+  );
 
   /// The lock card or its CTA was tapped. `paywall_viewed` follows with the
   /// same `source`, so the two divide cleanly.
   void gateTapped(String source) =>
       track(AnalyticsEvent('gate_tapped', {'source': source}));
+
+  // --- server-enforced walls -----------------------------------------------
+
+  /// A backend allowance refused something the user asked for.
+  ///
+  /// The gates above report doors we CHOSE to show; this reports walls people
+  /// actually hit, which is the higher-intent event of the two and was
+  /// completely dark until now. The coach cap rendered a template, `createPost`
+  /// threw `permission-denied`, and `panicSession` quietly narrowed the AI
+  /// option — none of them told the funnel anything, so "ran out of coach
+  /// messages" was indistinguishable from "never opened the coach".
+  ///
+  /// [premium] is the allowance that was in force, not the entitlement's exact
+  /// tier: a trial is on the premium allowance and reports as one. A bool
+  /// rather than a tier string because there is no way to misspell it.
+  ///
+  /// [used] and [limit] are sent only where the backend actually said. Deriving
+  /// them from a client-side constant would put our guess in the same column as
+  /// the server's fact.
+  void limitReached(
+    LpLimit capability, {
+    required bool premium,
+    int? used,
+    int? limit,
+  }) => track(
+    AnalyticsEvent('limit_reached', {
+      'capability': capability.wire,
+      'tier': premium ? 'premium' : 'free',
+      'used': ?used,
+      'limit': ?limit,
+    }),
+  );
 
   // --- day-one activation --------------------------------------------------
 

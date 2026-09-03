@@ -22,6 +22,7 @@ import '../settings/danger_hours_sheet.dart';
 import 'edit_day_sheet.dart';
 import '../../domain/logic/danger_hours.dart';
 import '../../domain/date_key.dart';
+import '../../domain/logic/allowances.dart';
 import '../../domain/logic/day_window.dart';
 import '../../domain/logic/dependence_engine.dart';
 import '../../domain/models/journey_state.dart';
@@ -59,10 +60,20 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     // The clock seam, so "what does Stats show on Tue Sep 29 with nothing
     // logged since Sunday" is a widget test.
     final now = snap.now;
-    // Free shows the last 7 days, Premium the whole journey (docs/01 §10).
+    // Free shows the last 30 days, Premium the whole journey (docs/12 §4.1).
     // One list, derived once, so every card below agrees on the window.
+    //
+    // It was 7 — shorter than the taper program itself, which runs 30 days
+    // (`P=30`), so a free account could not see its own plan's arc even
+    // though every one of those days is already sitting in their own journey
+    // document. Thirty is the shortest window that can show the thing the
+    // product is for. The Month pill and the forecast stay Premium: those are
+    // different *views*, not a shorter slice of the same data.
     final premium = ref.watch(isPremiumProvider);
-    final historyFloor = LpDate.addDays(LpDate.dayStart(now), -6);
+    final historyFloor = LpDate.addDays(
+      LpDate.dayStart(now),
+      -(LpAllowances.freeHistoryDays - 1),
+    );
     final visibleLogs = premium
         ? logs
         : [
@@ -102,7 +113,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  l10n.premiumFreeHistoryNote,
+                  l10n.premiumFreeHistoryNote(LpAllowances.freeHistoryDays),
                   style: LpType.caption11(lp.textFaint),
                 ),
               ),

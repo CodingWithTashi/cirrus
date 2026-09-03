@@ -17,6 +17,7 @@ import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
+import '../../data/stores/coach_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
 import '../../domain/logic/day_window.dart';
@@ -43,11 +44,42 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   /// context for what the user is about to say, not a permanent mode.
   int? _panicIntensity;
 
+  /// When the panic flow last sent this person here, or null.
+  ///
+  /// The panic flow no longer opens the paywall (docs/12 §4.2) — but a free
+  /// account whose messages are spent would meet the cap bubble's upgrade CTA
+  /// the moment it arrived, which moves the mid-craving purchase decision one
+  /// screen along rather than removing it. The words still explain what
+  /// happened; the button is what waits.
+  ///
+  /// A TIMESTAMP rather than a flag, because this tab is keep-alive: switching
+  /// to it from the bottom bar pushes no route, so `didUpdateWidget` never
+  /// fires and a plain flag would stay true for the rest of the session —
+  /// hiding the strongest door in the app long after the craving passed. It
+  /// expires on the app's own model of a craving instead (docs/03 §7: most
+  /// pass in 15–20 minutes), which is self-clearing and needs no event.
+  ///
+  /// Distinct from [_panicIntensity], which is cleared by the first send.
+  DateTime? _panicArrivedAt;
+
+  /// The window in which this screen will not sell anything.
+  static const _cravingWindow = Duration(minutes: 20);
+
+  /// [now] comes from the watched minute clock, so the CTA reappears on its
+  /// own when the window closes.
+  bool _inCraving(DateTime now) {
+    final at = _panicArrivedAt;
+    return at != null && now.difference(at) < _cravingWindow;
+  }
+
   @override
   void initState() {
     super.initState();
     _inputFocus.addListener(_onInputFocus);
     _panicIntensity = widget.panicIntensity;
+    if (widget.panicIntensity != null) {
+      _panicArrivedAt = ref.read(nowProvider)();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Pull the stored transcript first; the greeting is what you get when
       // there is genuinely nothing to continue. Seeding unconditionally is why
@@ -60,7 +92,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   void didUpdateWidget(CoachScreen old) {
     super.didUpdateWidget(old);
     final next = widget.panicIntensity;
-    if (next != null && next != old.panicIntensity) _panicIntensity = next;
+    if (next != old.panicIntensity) {
+      // Entering the coach WITHOUT an intensity is a normal visit again, so
+      // the suppression lifts immediately rather than waiting out the window.
+      _panicArrivedAt = next == null ? null : ref.read(nowProvider)();
+      if (next != null) _panicIntensity = next;
+    }
   }
 
   /// The spotlight measures its target ONCE, when the step starts. Tapping
@@ -136,6 +173,26 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     return '${LpFormat.weekdayShortDate(t, locale)} · $time';
   }
 
+  /// The cap bubble, in the voice the payer has earned.
+  ///
+  /// [wireLimit] is 0 when the reply carried no `limit` — an older stored
+  /// message, or a backend that did not say. The documented cap is the
+  /// fallback there rather than a literal zero.
+  String _capCopy(BuildContext context, int wireLimit) {
+    final l10n = context.l10n;
+    // The same reading the CTA below makes, so the words and the button can
+    // never disagree about who this person is.
+    final premium = ref.watch(isPremiumProvider);
+    final limit = wireLimit > 0
+        ? wireLimit
+        : premium
+        ? CoachStore.premiumDailyCap
+        : CoachStore.freeDailyCap;
+    return premium
+        ? l10n.coachCapReachedPremium(limit)
+        : l10n.coachCapReached(limit);
+  }
+
   String _resolve(BuildContext context, CoachMessage m, String coachName) {
     // A model-authored reply is already prose in the user's language (the
     // server pins it from the caller's locale), so it renders verbatim. The
@@ -180,7 +237,13 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       CoachTemplate.generic3 => l10n.coachReplyGeneric3,
       CoachTemplate.generic4 => l10n.coachReplyGeneric4,
       CoachTemplate.party => l10n.coachReplyParty(i('count')),
-      CoachTemplate.capReached => l10n.coachCapReached,
+      // The allowance comes from the side that enforced it (`aiCoachChat`
+      // sends `args: {limit}` with this template). It used to be the literal
+      // "5" in the copy, which told a Premium user who had just spent a
+      // HUNDRED messages that those were "my 5 free messages" — and then
+      // offered them no upsell, because the CTA below is free-only. Two
+      // strings now: one that sells, one that simply says goodnight.
+      CoachTemplate.capReached => _capCopy(context, i('limit')),
       CoachTemplate.connectionLost => l10n.coachConnectionLost,
       CoachTemplate.backendRejected => l10n.coachBackendRejected,
     };
@@ -298,8 +361,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                           ),
                           // The cap message names Premium; this is the door
                           // it points at (docs/04 §7, `source=coach_cap`).
+                          // …and never to somebody who walked in from a
+                          // craving that has not passed yet: the other half of
+                          // deleting the panic paywall door.
                           if (m.role != CoachRole.user &&
                               m.template == CoachTemplate.capReached &&
+                              !_inCraving(now) &&
                               !ref.watch(isPremiumProvider)) ...[
                             const SizedBox(height: 8),
                             Align(

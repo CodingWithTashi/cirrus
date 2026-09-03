@@ -100,6 +100,14 @@ class RecordingAnalytics implements AnalyticsSink {
     return null;
   }
 
+  /// Every occurrence, in order. [propsOf] answers the first, which silently
+  /// hides a call site firing twice — and "did this fire exactly once" is the
+  /// assertion an event with a per-wall meaning actually needs.
+  List<Map<String, Object>> propsOfAll(String name) => [
+    for (final e in events)
+      if (e.name == name) e.props,
+  ];
+
   @override
   void track(AnalyticsEvent event) => events.add(event);
 

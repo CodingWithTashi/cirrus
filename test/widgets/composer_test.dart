@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
-import 'package:last_puff/data/stores/community_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/logic/allowances.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
@@ -175,16 +175,58 @@ void main() {
     expect(find.text(l10n.communityRuleSourcing), findsNothing);
   });
 
-  testWidgets('the fourth post of the day is refused before it is typed', (
+  testWidgets('a subscriber past their posts is refused before typing', (
     tester,
   ) async {
+    // `openComposer` runs the paying demo persona, so the allowance is three.
     final container = await openComposer(tester);
     final store = container.read(communityStoreProvider.notifier);
-    for (var i = 0; i < CommunityStore.dailyPostCap; i++) {
+    for (var i = 0; i < LpAllowances.premiumPosts; i++) {
       store.addPost(text: 'post $i', tag: PostTag.vent);
     }
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.communityDailyCapReached), findsOneWidget);
+    expect(
+      find.text(l10n.communityDailyCapReached(LpAllowances.premiumPosts)),
+      findsOneWidget,
+    );
+    // Nothing to sell someone who already subscribed.
+    expect(find.text(l10n.premiumLockCta), findsNothing);
+  });
+
+  testWidgets('a spent ordinary allowance still leaves the SOS open', (
+    tester,
+  ) async {
+    // The rule this protects: using your ordinary posts must never grey out
+    // the one control somebody in trouble needs. The server keeps a separate
+    // counter for exactly this, and the composer has to agree with it.
+    final container = await openComposer(tester);
+    final store = container.read(communityStoreProvider.notifier);
+    for (var i = 0; i < LpAllowances.premiumPosts; i++) {
+      store.addPost(text: 'post $i', tag: PostTag.vent);
+    }
+    await tester.pumpAndSettle();
+    expect(
+      find.text(l10n.communityDailyCapReached(LpAllowances.premiumPosts)),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text(l10n.communityTagSos));
+    await tester.pumpAndSettle();
+
+    // The blocker is gone the moment the tag says SOS.
+    expect(
+      find.text(l10n.communityDailyCapReached(LpAllowances.premiumPosts)),
+      findsNothing,
+    );
+    await tester.enterText(find.byType(TextField), 'please talk to me');
+    await tester.pumpAndSettle();
+    final before = container.read(communityStoreProvider).posts.length;
+    await tester.tap(find.text(l10n.communityComposerPost));
+    await tester.pumpAndSettle();
+    expect(container.read(communityStoreProvider).posts.length, before + 1);
+    // Let the "Posted." snack and its fallback timer run out (showLpSnack
+    // force-closes at duration + 250ms), or the harness reports it pending.
+    await tester.pump(const Duration(seconds: 5));
   });
 }

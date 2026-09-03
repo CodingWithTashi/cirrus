@@ -11,6 +11,7 @@ import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/rolling_number.dart';
@@ -44,6 +45,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _hold.stop();
     super.dispose();
+  }
+
+  /// The danger-hour slot, for whichever tier is reading.
+  ///
+  /// Premium gets the nudge itself. A free account used to get NOTHING here,
+  /// which threw away the best contextual upgrade moment the app has: their
+  /// risky hour, from their own logs, on the screen they open most. It gets
+  /// the same door every other locked surface has, tagged `nudge` so it can
+  /// be read apart in the funnel.
+  ///
+  /// The pitch names the FORECAST and never the reminder: danger-hour nudges
+  /// are free for everyone (`ReminderPlanner` has no tier check), so promising
+  /// to text them first would be selling this reader something they have.
+  ///
+  /// Both branches are dismissible — docs/02 §5's "never interstitial spam"
+  /// means a card you can wave off, and `_nudgeDismissed` keeps it off for the
+  /// session. Distinct keys so a tier flip mid-session cannot leave a
+  /// `Dismissible` holding the other branch's drag state.
+  Widget _nudgeSlot(BuildContext context, TodaySnapshot snap, String locale) {
+    final hour = LpFormat.hour(snap.dangerWindow!.$1, locale);
+    void dismiss() => setState(() => _nudgeDismissed = true);
+
+    if (ref.watch(isPremiumProvider)) {
+      return Dismissible(
+        key: const ValueKey('nudge'),
+        onDismissed: (_) => dismiss(),
+        child: _CoachNudgeCard(
+          weekday: LpFormat.weekday(snap.now, locale),
+          hour: hour,
+          onTap: () => context.go(Routes.coach),
+        ),
+      );
+    }
+    return Dismissible(
+      key: const ValueKey('nudge_gate'),
+      onDismissed: (_) => dismiss(),
+      child: LpPremiumGate(
+        source: 'nudge',
+        compact: true,
+        pitch: context.l10n.premiumPitchNudge(hour),
+      ),
+    );
   }
 
   @override
@@ -518,25 +561,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // with a hardcoded 3 PM told every day-1 user about a
                         // spike nobody observed — an invented number wearing
                         // the coach's voice.
-                        // …and only for Premium: the nudge IS the craving
-                        // forecast (docs/01 §10). Free users meet the forecast
-                        // behind its gate on Stats, not as a card on Home.
-                        else if (!_nudgeDismissed &&
-                            snap.dangerWindow != null &&
-                            ref.watch(isPremiumProvider))
-                          Dismissible(
-                            key: const ValueKey('nudge'),
-                            onDismissed: (_) =>
-                                setState(() => _nudgeDismissed = true),
-                            child: _CoachNudgeCard(
-                              weekday: LpFormat.weekday(snap.now, locale),
-                              hour: LpFormat.hour(
-                                snap.dangerWindow!.$1,
-                                locale,
-                              ),
-                              onTap: () => context.go(Routes.coach),
-                            ),
-                          ),
+                        //
+                        // The nudge IS the craving forecast (docs/01 §10), so
+                        // it is Premium — but a free account used to render
+                        // NOTHING here, which threw away the best contextual
+                        // upgrade moment the app has: we know their risky hour,
+                        // from their own logs, on the screen they open most.
+                        // They now get the same door every other locked
+                        // surface has, tagged `nudge` so it can be read apart.
+                        //
+                        // The pitch names the forecast and never the reminder:
+                        // danger-hour nudges are free for everyone
+                        // (`ReminderPlanner` has no tier check), so promising
+                        // to "text you first" would be selling this reader
+                        // something they already have.
+                        else if (!_nudgeDismissed && snap.dangerWindow != null)
+                          _nudgeSlot(context, snap, locale),
                         const SizedBox(height: 12),
                         // The completion state. Day 30 of 30 used to render
                         // as any other 0-limit day (QA M3).

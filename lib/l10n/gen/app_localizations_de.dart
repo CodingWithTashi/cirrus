@@ -1118,20 +1118,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'Verlangens-Vorhersagen für die Stunden, in denen du sonst zugreifst.';
 
   @override
-  String get premiumFreeHistoryNote =>
-      'Der Gratis-Plan zeigt deine letzten 7 Tage.';
+  String premiumFreeHistoryNote(int days) {
+    return 'Gratis zeigt dir deine letzten $days Tage.';
+  }
 
   @override
-  String get premiumPitchCompose =>
-      'Posten gehört zu Premium. Lesen und Reagieren bleiben gratis — und ein SOS auch.';
+  String premiumPitchCompose(int limit) {
+    return 'Das war dein Post für heute. Premium postet $limit-mal am Tag — und ein SOS ist immer gratis.';
+  }
 
   @override
   String get premiumPitchPlan =>
       'Ein Plan, der sich anpasst, wenn du ausrutschst — die Anpassung von heute Nacht, jede Nacht.';
 
   @override
-  String get premiumPitchHealth =>
-      'Die vollständige Zeitleiste, von zwei Wochen bis zu einem Jahr.';
+  String premiumPitchHealth(String from) {
+    return 'Der Rest deiner Zeitleiste: ab $from bis zu einem Jahr.';
+  }
+
+  @override
+  String premiumPitchNudge(String hour) {
+    return 'Dein Hoch um $hour steht an. Premium sagt deine Risikostunden voraus, bevor sie da sind.';
+  }
 
   @override
   String get freePlanTitle => 'Gratis bringt dich ins Rollen.';
@@ -1150,10 +1158,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get freePlanFeat3 => '5 Coach-Nachrichten am Tag';
 
   @override
-  String get freePlanFeat4 => '1 Panik-Button-Session am Tag';
+  String get freePlanFeat4 => 'Panik-Button, wann immer du ihn brauchst';
 
   @override
-  String get freePlanFeat5 => 'Community (lesen + reagieren)';
+  String get freePlanFeat5 => 'Community — lesen, reagieren, ein Post am Tag';
 
   @override
   String get freePlanUpgradeNote =>
@@ -1503,8 +1511,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get panicLoopCoachLocked =>
-      'deine kostenlose KI-Sitzung heute ist aufgebraucht';
+  String get panicLoopCoachDaily =>
+      'Ember ist da — das kostet eine Tagesnachricht';
 
   @override
   String get gameTitle => 'Verdräng das Craving.';
@@ -1760,8 +1768,14 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get coachCapReached =>
-      'Das waren meine 5 Gratis-Nachrichten für heute — um Mitternacht bin ich zurück. Willst du mich rund um die Uhr? Genau das ist Premium.';
+  String coachCapReached(int limit) {
+    return 'Das waren meine $limit Gratis-Nachrichten für heute — um Mitternacht bin ich zurück. Willst du mich rund um die Uhr? Genau das ist Premium.';
+  }
+
+  @override
+  String coachCapReachedPremium(int limit) {
+    return 'Das sind $limit Nachrichten heute — du hast mich wirklich gebraucht, und das freut mich. Um Mitternacht bin ich zurück.';
+  }
 
   @override
   String get coachConnectionLost =>
@@ -2190,8 +2204,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Bezugsquellen und Verkaufsangebote sind hier nicht erlaubt. Bearbeite den Text und versuch es noch mal.';
 
   @override
-  String get communityDailyCapReached =>
-      'Das waren 3 Posts heute – um Mitternacht geht es weiter.';
+  String communityDailyCapReached(int limit) {
+    return 'Das waren $limit heute – um Mitternacht geht es weiter.';
+  }
 
   @override
   String get communityTagRequired =>

@@ -79,8 +79,8 @@ void main() {
     store.addPost(text: text, tag: PostTag.vent);
     await pumpEventQueue();
     expect(mine(c, text).status, PostStatus.blocked);
-    // It never claimed a slot, so it does not count toward the cap...
-    expect(store.myPostsToday, 0);
+    // It never claimed a slot, so it does not count toward the allowance...
+    expect(store.myPostsToday(sos: false), 0);
     // ...and a retry would only be refused again.
     store.retryPost(mine(c, text).id);
     await pumpEventQueue();

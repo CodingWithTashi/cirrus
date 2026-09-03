@@ -104,7 +104,11 @@ class HealthScreen extends ConsumerWidget {
             else if (milestones.length > freeNodes)
               LpPremiumGate(
                 source: 'health',
-                pitch: l10n.premiumPitchHealth,
+                // The first node that is actually locked FOR THIS READER, not
+                // a fixed "two weeks": nothing already reached is ever gated,
+                // so somebody 100 days puff-free already owns the three-month
+                // node and was still being sold the two-week one.
+                pitch: l10n.premiumPitchHealth(milestones[freeNodes].$2),
                 lockAlignment: Alignment.topCenter,
                 child: Column(
                   children: [
