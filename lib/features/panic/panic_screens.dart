@@ -100,7 +100,27 @@ class PanicViewModel extends Notifier<PanicSession> {
   void _openSession() {
     ref.read(panicRepositoryProvider).begin().then((availability) {
       // The notifier may already be gone (flow closed mid-flight).
-      if (!_disposed) state = state.copyWith(availability: availability);
+      if (_disposed) return;
+      state = state.copyWith(availability: availability);
+      // The server narrowed the AI option for the rest of the day.
+      //
+      // `premium: false` is the SERVER's word, not a guess: `panicSession`
+      // answers `aiAvailable: tier !== 'free' || sessionsToday <= N`, so a
+      // false can only mean a free account past its allowance. That is a
+      // deliberate coupling to one expression in `panicSession.ts` — if the
+      // rule there ever admits a paying user, this line has to move with it.
+      //
+      // `sessionsToday` is the server's own count; the ceiling is a server
+      // constant it does not send, so no `limit` is invented for it.
+      if (!availability.aiAvailable) {
+        ref
+            .read(analyticsProvider)
+            .limitReached(
+              LpLimit.panicAi,
+              premium: false,
+              used: availability.sessionsToday,
+            );
+      }
     }).ignore();
   }
 
@@ -684,18 +704,30 @@ class _BreakLoopStep extends ConsumerWidget {
                     ),
                     tint: lp.oxygen,
                     title: l10n.panicLoopCoach,
+                    // The server may have spent the panic-session extra; it
+                    // never spends the ordinary coach allowance, which is a
+                    // different counter. So the subtitle changes and the
+                    // destination does not.
                     sub: aiAvailable
                         ? l10n.panicLoopCoachSub(hourLabel)
-                        : l10n.panicLoopCoachLocked,
+                        : l10n.panicLoopCoachDaily,
+                    // ALWAYS the coach — never the paywall (docs/12 §4.2).
+                    //
+                    // This used to open the paywall once the free panic
+                    // session was spent: a purchase decision put in front of
+                    // somebody at 9/10 craving intensity. That is the least
+                    // considered moment a person has and the likeliest to
+                    // become a one-star review naming the exact thing this
+                    // product positions against. The flow never hard-blocked,
+                    // so it was within the letter of "never paywall mid-
+                    // crisis" and nowhere near its spirit.
+                    //
                     // The intensity rides along: `aiCoachChat` switches to its short,
                     // directive PANIC MODE voice when it is present, and until now no
                     // client ever sent it — so Ember answered a 9/10 craving in the
                     // same open-question register it uses for a quiet Tuesday.
-                    onTap: () => aiAvailable
-                        ? context.go(
-                            '${Routes.coach}?panic=${session.intensity}',
-                          )
-                        : context.push(Routes.paywallFrom('panic')),
+                    onTap: () =>
+                        context.go('${Routes.coach}?panic=${session.intensity}'),
                   ),
                 ],
               ),

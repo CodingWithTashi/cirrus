@@ -69,14 +69,101 @@ export const COACH_MIN_INSTANCES = defineInt('COACH_MIN_INSTANCES', {
   description: 'Warm instances held for aiCoachChat. Set 1-2 in production.',
 });
 
+/**
+ * The documented value of every daily allowance, in one place.
+ *
+ * Declared as constants rather than inline literals because each one is needed
+ * TWICE: once as the param's `default`, and once as the floor `allowance()`
+ * falls back to. Two literals would drift, and the drift would be silent.
+ */
+export const ALLOWANCE_DEFAULTS = {
+  freeCoachMessages: 5,
+  premiumCoachMessages: 100,
+  freePosts: 1,
+  premiumPosts: 3,
+  sosPosts: 5,
+} as const;
+
+/**
+ * Reads a daily allowance, refusing to believe an unusable answer.
+ *
+ * A deploy-time param resolves to **0** when nothing supplies a value — no
+ * `.env` for the active project, a typo'd key, a test process that never
+ * loaded one. Zero is not a small allowance, it is a total outage that looks
+ * like a policy: a coach limit of 0 answers every single user `capReached`
+ * before the model is ever called, and a post limit of 0 refuses every post
+ * in the app. That exact failure has already shipped here once.
+ *
+ * No allowance is ever legitimately 0 or negative — that would mean "nobody
+ * may ever use this" — so anything outside the usable range degrades to the
+ * documented default instead of taking the feature down. Params that CAN be
+ * zero (`COACH_MIN_INSTANCES`) deliberately do not go through this.
+ */
+export function allowance(
+  param: {value(): number},
+  fallback: number,
+): number {
+  const value = param.value();
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
 /** docs/04 §7 — free tier gets 5 coach messages/day, premium 100 (fair use). */
 export const FREE_DAILY_COACH_MESSAGES = defineInt('FREE_DAILY_COACH_MESSAGES', {
-  default: 5,
+  default: ALLOWANCE_DEFAULTS.freeCoachMessages,
 });
 export const PREMIUM_DAILY_COACH_MESSAGES = defineInt(
   'PREMIUM_DAILY_COACH_MESSAGES',
-  {default: 100},
+  {default: ALLOWANCE_DEFAULTS.premiumCoachMessages},
 );
+
+/**
+ * Community posting (docs/12 §4.1). Posting used to be refused outright for a
+ * free account, which made the feature we call our moat read-only for exactly
+ * the people whose posts a subscriber is paying to read. It is an allowance
+ * now, not a wall.
+ *
+ * An SOS has its OWN allowance and never touches these. Two reasons, and both
+ * matter: nobody may be refused a call for help because they used their
+ * ordinary posts earlier, and an SOS pins to the top of the feed for an hour,
+ * so an unbounded one would be a pinning megaphone for whoever wanted it.
+ * Generous enough that no real crisis meets it; bounded enough that abuse does.
+ */
+export const FREE_DAILY_POSTS = defineInt('FREE_DAILY_POSTS', {
+  default: ALLOWANCE_DEFAULTS.freePosts,
+});
+export const PREMIUM_DAILY_POSTS = defineInt('PREMIUM_DAILY_POSTS', {
+  default: ALLOWANCE_DEFAULTS.premiumPosts,
+});
+export const DAILY_SOS_POSTS = defineInt('DAILY_SOS_POSTS', {
+  default: ALLOWANCE_DEFAULTS.sosPosts,
+});
+
+/**
+ * Every allowance read, each bound to its OWN default.
+ *
+ * `allowance(param, fallback)` takes the two separately, so nothing stops a
+ * call site pairing one allowance's param with another's default — the exact
+ * drift `ALLOWANCE_DEFAULTS` exists to prevent, reintroduced at the point of
+ * USE. Reading through here makes the pairing structural: there is one
+ * expression per allowance and no way to write a mismatched one.
+ *
+ * The params stay exported so tests can still `vi.spyOn(P, 'value')`.
+ */
+export const readAllowance = {
+  freeCoachMessages: (): number =>
+    allowance(FREE_DAILY_COACH_MESSAGES, ALLOWANCE_DEFAULTS.freeCoachMessages),
+  premiumCoachMessages: (): number =>
+    allowance(
+      PREMIUM_DAILY_COACH_MESSAGES,
+      ALLOWANCE_DEFAULTS.premiumCoachMessages,
+    ),
+  freePosts: (): number =>
+    allowance(FREE_DAILY_POSTS, ALLOWANCE_DEFAULTS.freePosts),
+  premiumPosts: (): number =>
+    allowance(PREMIUM_DAILY_POSTS, ALLOWANCE_DEFAULTS.premiumPosts),
+  sosPosts: (): number =>
+    allowance(DAILY_SOS_POSTS, ALLOWANCE_DEFAULTS.sosPosts),
+} as const;
 
 /**
  * Model routing (docs/05 §8). Flash-Lite class for free + moderation, a
@@ -105,20 +192,32 @@ export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
 });
 
 /**
- * Pre-monetization switch (founder decision, Aug 29 2026).
+ * Where the trusted tier comes from.
  *
- *   'ungated' — everyone is premium. RevenueCat is not wired yet and the app
- *               must work end-to-end with nothing locked.
- *   'mirror'  — the real behaviour: tier comes from users/{uid}.entitlement,
- *               written only by rcWebhook.
+ *   'mirror'  — the real behaviour, and the default since Sep 3 2026: tier
+ *               comes from `users/{uid}.entitlement`, written by `rcWebhook`
+ *               and by the app's post-purchase `refreshEntitlement`.
+ *   'ungated' — everyone is premium. What ran from Aug 29 to Sep 3 2026,
+ *               while RevenueCat was being wired and nothing could be bought.
+ *
+ * **The default is `mirror` deliberately, and it is the one param here whose
+ * default is a security decision rather than a convenience.** Every other
+ * param in this file fails toward "do less" when nothing supplies a value;
+ * this one used to default to `ungated`, which fails toward *giving the
+ * product away* — an unloaded `.env`, a new project, a misconfigured deploy,
+ * and every caller is silently premium with no error anywhere. `allowance()`
+ * below exists because of the mirror-image trap (a param resolving to 0 is a
+ * total outage wearing the costume of a policy); this is the same lesson
+ * pointing the other way.
  *
  * The gating code stays live and tested in both modes on purpose. Deleting it
- * now and re-adding it at billing time is how paywalls ship broken; flipping
- * one param is not. **Set this to 'mirror' the day RevenueCat goes live.**
+ * and re-adding it later is how paywalls ship broken; flipping one param is
+ * not — which is what makes `ungated` worth keeping as an escape hatch if the
+ * mirror is ever wrong in the direction that costs customers.
  */
 export const ENTITLEMENT_MODE = defineString('ENTITLEMENT_MODE', {
-  default: 'ungated',
-  description: "'ungated' (everyone premium, pre-launch) or 'mirror' (real entitlements).",
+  default: 'mirror',
+  description: "'mirror' (real entitlements) or 'ungated' (everyone premium).",
 });
 
 /** Kill-switch: flip to "true" to route all AI traffic to the cheap model. */

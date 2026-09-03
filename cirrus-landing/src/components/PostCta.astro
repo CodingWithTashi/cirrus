@@ -1,0 +1,99 @@
+---
+// The blog's conversion surface.
+//
+// Until now a post had exactly one CTA, at the very bottom: on
+// `easiest-way-to-quit-vaping` that is roughly 2,500 words down, which most
+// readers never reach. This card sits at the top of `.post-side`, which is
+// `position: sticky` from 58rem up — so a desktop reader has it in view for
+// the whole article, and a phone reader meets it before "Keep reading"
+// instead of after the last paragraph.
+//
+// Deliberately NOT injected mid-article: README's content rules say an article
+// is for reading and its only devices are the pull quote, the figure and the
+// table. Astro 7 takes no rehype plugins anyway, so a mid-body card would mean
+// rewriting the Markdown pipeline to break a rule we chose on purpose.
+import { SITE_TITLE } from '../consts';
+import { STORE_LIVE, playUrl, DOWNLOAD_URL } from '../lib/store';
+
+interface Props {
+  /** Post slug — becomes the campaign tag on the store link. */
+  slug: string;
+  /** This post's own angle; falls back to the generic line. */
+  angle?: string;
+}
+
+const { slug, angle } = Astro.props;
+
+const line =
+  angle ??
+  `${SITE_TITLE} counts your real puffs and tapers them down, at a pace you pick.`;
+---
+
+<aside class="post-cta" aria-labelledby="post-cta-h">
+  <p class="micro post-cta__eyebrow" id="post-cta-h">While you're here</p>
+  <p class="post-cta__line">{line}</p>
+
+  {
+    STORE_LIVE ? (
+      <>
+        <a
+          class="btn btn-primary post-cta__btn"
+          href={playUrl(`blog-${slug}`)}
+          rel="noopener"
+        >
+          Get it free on Google Play
+        </a>
+        {/* iOS is months out and roughly half of this site's readers are on
+            it. Sending them to an Android-only button with no alternative
+            wastes the exact audience the writing just earned. */}
+        <p class="micro post-cta__alt">
+          On iPhone? <a href={DOWNLOAD_URL}>Join the list</a> — one email when it lands.
+        </p>
+      </>
+    ) : (
+      <a class="btn btn-primary post-cta__btn" href={DOWNLOAD_URL}>
+        Get {SITE_TITLE}
+      </a>
+    )
+  }
+</aside>
+
+<style>
+  .post-cta {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.15rem 1.25rem;
+    background: var(--surface, transparent);
+  }
+
+  .post-cta__eyebrow {
+    margin: 0 0 0.45rem;
+    color: var(--volt-text, var(--muted));
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .post-cta__line {
+    margin: 0 0 0.9rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .post-cta__btn {
+    display: block;
+    text-align: center;
+  }
+
+  .post-cta__alt {
+    margin: 0.7rem 0 0;
+    color: var(--muted);
+  }
+
+  /* Single-column: the card sits between the article and "Keep reading", so it
+     needs the breathing room the sticky column gets from its own margin. */
+  @media (max-width: 57.999rem) {
+    .post-cta {
+      margin-top: clamp(40px, 7vw, 72px);
+    }
+  }
+</style>

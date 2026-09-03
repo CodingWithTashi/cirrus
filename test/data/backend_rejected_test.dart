@@ -68,10 +68,17 @@ void main() {
       );
     });
 
-    test('permission-denied is a rejection, never an outage', () {
+    test('permission-denied is passed through, not read as a rejection', () {
+      // It reads like App Check and used to be folded into
+      // `BackendRejectedException`. Exactly one callable raises it —
+      // `createPost`, for a free account whose post a subscription WOULD have
+      // let through — and that is the app's strongest upgrade door, not a
+      // refused build. Folding it meant `FirebaseCommunityRepository` never
+      // saw the code it switches on, so a free user out of posts got
+      // "couldn't post, tap to retry" on a retry that could never succeed.
       expect(
         mapCallableError(_Fx('permission-denied'), signedIn: true),
-        isA<BackendRejectedException>(),
+        isA<FirebaseFunctionsException>(),
       );
     });
 

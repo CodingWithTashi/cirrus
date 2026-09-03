@@ -760,15 +760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obRatingSubtitle => '30 seconds. Skippable. No hard feelings.';
 
   @override
-  String get obRatingBetaTester => 'BETA TESTER';
-
-  @override
-  String get obRatingQuote1 =>
-      '\"The panic button got me through week one. I\'d have caved on day 3 without it.\"';
-
-  @override
-  String get obRatingQuote2 =>
-      '\"First app that didn\'t talk to me like a doctor or my mom.\"';
+  String get obRatingQuoteBadge => 'REAL REVIEW';
 
   @override
   String get obRatingCta => 'Rate Cirrus';
@@ -887,7 +879,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Not spam. One nudge before your danger hours, one when you hit a milestone.';
+      'Not spam. One nudge before your danger hours, and one before your trial ends.';
 
   @override
   String get obNotifPreviewTime => 'Fri 9:54 PM';
@@ -900,7 +892,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obNotifBullet1 => 'Danger-hour heads-up (you set the hours)';
 
   @override
-  String get obNotifBullet2 => 'Streak + milestone celebrations';
+  String get obNotifBullet2 =>
+      'A heads-up before your trial ends — no surprise charges';
 
   @override
   String get obNotifBullet3 => 'Nothing else — no marketing, ever';
@@ -913,6 +906,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Go further with Premium.';
+
+  @override
+  String get paywallRevealLabel => 'YOUR PLAN';
 
   @override
   String get paywallFeatCoach => 'Unlimited AI coach that remembers your why';
@@ -1101,19 +1097,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Craving forecasts for the hours you usually reach for it.';
 
   @override
-  String get premiumFreeHistoryNote => 'Free shows your last 7 days.';
+  String premiumFreeHistoryNote(int days) {
+    return 'Free shows your last $days days.';
+  }
 
   @override
-  String get premiumPitchCompose =>
-      'Posting is part of Premium. Reading and reacting are always free — and so is an SOS.';
+  String premiumPitchCompose(int limit) {
+    return 'That\'s your post for today. Premium posts $limit times a day — and an SOS is always free.';
+  }
 
   @override
   String get premiumPitchPlan =>
       'A plan that adapts when you slip — tonight\'s adjustment, every night.';
 
   @override
-  String get premiumPitchHealth =>
-      'The full timeline, from two weeks to a year.';
+  String premiumPitchHealth(String from) {
+    return 'The rest of your timeline: from $from to a year.';
+  }
+
+  @override
+  String premiumPitchNudge(String hour) {
+    return 'A $hour spike is due. Premium forecasts your risky hours before they land.';
+  }
 
   @override
   String get freePlanTitle => 'Free gets you moving.';
@@ -1131,10 +1136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get freePlanFeat3 => '5 coach messages a day';
 
   @override
-  String get freePlanFeat4 => '1 Panic Button session a day';
+  String get freePlanFeat4 => 'Panic Button, any time you need it';
 
   @override
-  String get freePlanFeat5 => 'Community (read + react)';
+  String get freePlanFeat5 => 'Community — read, react, one post a day';
 
   @override
   String get freePlanUpgradeNote =>
@@ -1485,7 +1490,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get panicLoopCoachLocked => 'you\'ve used today\'s free AI session';
+  String get panicLoopCoachDaily =>
+      'Ember\'s here — this one uses a daily message';
 
   @override
   String get gameTitle => 'Crowd the craving out.';
@@ -1739,8 +1745,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachCapReached =>
-      'That\'s my 5 free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.';
+  String coachCapReached(int limit) {
+    return 'That\'s my $limit free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.';
+  }
+
+  @override
+  String coachCapReachedPremium(int limit) {
+    return 'That\'s $limit messages today — you\'ve really used me, and I\'m glad. I\'ll be back at midnight.';
+  }
 
   @override
   String get coachConnectionLost =>
@@ -2165,8 +2177,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Where-to-buy and for-sale talk isn\'t allowed here. Edit it and try again.';
 
   @override
-  String get communityDailyCapReached =>
-      'That\'s 3 posts today — the cap resets at midnight.';
+  String communityDailyCapReached(int limit) {
+    return 'That\'s $limit today — the counter resets at midnight.';
+  }
 
   @override
   String get communityTagRequired =>
@@ -2866,6 +2879,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'We never sell your data. No ad trackers. Ever.';
 
   @override
+  String get settingsWebsite => 'Website';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get settingsTermsOfUse => 'Terms of use';
+
+  @override
+  String get settingsSupport => 'Contact support';
+
+  @override
   String get settingsDeleteEverything => 'Delete everything';
 
   @override
@@ -2966,17 +2991,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'Your trial ends tomorrow';
-
-  @override
-  String get frameMapTitle => 'All 52 design frames';
-
-  @override
-  String get frameMapNote =>
-      'Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'These states go live with the backend — an in-memory app has no offline or server errors to show honestly.';
 
   @override
   String get seedPostWin30 =>

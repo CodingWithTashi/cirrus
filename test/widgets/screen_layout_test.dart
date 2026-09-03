@@ -7,7 +7,6 @@ import 'package:last_puff/features/auth/auth_screens.dart';
 import 'package:last_puff/features/coach/coach_screen.dart';
 import 'package:last_puff/features/coach/memories_screen.dart';
 import 'package:last_puff/features/community/community_screens.dart';
-import 'package:last_puff/features/frame_map/frame_map_screen.dart';
 import 'package:last_puff/features/health/health_screen.dart';
 import 'package:last_puff/features/day1/day1_screen.dart';
 import 'package:last_puff/features/home/home_screen.dart';
@@ -82,8 +81,6 @@ void main() {
       'ObRating',
     ])
       name: const OnboardingFlow(),
-    'FrameMap': const FrameMapScreen(),
-    'EdgeStates': const EdgeStatesPreviewScreen(),
     'Moderation': const ModerationScreen(),
     'CoachMemories': const CoachMemoriesScreen(),
     // The screen every new account lands on straight out of the paywall, and

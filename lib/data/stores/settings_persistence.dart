@@ -27,6 +27,7 @@ abstract final class SettingsPersistence {
   static const _trialReminderOn = 'settings.trialReminderOn';
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
+  static const _launchPaywallCount = 'settings.launchPaywallShownCount';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -51,6 +52,9 @@ abstract final class SettingsPersistence {
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
         launchPaywallShownDay: prefs.getString(_launchPaywallDay),
+        launchPaywallShownCount:
+            prefs.getInt(_launchPaywallCount) ??
+            defaults.launchPaywallShownCount,
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -72,6 +76,7 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
+      await prefs.setInt(_launchPaywallCount, state.launchPaywallShownCount);
       final day = state.launchPaywallShownDay;
       if (day == null) {
         await prefs.remove(_launchPaywallDay);

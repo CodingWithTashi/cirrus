@@ -111,7 +111,8 @@ PHASE D: PAYOFF        D1 Plan reveal → D2 Commitment (hold-to-commit) → D3 
 ### D3 — Rating ask ⭐ (their genius placement, our honest copy)
 - Trigger native StoreKit review prompt at THIS peak-motivation moment (before paywall, before anything can annoy).
 - Lead-in screen copy: "One quitter's review helps the next one find us. 10 seconds, huge karma." **No fake statistic.**
-- Show real beta-tester quotes only, labeled "Beta tester" until we have live reviews. Never stock-photo fake personas (clone's "Sarah, 29" = review-bomb risk).
+- Show real quotes only. Never stock-photo fake personas (clone's "Sarah, 29" = review-bomb risk).
+- > 🚨 **Unresolved as of Sep 3 2026 — `docs/08 §7 #29`, `S6-2`.** This rule said "real beta-tester quotes," and the beta cohort that would have supplied them **is descoped**. The `testimonials` collection `matchedTestimonials` reads is therefore empty, and `payoff_steps.dart:484` falls back to `obRatingQuote1`/`obRatingQuote2` — **two five-star reviews no human ever said**, on the screen immediately before the paywall. That is the exact failure this bullet was written to prevent, and it is currently what ships. Resolve before launch: cut the quote cards, hold them until real reviews exist, or source real consented quotes (the rows already carry a consent reference).
 
 ### D4 — Notification permission
 - Pre-permission screen: "Your coach texts you BEFORE your danger hours — not spam, backup." Preview bubble: "Fri 9:54 PM — heads up, Friday nights are your spike. Plan's ready. 💪"

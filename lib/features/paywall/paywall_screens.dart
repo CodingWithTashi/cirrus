@@ -22,7 +22,10 @@ import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../core/widgets/lp_charts.dart';
+import '../../domain/logic/plan_reveal.dart';
 import '../../domain/logic/billing_catalog.dart';
 import '../../domain/logic/pricing_math.dart';
 import '../../domain/models/models.dart';
@@ -46,22 +49,107 @@ class PaywallScreen extends ConsumerStatefulWidget {
   ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
 }
 
+/// What the paywall actually rendered. Not an A/B arm — an arm adds values
+/// here — but three genuinely different offers a person can be shown.
+const String _variantLive = 'd5_default';
+const String _variantFallback = 'd5_fallback';
+const String _variantLoading = 'd5_loading';
+
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   PlanPeriod _selected = PlanPeriod.yearly;
   bool _busy = false;
   bool _restoring = false;
+
+  /// The variant to report, set on the first build that knows whether the
+  /// store answered. Null means it never did.
+  String? _pendingVariant;
+
+  /// Whether `paywall_viewed` has actually gone out. Distinct from
+  /// [_pendingVariant] on purpose: the send is deferred a frame, and a pop
+  /// inside that frame would otherwise leave the view scheduled, unsent, and
+  /// silently skipped by both paths.
+  bool _viewSent = false;
+
+  /// A purchase completed, or the free path was taken on purpose. Either way
+  /// this screen did its job and leaving is not a dismissal.
+  bool _resolved = false;
+
+  /// Captured in [initState]: Riverpod forbids `ref` in `dispose`, and both
+  /// of this screen's closing events fire from there.
+  late final AnalyticsSink _analytics;
+
+  /// Where this reader was in their own quit when the paywall opened. Read
+  /// once, for the same reason — and it cannot meaningfully change while a
+  /// paywall is on screen. Null before a journey exists (the D5 paywall).
+  int? _planDay;
 
   bool get _fromOnboarding => ref.read(quitStoreProvider) == null;
 
   @override
   void initState() {
     super.initState();
-    // `variant` is the A/B slot docs/06 §3's paywall tests read. There is one
-    // layout today, so it is named rather than left blank — an empty string
-    // would make the first test's data indistinguishable from history.
-    ref
-        .read(analyticsProvider)
-        .paywallViewed('d5_default', source: widget.source);
+    _analytics = ref.read(analyticsProvider);
+    final journey = ref.read(quitStoreProvider);
+    _planDay = journey?.plan.dayNumber(ref.read(nowProvider)());
+  }
+
+  /// `paywall_viewed`, once, with what was actually on screen.
+  ///
+  /// Held back until the offering has resolved, because the variant is a fact
+  /// about the rendered page: a paywall showing the typed fallback prices
+  /// under their "prices unavailable" caption is a different offer from one
+  /// showing live store prices, it happens in production, and it converts
+  /// differently. The dimension used to be the constant `d5_default`, so every
+  /// chart cut by it had exactly one bucket.
+  ///
+  /// Fired from a post-frame callback, never from `build` itself: a sink can
+  /// reach a platform channel, and `build` has to stay free of side effects —
+  /// the same rule `LpPremiumGate` follows for `gate_shown`.
+  void _reportView({required bool live, required bool loading}) {
+    if (_pendingVariant != null || loading) return;
+    _pendingVariant = live ? _variantLive : _variantFallback;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sendView());
+  }
+
+  /// Sends the view exactly once, from whichever path gets there first.
+  ///
+  /// Touches no `ref`: [dispose] calls this too, and Riverpod forbids `ref`
+  /// there. Everything it needs was captured in [initState].
+  void _sendView() {
+    if (_viewSent) return;
+    _viewSent = true;
+    _analytics.paywallViewed(
+      // Never resolved means the store never answered — its own variant, not
+      // one of the other two.
+      _pendingVariant ?? _variantLoading,
+      source: widget.source,
+      planDay: _planDay,
+    );
+  }
+
+  @override
+  void dispose() {
+    // A paywall closed before the store ever answered is still a paywall
+    // somebody saw, and losing it would understate every door's denominator.
+    // `d5_loading` gets its own variant rather than being folded into either
+    // of the others: a spike in it means the store is slow, which is a
+    // conversion problem with a completely different fix.
+    //
+    // This also covers the narrow race the deferral opens: a pop inside the
+    // frame the send was queued for. `_sendView` is idempotent, so whichever
+    // of the two arrives first wins and the other is a no-op.
+    _sendView();
+    // Left without buying and without choosing Free. `purchase_cancelled`
+    // only ever fired once the STORE sheet had opened, so backing out of the
+    // paywall itself was invisible — and for the launch paywall, which nobody
+    // asked for, this is the number that says whether it is a door or a nag.
+    if (!_resolved) {
+      _analytics.paywallDismissed(
+        source: widget.source,
+        plan: _selected.name,
+      );
+    }
+    super.dispose();
   }
 
   /// The entitlement arrived while the paywall was up — a pending payment
@@ -75,6 +163,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     if (!mounted || _busy || _restoring) return;
     if (ModalRoute.of(context)?.isCurrent != true) return;
     final router = GoRouter.of(context);
+    // A restore, a renewal, a pending payment that settled: nothing left to
+    // sell, so this close is not an abandonment either.
+    _resolved = true;
     showLpSnack(context, context.l10n.paywallRestored);
     if (_fromOnboarding) {
       setState(() => _busy = true);
@@ -94,6 +185,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     // trial-start rate stays comparable with the pre-billing funnel. What the
     // sheet did is the `purchase_*` family, fired by the store. Once per tap:
     // a retry after a store failure re-runs the purchase, not the intent.
+    //
+    // Deliberately NOT `_resolved`: opening the sheet and backing out and then
+    // leaving IS a dismissal, and the pair (`purchase_cancelled` then
+    // `paywall_dismissed`) is what separates "tried and thought better of it"
+    // from "never engaged at all".
     ref.read(analyticsProvider).trialStarted(_selected.name);
     return _purchaseSelected();
   }
@@ -132,6 +228,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         setState(() => _busy = false);
         showLpSnack(context, l10n.paywallPurchasePending);
       case PurchaseCompleted():
+        // Bought. Leaving now is the screen finishing, not a dismissal.
+        _resolved = true;
         if (fromOnboarding) {
           await _finishOnboarding();
         } else {
@@ -216,6 +314,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     // so more honestly than an empty card list under a live disclosure.
     final live = offering != null && offering.plans.isNotEmpty;
     final loading = offeringAsync.isLoading && !live;
+    _reportView(live: live, loading: loading);
 
     BillingPlan? plan(PlanPeriod period) => offering?[period];
     // Only the plans the store actually offers get a card. A period missing
@@ -356,7 +455,16 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     }) {
       final selected = _selected == period;
       return PressScale(
-        onTap: () => setState(() => _selected = period),
+        onTap: () {
+          if (_selected == period) return;
+          setState(() => _selected = period);
+          // What people CONSIDER, as opposed to what they buy — the gap
+          // between the two is the whole question behind the price ladder,
+          // and `trial_started` only ever reported the winner.
+          ref
+              .read(analyticsProvider)
+              .planSelected(period.name, source: widget.source);
+        },
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -501,6 +609,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     const SizedBox(height: 4),
                     Text(subtitle, style: LpType.body13(lp.textSecondary)),
                     const SizedBox(height: 18),
+                    // Their own plan, above the generic list. This runs WITH
+                    // the Sep 1 decision that features out-rank pricing
+                    // (docs/09 #4), not against it: the order is now their
+                    // numbers, then what Premium adds, then the price.
+                    const _PlanRevealCard(),
                     feature(Icons.auto_awesome, l10n.paywallFeatCoach),
                     feature(Icons.bolt, l10n.paywallFeatPanic),
                     feature(Icons.forum_outlined, l10n.paywallFeatCommunity),
@@ -643,7 +756,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   LpTextButton(
                     l10n.paywallFreeLink,
                     size: 12,
-                    onTap: () => context.push(Routes.paywallFree),
+                    onTap: () {
+                      // Choosing Free on purpose is an answer, not an
+                      // abandonment; `free_continued` is its event.
+                      _resolved = true;
+                      context.push(Routes.paywallFree);
+                    },
                   ),
                 ],
               ),
@@ -662,6 +780,115 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 /// Copy about the offer, on the same footing as the CTA. The reminder beat is
 /// the day before the charge: that is when the on-device reminder fires, and
 /// its own copy says "ends tomorrow". The charge is the store's.
+/// The user's own plan, on the screen that asks them for money.
+///
+/// Onboarding step 16 computes a Freedom Day, a projected saving, the puffs a
+/// taper removes and the shape of the curve — then the paywall four screens
+/// later opened with six generic feature rows and a price, and none of it
+/// followed. This is the strongest thing the funnel knows about a person, and
+/// it was being dropped immediately before the ask.
+///
+/// Every figure comes from [PlanReveal], the same source `RevealStep` reads, so
+/// the two screens cannot quote different numbers at the same person.
+class _PlanRevealCard extends ConsumerWidget {
+  const _PlanRevealCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final locale = context.localeTag;
+
+    // A returning free user has a real journey. During onboarding the journey
+    // does not exist yet — it is created by `complete()` on this very screen —
+    // so the draft is the only source there is. The `??` is lazy, so a signed-in
+    // user never touches the onboarding provider at all.
+    final journey = ref.watch(quitStoreProvider);
+    final plan =
+        journey?.plan ?? ref.read(onboardingProvider.notifier).draftPlan();
+    final reveal = PlanReveal.of(plan, now: ref.read(nowProvider)());
+
+    // Nothing honest to show: the launch paywall can open before any journey
+    // or any answers exist. An empty state beats a Freedom Day derived from a
+    // baseline of zero, which would be inventing the user's own data.
+    if (reveal == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: LpCard(
+        radius: LpDimens.rCardLg,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.paywallRevealLabel,
+              style: LpType.caption11(
+                lp.voltText,
+                weight: FontWeight.w600,
+              ).copyWith(letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 8),
+            // Static, unlike the reveal screen's. The curve already drew itself
+            // once; replaying it here would read as decoration rather than as
+            // the plan they just committed to.
+            TaperCurveChart(samples: reveal.curve, height: 54, animate: false),
+            const SizedBox(height: 10),
+            Text(
+              l10n.obRevealMilestoneFreedom(
+                LpFormat.shortDate(reveal.freedomDate, locale),
+              ),
+              style: LpType.caption(lp.textPrimary, weight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                // Spend is a required onboarding answer, so this is present on
+                // every real path — but "$0 saved" is honest and useless, so
+                // the tile simply goes away rather than showing a zero.
+                if (reveal.hasSaving) ...[
+                  Expanded(
+                    child: _stat(
+                      context,
+                      LpFormat.money(reveal.projectedSaved, locale),
+                      l10n.obRevealSavedLabel,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: _stat(
+                    context,
+                    LpFormat.integer(reveal.puffsAvoided, locale),
+                    l10n.obRevealPuffsLabel,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String value, String label) {
+    final lp = context.lp;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: LpType.number(lp.voltText, size: 22)),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: LpType.caption11(lp.textSecondary),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
 class _TrialTimeline extends StatelessWidget {
   const _TrialTimeline({
     required this.chargePrice,

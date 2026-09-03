@@ -112,4 +112,7 @@ class _StubServerState implements ServerStateRepository {
 
   @override
   Future<WeeklyInsight?> latestInsight() async => _insight;
+
+  @override
+  Future<bool> refreshEntitlement() async => false;
 }

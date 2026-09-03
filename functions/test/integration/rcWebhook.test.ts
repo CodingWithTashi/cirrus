@@ -17,9 +17,11 @@
  * logic and skip the transport, the same way the other handler suites do.
  */
 import {EventEmitter} from 'node:events';
+import type {CallableRequest} from 'firebase-functions/v2/https';
 import {getAuth} from 'firebase-admin/auth';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {rcWebhook} from '../../src/handlers/rcWebhook';
+import {refreshEntitlement} from '../../src/handlers/refreshEntitlement';
 import {resetRevenueCatCaches} from '../../src/lib/revenuecat';
 import {
   RC_ACCEPT_SANDBOX,
@@ -516,6 +518,112 @@ describe('malformed events', () => {
     subscribers.set('alice', {tier: 'premium'});
     const res = await call(event({type: 'SOME_FUTURE_EVENT'}));
     expect(res.status).toBe(200);
+    expect((await entitlementOf('alice'))?.tier).toBe('premium');
+  });
+});
+
+/**
+ * `refreshEntitlement` — the app's own door to the same mirror.
+ *
+ * Everything above proves the webhook writes the right row. These prove the
+ * app can ask for that row to be written NOW, which is what closes the window
+ * between "the store sheet returned" and "the server agrees you paid". Under
+ * `ENTITLEMENT_MODE=mirror` that window is a paying customer being metered.
+ */
+describe('refreshEntitlement', () => {
+  const asUser = (uid = 'alice') =>
+    ({
+      data: {timeZone: 'America/Toronto', locale: 'en-CA'},
+      auth: {uid, token: {}},
+      rawRequest: {},
+      acceptsStreaming: false,
+    }) as unknown as CallableRequest<unknown>;
+
+  it('writes the mirror without waiting for a webhook', async () => {
+    subscribers.set('alice', {tier: 'premium'});
+    expect((await userDoc('alice').get()).exists).toBe(false);
+
+    const result = await refreshEntitlement.run(asUser());
+
+    expect(result).toEqual({tier: 'premium'});
+    const row = await entitlementOf('alice');
+    expect(row?.tier).toBe('premium');
+    expect(row?.plan).toBe('monthly');
+    // No event drove this, and the fields that describe one must say so
+    // rather than inherit a stale event's id from an earlier write.
+    expect(row?.lastEventId).toBeNull();
+    expect(row?.lastEventType).toBeNull();
+  });
+
+  it('mirrors a trial as a trial, not as premium', async () => {
+    subscribers.set('alice', {tier: 'trial'});
+    await refreshEntitlement.run(asUser());
+    expect((await entitlementOf('alice'))?.tier).toBe('trial');
+  });
+
+  it('answers free for a caller who has bought nothing', async () => {
+    subscribers.set('alice', {tier: 'free'});
+    const result = await refreshEntitlement.run(asUser());
+    expect(result).toEqual({tier: 'free'});
+    expect((await entitlementOf('alice'))?.tier).toBe('free');
+  });
+
+  it('reads only the record of the caller who asked', async () => {
+    // The request carries no id — the uid comes from the verified token — so
+    // there is no field to point at somebody else's subscription.
+    subscribers.set('alice', {tier: 'premium'});
+    subscribers.set('bob', {tier: 'free'});
+
+    await refreshEntitlement.run(asUser('bob'));
+
+    expect(fetchedIds).toEqual(['bob']);
+    expect((await entitlementOf('bob'))?.tier).toBe('free');
+    expect((await userDoc('alice').get()).exists).toBe(false);
+  });
+
+  it('refuses an unauthenticated caller', async () => {
+    await expect(
+      refreshEntitlement.run({
+        data: {},
+        rawRequest: {},
+        acceptsStreaming: false,
+      } as unknown as CallableRequest<unknown>),
+    ).rejects.toMatchObject({code: 'unauthenticated'});
+  });
+
+  it('throws `unavailable` when RevenueCat cannot be read — never a free row', async () => {
+    // The whole point: an unreadable snapshot is not evidence of anything.
+    // Writing `free` here would revoke a subscriber because a third party had
+    // a bad minute, and the app would show them the paywall they just paid at.
+    await expect(refreshEntitlement.run(asUser())).rejects.toMatchObject({
+      code: 'unavailable',
+    });
+    expect((await userDoc('alice').get()).exists).toBe(false);
+  });
+
+  it('never overwrites a newer snapshot', async () => {
+    // The app's refresh and the webhook race by design — both fire on the
+    // same purchase. Whichever READ later must win, whichever WRITES later.
+    subscribers.set('alice', {tier: 'premium'});
+    await refreshEntitlement.run(asUser());
+    await userDoc('alice').set(
+      {entitlement: {tier: 'premium', snapshotAt: Date.now() + 60_000}},
+      {merge: true},
+    );
+
+    subscribers.set('alice', {tier: 'free'});
+    const result = await refreshEntitlement.run(asUser());
+
+    expect(result).toEqual({tier: 'free'});
+    // The answer is honest about what the store said; the mirror keeps the
+    // newer row.
+    expect((await entitlementOf('alice'))?.tier).toBe('premium');
+  });
+
+  it('is idempotent — calling twice leaves one consistent row', async () => {
+    subscribers.set('alice', {tier: 'premium'});
+    await refreshEntitlement.run(asUser());
+    await refreshEntitlement.run(asUser());
     expect((await entitlementOf('alice'))?.tier).toBe('premium');
   });
 });

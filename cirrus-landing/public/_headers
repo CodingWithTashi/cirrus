@@ -52,3 +52,23 @@
 
 /apple-touch-icon.png
   Cache-Control: public, max-age=604800
+
+# Android App Links. Google's verifier fetches this over HTTPS and requires
+# `application/json`; Pages would otherwise serve a bare .json from a dot-
+# directory with a guessed type, and verification fails with no error anywhere
+# a developer would look — the links simply keep opening the browser.
+#
+# Two more things this file depends on, neither of them expressible here:
+#   1. The verifier does NOT follow redirects, and www.cirrusquit.com 301s to
+#      the apex — so the app's intent-filter declares the apex host ONLY.
+#   2. The app claims /download and /go/* and nothing else. An unscoped claim
+#      would make the in-app "Privacy" link re-open the app, and would hijack
+#      every shared blog URL away from the site.
+#
+# An hour, not a week: adding a fingerprint (a new signing key, a second app)
+# should reach Google quickly, and this file is fetched rarely enough that the
+# short TTL costs nothing.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+  Access-Control-Allow-Origin: *

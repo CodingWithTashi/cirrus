@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../domain/logic/allowances.dart';
 import '../../../domain/logic/community_rules.dart';
 import '../../../domain/logic/lp_pricing.dart';
 import '../../../domain/models/billing.dart';
@@ -183,6 +184,13 @@ class FakeServer {
   /// straight from the sign-in screen) persist a journey without an account.
   String _sessionOrGuest() => _sessionAccountId ??= _guestAccountId;
 
+  /// Who a read should attribute to, WITHOUT opening a guest session.
+  ///
+  /// [_sessionOrGuest] binds one as a side effect (`??=`), which is right for
+  /// a write — a guest posting needs an account — and wrong for a count: a
+  /// read must not change who this server thinks is signed in.
+  String get _readerId => _sessionAccountId ?? _guestAccountId;
+
   Map<String, dynamic>? journeyJsonForCurrentSession() {
     final id = _sessionAccountId;
     return id == null ? null : _copy(_journeys[id]);
@@ -219,25 +227,41 @@ class FakeServer {
   /// "moderates" it the way production does — synchronously, so the status
   /// a client reads back is the verdict, never the optimistic guess.
   String insertPost(Map<String, dynamic> post) {
+    final stored = _copy(post)!..remove('isMine');
+    final id = stored['id'] as String;
+    // Idempotent on the client's id, as `createPost` is on `clientId`: a
+    // retry of a send that did land does not mint a second post — and,
+    // because this is checked FIRST exactly as the callable does, it does not
+    // spend a second allowance either.
+    if (posts.any((p) => p['id'] == id)) return id;
+
     // Refused at the door, as `createPost` does with the same list: a slur
-    // never lands and never claims a slot (docs/09 issue 6).
+    // never lands and never claims a slot (docs/09 issue 6). Ahead of the
+    // allowance, so the answer to a slur costs nobody a post.
     if (CommunityRules.check(post['text'] as String? ?? '') ==
         CommunityRuleViolation.slur) {
       throw const ContentRefusedException(ContentRefusal.rules);
     }
-    // Posting is Premium; an SOS never is (docs/01 §10, docs/07 §8). The same
-    // rule `createPost` enforces with `tierFor`, read here from the fake's
-    // own entitlement row.
+
+    // Posting is an ALLOWANCE, not a wall (docs/12 §4.1) — the same rule
+    // `createPost` enforces through `tierFor` and `claimDailyPost`, read here
+    // from the fake's own entitlement row and its own posts.
+    //
+    // An SOS spends a SEPARATE allowance: nobody is refused a call for help
+    // because they used their ordinary posts, and a post that pins to the top
+    // of the feed for an hour still cannot be spammed without limit.
+    final sos = post['tag'] == 'sos';
     final tier = entitlementForSession()?['tier'];
     final entitled = tier == 'premium' || tier == 'trial';
-    if (!entitled && post['tag'] != 'sos') {
-      throw const ContentRefusedException(ContentRefusal.premium);
+    final limit = LpAllowances.postsForKind(premium: entitled, sos: sos);
+    if (_myPostsToday(sos: sos) >= limit) {
+      // The same two codes the callable answers with, and for the same
+      // reason: only a refusal a subscription would have prevented gets the
+      // upgrade-shaped one the app turns into a door.
+      throw ContentRefusedException(
+        !sos && !entitled ? ContentRefusal.premium : ContentRefusal.dailyCap,
+      );
     }
-    final stored = _copy(post)!..remove('isMine');
-    final id = stored['id'] as String;
-    // Idempotent on the client's id, as `createPost` is on `clientId`: a
-    // retry of a send that did land does not mint a second post.
-    if (posts.any((p) => p['id'] == id)) return id;
     // `held`, not `pending`: this is the verdict, not the wait for one. The
     // real mirror says the same (MIRROR_STATUS in moderatePost.ts).
     stored['status'] = CommunityRules.violates(stored['text'] as String? ?? '')
@@ -246,6 +270,34 @@ class FakeServer {
     _postAuthors[id] = _sessionOrGuest();
     posts.insert(0, stored);
     return id;
+  }
+
+  /// The caller's own posts stored today in one allowance bucket.
+  ///
+  /// Counted off the stored posts rather than a separate counter, because the
+  /// fake's whole contract is that a read reflects what was written. A post
+  /// refused at the door never landed, so it never counts — which is the same
+  /// guarantee `claimDailyPost` gives by only incrementing on success.
+  int _myPostsToday({required bool sos}) {
+    final me = _readerId;
+    final now = DateTime.now();
+    var count = 0;
+    for (final p in posts) {
+      if (_postAuthors[p['id']] != me) continue;
+      if ((p['tag'] == 'sos') != sos) continue;
+      final raw = p['createdAt'];
+      final at = raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
+      // Local calendar day, never a 24h window — the same rollover
+      // `dayKeyIn` gives the server.
+      if (at == null ||
+          at.year != now.year ||
+          at.month != now.month ||
+          at.day != now.day) {
+        continue;
+      }
+      count++;
+    }
+    return count;
   }
 
   /// `posts/{id}.status` as the backend has it, null when unknown.

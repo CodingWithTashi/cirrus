@@ -5,6 +5,7 @@ standfirst: There is no clinical cut-off, and every site quoting you a number is
 publishedAt: 2026-08-10
 tags: ['puff count', 'research', '#puffcount', '#vapingfacts', '#quitvaping', '#cirrusquit']
 draft: false
+ctaAngle: "Stop guessing your number. A few ordinary days of counting is all it takes to see it."
 medical: true
 author: Gurmey
 authorTitle: Content Writer

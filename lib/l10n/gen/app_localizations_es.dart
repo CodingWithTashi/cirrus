@@ -765,15 +765,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get obRatingSubtitle => '30 segundos. Se puede saltar. Sin rencores.';
 
   @override
-  String get obRatingBetaTester => 'BETA TESTER';
-
-  @override
-  String get obRatingQuote1 =>
-      '\"El botón de pánico me sacó de la primera semana. Habría caído el día 3 sin él.\"';
-
-  @override
-  String get obRatingQuote2 =>
-      '\"La primera app que no me habla como un médico o como mi madre.\"';
+  String get obRatingQuoteBadge => 'RESEÑA REAL';
 
   @override
   String get obRatingCta => 'Valorar Cirrus';
@@ -893,7 +885,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Un aviso antes de tus horas de peligro y otro cuando logras un hito.';
+      'Nada de spam. Un aviso antes de tus horas de peligro y otro antes de que acabe tu prueba.';
 
   @override
   String get obNotifPreviewTime => 'Vie 21:54';
@@ -906,7 +898,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get obNotifBullet1 => 'Aviso de horas de peligro (tú pones las horas)';
 
   @override
-  String get obNotifBullet2 => 'Celebraciones de rachas e hitos';
+  String get obNotifBullet2 =>
+      'Un aviso antes de que acabe tu prueba: sin cargos sorpresa';
 
   @override
   String get obNotifBullet3 => 'Nada más: cero marketing, nunca';
@@ -919,6 +912,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallTitleUpgrade => 'Llega más lejos con Premium.';
+
+  @override
+  String get paywallRevealLabel => 'TU PLAN';
 
   @override
   String get paywallFeatCoach => 'Coach de IA ilimitado que recuerda tu porqué';
@@ -1108,20 +1104,28 @@ class AppLocalizationsEs extends AppLocalizations {
       'Previsiones de antojos para las horas en que sueles recurrir a él.';
 
   @override
-  String get premiumFreeHistoryNote =>
-      'El plan Gratis muestra tus últimos 7 días.';
+  String premiumFreeHistoryNote(int days) {
+    return 'Gratis muestra tus últimos $days días.';
+  }
 
   @override
-  String get premiumPitchCompose =>
-      'Publicar forma parte de Premium. Leer y reaccionar siempre es gratis — y un SOS también.';
+  String premiumPitchCompose(int limit) {
+    return 'Esa era tu publicación de hoy. Premium publica $limit veces al día, y un SOS siempre es gratis.';
+  }
 
   @override
   String get premiumPitchPlan =>
       'Un plan que se adapta cuando resbalas — el ajuste de esta noche, cada noche.';
 
   @override
-  String get premiumPitchHealth =>
-      'La línea de tiempo completa, de dos semanas a un año.';
+  String premiumPitchHealth(String from) {
+    return 'El resto de tu línea temporal: desde $from hasta un año.';
+  }
+
+  @override
+  String premiumPitchNudge(String hour) {
+    return 'Tu pico de las $hour está al caer. Premium predice tus horas de riesgo antes de que lleguen.';
+  }
 
   @override
   String get freePlanTitle => 'Gratis ya te pone en marcha.';
@@ -1140,10 +1144,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get freePlanFeat3 => '5 mensajes de coach al día';
 
   @override
-  String get freePlanFeat4 => '1 sesión de Botón de pánico al día';
+  String get freePlanFeat4 => 'Botón de pánico, siempre que lo necesites';
 
   @override
-  String get freePlanFeat5 => 'Comunidad (leer + reaccionar)';
+  String get freePlanFeat5 =>
+      'Comunidad: leer, reaccionar y una publicación al día';
 
   @override
   String get freePlanUpgradeNote =>
@@ -1496,7 +1501,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get panicLoopCoachLocked => 'ya usaste tu sesión de IA gratis de hoy';
+  String get panicLoopCoachDaily =>
+      'Ember está aquí: esto usa un mensaje del día';
 
   @override
   String get gameTitle => 'Quítale espacio al antojo.';
@@ -1751,8 +1757,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get coachCapReached =>
-      'Esos son mis 5 mensajes gratis de hoy — vuelvo a medianoche. ¿Me quieres 24/7? Eso es Premium.';
+  String coachCapReached(int limit) {
+    return 'Esos son mis $limit mensajes gratis de hoy — vuelvo a medianoche. ¿Me quieres 24/7? Eso es Premium.';
+  }
+
+  @override
+  String coachCapReachedPremium(int limit) {
+    return 'Son $limit mensajes hoy — me has exprimido, y me alegro. Vuelvo a medianoche.';
+  }
 
   @override
   String get coachConnectionLost =>
@@ -2179,8 +2191,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Aquí no se permite hablar de dónde comprar ni de ventas. Edítalo e inténtalo de nuevo.';
 
   @override
-  String get communityDailyCapReached =>
-      'Ya van 3 publicaciones hoy: el límite se reinicia a medianoche.';
+  String communityDailyCapReached(int limit) {
+    return 'Ya van $limit hoy: el límite se reinicia a medianoche.';
+  }
 
   @override
   String get communityTagRequired =>
@@ -2885,6 +2898,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Nunca vendemos tus datos. Sin rastreadores. Jamás.';
 
   @override
+  String get settingsWebsite => 'Sitio web';
+
+  @override
+  String get settingsPrivacyPolicy => 'Política de privacidad';
+
+  @override
+  String get settingsTermsOfUse => 'Términos de uso';
+
+  @override
+  String get settingsSupport => 'Contactar con soporte';
+
+  @override
   String get settingsDeleteEverything => 'Borrarlo todo';
 
   @override
@@ -2986,17 +3011,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'Tu prueba termina mañana';
-
-  @override
-  String get frameMapTitle => 'Los 52 frames del diseño';
-
-  @override
-  String get frameMapNote =>
-      'Cada frame de los cuatro handoffs, a un toque. Las filas cargan el viaje demo o las respuestas del quiz según haga falta.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'Estos estados se activan con el backend — una app en memoria no tiene errores de red que mostrar con honestidad.';
 
   @override
   String get seedPostWin30 =>

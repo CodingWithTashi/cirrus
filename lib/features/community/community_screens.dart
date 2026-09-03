@@ -8,7 +8,6 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
-import '../../core/widgets/lp_states.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
@@ -16,10 +15,12 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
+import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
-import '../../data/stores/community_store.dart' show CommunityStore, FeedStatus;
-import '../../domain/logic/community_rules.dart';
+import '../../data/stores/community_store.dart' show FeedStatus;
 import '../../data/stores/providers.dart';
+import '../../domain/logic/allowances.dart';
+import '../../domain/logic/community_rules.dart';
 import '../../domain/models/models.dart';
 
 /// Resolves seeded demo content to localized copy; user posts are raw text.
@@ -459,6 +460,22 @@ class _PostMenu extends ConsumerWidget {
   }
 }
 
+/// Why the composer is refusing to send, which decides both the words and how
+/// they look. A spent allowance is not a rule violation and must never wear
+/// the red styling of one.
+enum _BlockerTone {
+  /// The text breaks a community rule. Final, and nobody's tier changes it.
+  rule,
+
+  /// The allowance is spent and a subscription would raise it — the one case
+  /// that carries a door.
+  upgrade,
+
+  /// The allowance is spent and nothing is for sale that would help: a
+  /// subscriber at three, or anyone at the SOS ceiling.
+  spent,
+}
+
 /// Frame 44 — composer: tag required, kindness line persistent, always
 /// anonymous, day count auto-attached.
 class ComposerScreen extends ConsumerStatefulWidget {
@@ -476,12 +493,26 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   final _text = TextEditingController();
   late PostTag? _tag = widget.initialTag;
 
+  /// The allowance this post would spend, and how much of it is gone.
+  ///
   /// Watched for the rebuild; the count itself lives on the notifier, which
-  /// knows which of today's posts never claimed a server slot.
-  bool _capReached(WidgetRef ref) {
+  /// knows which of today's posts never claimed a server slot. An SOS reads a
+  /// different bucket entirely (docs/12 §4.1) — using your ordinary posts must
+  /// never grey out the control somebody in trouble needs.
+  ///
+  /// A hint, never the verdict: the server counts too, and its answer is the
+  /// one that decides. This exists so the refusal happens under the text with
+  /// the words still there to edit, rather than as "not published" after the
+  /// composer has already closed (docs/09 issue 6).
+  ({int used, int limit}) _allowance(WidgetRef ref, {required bool sos}) {
     ref.watch(communityStoreProvider);
-    return ref.read(communityStoreProvider.notifier).myPostsToday >=
-        CommunityStore.dailyPostCap;
+    return (
+      used: ref.read(communityStoreProvider.notifier).myPostsToday(sos: sos),
+      limit: LpAllowances.postsForKind(
+        premium: ref.watch(isPremiumProvider),
+        sos: sos,
+      ),
+    );
   }
 
   @override
@@ -497,21 +528,49 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     final journey = ref.watch(quitStoreProvider);
     // Refused before the send, under the text, with the words still there
     // to edit — not "not published" after the pop (docs/09 issue 6). The
-    // server runs the same prefilter and the same cap at the door.
-    // Posting is Premium; an SOS never is (docs/01 §10, docs/07 §8). Named
-    // here, under the text, with the door beside it — the server refuses the
-    // same post with `permission-denied` for a client that skips this.
-    final premiumBlocked =
-        !ref.watch(isPremiumProvider) && _tag != null && _tag != PostTag.sos;
-    final blocker = switch (CommunityRules.check(_text.text)) {
-      CommunityRuleViolation.slur => l10n.communityRuleSlur,
-      CommunityRuleViolation.sourcing => l10n.communityRuleSourcing,
-      null => premiumBlocked
-          ? l10n.premiumPitchCompose
-          : _capReached(ref)
-          ? l10n.communityDailyCapReached
-          : null,
-    };
+    // server runs the same prefilter and the same allowance at the door.
+    //
+    // Posting is an ALLOWANCE now, not a wall (docs/12 §4.1): a free account
+    // gets one ordinary post a day and a subscriber three, and an SOS is
+    // refused for neither tier and spends its own. So the blocker only
+    // appears once the allowance is actually spent, and only THEN does it
+    // carry a door — and only when a subscription would genuinely have let
+    // this post through, which is exactly what the server decides too.
+    final premium = ref.watch(isPremiumProvider);
+    // No tag yet reads the ORDINARY bucket, which is what an untagged draft
+    // will almost always become — so someone who has already posted today
+    // learns it on open, not after typing. Choosing SOS then visibly clears
+    // the blocker, because that allowance is a different one and is still
+    // there. Both halves of that are true, which is why it can be shown early.
+    final sos = _tag == PostTag.sos;
+    final spent = _allowance(ref, sos: sos);
+    final outOfPosts = spent.used >= spent.limit;
+    final upgradeHelps = outOfPosts && !premium && !sos;
+    // Text and tone decided together, in one switch, so they can never
+    // disagree: a spent allowance is not an error and must not wear the red
+    // "you broke a rule" styling — it is "come back tomorrow", and for a free
+    // account it is an offer.
+    final ({String text, _BlockerTone tone})? blocked =
+        switch (CommunityRules.check(_text.text)) {
+          CommunityRuleViolation.slur => (
+            text: l10n.communityRuleSlur,
+            tone: _BlockerTone.rule,
+          ),
+          CommunityRuleViolation.sourcing => (
+            text: l10n.communityRuleSourcing,
+            tone: _BlockerTone.rule,
+          ),
+          null when upgradeHelps => (
+            text: l10n.premiumPitchCompose(LpAllowances.premiumPosts),
+            tone: _BlockerTone.upgrade,
+          ),
+          null when outOfPosts => (
+            text: l10n.communityDailyCapReached(spent.limit),
+            tone: _BlockerTone.spent,
+          ),
+          null => null,
+        };
+    final blocker = blocked?.text;
     final canPost =
         _text.text.trim().isNotEmpty && _tag != null && blocker == null;
     final isSos = _tag == PostTag.sos;
@@ -646,33 +705,44 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                           ),
                         ),
                       ),
-                      if (blocker != null) ...[
+                      if (blocked != null) ...[
                         const SizedBox(height: 8),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
-                              premiumBlocked
-                                  ? Icons.lock_outline
-                                  : Icons.block_rounded,
+                              switch (blocked.tone) {
+                                _BlockerTone.rule => Icons.block_rounded,
+                                _BlockerTone.upgrade => Icons.lock_outline,
+                                // Nothing is wrong and nothing is locked —
+                                // the allowance simply resets at midnight.
+                                _BlockerTone.spent => Icons.schedule_rounded,
+                              },
                               size: 14,
-                              color: premiumBlocked
-                                  ? lp.voltText
-                                  : lp.dangerText,
+                              color: switch (blocked.tone) {
+                                _BlockerTone.rule => lp.dangerText,
+                                _BlockerTone.upgrade => lp.voltText,
+                                _BlockerTone.spent => lp.textSecondary,
+                              },
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                blocker,
+                                blocked.text,
                                 style: LpType.caption11(
-                                  premiumBlocked ? lp.textBody : lp.dangerText,
+                                  blocked.tone == _BlockerTone.rule
+                                      ? lp.dangerText
+                                      : lp.textBody,
                                   weight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        if (premiumBlocked)
+                        // Only where a subscription would actually change the
+                        // answer. A subscriber who has used all three, or
+                        // anyone at the SOS ceiling, has nothing to buy.
+                        if (blocked.tone == _BlockerTone.upgrade)
                           Align(
                             alignment: Alignment.centerLeft,
                             child: LpTextButton(

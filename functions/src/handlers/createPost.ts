@@ -14,7 +14,7 @@
 import {createHash} from 'node:crypto';
 import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {readAllowance, REGION} from '../config';
 import {prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
@@ -22,12 +22,16 @@ import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {claimDailyPost, tierFor} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
 
-/** docs/03 §9: text <= 500 chars, one tag required, 3 posts/day. */
+/**
+ * docs/03 §9: text <= 500 chars, one tag required. The per-day allowance is
+ * no longer a constant — it depends on tier and on whether the post is an SOS
+ * (docs/12 §4.1), so it lives in `config.ts` where it can be tuned without a
+ * code change.
+ */
 const MAX_POST_CHARS = 500;
 
 /** The app's local post id (`p<micros>`); anything else gets a fresh id. */
 const CLIENT_ID = /^[A-Za-z0-9_-]{1,64}$/;
-const DAILY_POST_CAP = 3;
 
 export const createPost = onCall(
   {region: REGION, enforceAppCheck: true, memory: '256MiB'},
@@ -60,22 +64,33 @@ export const createPost = onCall(
       : postsCol().doc();
     if (keyed && (await post.get()).exists) return {postId: post.id};
 
-    // Posting is Premium (docs/01 §10: free reads and reacts). An SOS is
-    // never refused for this — nobody is paywalled mid-crisis (docs/07 §8).
-    // Before the prefilter and before the cap, so a refused post never
-    // claims a slot. The composer says the same thing before the send; this
-    // is the backstop for a client that did not.
-    if (tag !== 'sos' && (await tierFor(caller.uid)) === 'free') {
-      throw new HttpsError('permission-denied', 'Posting is part of Premium.');
-    }
-
     // Refused at the door, not after the write: the same deterministic list
     // `moderatePost` runs first. A slur never lands in Firestore, never
     // claims a cap slot, and its author hears "no" while the composer is
     // still open rather than "not published" later (docs/09 issue 6).
+    //
+    // Ahead of the tier read as well as the cap, so the answer to a slur is
+    // the same for everyone and costs nobody an allowance.
     if (prefilter(text)?.action === 'block') {
       throw new HttpsError('invalid-argument', 'That breaks the community rules.');
     }
+
+    // Posting is an ALLOWANCE, not a wall (docs/12 §4.1). It used to be
+    // refused outright for a free account, which left the feature we call our
+    // moat read-only for exactly the people a subscriber pays to read — while
+    // replying stayed free, so the line was arbitrary as well as costly.
+    //
+    // An SOS spends a different allowance and is refused for neither tier:
+    // nobody is told they are out of posts while asking for help, and nobody
+    // can spam a post that pins to the top of the feed for an hour either.
+    const sos = tag === 'sos';
+    const tier = sos ? null : await tierFor(caller.uid);
+    const premiumLimit = readAllowance.premiumPosts();
+    const limit = sos
+      ? readAllowance.sosPosts()
+      : tier === 'free'
+        ? readAllowance.freePosts()
+        : premiumLimit;
 
     // Transactional, not count-then-write. The aggregate-query version let
     // five concurrent requests all observe "0 posted" and all proceed, which
@@ -84,9 +99,19 @@ export const createPost = onCall(
     const claim = await claimDailyPost(
       caller.uid,
       dayKeyIn(new Date(), caller.timeZone),
-      DAILY_POST_CAP,
+      limit,
+      sos ? 'sosUsage' : 'postUsage',
     );
     if (!claim.allowed) {
+      // Two different refusals, because they need two different answers on
+      // screen. A free account that a subscription WOULD have let through
+      // gets the upgrade-shaped code the client turns into a door; anyone a
+      // subscription would not help gets "come back tomorrow" and no door.
+      // The client cannot make this call itself — it would have to trust its
+      // own tier, which is the one thing it must never be trusted about.
+      if (!sos && tier === 'free' && premiumLimit > limit) {
+        throw new HttpsError('permission-denied', 'Premium posts more often.');
+      }
       throw new HttpsError('resource-exhausted', 'Daily post limit reached.');
     }
 

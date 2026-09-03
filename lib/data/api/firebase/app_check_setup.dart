@@ -46,6 +46,36 @@ const appCheckDebugToken = String.fromEnvironment('LP_APPCHECK_DEBUG_TOKEN');
 /// Activates App Check for the current build.
 Future<void> activateAppCheck() async {
   const token = appCheckDebugToken;
+  // The define was supplied, and this build cannot use it.
+  //
+  // This is the trap that keeps costing a session, because the command LOOKS
+  // right: `flutter build apk --release --dart-define-from-file=.dart_defines.json`
+  // passes the pinned token exactly the way `./tool/device.ps1` does — and
+  // then `kDebugMode` is false, the token is read into a constant nothing
+  // consults, and the build attests with Play Integrity instead.
+  //
+  // Play Integrity cannot vouch for an APK that Google has never seen. A
+  // locally built, sideloaded release gets no valid token, the SDK sends
+  // something that is not a JWT, and the backend answers every single
+  // callable with `Decoding App Check token failed` — coach, panic,
+  // community, testimonials, user sync, all at once, all looking like
+  // unrelated bugs.
+  //
+  // Printed in EVERY build mode, because the mode is the thing being warned
+  // about.
+  if (!kDebugMode && token.isNotEmpty) {
+    debugPrint(
+      '========================================================\n'
+      'app-check: LP_APPCHECK_DEBUG_TOKEN was passed to a NON-DEBUG build '
+      'and is being IGNORED.\n'
+      'This build attests with Play Integrity / App Attest, which cannot '
+      'verify a sideloaded APK - so EVERY callable will be rejected.\n'
+      'On-device testing: ./tool/device.ps1 (add -Analytics for the funnel).\n'
+      'Testing a real release build: install from the Play internal testing '
+      'track - sideloading cannot pass, whatever defines you add.\n'
+      '========================================================',
+    );
+  }
   if (kDebugMode && token.isEmpty) {
     // The exact configuration that produces a comprehensively broken app, so
     // it says so BEFORE the first callable rather than one layer down wearing
@@ -86,23 +116,38 @@ Future<void> activateAppCheck() async {
 /// that into one line in logcat, at launch, naming the fix — the same trick
 /// `aiCoachChat` uses when it logs the live model catalogue on a 404.
 ///
-/// Debug-only and best-effort: it must never delay or break a launch.
+/// Runs in **every** build mode, and that is the point.
+///
+/// It used to start with `if (!kDebugMode) return;`, which meant the one
+/// diagnostic written to catch a missing App Check token was switched off in
+/// exactly the build that fails most confusingly. A release APK built locally
+/// and sideloaded cannot obtain a token at all, so it failed every callable in
+/// total silence — no warning at launch, and four layers down an error that
+/// reads like the network. Debug builds have `activateAppCheck`'s own loud
+/// notice; release builds had nothing until here.
+///
+/// Best-effort: never delays a launch, never throws, one line either way. Safe
+/// in a store build too — it is a log line, and a real user whose attestation
+/// is failing is worth being able to diagnose.
 Future<void> logAppCheckStatus() async {
-  if (!kDebugMode) return;
   try {
     final token = await FirebaseAppCheck.instance.getToken();
     if (token == null || token.isEmpty) {
       debugPrint(
         'app-check: NO TOKEN — every callable will fail as `unauthenticated`. '
-        'Register this build: see lib/data/api/firebase/app_check_setup.dart',
+        '${kDebugMode ? 'Register this build: see lib/data/api/firebase/app_check_setup.dart' : 'This is a non-debug build: Play Integrity / App Attest could not '
+              'vouch for it. A sideloaded release APK never can — install from '
+              'the Play internal testing track, or use ./tool/device.ps1.'}',
       );
       return;
     }
-    final pinned = appCheckDebugToken.isNotEmpty;
-    debugPrint(
-      'app-check: token acquired (${pinned ? 'pinned debug secret' : 'rotating debug secret — '
-                'pass --dart-define=LP_APPCHECK_DEBUG_TOKEN to stop the rotation'}).',
-    );
+    final how = !kDebugMode
+        ? 'Play Integrity / App Attest'
+        : appCheckDebugToken.isNotEmpty
+        ? 'pinned debug secret'
+        : 'rotating debug secret — pass --dart-define=LP_APPCHECK_DEBUG_TOKEN '
+              'to stop the rotation';
+    debugPrint('app-check: token acquired ($how).');
   } on Object catch (error) {
     debugPrint(
       'app-check: token request failed — $error. Every callable will be '

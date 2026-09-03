@@ -13,7 +13,7 @@ The internal project name is LastPuff; the store name is Cirrus.
 | `functions/` | Cloud Functions (2nd gen) on project `alastpuff` — coach, moderation, billing mirror, crons |
 | `firestore.rules`, `firestore.indexes.json` | Firestore security rules and indexes |
 | `cirrus-landing/` | The marketing site (Astro on Cloudflare Pages, cirrusquit.com) |
-| `hosting/` | Firebase Hosting: the `/privacy` and `/terms` pages the app currently links to |
+| `hosting/` | Firebase Hosting: the retired legal pages. The `hosting.redirects` block in `firebase.json` 301s `/privacy` and `/terms` to `cirrusquit.com`, and that redirect outlives the files — every build ever installed still asks for the old URL. **Those two paths only, never a `/**` catch-all:** Firebase emails password-reset links to `/__/auth/action` on this same site, and a blanket redirect risks sending every reset click to the marketing home page |
 | `docs/` | Product specs (`01`–`07`, frozen), the build board (`08`), the QA round (`09`), the build log (`10`), the AI pipeline explainer (`11`), and the design handoff |
 | `tool/device.ps1` | Build, install and run on a device against real Firebase with the right defines |
 
@@ -26,7 +26,7 @@ flutter test                             # unit + widget suites
 ./tool/device.ps1                        # run on a device against real Firebase (Windows)
 ./tool/device.ps1 -Test                  # the on-device end-to-end suites
 flutter build appbundle --release --dart-define-from-file=.dart_defines.json
-
+ flutter build appbundle --release 
 cd functions
 npm install                              # first run
 npm run verify                           # typecheck + lint + tests — the deploy gate

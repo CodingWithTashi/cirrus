@@ -1412,23 +1412,11 @@ abstract class AppLocalizations {
   /// **'30 seconds. Skippable. No hard feelings.'**
   String get obRatingSubtitle;
 
-  /// No description provided for @obRatingBetaTester.
+  /// No description provided for @obRatingQuoteBadge.
   ///
   /// In en, this message translates to:
-  /// **'BETA TESTER'**
-  String get obRatingBetaTester;
-
-  /// No description provided for @obRatingQuote1.
-  ///
-  /// In en, this message translates to:
-  /// **'\"The panic button got me through week one. I\'d have caved on day 3 without it.\"'**
-  String get obRatingQuote1;
-
-  /// No description provided for @obRatingQuote2.
-  ///
-  /// In en, this message translates to:
-  /// **'\"First app that didn\'t talk to me like a doctor or my mom.\"'**
-  String get obRatingQuote2;
+  /// **'REAL REVIEW'**
+  String get obRatingQuoteBadge;
 
   /// No description provided for @obRatingCta.
   ///
@@ -1631,7 +1619,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Not spam. One nudge before your danger hours, one when you hit a milestone.'**
+  /// **'Not spam. One nudge before your danger hours, and one before your trial ends.'**
   String get obNotifSubtitle;
 
   /// No description provided for @obNotifPreviewTime.
@@ -1655,7 +1643,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet2.
   ///
   /// In en, this message translates to:
-  /// **'Streak + milestone celebrations'**
+  /// **'A heads-up before your trial ends — no surprise charges'**
   String get obNotifBullet2;
 
   /// No description provided for @obNotifBullet3.
@@ -1681,6 +1669,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go further with Premium.'**
   String get paywallTitleUpgrade;
+
+  /// No description provided for @paywallRevealLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR PLAN'**
+  String get paywallRevealLabel;
 
   /// No description provided for @paywallFeatCoach.
   ///
@@ -1972,14 +1966,14 @@ abstract class AppLocalizations {
   /// No description provided for @premiumFreeHistoryNote.
   ///
   /// In en, this message translates to:
-  /// **'Free shows your last 7 days.'**
-  String get premiumFreeHistoryNote;
+  /// **'Free shows your last {days} days.'**
+  String premiumFreeHistoryNote(int days);
 
   /// No description provided for @premiumPitchCompose.
   ///
   /// In en, this message translates to:
-  /// **'Posting is part of Premium. Reading and reacting are always free — and so is an SOS.'**
-  String get premiumPitchCompose;
+  /// **'That\'s your post for today. Premium posts {limit} times a day — and an SOS is always free.'**
+  String premiumPitchCompose(int limit);
 
   /// No description provided for @premiumPitchPlan.
   ///
@@ -1990,8 +1984,14 @@ abstract class AppLocalizations {
   /// No description provided for @premiumPitchHealth.
   ///
   /// In en, this message translates to:
-  /// **'The full timeline, from two weeks to a year.'**
-  String get premiumPitchHealth;
+  /// **'The rest of your timeline: from {from} to a year.'**
+  String premiumPitchHealth(String from);
+
+  /// No description provided for @premiumPitchNudge.
+  ///
+  /// In en, this message translates to:
+  /// **'A {hour} spike is due. Premium forecasts your risky hours before they land.'**
+  String premiumPitchNudge(String hour);
 
   /// No description provided for @freePlanTitle.
   ///
@@ -2026,13 +2026,13 @@ abstract class AppLocalizations {
   /// No description provided for @freePlanFeat4.
   ///
   /// In en, this message translates to:
-  /// **'1 Panic Button session a day'**
+  /// **'Panic Button, any time you need it'**
   String get freePlanFeat4;
 
   /// No description provided for @freePlanFeat5.
   ///
   /// In en, this message translates to:
-  /// **'Community (read + react)'**
+  /// **'Community — read, react, one post a day'**
   String get freePlanFeat5;
 
   /// No description provided for @freePlanUpgradeNote.
@@ -2587,11 +2587,11 @@ abstract class AppLocalizations {
   /// **'it knows this is your {hour} stress pattern'**
   String panicLoopCoachSub(String hour);
 
-  /// No description provided for @panicLoopCoachLocked.
+  /// No description provided for @panicLoopCoachDaily.
   ///
   /// In en, this message translates to:
-  /// **'you\'ve used today\'s free AI session'**
-  String get panicLoopCoachLocked;
+  /// **'Ember\'s here — this one uses a daily message'**
+  String get panicLoopCoachDaily;
 
   /// No description provided for @gameTitle.
   ///
@@ -2932,8 +2932,14 @@ abstract class AppLocalizations {
   /// No description provided for @coachCapReached.
   ///
   /// In en, this message translates to:
-  /// **'That\'s my 5 free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.'**
-  String get coachCapReached;
+  /// **'That\'s my {limit} free messages for today — I\'ll be back at midnight. Want me around 24/7? That\'s what Premium is.'**
+  String coachCapReached(int limit);
+
+  /// No description provided for @coachCapReachedPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s {limit} messages today — you\'ve really used me, and I\'m glad. I\'ll be back at midnight.'**
+  String coachCapReachedPremium(int limit);
 
   /// No description provided for @coachConnectionLost.
   ///
@@ -3604,8 +3610,8 @@ abstract class AppLocalizations {
   /// No description provided for @communityDailyCapReached.
   ///
   /// In en, this message translates to:
-  /// **'That\'s 3 posts today — the cap resets at midnight.'**
-  String get communityDailyCapReached;
+  /// **'That\'s {limit} today — the counter resets at midnight.'**
+  String communityDailyCapReached(int limit);
 
   /// No description provided for @communityTagRequired.
   ///
@@ -4771,6 +4777,30 @@ abstract class AppLocalizations {
   /// **'We never sell your data. No ad trackers. Ever.'**
   String get settingsPrivacyNote;
 
+  /// No description provided for @settingsWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get settingsWebsite;
+
+  /// No description provided for @settingsPrivacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsPrivacyPolicy;
+
+  /// No description provided for @settingsTermsOfUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get settingsTermsOfUse;
+
+  /// No description provided for @settingsSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get settingsSupport;
+
   /// No description provided for @settingsDeleteEverything.
   ///
   /// In en, this message translates to:
@@ -4950,24 +4980,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your trial ends tomorrow'**
   String get trialEndingNotifTitle;
-
-  /// No description provided for @frameMapTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'All 52 design frames'**
-  String get frameMapTitle;
-
-  /// No description provided for @frameMapNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.'**
-  String get frameMapNote;
-
-  /// No description provided for @frameMapEdgeNote.
-  ///
-  /// In en, this message translates to:
-  /// **'These states go live with the backend — an in-memory app has no offline or server errors to show honestly.'**
-  String get frameMapEdgeNote;
 
   /// No description provided for @seedPostWin30.
   ///

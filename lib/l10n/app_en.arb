@@ -459,9 +459,7 @@
   "obCommitPrivacy": "🔒 We never sell your data. No ad trackers. Ever.",
   "obRatingTitle": "One quitter's review helps the next one find us.",
   "obRatingSubtitle": "30 seconds. Skippable. No hard feelings.",
-  "obRatingBetaTester": "BETA TESTER",
-  "obRatingQuote1": "\"The panic button got me through week one. I'd have caved on day 3 without it.\"",
-  "obRatingQuote2": "\"First app that didn't talk to me like a doctor or my mom.\"",
+  "obRatingQuoteBadge": "REAL REVIEW",
   "obRatingCta": "Rate Cirrus",
   "obCoachNameTitle": "Meet your coach.",
   "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
@@ -530,15 +528,16 @@
   "obWhyWordsCta": "That's why",
   "obWhyWordsSkip": "Skip this",
   "obNotifTitle": "Backup, exactly when you cave.",
-  "obNotifSubtitle": "Not spam. One nudge before your danger hours, one when you hit a milestone.",
+  "obNotifSubtitle": "Not spam. One nudge before your danger hours, and one before your trial ends.",
   "obNotifPreviewTime": "Fri 9:54 PM",
   "obNotifPreviewBody": "heads up — Friday nights are your spike. Plan's ready 💪",
   "obNotifBullet1": "Danger-hour heads-up (you set the hours)",
-  "obNotifBullet2": "Streak + milestone celebrations",
+  "obNotifBullet2": "A heads-up before your trial ends — no surprise charges",
   "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitle": "Your plan is ready.",
   "paywallTitleUpgrade": "Go further with Premium.",
+  "paywallRevealLabel": "YOUR PLAN",
   "paywallFeatCoach": "Unlimited AI coach that remembers your why",
   "paywallFeatPanic": "Panic button: a 60-second craving killer",
   "paywallFeatPlan": "A plan that adapts when you slip",
@@ -681,17 +680,46 @@
   "premiumLockCta": "See Premium",
   "premiumPitchInsight": "Your weekly report, written from your own numbers.",
   "premiumPitchForecast": "Craving forecasts for the hours you usually reach for it.",
-  "premiumFreeHistoryNote": "Free shows your last 7 days.",
-  "premiumPitchCompose": "Posting is part of Premium. Reading and reacting are always free — and so is an SOS.",
+  "premiumFreeHistoryNote": "Free shows your last {days} days.",
+  "@premiumFreeHistoryNote": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "premiumPitchCompose": "That's your post for today. Premium posts {limit} times a day — and an SOS is always free.",
+  "@premiumPitchCompose": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "premiumPitchPlan": "A plan that adapts when you slip — tonight's adjustment, every night.",
-  "premiumPitchHealth": "The full timeline, from two weeks to a year.",
+  "premiumPitchHealth": "The rest of your timeline: from {from} to a year.",
+  "@premiumPitchHealth": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumPitchNudge": "A {hour} spike is due. Premium forecasts your risky hours before they land.",
+  "@premiumPitchNudge": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
   "freePlanTitle": "Free gets you moving.",
   "freePlanSubtitle": "Yours forever. No countdown, no nagging.",
   "freePlanFeat1": "Puff log + streaks",
   "freePlanFeat2": "Money-saved ticker",
   "freePlanFeat3": "5 coach messages a day",
-  "freePlanFeat4": "1 Panic Button session a day",
-  "freePlanFeat5": "Community (read + react)",
+  "freePlanFeat4": "Panic Button, any time you need it",
+  "freePlanFeat5": "Community — read, react, one post a day",
   "freePlanUpgradeNote": "Upgrade any time — your streak and history come with you.",
   "freePlanCta": "Start with Free",
   "winbackBadge": "ONE-TIME FOUNDING OFFER",
@@ -939,7 +967,7 @@
       }
     }
   },
-  "panicLoopCoachLocked": "you've used today's free AI session",
+  "panicLoopCoachDaily": "Ember's here — this one uses a daily message",
   "gameTitle": "Crowd the craving out.",
   "gameTimeLeft": "{seconds}s",
   "@gameTimeLeft": {
@@ -1107,7 +1135,22 @@
       }
     }
   },
-  "coachCapReached": "That's my 5 free messages for today — I'll be back at midnight. Want me around 24/7? That's what Premium is.",
+  "coachCapReached": "That's my {limit} free messages for today — I'll be back at midnight. Want me around 24/7? That's what Premium is.",
+  "@coachCapReached": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "coachCapReachedPremium": "That's {limit} messages today — you've really used me, and I'm glad. I'll be back at midnight.",
+  "@coachCapReachedPremium": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "coachConnectionLost": "Signal dropped mid-thought 😅 I'm still right here — say that again once you're back online?",
   "coachBackendRejected": "Okay, that's on our end — the server didn't recognise this app, so I never got your message. Not your connection, not you. We're on it.",
   "errorOfflineBanner": "offline — logs still count, we'll sync later",
@@ -1463,7 +1506,14 @@
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
   "communityRuleSlur": "This can't be posted — slurs and hate aren't allowed here.",
   "communityRuleSourcing": "Where-to-buy and for-sale talk isn't allowed here. Edit it and try again.",
-  "communityDailyCapReached": "That's 3 posts today — the cap resets at midnight.",
+  "communityDailyCapReached": "That's {limit} today — the counter resets at midnight.",
+  "@communityDailyCapReached": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "communityTagRequired": "Pick a tag — it routes your post to the right people.",
   "communitySosBanner": "🛡️ {count} people had your back",
   "@communitySosBanner": {
@@ -1979,6 +2029,10 @@
   },
   "settingsPrivacy": "Privacy",
   "settingsPrivacyNote": "We never sell your data. No ad trackers. Ever.",
+  "settingsWebsite": "Website",
+  "settingsPrivacyPolicy": "Privacy policy",
+  "settingsTermsOfUse": "Terms of use",
+  "settingsSupport": "Contact support",
   "settingsDeleteEverything": "Delete everything",
   "settingsDeleteConfirmTitle": "Delete everything?",
   "settingsDeleteConfirmBody": "Your plan, logs, streak, and community posts — gone for good. This is the one button we can't undo.",
@@ -2030,9 +2084,6 @@
     }
   },
   "trialEndingNotifTitle": "Your trial ends tomorrow",
-  "frameMapTitle": "All 52 design frames",
-  "frameMapNote": "Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.",
-  "frameMapEdgeNote": "These states go live with the backend — an in-memory app has no offline or server errors to show honestly.",
   "seedPostWin30": "FREEDOM DAY. 30 days, zero puffs the last week. The panic button carried me through weekends. If you're on day 2 and dying — it genuinely gets easier around day 8.",
   "seedPostSos": "outside the gas station. wallet in hand. someone talk me out of this",
   "seedPostDay1": "threw mine in the lake. probably bad for the lake. day 1 starts now",

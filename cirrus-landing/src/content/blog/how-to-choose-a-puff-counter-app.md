@@ -5,6 +5,7 @@ standfirst: Most vape trackers count puffs and stop there. Five things worth che
 publishedAt: 2026-07-24
 tags: ['puff count', 'quitting vaping', '#puffcounter', '#quitvapingapp', '#lastpuff', '#cirrusquit']
 draft: false
+ctaAngle: "An app that resets you to day one after one bad night punishes the moment you most need it."
 medical: true
 author: Gurmey
 authorTitle: Content Writer

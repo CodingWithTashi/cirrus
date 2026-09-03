@@ -5,6 +5,7 @@ standfirst: The number on the box is a laboratory figure, not a promise. Here is
 publishedAt: 2026-08-01
 tags: ['puff count', 'vape safety', '#disposablevape', '#puffcount', '#vapesafety', '#cirrusquit']
 draft: false
+ctaAngle: "The number on the box is a lab figure. Yours is the one that decides the plan."
 medical: true
 author: Gurmey
 authorTitle: Content Writer

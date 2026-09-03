@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
+import '../../domain/logic/allowances.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import 'providers.dart';
@@ -54,7 +56,15 @@ class CoachState {
 /// [CoachRepository] (scripted fake today, Gemini later — docs/04); this store
 /// only manages the thread, the typing beat, and the free-tier counter.
 class CoachStore extends Notifier<CoachState> {
-  static const int freeDailyCap = 5;
+  /// Mirrors of the server's allowances, and **fallbacks, never authority**:
+  /// the server sends what it actually enforced with every reply
+  /// (`messagesLeft`, and `args.limit` on the cap) and that number wins
+  /// wherever it exists. These cover the first message of a session, before
+  /// the wire has said anything, and a stored message that predates the
+  /// field — rendering "0 messages" there would be worse than the documented
+  /// cap. See [LpAllowances].
+  static const int freeDailyCap = LpAllowances.freeCoachMessages;
+  static const int premiumDailyCap = LpAllowances.premiumCoachMessages;
 
   int _idCounter = 0;
   bool Function() _alive = () => false;
@@ -265,6 +275,29 @@ class CoachStore extends Notifier<CoachState> {
         ],
       );
       return;
+    }
+
+    // The wall, reported where the user actually met it: the reply that says
+    // so. Not from the pre-send `capped` guess — that reads a local counter
+    // which resets on launch and never rolls over at midnight, so it fires on
+    // turns the server happily answers and stays silent on turns it refuses.
+    //
+    // `args['limit']` is the server's own allowance (`aiCoachChat` sends it
+    // with the template), and at the cap `used` equals it by definition.
+    if (done.template == CoachTemplate.capReached) {
+      final limit = done.args['limit'];
+      final cap = limit is int ? limit : null;
+      // The enforcing side's own word on which allowance this was, falling
+      // back to what the client believes when the wire did not say. `null`
+      // there means "an older backend did not tell us", NOT "free" — reading
+      // it as free would file a subscriber who had just spent a hundred
+      // messages under the free tier's wall.
+      final premium = done.isFreeTier == null
+          ? ref.read(isPremiumProvider)
+          : !done.isFreeTier!;
+      ref
+          .read(analyticsProvider)
+          .limitReached(LpLimit.coach, premium: premium, used: cap, limit: cap);
     }
 
     // The envelope is authoritative — it carries the args, the week card, the

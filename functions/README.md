@@ -118,11 +118,15 @@ firebase deploy --only functions
 
 ### Before the first production deploy
 
-- [ ] **Flip `ENTITLEMENT_MODE=mirror`** in `.env.alastpuff` — only once the
-      RevenueCat-enabled client is the live build. Earlier makes every user free
-      with no way to pay; later leaves the coach unmetered.
-- [ ] `RC_ACCEPT_SANDBOX=true` stays on through beta (license testers and
-      TestFlight are all sandbox); the mirror records `environment` either way.
+- [x] **`ENTITLEMENT_MODE=mirror`** — flipped Sep 3 2026 (docs/10 §18). Until
+      then `tierFor()` returned `premium` for every caller, so every limit in
+      `.env.alastpuff` was inert and no user could be given a reason to pay.
+      **The param default in `config.ts` is now `mirror` too**, so an unloaded
+      `.env` fails toward charging rather than toward giving the app away.
+- [ ] `RC_ACCEPT_SANDBOX=true` stays on while sandbox purchases are still being
+      verified (Play license testers, TestFlight); the mirror records
+      `environment` either way. **Turn it off before the public build** — with
+      it on, anyone who can make a sandbox purchase gets a real entitlement.
 
 - [ ] **Enable App Check** (Play Integrity + App Attest) and register the apps.
       Every callable sets `enforceAppCheck: true`; without App Check registered,

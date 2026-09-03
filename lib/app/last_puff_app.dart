@@ -235,6 +235,11 @@ class _PushSyncState extends ConsumerState<_PushSync> {
   final _subs = <StreamSubscription<Object?>>[];
 
   /// Destinations a push is allowed to ask for. See [PushService.routeFor].
+  ///
+  /// `Routes.paywall` here is the app's TWELFTH paywall door and the only
+  /// untagged one: it arrived bare, so the route builder's `'direct'` default
+  /// applied and a push-driven paywall was indistinguishable in the funnel
+  /// from the debug frame map's. [taggedPushRoute] fixes that at the door.
   static const _allowedRoutes = {
     Routes.community,
     Routes.insight,
@@ -290,7 +295,7 @@ class _PushSyncState extends ConsumerState<_PushSync> {
     // No route, or one we do not accept: opening the app is still the right
     // outcome, so this is deliberately silent rather than an error.
     if (route == null || !mounted) return;
-    ref.read(routerProvider).go(route);
+    ref.read(routerProvider).go(taggedPushRoute(route));
   }
 
   @override
@@ -303,4 +308,21 @@ class _PushSyncState extends ConsumerState<_PushSync> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// Stamps `source=push` on a paywall a notification opened.
+///
+/// `paywall_viewed` reads `?source=`, and the route builder defaults a missing
+/// one to `direct` — which is also what the debug frame map reports, so a
+/// push-driven paywall could not be told apart from it. `lp_events.dart` has
+/// documented a `push` source all along; nothing ever passed one.
+///
+/// A source the SERVER already put on the route wins: the payload is how a
+/// campaign names itself, and this must not overwrite that.
+String taggedPushRoute(String route) {
+  final uri = Uri.tryParse(route);
+  if (uri == null) return route;
+  if (uri.path != Routes.paywall) return route;
+  if ((uri.queryParameters['source'] ?? '').isNotEmpty) return route;
+  return Routes.paywallFrom('push');
 }

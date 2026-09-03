@@ -8,6 +8,7 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../data/stores/providers.dart';
 import '../utils/l10n_ext.dart';
 import 'lp_buttons.dart';
@@ -29,7 +30,7 @@ import 'press_scale.dart';
 /// Layout note: a `Stack` with a positioned overlay, never `IntrinsicHeight`
 /// around a blurred child — positioned children are excluded from intrinsic
 /// sizing and get bounded constraints (see the Health screen gotcha).
-class LpPremiumGate extends ConsumerWidget {
+class LpPremiumGate extends ConsumerStatefulWidget {
   const LpPremiumGate({
     super.key,
     required this.source,
@@ -63,27 +64,82 @@ class LpPremiumGate extends ConsumerWidget {
   final Alignment lockAlignment;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final gated = child;
+  ConsumerState<LpPremiumGate> createState() => _LpPremiumGateState();
+}
+
+class _LpPremiumGateState extends ConsumerState<LpPremiumGate> {
+  bool _reported = false;
+
+  /// Where this reader is in their own quit, or null before a journey exists.
+  ///
+  /// Read, never watched: it is a dimension on an event that fires once, and
+  /// watching it would rebuild every gate in the app on every puff tap.
+  int? get _planDay {
+    final journey = ref.read(quitStoreProvider);
+    if (journey == null) return null;
+    return journey.plan.dayNumber(ref.read(nowProvider)());
+  }
+
+  /// Reports that this door was put in front of someone, once per mount.
+  ///
+  /// Without it the funnel can only see doors that were *tapped*
+  /// (`paywall_viewed` fires from the tap), so a gate nobody opens is
+  /// indistinguishable from a gate nobody ever saw — and those are different
+  /// problems with opposite fixes.
+  ///
+  /// Honest about what it counts: "this gate built", not "this gate entered
+  /// the viewport". A gate below the fold in a scrolling column still counts.
+  /// True visibility would need a detector on every one of them; built-versus-
+  /// tapped is the ratio actually worth having, and this is a good enough
+  /// denominator for it.
+  ///
+  /// Consequence for reading the dashboard: compare a door to ITSELF over
+  /// time. The level of `gate_tapped/gate_shown` is not comparable across
+  /// doors of different placement, because the denominators are inflated by
+  /// different unknown amounts.
+  ///
+  /// Deferred a frame because `build` must stay free of side effects and a
+  /// sink can reach a platform channel.
+  void _reportShown() {
+    if (_reported) return;
+    _reported = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(analyticsProvider)
+          .gateShown(widget.source, planDay: _planDay);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gated = widget.child;
     if (ref.watch(isPremiumProvider)) return gated ?? const SizedBox.shrink();
-    final lock = _LockCard(source: source, pitch: pitch, compact: compact);
+
+    _reportShown();
+
+    final lock = _LockCard(
+      source: widget.source,
+      pitch: widget.pitch,
+      compact: widget.compact,
+    );
     if (gated == null) return lock;
     // Both children are non-positioned on purpose: the Stack then sizes to
     // the taller of the two, so a lock card over a short surface (the
     // trigger-hours heatmap) grows the region instead of overflowing it.
     return Stack(
-      alignment: lockAlignment,
+      alignment: widget.lockAlignment,
       children: [
         // The real thing, out of reach but not out of sight. Absorbing taps
         // here is what keeps a blurred button from being a working button.
         AbsorbPointer(
           child: Opacity(
             opacity: 0.55,
-            child: blurSigma > 0
+            child: widget.blurSigma > 0
                 ? ImageFiltered(
                     imageFilter: ImageFilter.blur(
-                      sigmaX: blurSigma,
-                      sigmaY: blurSigma,
+                      sigmaX: widget.blurSigma,
+                      sigmaY: widget.blurSigma,
                     ),
                     child: gated,
                   )
@@ -96,7 +152,7 @@ class LpPremiumGate extends ConsumerWidget {
   }
 }
 
-class _LockCard extends StatelessWidget {
+class _LockCard extends ConsumerWidget {
   const _LockCard({
     required this.source,
     required this.pitch,
@@ -107,12 +163,20 @@ class _LockCard extends StatelessWidget {
   final String pitch;
   final bool compact;
 
+  /// One door with two targets — the whole card, and the button inside it.
+  /// Both report before navigating, so `gate_tapped` and the `paywall_viewed`
+  /// that follows always arrive as a pair whichever one was pressed.
+  void _open(BuildContext context, WidgetRef ref) {
+    ref.read(analyticsProvider).gateTapped(source);
+    context.push(Routes.paywallFrom(source));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
     return PressScale(
-      onTap: () => context.push(Routes.paywallFrom(source)),
+      onTap: () => _open(context, ref),
       child: Container(
         margin: const EdgeInsets.all(16),
         padding: EdgeInsets.symmetric(
@@ -158,7 +222,7 @@ class _LockCard extends StatelessWidget {
               height: compact ? 40 : 46,
               fontSize: compact ? 14 : 15,
               glow: false,
-              onTap: () => context.push(Routes.paywallFrom(source)),
+              onTap: () => _open(context, ref),
             ),
           ],
         ),

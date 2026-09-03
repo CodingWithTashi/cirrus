@@ -126,7 +126,7 @@ Copy note: adapted from smoking-cessation literature; all cards labeled "based o
 - **SOS flow:** posting SOS auto-notifies user's buddy + last 5 people they interacted with; reply composer opens with kindness prompt; after 60 min author gets "23 people had your back."
 - **Moderation pipeline:** every post/reply → `moderatePost` Function → Gemini classification (allow / flag / block) against policy: no vape brand praise or sourcing, no minors content, no self-harm encouragement (self-harm *disclosure* → allow + auto-reply with resources), no harassment, no medical claims. Blocked = never visible; flagged = visible + queued for founder review (daily).
 - **User tools (App Store mandatory):** report (3 reports auto-hide pending review), block user (mutual invisibility), delete own content.
-- **Empty-feed cold start:** seed with founder's own quit-journey posts + beta testers; "Day 1" auto-prompt nudges every new user to post once (investment + content flywheel).
+- **Empty-feed cold start:** seed with the founder's own quit-journey posts; "Day 1" auto-prompt nudges every new user to post once (investment + content flywheel). *(Revised Sep 3 2026 — the "+ beta testers" half of this is descoped with the cohort, `docs/08 §7 #29`. Founder posts are now the only seed, so day-one users land in a thinner feed than this section assumes: `S3-12`.)*
 
 ---
 

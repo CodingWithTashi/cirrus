@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -278,18 +277,6 @@ class SettingsScreen extends ConsumerWidget {
               value: languageValue(),
               onTap: () => _showLanguageSheet(context, ref),
             ),
-            // Debug builds only. The frame map is a developer navigator: it
-            // opens every screen in the app, and for anyone without a journey
-            // it seeds the demo day-12 fixture — which then syncs to Firestore
-            // like any other mutation. Shipping that two taps from Settings
-            // put a stranger's fake progress on a real account.
-            if (kDebugMode)
-              row(
-                emoji: '🗺️',
-                label: l10n.frameMapTitle,
-                value: '',
-                onTap: () => context.push(Routes.frames),
-              ),
             // Founder-only. `isModeratorProvider` reads the signed token's
             // `admin` claim, so a non-admin never sees this row and a client
             // that forced the route would still be refused by the callables.
@@ -300,8 +287,43 @@ class SettingsScreen extends ConsumerWidget {
                 value: '',
                 onTap: () => context.push(Routes.moderation),
               ),
-            // Support used to live here and only showed a snack; there is no
-            // support channel yet. Restore Purchases is back above, real.
+            // The app used to be an island: no way to reach the site, the
+            // policy, the terms or a person from anywhere inside it. Support
+            // used to sit here and only show a snack, so it was deleted — this
+            // one opens a real mail app AND prints the address underneath, so a
+            // device with no mail client still leaves the reader somewhere to
+            // write. A row that can only fail silently is worse than no row.
+            row(
+              emoji: '🌐',
+              label: l10n.settingsWebsite,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.website).ignore(),
+            ),
+            row(
+              emoji: '🔒',
+              label: l10n.settingsPrivacyPolicy,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.privacy).ignore(),
+            ),
+            row(
+              emoji: '📄',
+              label: l10n.settingsTermsOfUse,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.terms).ignore(),
+            ),
+            row(
+              emoji: '✉️',
+              label: l10n.settingsSupport,
+              value: '',
+              onTap: () => LpLinks.open(LpLinks.support).ignore(),
+              below: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  LpLinks.supportEmail,
+                  style: LpType.caption(lp.textSecondary),
+                ),
+              ),
+            ),
             const SizedBox(height: 10),
             Center(
               child: LpTextButton(

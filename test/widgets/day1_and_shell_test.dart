@@ -19,8 +19,13 @@ import '../helpers.dart';
 /// second session. Both are driven here through the real router, since the
 /// interesting behaviour in both is navigation.
 void main() {
-  Future<ProviderContainer> pumpApp(WidgetTester tester) async {
-    final container = ProviderContainer(overrides: fastBackendOverrides());
+  Future<ProviderContainer> pumpApp(
+    WidgetTester tester, {
+    RecordingAnalytics? analytics,
+  }) async {
+    final container = ProviderContainer(
+      overrides: fastBackendOverrides(analytics: analytics),
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -41,8 +46,11 @@ void main() {
   });
 
   group('Day 1 checklist', () {
-    Future<ProviderContainer> openDay1(WidgetTester tester) async {
-      final container = await pumpApp(tester);
+    Future<ProviderContainer> openDay1(
+      WidgetTester tester, {
+      RecordingAnalytics? analytics,
+    }) async {
+      final container = await pumpApp(tester, analytics: analytics);
       // The seeded demo journey is day 12 with all three tasks already done,
       // which is the right fixture for every other screen and the wrong one
       // for this: clear them so the checklist starts where a real day 1 does.
@@ -54,6 +62,42 @@ void main() {
       await tester.pumpAndSettle();
       return container;
     }
+
+    testWidgets('an untouched list reports one view; a re-entry reports none', (
+      tester,
+    ) async {
+      // `day1_viewed` is the denominator of install→activation, and it used to
+      // fire on every mount. This screen is remounted after each task —
+      // `Day1TourStore.complete()` ends in `go(Routes.day1)` — so someone who
+      // finished all three emitted four views and someone who abandoned at the
+      // list emitted one. The ratio it exists to produce would have FALLEN as
+      // activation improved.
+      final analytics = RecordingAnalytics();
+      final container = await openDay1(tester, analytics: analytics);
+
+      int views() => analytics.names.where((n) => n == 'day1_viewed').length;
+      expect(views(), 1);
+
+      // Drive the REAL walkthrough, because only that remounts the screen.
+      // Starting a task sets `running`, which suspends the redirect that
+      // otherwise pins a day-one account to /day1 — so the screen genuinely
+      // unmounts on the way to Home, and `complete()`'s `go(Routes.day1)`
+      // genuinely rebuilds it. Navigating to Home without starting the tour
+      // just bounces off the redirect and reuses the element, which is why
+      // that version of this test passed against the bug.
+      container.read(day1TourProvider.notifier).start(Day1TourStep.logPuff);
+      container.read(routerProvider).go(Routes.home);
+      await tester.pumpAndSettle();
+
+      container.read(day1TourProvider.notifier).complete(Day1TourStep.logPuff);
+      await tester.pumpAndSettle();
+
+      expect(
+        views(),
+        1,
+        reason: 'a return to a part-done checklist is not a new view',
+      );
+    });
 
     testWidgets('opens with nothing done and all three moves offered', (
       tester,

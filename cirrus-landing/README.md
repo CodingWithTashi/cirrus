@@ -198,10 +198,49 @@ needs to break out, give it `max-width: none` — never a `100vw` width, because
 `vw` includes the scrollbar and the figure ends up a few pixels wider than the
 viewport, then gets silently clipped by `body { overflow-x: hidden }`.
 
-**Post CTAs are the waitlist, not store buttons.** There is no store listing yet
-(`PLAY_STORE_URL` is empty), and a download button that goes nowhere is the
-exact failure mode the app's own rules ban. The end-of-post form tags its
-signups `blog-<slug>`, which is what tells you a post is converting.
+**Post CTAs go to `/download`, never to `play.google.com`.** Markdown cannot read
+`PLAY_STORE_URL`, so a store link written into a post goes stale silently — two
+of them already did, pointing at the listing before it was public. `/download`
+is the indirection: one page that stays correct whether the store is open or
+not, and the only place besides `src/lib/store.ts` that knows the store URL.
+The end-of-post form tags its signups `blog-<slug>`, which is what tells you a
+post is converting.
+
+**The waitlist did not retire when Android shipped — it became the iPhone list.**
+About half of this site's readers are on iOS and that build is months away.
+`/download` shows the Play button *and* an iOS signup; the home hero
+deliberately still leads with the waitlist.
+
+## App Links
+
+`public/.well-known/assetlinks.json` is what lets `cirrusquit.com` links open the
+Android app. It carries two SHA-256 fingerprints — the Play App Signing key
+(what Play-installed builds are signed with) and the upload key (what internal
+testing and local release builds are signed with) — both from Play Console →
+Test and release → Setup → App signing.
+
+Four things this depends on, none of which fail loudly:
+
+- **`Content-Type: application/json`.** Set in `public/_headers`. Google's
+  verifier rejects anything else, and Pages would otherwise guess a type for a
+  file in a dot-directory.
+- **The apex host only.** `www` 301s here, and the Digital Asset Links verifier
+  does not follow redirects — declaring both hosts fails the whole set.
+- **The app claims `/download` and nothing else.** (`/go/*` is reserved for the deferred-context links but is NOT claimed until the site serves it and `LpDeepLinks` routes it — a claimed path with no destination 404s the very people who do not have the app.) An unscoped claim
+  would make the in-app "Privacy policy" link re-open the app instead of showing
+  the policy, and would pull every shared blog URL away from the site. The
+  manifest carries the same note; `test/android_manifest_test.dart` pins it, and
+  cross-checks the claimed prefixes against the URLs `LpLinks` opens in a browser.
+- **A new signing key means a new fingerprint here.** It is an array, so adding
+  one needs no app release.
+
+Check it end to end with Google's own resolver rather than a browser:
+
+```
+curl -sI https://cirrusquit.com/.well-known/assetlinks.json   # 200, application/json, no redirect
+https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://cirrusquit.com&relation=delegate_permission/common.handle_all_urls
+adb shell pm get-app-links com.quitvape.last_puff             # on device
+```
 
 ## SEO notes
 

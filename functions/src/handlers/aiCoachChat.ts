@@ -20,12 +20,11 @@ import {
   COACH_MIN_INSTANCES,
   COACH_SUMMARY_EVERY,
   COACH_SUMMARY_MAX_CHARS,
-  FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
   MAX_OUTPUT_TOKENS,
   MODEL_FREE,
   MODEL_PREMIUM,
-  PREMIUM_DAILY_COACH_MESSAGES,
+  readAllowance,
   REGION,
 } from '../config';
 import {geminiModel} from '../ai/gemini';
@@ -115,10 +114,14 @@ export const aiCoachChat = onCall(
 
     const card = buildMemoryCard(journeySnap.data(), new Date(), caller.timeZone);
 
+    // Through `readAllowance`, never the param's `.value()` directly: a param
+    // that resolves to 0 — no `.env` for the active project, a typo'd key —
+    // would answer EVERY user `capReached` before the model is ever called,
+    // which is a total coach outage wearing the costume of a policy decision.
     const limit =
       tier === 'free'
-        ? FREE_DAILY_COACH_MESSAGES.value()
-        : PREMIUM_DAILY_COACH_MESSAGES.value();
+        ? readAllowance.freeCoachMessages()
+        : readAllowance.premiumCoachMessages();
     const quota = await claimCoachMessage(caller.uid, card.todayKey, limit);
     if (!quota.allowed) {
       // docs/04 §7 — kind cap copy, and zero model spend.

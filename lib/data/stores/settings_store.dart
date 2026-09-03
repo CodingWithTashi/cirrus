@@ -18,6 +18,7 @@ class SettingsState {
     this.trialReminderOn = true,
     this.winbackShown = false,
     this.launchPaywallShownDay,
+    this.launchPaywallShownCount = 0,
   });
 
   final ThemeMode themeMode;
@@ -45,6 +46,12 @@ class SettingsState {
   /// an interstitial beyond that; this is how "one a day" is counted.
   final String? launchPaywallShownDay;
 
+  /// How many launch paywalls this account has ever been shown
+  /// (`LaunchPaywallPolicy.lifetimeCap`). Counted, not derived from the day
+  /// key: a Comeback restarts the plan and would bring the milestone days
+  /// round again.
+  final int launchPaywallShownCount;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
     Locale? Function()? locale,
@@ -55,6 +62,7 @@ class SettingsState {
     bool? trialReminderOn,
     bool? winbackShown,
     String? launchPaywallShownDay,
+    int? launchPaywallShownCount,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
     locale: locale != null ? locale() : this.locale,
@@ -67,6 +75,8 @@ class SettingsState {
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
     winbackShown: winbackShown ?? this.winbackShown,
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
+    launchPaywallShownCount:
+        launchPaywallShownCount ?? this.launchPaywallShownCount,
   );
 }
 
@@ -128,6 +138,10 @@ class SettingsStore extends Notifier<SettingsState> {
 
   /// Records that today's launch paywall was shown, so it is not shown again
   /// before the next local day.
-  void markLaunchPaywallShown(String dayKey) =>
-      _commit(state.copyWith(launchPaywallShownDay: dayKey));
+  void markLaunchPaywallShown(String dayKey) => _commit(
+    state.copyWith(
+      launchPaywallShownDay: dayKey,
+      launchPaywallShownCount: state.launchPaywallShownCount + 1,
+    ),
+  );
 }

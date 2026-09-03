@@ -399,8 +399,11 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   }
 
   /// The taper plan implied by the current answers (for reveal/pace preview).
-  QuitPlan draftPlan() {
-    final now = DateTime.now();
+  /// [now] defaults to `nowProvider`, so a test can put the reveal on a fixed
+  /// day instead of on the clock the suite happens to run at — the same trap
+  /// that made Home's mood-prompt test pass in the morning and fail at night.
+  QuitPlan draftPlan({DateTime? now}) {
+    now ??= ref.read(nowProvider)();
     return QuitPlan(
       method: state.method,
       paceDays: state.paceDays,

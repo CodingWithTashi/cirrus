@@ -16,6 +16,7 @@ import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 
 /// Frame 24 — Day-1 checklist: three setup moves, CTA always points at the
 /// next unchecked item.
@@ -29,8 +30,41 @@ import '../../data/stores/providers.dart';
 /// What ticks a box now is the real move, made on the real screen, with the
 /// walkthrough holding everything else closed until it happens. See
 /// [Day1TourStore].
-class Day1Screen extends ConsumerWidget {
+class Day1Screen extends ConsumerStatefulWidget {
   const Day1Screen({super.key});
+
+  @override
+  ConsumerState<Day1Screen> createState() => _Day1ScreenState();
+}
+
+class _Day1ScreenState extends ConsumerState<Day1Screen> {
+  @override
+  void initState() {
+    super.initState();
+    // The router redirects every root tab here until the list is finished, so
+    // this is the gate every new account passes through — and it reported
+    // nothing at all, which made install→activation, the biggest drop-off
+    // risk in the app, impossible to see.
+    //
+    // Reported only on an UNTOUCHED checklist, not on every mount. This screen
+    // is remounted after each task: `Day1TourStore.complete()` ends in
+    // `go(Routes.day1)`. Counting those would give a user who finishes all
+    // three four `day1_viewed` events and a user who abandons at the list
+    // one — so `day1_completed / day1_viewed` would sink as activation
+    // improved, which is precisely backwards for the one ratio this event
+    // exists to produce.
+    //
+    // Deferred a frame so a sink can reach a platform channel without doing
+    // it during a build, and so the journey is readable.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final journey = ref.read(quitStoreProvider);
+      // No journey means `build` bailed out to an empty box; nothing was seen.
+      if (journey == null) return;
+      if (journey.day1TasksDone.isNotEmpty || journey.day1TourSkipped) return;
+      ref.read(analyticsProvider).day1Viewed();
+    });
+  }
 
   /// Opens the walkthrough at [step] and sends them to the screen it lives on.
   ///
@@ -51,7 +85,7 @@ class Day1Screen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
     final locale = context.localeTag;

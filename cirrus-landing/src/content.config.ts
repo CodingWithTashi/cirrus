@@ -55,6 +55,17 @@ const blog = defineCollection({
      */
     takeaways: z.array(z.string()).default([]),
 
+    /**
+     * One sentence for this post's sidebar CTA, picking up the argument the
+     * reader has just been following. Optional — the card falls back to the
+     * generic line, which is what every post used to get.
+     *
+     * The same honesty rule as the body applies: it may not claim a feature
+     * the app does not have, and it may not carry a number that is not in
+     * HONEST_STATS. Capped so it cannot grow into a second standfirst.
+     */
+    ctaAngle: z.string().max(160).optional(),
+
     // ---- E-E-A-T ----
     //
     // Google classes anything about nicotine, lungs or medication as "Your Money

@@ -33,6 +33,47 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const normalizeEmail = (v: unknown): string =>
   typeof v === 'string' ? v.trim().toLowerCase().slice(0, 254) : '';
 
+// Where the signup came from — `hero`, `footer`, `blog-<slug>`. The form has
+// always sent this and nothing ever read it, so the one signal that says which
+// post converts was being thrown away. Allow-listed to a slug shape: it is
+// attacker-supplied and it ends up in a log line.
+//
+// 80, not 40: the blog form sends `blog-${slug}`, and
+// `blog-how-long-does-vaping-withdrawal-last` is already 41 characters — at a
+// 40-cap that post's signups were silently filed as 'unknown', losing exactly
+// the "which post converts" signal this logging was added to capture. Another
+// live slug sits on 40 exactly. Slugs get longer, not shorter.
+const SOURCE_RE = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+const normalizeSource = (v: unknown): string => {
+  const s = typeof v === 'string' ? v.trim().toLowerCase() : '';
+  return SOURCE_RE.test(s) ? s : 'unknown';
+};
+
+/**
+ * One structured line per terminating request, for the Pages Functions log.
+ *
+ * This is the whole site analytics story for conversions: no script, no cookie,
+ * no vendor, nothing to ad-block, and no consent question — which is the only
+ * kind of measurement that fits a site whose pitch is not being tracked.
+ *
+ * NEVER log the email address. `country` is Cloudflare's own geo header and
+ * the referer is reduced to a host, so no line here identifies a person.
+ */
+function logEvent(request: Request, source: string, outcome: string): void {
+  let referer = '';
+  try {
+    const raw = request.headers.get('referer');
+    if (raw) referer = new URL(raw).host;
+  } catch {
+    // A malformed Referer is not worth a branch; an empty host is fine.
+  }
+  const country = (request as { cf?: { country?: string } }).cf?.country ?? '';
+  console.log(
+    JSON.stringify({ event: 'waitlist_submit', source, outcome, country, referer }),
+  );
+}
+
 // Per-IP rate limit. Module scope, so it lives as long as the isolate — good
 // enough to blunt a burst, and deliberately not a durable store: a waitlist
 // does not warrant the cost or complexity of one.
@@ -120,31 +161,44 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const body = await readBody(request);
+  const source = normalizeSource(body.source);
 
-  // 2. Honeypot. Bots fill every field they find; a real person never sees this
-  //    one. Answer 200 so the bot learns nothing, but never call Listmonk.
-  if (typeof body.website === 'string' && body.website.trim() !== '') {
-    return json(200, { ok: true, status: 'subscribed' });
-  }
-
-  // 3. Validate before spending a network call.
-  const email = normalizeEmail(body.email);
-  if (!EMAIL_RE.test(email)) return json(400, { ok: false, error: 'invalid_email' });
-
-  // 4. Rate limit per IP.
+  // 2. Rate limit per IP — FIRST, because every branch below writes a log line.
+  //    Behind the honeypot and the validator, one client posting junk could
+  //    emit unbounded `waitlist_submit` lines, inflating the outcome counts
+  //    this logging exists to produce and paying for the privilege in Workers
+  //    log volume. A bot under the limit still gets the honeypot's bland 200.
   const ip =
     request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for') ?? 'local';
   const rl = rateLimit(ip);
   if (!rl.ok) {
+    logEvent(request, source, 'rate_limited');
     return json(429, { ok: false, error: 'rate_limited' }, { 'retry-after': String(rl.retryAfterSec) });
+  }
+
+  // 3. Honeypot. Bots fill every field they find; a real person never sees this
+  //    one. Answer 200 so the bot learns nothing, but never call Listmonk.
+  //    Logged so bot volume stays visible without polluting the real numbers.
+  if (typeof body.website === 'string' && body.website.trim() !== '') {
+    logEvent(request, source, 'honeypot');
+    return json(200, { ok: true, status: 'subscribed' });
+  }
+
+  // 4. Validate before spending a network call.
+  const email = normalizeEmail(body.email);
+  if (!EMAIL_RE.test(email)) {
+    logEvent(request, source, 'invalid_email');
+    return json(400, { ok: false, error: 'invalid_email' });
   }
 
   // 5. Hand off.
   const result = await subscribe(env, email);
   if (!result.ok) {
     console.error('subscribe failed', result.error, result.detail ?? '');
+    logEvent(request, source, result.error ?? 'provider_error');
     return json(502, { ok: false, error: result.error ?? 'provider_error' });
   }
+  logEvent(request, source, result.status ?? 'subscribed');
   return json(200, { ok: true, status: result.status });
 };
 

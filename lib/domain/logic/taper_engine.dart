@@ -39,10 +39,16 @@ abstract final class TaperEngine {
   /// plan (docs/03 §3, the frame-37 "coming up" milestone).
   static int cravingsFadeDay(QuitPlan plan) => (plan.totalDays * 0.7).round();
 
-  /// Puffs the whole curve avoids vs baseline: `Σ (B − limit(d))`.
-  static int projectedPuffsAvoided(QuitPlan plan) {
+  /// Puffs the curve avoids vs baseline: `Σ (B − limit(d))`.
+  ///
+  /// [fromDay] mirrors `MoneyEngine.projectedToFreedom`: it sums the days
+  /// AFTER it, so 0 (the default) is the whole plan and a day number part-way
+  /// through gives what is still ahead. A paywall shown to someone on day 25
+  /// of 30 must not offer them the whole curve as though none of it had
+  /// happened yet.
+  static int projectedPuffsAvoided(QuitPlan plan, {int fromDay = 0}) {
     var avoided = 0;
-    for (var d = 1; d <= plan.totalDays; d++) {
+    for (var d = fromDay + 1; d <= plan.totalDays; d++) {
       avoided += plan.baselinePuffsPerDay - limitFor(plan, d);
     }
     return avoided;

@@ -25,9 +25,24 @@ export const LAUNCH_PLATFORM = 'Android';
 // social proof, so this must stay truthful — bump it, don't inflate it.
 export const WAITLIST_COUNT = 103;
 
-// Store link is empty until the Play listing exists; the hero CTA stays the
-// waitlist until then and switches itself when this is filled in.
-export const PLAY_STORE_URL = '';
+// The live Play listing: "Cirrus - Vaping Quit Tracker", Kharag Edition.
+//
+// Read only through `src/lib/store.ts` — never inline this URL anywhere else,
+// and never put it in Markdown. Posts link to /download, which is the one page
+// that stays correct whether or not the store is open.
+//
+// The home hero deliberately still shows the waitlist rather than a store
+// button: roughly half of blog traffic is on iPhone, iOS is months away, and
+// dropping that capture on the day Android ships is the most expensive
+// available mistake. /download offers both.
+//
+// Annotated `string` rather than left as a literal type: `STORE_LIVE` compares
+// it against '', and TypeScript would otherwise narrow this to its own value
+// and call that comparison dead code. The guard has to keep compiling in both
+// states, because emptying this is the documented way to take the store link
+// back down.
+export const PLAY_STORE_URL: string =
+  'https://play.google.com/store/apps/details?id=com.quitvape.last_puff';
 
 // Official profiles, emitted as Organization.sameAs. This is how Google ties
 // the domain to a known entity rather than treating it as an anonymous site,
@@ -43,7 +58,12 @@ export const TERMS_URL = '/terms';
 
 // The address on both legal pages, and the one data-rights requests arrive at.
 // Defined once so the two policies can never disagree about where to write.
-export const LEGAL_CONTACT_EMAIL = 'developer.kharag@gmail.com';
+export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
 
 // Shown on both legal pages. Bump it whenever either policy changes materially.
-export const LEGAL_LAST_UPDATED = '2026-08-30';
+//
+// 2026-09-03: named Amplitude in the processor list (it ships in the release
+// app and the Play Data Safety form has to agree with this page), and added
+// the "This website" section — the policy documented the app only, which is a
+// gap you cannot have on a site that claims not to track anyone.
+export const LEGAL_LAST_UPDATED = '2026-09-03';

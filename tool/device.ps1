@@ -8,6 +8,7 @@
 #   ./tool/device.ps1                       # build + install + launch
 #   ./tool/device.ps1 -Backend fake         # demo backend instead
 #   ./tool/device.ps1 -Test                 # run the on-device E2E suites
+#   ./tool/device.ps1 -Analytics            # ...with the analytics funnel live
 #   ./tool/device.ps1 -ReRegister           # console entry deleted; register again
 #
 # Equivalent by hand, if you ever need it. The defines file is written by this
@@ -16,17 +17,31 @@
 #
 #   flutter run -d <device> --dart-define-from-file=.dart_defines.json
 #
-# RELEASE BUILDS TAKE NONE OF THIS. App Check uses Play Integrity there, and
-# `kDebugMode` gates the debug provider, so a debug secret cannot ship:
+# ============================================================================
+# A SIDELOADED RELEASE APK CANNOT PASS APP CHECK. Not with any combination of
+# defines. This has cost more than one session, so it is written out in full:
 #
-#   flutter build appbundle --release       # Play Store
-#   flutter build apk --release             # sideload
+#   flutter build apk --release --dart-define-from-file=.dart_defines.json
 #
-# Analytics is `kReleaseMode`-only by design (the launch gates read that
-# funnel, so a dev build must not appear in it as a user). To verify the
-# integration on a debug build, and only for that:
+# ...looks correct and is not. `kDebugMode` is false in a release build, so
+# the pinned token is read into a constant nothing consults and the app
+# attests with PLAY INTEGRITY instead. Play Integrity cannot vouch for an APK
+# Google has never seen, so no token is minted, and the backend rejects EVERY
+# callable with `Decoding App Check token failed` - the coach, panic,
+# community, testimonials and user sync all break at once and none of it looks
+# like App Check. `activateAppCheck()` now says so out loud at launch.
 #
-#   flutter run -d <device> --dart-define-from-file=.dart_defines.json --dart-define=LP_ANALYTICS=on
+# The two things that DO work:
+#
+#   * this script, for anything you would sideload for;
+#   * the Play internal testing track, for a genuine release build - install it
+#     from Play, with the Play app-signing SHA-256 registered in Firebase.
+#
+# Analytics is not a reason to build release: `LP_ANALYTICS=on` overrides the
+# `kReleaseMode` check in any build mode, which is what -Analytics passes.
+# ============================================================================
+#
+#   flutter build appbundle --release       # Play Store (no defines needed)
 #
 param(
   [string]$Device  = '',
@@ -35,7 +50,13 @@ param(
   [switch]$Test,
   # Re-register the App Check token even if this checkout already did. Use it
   # when the console entry has been deleted.
-  [switch]$ReRegister
+  [switch]$ReRegister,
+  # Send analytics from this debug build. `analyticsEnabled()` is
+  # `kReleaseMode`-only by default so a dev build never appears in the launch
+  # funnel as a user; this is the sanctioned override for verifying the
+  # integration. It exists so that wanting analytics on device is never a
+  # reason to build release - which is what breaks App Check.
+  [switch]$Analytics
 )
 
 $ErrorActionPreference = 'Stop'
@@ -116,8 +137,10 @@ $defines = @(
   "--dart-define=LP_BACKEND=$Backend",
   "--dart-define-from-file=$definesFile"
 )
+if ($Analytics) { $defines += '--dart-define=LP_ANALYTICS=on' }
 
-Write-Host "device=$Device backend=$Backend" -ForegroundColor Cyan
+$analyticsLabel = if ($Analytics) { 'on' } else { 'off (pass -Analytics)' }
+Write-Host "device=$Device backend=$Backend analytics=$analyticsLabel" -ForegroundColor Cyan
 
 if ($Test) {
   # Note: `flutter test integration_test` uninstalls the app when it finishes.

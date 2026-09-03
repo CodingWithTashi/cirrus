@@ -22,8 +22,7 @@ import '../../../core/widgets/lp_charts.dart';
 import '../../../core/widgets/lp_misc.dart';
 import '../../../core/widgets/progress_ring.dart';
 import '../../../core/widgets/rolling_number.dart';
-import '../../../domain/logic/money_engine.dart';
-import '../../../domain/logic/taper_engine.dart';
+import '../../../domain/logic/plan_reveal.dart';
 import '../onboarding_view_model.dart';
 import '../tailoring.dart';
 import 'step_body.dart';
@@ -40,8 +39,13 @@ class RevealStep extends ConsumerWidget {
     final state = ref.watch(onboardingProvider);
     final vm = ref.read(onboardingProvider.notifier);
     final plan = vm.draftPlan();
-    final projectedSaved = MoneyEngine.projectedToFreedom(plan, 0);
-    final puffsAvoided = TaperEngine.projectedPuffsAvoided(plan);
+    // One source for the four figures, shared with the paywall's proof card, so
+    // the two screens can never quote different numbers at the same person.
+    //
+    // Null only if puffs/day were somehow unanswered, which the flow prevents —
+    // the block below is then simply absent. An honest gap beats a Freedom Day
+    // computed from a baseline of zero.
+    final reveal = PlanReveal.of(plan, now: ref.read(nowProvider)());
 
     return StepBody(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -51,99 +55,105 @@ class RevealStep extends ConsumerWidget {
           style: LpType.title(lp.textPrimary, size: 32),
         ),
         const SizedBox(height: 18),
-        LpCard(
-          radius: LpDimens.rCardLg,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        if (reveal != null) ...[
+          LpCard(
+            radius: LpDimens.rCardLg,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TaperCurveChart(
+                  samples: reveal.curve,
+                  height: 104,
+                  animate: true,
+                  milestones: [(0.1, lp.ember), (0.23, lp.oxygen)],
+                ),
+                const SizedBox(height: 10),
+                _milestone(
+                  context,
+                  lp.ember,
+                  l10n.commonDayN(3),
+                  l10n.obRevealMilestone3,
+                ),
+                _milestone(
+                  context,
+                  lp.oxygen,
+                  l10n.commonDayN(7),
+                  l10n.obRevealMilestone7,
+                ),
+                _milestone(
+                  context,
+                  lp.ember,
+                  l10n.commonDayN(reveal.totalDays),
+                  l10n.obRevealMilestoneFreedom(
+                    LpFormat.shortDate(reveal.freedomDate, locale),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              TaperCurveChart(
-                samples: TaperEngine.normalizedCurve(plan),
-                height: 104,
-                animate: true,
-                milestones: [(0.1, lp.ember), (0.23, lp.oxygen)],
+              Expanded(
+                child: _statCard(
+                  context,
+                  RollingNumber(
+                    reveal.projectedSaved,
+                    format: (v) => LpFormat.money(v, locale),
+                    style: LpType.number(lp.voltText, size: 30).copyWith(
+                      shadows: [
+                        Shadow(
+                          color: lp.volt.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  l10n.obRevealSavedLabel,
+                ),
               ),
-              const SizedBox(height: 10),
-              _milestone(
-                context,
-                lp.ember,
-                l10n.commonDayN(3),
-                l10n.obRevealMilestone3,
-              ),
-              _milestone(
-                context,
-                lp.oxygen,
-                l10n.commonDayN(7),
-                l10n.obRevealMilestone7,
-              ),
-              _milestone(
-                context,
-                lp.ember,
-                l10n.commonDayN(plan.totalDays),
-                l10n.obRevealMilestoneFreedom(
-                  LpFormat.shortDate(plan.freedomDate, locale),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statCard(
+                  context,
+                  // Frame 16: counters roll up staggered — this one lands second.
+                  RollingNumber(
+                    reveal.puffsAvoided,
+                    duration: const Duration(milliseconds: 1400),
+                    curve: const Interval(0.4, 1, curve: LpMotion.emphasized),
+                    format: (v) => LpFormat.integer(v, locale),
+                    style: LpType.number(lp.voltText, size: 30).copyWith(
+                      shadows: [
+                        Shadow(
+                          color: lp.volt.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  l10n.obRevealPuffsLabel,
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _statCard(
-                context,
-                RollingNumber(
-                  projectedSaved,
-                  format: (v) => LpFormat.money(v, locale),
-                  style: LpType.number(lp.voltText, size: 30).copyWith(
-                    shadows: [
-                      Shadow(
-                        color: lp.volt.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
-                ),
-                l10n.obRevealSavedLabel,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _statCard(
-                context,
-                // Frame 16: counters roll up staggered — this one lands second.
-                RollingNumber(
-                  puffsAvoided,
-                  duration: const Duration(milliseconds: 1400),
-                  curve: const Interval(0.4, 1, curve: LpMotion.emphasized),
-                  format: (v) => LpFormat.integer(v, locale),
-                  style: LpType.number(lp.voltText, size: 30).copyWith(
-                    shadows: [
-                      Shadow(
-                        color: lp.volt.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
-                ),
-                l10n.obRevealPuffsLabel,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // What the projected saving actually buys. A different figure from the
-        // spend screen's, and by now every answer exists, so the catalogue can
-        // draw on their reasons too — the two screens never repeat each other.
-        if (ObTailoring.revealComparison(context, state, projectedSaved)
-            case final line?) ...[
-          Text(
-            line,
-            textAlign: TextAlign.center,
-            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
-          ),
           const SizedBox(height: 12),
+          // What the projected saving actually buys. A different figure from the
+          // spend screen's, and by now every answer exists, so the catalogue can
+          // draw on their reasons too — the two screens never repeat each other.
+          if (ObTailoring.revealComparison(
+                context,
+                state,
+                reveal.projectedSaved,
+              )
+              case final line?) ...[
+            Text(
+              line,
+              textAlign: TextAlign.center,
+              style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+          ],
         ],
         LpCard(
           radius: LpDimens.rInput,
@@ -473,11 +483,21 @@ class RatingStep extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
 
     // Warmed on leaving the worries screen, four steps back. Empty means the
-    // fetch found nothing, came back short, or never landed — all of which end
-    // in the same honest place: the two quotes bundled in the ARB files.
-    final quotes = state.testimonials.isNotEmpty
-        ? state.testimonials.map((t) => t.text).toList()
-        : [l10n.obRatingQuote1, l10n.obRatingQuote2];
+    // fetch found nothing, came back short, or never landed — and then this
+    // screen shows NO quote cards at all.
+    //
+    // It used to fall back to two quotes bundled in the ARB files, which was
+    // honest only for as long as real ones were coming. The beta cohort that
+    // was to supply them was descoped on Sep 3 2026 (docs/08 §7 #29), so the
+    // `testimonials` collection is empty until somebody consents to a quote —
+    // and the fallback stopped being a safety net and became the content: two
+    // five-star reviews nobody said, on the screen before the paywall. That is
+    // the exact thing docs/02 §7 forbids, and the same rule that killed the
+    // invented "Tokyo flight" goal and the buddy named Sam.
+    //
+    // The title and the ask stand on their own without them. When real quotes
+    // exist, they appear here with no further change.
+    final quotes = state.testimonials.map((t) => t.text).toList();
 
     Widget quote(String text) => LpCard(
       padding: const EdgeInsets.all(16),
@@ -506,7 +526,7 @@ class RatingStep extends ConsumerWidget {
                   border: Border.all(color: lp.border),
                 ),
                 child: Text(
-                  l10n.obRatingBetaTester,
+                  l10n.obRatingQuoteBadge,
                   style: LpType.micro(
                     lp.textSecondary,
                     weight: FontWeight.w700,
@@ -529,13 +549,20 @@ class RatingStep extends ConsumerWidget {
     return StepBody(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
+        // Balances the Spacer above the CTA when there are no quote cards to
+        // fill the middle. Without it the ask sits jammed against the status
+        // bar over an empty half-screen, which reads as a screen that failed
+        // to load rather than one with nothing to show.
+        if (quotes.isEmpty) const Spacer(),
         Text(l10n.obRatingTitle, style: LpType.title(lp.textPrimary, size: 28)),
         const SizedBox(height: 8),
         Text(l10n.obRatingSubtitle, style: LpType.body14(lp.textSecondary)),
-        const SizedBox(height: 22),
-        quote(quotes[0]),
-        const SizedBox(height: 12),
-        quote(quotes[1]),
+        // Indexed nowhere — the list is whatever the server had, including
+        // none and including one.
+        for (final text in quotes) ...[
+          const SizedBox(height: 12),
+          quote(text),
+        ],
         const Spacer(),
         // This used to be a five-star row inside a card pastiching the StoreKit
         // sheet, and tapping it did nothing but advance. It cannot come back:

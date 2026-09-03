@@ -5,6 +5,7 @@ standfirst: Just stop picking up the vape, right? If only it were that easy. Ten
 publishedAt: 2026-08-31
 tags: ["quitting vaping", "how to quit", "#quitvaping", "#vapequit", "#lastpuff", "#cirrusquit"]
 draft: false
+ctaAngle: "Ten steps is a lot to hold in your head. Cirrus keeps the count, the plan, and the 2am part."
 medical: true
 author: Gurmey
 authorTitle: Content Writer
@@ -265,7 +266,7 @@ Here's how it maps onto the list you just read:
 One more thing, because it's the house rule: every stat the app shows you traces to a
 source, the same as every figure in this article. No invented numbers anywhere.
 
-**[Download Cirrus free on Google Play](https://play.google.com/store/apps/details?id=com.quitvape.last_puff)**
+**[Get Cirrus, free to start](/download)**
 and let your phone carry half of the plan. On iPhone? The iOS version is next on the
 list.
 
@@ -301,4 +302,4 @@ You just need to get through the next craving, then the next one, and keep stack
 that don't include vaping.
 
 The vape doesn't have to be part of your life forever. And if you'd like company for
-that first week, [Cirrus is free on Google Play](https://play.google.com/store/apps/details?id=com.quitvape.last_puff).
+that first week, [Cirrus is free to start](/download).
