@@ -2210,3 +2210,72 @@ testing** track, installed from Play, with the Play app-signing SHA-256
 registered in Firebase. That is a property of Play Integrity, not of this app.
 
 `flutter analyze` clean · `flutter test` **947**.
+
+---
+
+## 21. THE ARCHIVE THAT NAMED THE WRONG POD (Sep 3)
+
+Product → Archive failed on:
+
+```
+/Users/kunchoktashi/dev/flutter/last_puff/ios/Runner/GeneratedPluginRegistrant.m:12:9
+Module 'amplitude_flutter' not found
+```
+
+Line 12 is `@import amplitude_flutter;`. Read at face value it is a story about
+Amplitude — a bad podspec, a Swift-module problem, a version skew between
+`pubspec.lock` (4.7.1) and the podspec (which still says 4.4.0, because the
+plugin author never bumped it). All three were checked. All three were fine.
+
+### What was actually wrong
+
+Nothing in the repo. `flutter build ipa --no-codesign` archived clean in 342s
+and produced a 582MB `.xcarchive` with `amplitude_flutter.framework` sitting in
+`Runner.app/Frameworks` alongside the other 39.
+
+The archive that failed was run against **`ios/Runner.xcodeproj`**. CocoaPods
+does not put pods in the app project; it writes a second, separate
+`Pods.xcodeproj` and stitches the two together in `Runner.xcworkspace`. Open the
+bare project and the pods are not in the build graph at all.
+
+The proof is in DerivedData, and it is unambiguous. Every `Runner-<hash>` tree
+records the file it belongs to:
+
+```
+Runner-gpfkmbfrlkmvqxfknwuoophzvdge/info.plist → .../last_puff/ios/Runner.xcodeproj    ← the failures
+Runner-gqcacswcpzvwdldqpojzmnuqnffy/info.plist → .../last_puff/ios/Runner.xcworkspace  ← the good builds
+```
+
+and counting Pods work in the two `.xcactivitylog`s settles it:
+
+| build | `from project 'Pods'` lines |
+| --- | --- |
+| archive from `Runner.xcodeproj` | **0** |
+| archive from `Runner.xcworkspace` | ~6,158 |
+
+Zero. Not "amplitude_flutter failed to compile" — *no pod was ever built*, and
+the log carries no complaint about that, because a missing target is not an
+error, it is just a graph nobody asked for.
+
+### Why it accuses Amplitude specifically
+
+`GeneratedPluginRegistrant.m` imports its plugins in alphabetical order and
+`amplitude_flutter` sorts first, so it is the first `@import` clang reaches. The
+compile stops there. Every one of the eighteen plugins is equally missing; the
+diagnostic only ever has room to name one, and it will always name whichever
+plugin happens to sort first. Rename the app's dependencies tomorrow and the
+same failure reports a different pod. **The pod named in this error is evidence
+of alphabetical order, not of a broken pod.**
+
+That is the trap: the message points at a real, specific, recently-added
+dependency and invites you to go audit it.
+
+### The rule
+
+Archive with `flutter build ipa` — it runs `pod install` and drives the
+workspace itself, which is why it never sees this. If you archive from Xcode,
+the window must be **`Runner.xcworkspace`**. And when a Flutter iOS build
+reports a missing plugin module, count the `from project 'Pods'` lines in the
+log *before* opening the plugin's podspec.
+
+Pinned as a gotcha in `CLAUDE.md`. No code changed — there was nothing to fix.
