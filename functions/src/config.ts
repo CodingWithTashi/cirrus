@@ -192,20 +192,32 @@ export const MODEL_MODERATION = defineString('MODEL_MODERATION', {
 });
 
 /**
- * Pre-monetization switch (founder decision, Aug 29 2026).
+ * Where the trusted tier comes from.
  *
- *   'ungated' — everyone is premium. RevenueCat is not wired yet and the app
- *               must work end-to-end with nothing locked.
- *   'mirror'  — the real behaviour: tier comes from users/{uid}.entitlement,
- *               written only by rcWebhook.
+ *   'mirror'  — the real behaviour, and the default since Sep 3 2026: tier
+ *               comes from `users/{uid}.entitlement`, written by `rcWebhook`
+ *               and by the app's post-purchase `refreshEntitlement`.
+ *   'ungated' — everyone is premium. What ran from Aug 29 to Sep 3 2026,
+ *               while RevenueCat was being wired and nothing could be bought.
+ *
+ * **The default is `mirror` deliberately, and it is the one param here whose
+ * default is a security decision rather than a convenience.** Every other
+ * param in this file fails toward "do less" when nothing supplies a value;
+ * this one used to default to `ungated`, which fails toward *giving the
+ * product away* — an unloaded `.env`, a new project, a misconfigured deploy,
+ * and every caller is silently premium with no error anywhere. `allowance()`
+ * below exists because of the mirror-image trap (a param resolving to 0 is a
+ * total outage wearing the costume of a policy); this is the same lesson
+ * pointing the other way.
  *
  * The gating code stays live and tested in both modes on purpose. Deleting it
- * now and re-adding it at billing time is how paywalls ship broken; flipping
- * one param is not. **Set this to 'mirror' the day RevenueCat goes live.**
+ * and re-adding it later is how paywalls ship broken; flipping one param is
+ * not — which is what makes `ungated` worth keeping as an escape hatch if the
+ * mirror is ever wrong in the direction that costs customers.
  */
 export const ENTITLEMENT_MODE = defineString('ENTITLEMENT_MODE', {
-  default: 'ungated',
-  description: "'ungated' (everyone premium, pre-launch) or 'mirror' (real entitlements).",
+  default: 'mirror',
+  description: "'mirror' (real entitlements) or 'ungated' (everyone premium).",
 });
 
 /** Kill-switch: flip to "true" to route all AI traffic to the cheap model. */

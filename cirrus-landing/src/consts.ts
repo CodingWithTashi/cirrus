@@ -58,7 +58,7 @@ export const TERMS_URL = '/terms';
 
 // The address on both legal pages, and the one data-rights requests arrive at.
 // Defined once so the two policies can never disagree about where to write.
-export const LEGAL_CONTACT_EMAIL = 'developer.kharag@gmail.com';
+export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
 
 // Shown on both legal pages. Bump it whenever either policy changes materially.
 //

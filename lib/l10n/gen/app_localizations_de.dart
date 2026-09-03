@@ -764,15 +764,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get obRatingSubtitle => '30 Sekunden. Überspringbar. Kein Groll.';
 
   @override
-  String get obRatingBetaTester => 'BETA-TESTER';
-
-  @override
-  String get obRatingQuote1 =>
-      '„Der Panik-Button hat mich durch Woche eins getragen. Ohne ihn wäre ich an Tag 3 eingeknickt.“';
-
-  @override
-  String get obRatingQuote2 =>
-      '„Die erste App, die nicht mit mir redet wie ein Arzt oder meine Mutter.“';
+  String get obRatingQuoteBadge => 'ECHTE BEWERTUNG';
 
   @override
   String get obRatingCta => 'Cirrus bewerten';
@@ -3022,17 +3014,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'Deine Testphase endet morgen';
-
-  @override
-  String get frameMapTitle => 'Alle 52 Design-Frames';
-
-  @override
-  String get frameMapNote =>
-      'Jeder Frame aus den vier Handoffs, einen Tipp entfernt. Zeilen laden bei Bedarf die Demo-Reise oder Quiz-Antworten.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'Diese Zustände gehen mit dem Backend live — eine In-Memory-App hat ehrlicherweise kein Offline und keine Serverfehler.';
 
   @override
   String get seedPostWin30 =>

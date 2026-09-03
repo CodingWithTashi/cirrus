@@ -17,11 +17,11 @@ A tighter wall is not automatically better. The published data says our *structu
 
 ### ⚠️ The finding that outranks the rest
 
-`ENTITLEMENT_MODE=ungated` (`functions/.env.alastpuff`) makes `tierFor()` return `'premium'` for every caller and skip the Firestore read entirely. **Every server-enforced limit is inert in production right now.** The beta cohort has an uncapped coach, unlimited panic AI and open community posting.
+`ENTITLEMENT_MODE=ungated` (`functions/.env.alastpuff`) makes `tierFor()` return `'premium'` for every caller and skip the Firestore read entirely. **Every server-enforced limit is inert in production right now** — every account has an uncapped coach, unlimited panic AI and open community posting. There is no Premium to buy, because there is no Free to leave.
 
-Flipping one config value to `mirror` imposes 5 coach messages/day, 1 panic AI session/day and SOS-only posting on **every account simultaneously** — including the 30–50 testers promised "50 free lifetime spots" (`docs/06 §3`, `S2-10`). There is no founder-grant path in the code.
+Flipping one config value to `mirror` imposes 5 coach messages/day, 1 panic AI session/day and the posting cap on every account at once. That flip **is** the free/premium split; until it happens, none of the work in this study is reachable by a user.
 
-**That flip *is* the free/premium redesign, whether or not anyone designs it.** Doing §3's work before the flip means the tier the cohort lands on is the one we chose. See `S1-12`…`S1-15`.
+**Founder correction, Sep 3 2026 — there is no beta cohort.** The earlier version of this section treated the flip as blocked on a founder-grant path, because `docs/06 §3` promised "50 free lifetime spots" to a recruited tester group. **That cohort was never recruited and will not be: Cirrus ships direct to production.** Nobody holds a promise the flip would break, so the grant path is descoped (`S1-12`) and the flip is gated only on the four remaining preconditions in §4.4 — all of which are about not wrongly refusing a *paying* customer.
 
 ---
 
@@ -241,13 +241,16 @@ Prices as observed Sep 3, 2026.
 
 **Stays or becomes server-side:** coach cap, panic-AI count, posting cap, taper recalc, weekly insight — everything carrying real marginal cost.
 
-**Five things that must be true before `ENTITLEMENT_MODE=mirror`:**
+**Four things that must be true before `ENTITLEMENT_MODE=mirror`** (revised Sep 3 2026):
 
-1. **A founder-grant path exists.** A server-written `entitlement` with a far-future `expiresAt` and a `source: 'founder_grant'` field that `rcWebhook`'s `snapshotOf` leaves alone. Without it the flip revokes the "50 free lifetime spots" promised to the cohort carrying our first reviews. **This blocks the flip.**
-2. **`S1-11` passes** — a real sandbox purchase flips `users/{uid}.entitlement`. If the mirror is wrong, `mirror` mode makes paying users free.
-3. **A refusal event exists on every server wall**, or the flip is unobservable.
-4. **Grace periods and dunning are on and verified** against a forced Play billing failure. 31% of Play cancellations are involuntary; `tierOf()` fails closed on `expiresAt`, and the mirror's "later of `expires_at` and `ends_at`" rule is what covers grace — **prove it before trusting it.**
-5. **Purchase→mirror latency is handled.** A purchase makes the client premium instantly (`EntitlementStore`) while `users/{uid}` lags a webhook round-trip, so a freshly-paying user can be refused by `createPost` or metered by `aiCoachChat`. **This is a real, reachable bug the moment `mirror` lands.**
+Every one of them is about the same failure: **the flip must never refuse a customer who has paid.** The reverse failure — a free account keeping something it should have lost — costs nothing but a day's margin and self-corrects on the next call.
+
+1. **`S1-11` passes** — a real sandbox purchase flips `users/{uid}.entitlement`. If the mirror is wrong, `mirror` mode makes paying users free. The Test Store proved the path end to end on Sep 2 (`docs/10 §14`); Play and App Store sandbox are what remain.
+2. **Purchase→mirror latency is handled.** A purchase makes the client premium instantly (`EntitlementStore`) while `users/{uid}` lags a webhook round-trip, so a freshly-paying user can be refused by `createPost` or metered by `aiCoachChat`. **This is a real, reachable bug the moment `mirror` lands** — and the one precondition that is pure code, owing nothing to a store dashboard.
+3. **Grace periods and dunning are on and verified** against a forced Play billing failure. 31% of Play cancellations are involuntary; `tierOf()` fails closed on `expiresAt`, and the mirror's "later of `expires_at` and `ends_at`" rule is what covers grace — **prove it before trusting it.**
+4. **A refusal event exists on every server wall**, or the flip is unobservable. ✅ **Satisfied Sep 3** by `S5-16` — `limit_reached{capability, tier, used, limit}` fires on every wall, client and server.
+
+> **Descoped Sep 3 2026 — the founder-grant path (`S1-12`).** It existed only to protect the "50 free lifetime spots" of `docs/06 §3`. **There is no beta cohort — Cirrus ships direct to production**, so there is no promise to keep and nothing the flip revokes. If a comp is ever needed (press, a refund, a support case), the mechanism is a server-written `entitlement` with a far-future `expiresAt` and `source: 'founder_grant'` that `snapshotOf` leaves alone — build it then, for a real case, not speculatively.
 
 ### 4.5 Measurement plan
 
@@ -330,6 +333,7 @@ These rows belong in `docs/08 §7`.
 | `docs/02 §5` "Upgrade prompts … max 1/day" | Only `launch` was ever throttled. Restated: **lock cards are honest labelling and always render; the unrequested full-screen paywall is capped to plan days {3, 7, 14, 30}** (§4.2) |
 | `docs/02 §4` feature checklist "Panic Button + buddy ping" | Buddy is descoped (`docs/08 §7 #13`); the panic **AI** never routes to the paywall (§4.1) |
 | `docs/08 §2` lever 2 ("$3.99/wk test") | **Annual price first** — $59.99/yr for new users (§4.3) |
+| `docs/06 §3` "50 free lifetime spots" + the recruited beta cohort | **Descoped Sep 3 2026 (founder).** No cohort was recruited and none will be; Cirrus ships direct to production. Everything downstream of it goes too — `S1-12` (founder grant), `S2-10` (closed testing), `S3-12` (tester-seeded feed), `S5-8` (cohort crash-free), `S6-2` (tester testimonials), `S6-4` (thank-you post) |
 
 ---
 

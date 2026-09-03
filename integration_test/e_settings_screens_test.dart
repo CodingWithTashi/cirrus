@@ -53,7 +53,6 @@ void main() {
     Routes.paywallFree,
     Routes.winback,
     Routes.trialEnding,
-    Routes.frames,
     Routes.moderation,
   ];
 

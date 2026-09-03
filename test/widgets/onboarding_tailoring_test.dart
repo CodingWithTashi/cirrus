@@ -133,12 +133,20 @@ void main() {
   });
 
   group('the rating ask is honest and tailored', () {
-    testWidgets('falls back to the bundled quotes with nothing from the server',
-        (tester) async {
+    testWidgets('shows NO quote at all when the server has none', (
+      tester,
+    ) async {
+      // There used to be two bundled quotes here. They were five-star reviews
+      // no human had said, on the screen immediately before the paywall —
+      // written as a fallback for a beta cohort that was then descoped
+      // (docs/08 §7 #29), which left the fallback as the shipping content.
+      // An honest empty state is always the right answer.
       await pump(tester, (vm) => vm.previewStep(ObStep.rating));
 
-      expect(find.text(l10n.obRatingQuote1), findsOneWidget);
-      expect(find.text(l10n.obRatingQuote2), findsOneWidget);
+      expect(find.text(l10n.obRatingQuoteBadge), findsNothing);
+      expect(find.textContaining('★'), findsNothing);
+      // The ask itself still stands on its own.
+      expect(find.text(l10n.obRatingTitle), findsOneWidget);
     });
 
     testWidgets('shows the tailored pair when the server answered', (
@@ -155,7 +163,8 @@ void main() {
       });
 
       expect(find.text('Day 4 and the fog lifted.'), findsOneWidget);
-      expect(find.text(l10n.obRatingQuote1), findsNothing);
+      expect(find.text('I stopped counting hours.'), findsOneWidget);
+      expect(find.text(l10n.obRatingQuoteBadge), findsNWidgets(2));
     });
 
     testWidgets('offers no rating control when no sheet is coming', (

@@ -479,11 +479,21 @@ class RatingStep extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
 
     // Warmed on leaving the worries screen, four steps back. Empty means the
-    // fetch found nothing, came back short, or never landed — all of which end
-    // in the same honest place: the two quotes bundled in the ARB files.
-    final quotes = state.testimonials.isNotEmpty
-        ? state.testimonials.map((t) => t.text).toList()
-        : [l10n.obRatingQuote1, l10n.obRatingQuote2];
+    // fetch found nothing, came back short, or never landed — and then this
+    // screen shows NO quote cards at all.
+    //
+    // It used to fall back to two quotes bundled in the ARB files, which was
+    // honest only for as long as real ones were coming. The beta cohort that
+    // was to supply them was descoped on Sep 3 2026 (docs/08 §7 #29), so the
+    // `testimonials` collection is empty until somebody consents to a quote —
+    // and the fallback stopped being a safety net and became the content: two
+    // five-star reviews nobody said, on the screen before the paywall. That is
+    // the exact thing docs/02 §7 forbids, and the same rule that killed the
+    // invented "Tokyo flight" goal and the buddy named Sam.
+    //
+    // The title and the ask stand on their own without them. When real quotes
+    // exist, they appear here with no further change.
+    final quotes = state.testimonials.map((t) => t.text).toList();
 
     Widget quote(String text) => LpCard(
       padding: const EdgeInsets.all(16),
@@ -512,7 +522,7 @@ class RatingStep extends ConsumerWidget {
                   border: Border.all(color: lp.border),
                 ),
                 child: Text(
-                  l10n.obRatingBetaTester,
+                  l10n.obRatingQuoteBadge,
                   style: LpType.micro(
                     lp.textSecondary,
                     weight: FontWeight.w700,
@@ -538,10 +548,12 @@ class RatingStep extends ConsumerWidget {
         Text(l10n.obRatingTitle, style: LpType.title(lp.textPrimary, size: 28)),
         const SizedBox(height: 8),
         Text(l10n.obRatingSubtitle, style: LpType.body14(lp.textSecondary)),
-        const SizedBox(height: 22),
-        quote(quotes[0]),
-        const SizedBox(height: 12),
-        quote(quotes[1]),
+        // Indexed nowhere — the list is whatever the server had, including
+        // none and including one.
+        for (final text in quotes) ...[
+          const SizedBox(height: 12),
+          quote(text),
+        ],
         const Spacer(),
         // This used to be a five-star row inside a card pastiching the StoreKit
         // sheet, and tapping it did nothing but advance. It cannot come back:

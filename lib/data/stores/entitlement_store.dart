@@ -174,6 +174,7 @@ class EntitlementStore extends Notifier<Entitlement> {
         case PurchaseCompleted(:final entitlement):
           _apply(entitlement, announce: false);
           analytics.purchaseCompleted(plan, trial: entitlement.isTrial);
+          await _warmServerMirror();
         case PurchaseCancelled():
           analytics.purchaseCancelled(plan);
         case PurchasePending():
@@ -200,9 +201,36 @@ class EntitlementStore extends Notifier<Entitlement> {
       final e = await repo.restore();
       _apply(e, announce: false);
       analytics.restoreCompleted(found: e.isActive);
+      if (e.isActive) await _warmServerMirror();
       return e;
     } finally {
       _selfChanges--;
+    }
+  }
+
+  /// Tells the server to re-read this account from the store, so its mirror
+  /// agrees with what this device already knows.
+  ///
+  /// The client goes Premium the instant the store sheet returns; the
+  /// server's `users/{uid}.entitlement` waits on RevenueCat's webhook. Under
+  /// `ENTITLEMENT_MODE=mirror` everything the SERVER gates — the coach cap,
+  /// the posting allowance, `taperRecalc` — reads that mirror, so between the
+  /// two the app shows Premium while the backend still meters a free account.
+  /// The person who meets that wall is the one who has just paid.
+  ///
+  /// Awaited, because the screens straight after a purchase are the ones that
+  /// call those functions; it is a single round-trip against a purchase the
+  /// user already waited for. Never throws, never fails the purchase: the
+  /// webhook performs the same write regardless, so the worst case is the
+  /// short wait we had before.
+  Future<void> _warmServerMirror() async {
+    try {
+      await ref.read(serverStateRepositoryProvider).refreshEntitlement();
+    } on Object {
+      // The contract says this never throws; the guard is here anyway,
+      // because the cost of being wrong is telling someone who has just paid
+      // that their purchase failed. A swallowed refresh costs one webhook's
+      // wait — the exact wait we had before it existed.
     }
   }
 

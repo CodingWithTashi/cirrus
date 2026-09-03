@@ -763,15 +763,7 @@ class AppLocalizationsPt extends AppLocalizations {
       '30 segundos. Podes saltar. Sem ressentimentos.';
 
   @override
-  String get obRatingBetaTester => 'BETA TESTER';
-
-  @override
-  String get obRatingQuote1 =>
-      '\"O botão de pânico levou-me pela primeira semana. Sem ele tinha cedido no dia 3.\"';
-
-  @override
-  String get obRatingQuote2 =>
-      '\"A primeira app que não fala comigo como um médico ou a minha mãe.\"';
+  String get obRatingQuoteBadge => 'AVALIAÇÃO REAL';
 
   @override
   String get obRatingCta => 'Avaliar o Cirrus';
@@ -3013,17 +3005,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'O teu teste termina amanhã';
-
-  @override
-  String get frameMapTitle => 'Os 52 frames do design';
-
-  @override
-  String get frameMapNote =>
-      'Cada frame dos quatro handoffs, a um toque. As linhas carregam a jornada demo ou as respostas do quiz quando preciso.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'Estes estados ativam-se com o backend — uma app em memória não tem offline nem erros de servidor para mostrar com honestidade.';
 
   @override
   String get seedPostWin30 =>

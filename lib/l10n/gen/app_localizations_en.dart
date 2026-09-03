@@ -760,15 +760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obRatingSubtitle => '30 seconds. Skippable. No hard feelings.';
 
   @override
-  String get obRatingBetaTester => 'BETA TESTER';
-
-  @override
-  String get obRatingQuote1 =>
-      '\"The panic button got me through week one. I\'d have caved on day 3 without it.\"';
-
-  @override
-  String get obRatingQuote2 =>
-      '\"First app that didn\'t talk to me like a doctor or my mom.\"';
+  String get obRatingQuoteBadge => 'REAL REVIEW';
 
   @override
   String get obRatingCta => 'Rate Cirrus';
@@ -2996,17 +2988,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'Your trial ends tomorrow';
-
-  @override
-  String get frameMapTitle => 'All 52 design frames';
-
-  @override
-  String get frameMapNote =>
-      'Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'These states go live with the backend — an in-memory app has no offline or server errors to show honestly.';
 
   @override
   String get seedPostWin30 =>

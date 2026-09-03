@@ -1890,3 +1890,237 @@ apart. 4 tests -> 6. `flutter test` 869 green, `flutter analyze` clean.
 question, keep the Data Safety form free of an advertising identifier (pairs
 with `S4-9`, which already owes it a third-party-analytics disclosure), and
 re-upload this bundle to every active track.
+
+---
+
+## 18. THE COHORT THAT NEVER WAS (Sep 3) — and the two invented reviews it was hiding
+
+Founder correction, raised while reviewing the build: **"there is no tester as
+such. It is direct production."** `docs/06 §3` had planned a recruited beta
+cohort — 30–50 people from r/QuitVaping, paid in "50 free lifetime spots" —
+and five documents had quietly built on it. None of it was ever real.
+
+**What it was blocking.** `S1-12`, the founder-grant path, existed for exactly
+one reason: flipping `ENTITLEMENT_MODE` to `mirror` would have revoked a
+lifetime-free promise made to the people carrying our first reviews. With no
+promise, there is nothing to protect. `S1-12` is descoped, and the flip is now
+gated only on the three preconditions that are about **not wrongly refusing a
+paying customer** — `S1-11` (sandbox purchase flips the mirror), `S1-13`
+(purchase→mirror latency), `S1-14` (grace periods). `docs/12 §4.4` is rewritten
+around that distinction, and the fourth precondition — a refusal event on every
+wall — was already satisfied by `S5-16`.
+
+**What it was hiding, which matters more.** The cohort was the *source* for the
+D3 testimonial quotes. `matchedTestimonials` reads a server-only `testimonials`
+collection; `payoff_steps.dart:484` falls back to `obRatingQuote1` /
+`obRatingQuote2` when it comes back empty, and the comment above that line calls
+the fallback "the honest place." It was honest **only while real quotes were
+coming**. With the cohort gone the collection is empty permanently, so the
+fallback is not a safety net any more — it is the shipping content:
+
+> *"The panic button got me through week one. I'd have caved on day 3 without it."*
+> *"First app that didn't talk to me like a doctor or my mom."*
+
+Two five-star reviews, attributed to nobody, on the screen immediately before
+the paywall. `docs/02 §7` forbids precisely this in its own words ("real
+beta-tester quotes only … never stock-photo fake personas"), it breaks the
+repo's oldest rule (*never invent data that renders as the user's own* —
+the same rule that killed the "Tokyo flight" goal and the buddy named Sam), and
+fabricated testimonials are a store-review risk on their own merits. It is now
+`S6-2`, marked a launch blocker, with three honest exits: cut the cards, hold
+them until real reviews exist, or source consented quotes (the `testimonials`
+rows already carry a consent-reference field).
+
+**Two more gaps the descope opens,** both recorded rather than solved: there is
+no pre-launch crash signal (`S5-8` — a staged Play rollout at 5–10% for 48h is
+what replaces a beta), and no organic first-review source at launch (`S6-4` was
+the plan; nothing has taken its place).
+
+**Also this session:** the frame map is **deleted**, not merely hidden. It was
+`kDebugMode`-gated in Settings but its two routes were registered
+unconditionally, so `FrameMapScreen` and `EdgeStatesPreviewScreen` shipped
+inside every release binary and were reachable by deep link. Gone: the screen
+file, `Routes.frames` / `Routes.framesEdge` and their `GoRoute`s, the Settings
+row, three ARB keys across five locales, two `screen_layout_test` cases and one
+`integration_test` route entry. `flutter analyze` clean, `flutter test` **938**.
+
+Documents touched: `docs/02 §7`, `docs/03 §9`, `docs/06 §3` + launch checklist,
+`docs/08` (S1 flip block, `S2-10`, `S3-12`, `S5-8`, `S6-2`, `S6-4`, register
+row **#29**), `docs/12 §0`, `§4.4`, `§6`.
+
+---
+
+## 19. THE FLIP (Sep 3) — Premium becomes a thing you can buy
+
+Founder, on seeing the build: *"look like free users has access to everything,
+then why premium flow."* Correct, and the cause was one config value.
+
+`ENTITLEMENT_MODE=ungated` had been live since Aug 29, set deliberately while
+RevenueCat was being wired so nothing would be locked before anything could be
+bought. `tierFor()` short-circuited to `'premium'` for every caller and never
+read the mirror, so **every server limit in `.env.alastpuff` was inert**: the
+coach cap, the posting allowance, `taperRecalc`. The eleven client gates were
+real and tested the whole time — but a founder testing on the demo account (the
+seeded day-12 journey has always been a subscriber's) or on the device that
+made the Sep 2 Test Store purchase sees every one of them open, because that
+account genuinely is Premium. Nothing was withheld from anyone, so nothing
+could be sold.
+
+### `S1-13` — the window between paying and being believed
+
+Flipping the switch alone would have shipped a worse bug than the one it fixed.
+A purchase makes the client Premium the instant the store sheet returns (the
+SDK reads the receipt); `users/{uid}.entitlement` waits on RevenueCat's
+webhook. Under `ungated` nobody could see the gap. Under `mirror` it is the
+first thing a paying customer meets: the app says Premium, `aiCoachChat` still
+meters five messages, `createPost` still refuses the second post.
+
+`refreshEntitlement` (the 24th export) closes it. The mirror write moved out of
+`rcWebhook` into `lib/entitlementMirror.ts`, and both doors now share it —
+same snapshot fetch, same `snapshotAt` ordering, same refusal to write `free`
+when RevenueCat cannot be read. `EntitlementStore` awaits it after a completed
+purchase and after a restore that found something.
+
+Three properties worth keeping:
+
+1. **It takes no tier from its caller.** The uid comes from the verified token,
+   the tier from RevenueCat. The request body carries nothing. So the callable
+   is safe to expose to any signed-in user — the most a liar achieves is making
+   us re-read their own unchanged record.
+2. **It never fails a purchase.** Guarded at the repository *and* at the call
+   site. The second guard is not redundant: the Dart test written for it
+   immediately caught the store propagating a thrown refresh out of
+   `purchase()`, which would have told someone who had paid that it failed.
+3. **An unreadable snapshot is never written as `free`.** A 503 from RevenueCat
+   is not evidence about anybody's subscription.
+
+### The default was the other half
+
+`config.ts` still declared `default: 'ungated'`. Every other param in that file
+fails toward *doing less* when nothing supplies a value — that is why
+`allowance()` exists, since a param resolving to 0 is a total outage wearing
+the costume of a policy. This one failed toward **giving the product away**: an
+unloaded `.env`, a new project, a deploy bound to the wrong config, and every
+caller is silently premium with no error anywhere. It defaults to `mirror` now.
+`test/allowance.test.ts` pins that only the exact string `ungated` opens the
+gates — `''`, `'MIRROR'`, `'Ungated'` and `'ungated '` all resolve to gated.
+
+### `S6-2` — the fallback that became the content
+
+Fixed in the same pass, because §18 had just found it. `RatingStep` renders
+quote cards only for rows the server actually returned. With none, the screen
+keeps its title and its ask and shows no quotes — an honest empty state, the
+same answer as the invented savings goal and the buddy named Sam. The two
+bundled ARB quotes are deleted in all five locales, and the badge moved from
+`BETA TESTER` (a cohort that does not exist) to `REAL REVIEW` — labelling the
+review rather than the speaker, so no locale has to gender an unknown person.
+
+### Gates
+
+`flutter analyze` clean · `flutter test` **943** · `npm run verify` **207** ·
+`npm run test:integration` **273** · `npm run test:rules` **47**.
+
+**Founder-side, and the flip is not finished without them:** `S1-11` (a real
+Play/App Store sandbox purchase must flip the mirror — the Test Store proved
+the path, the real stores have not), `S1-14` (grace periods against a forced
+billing failure), and 48h watching `limit_reached` / `entitlement_changed`
+after the deploy. Also `RC_ACCEPT_SANDBOX=true` must go off before the public
+build, or anyone who can make a sandbox purchase gets a real entitlement.
+
+### 19a. The validation pass — one live bug the flip had armed
+
+Asked to validate before deploying, and the audit found a real one.
+
+**A free user out of posts would have been told "tap to retry", forever.**
+`createPost` is careful to raise two different refusals — `permission-denied`
+when a subscription *would* have let the post through, `resource-exhausted`
+when it would not — because they need two different screens.
+`FirebaseCommunityRepository` switches on exactly those codes to build a
+`ContentRefusal`. But `LpFunctions.call` maps every failure onto the domain
+taxonomy *first*, and it folded `permission-denied` into
+`BackendRejectedException` — reasonable-looking, since that code reads like an
+App Check refusal. The repository's `on FirebaseFunctionsException` therefore
+never saw it, `ContentRefusal.premium` was dead code, and the post landed in
+the generic `on Exception` arm as `PostStatus.failed`: "couldn't post, tap to
+retry", on a retry that could never succeed.
+
+`createPost` is the **only** producer of `permission-denied` in the whole
+backend, so the mapping had no other justification. It is removed; the code
+falls through to the pass-through arm and reaches the repository intact.
+
+Two things about this one are worth remembering:
+
+1. **It was unreachable until this session.** `ENTITLEMENT_MODE=ungated` made
+   `tierFor()` return premium for every caller, so `createPost` never raised
+   `permission-denied`. The flip armed it. Flipping without auditing what the
+   flip newly reaches would have shipped it.
+2. **The suite could not have caught it.** `premium_gate_test.dart` covers this
+   exact path — "the backend refuses what a skipped gate sends" — but on the
+   fake backend, which never goes through `LpFunctions` and so never meets the
+   mapper. Same shape as the `collectionGroup` rules bug: green tests, broken
+   production, because the test and the production path diverge below the
+   assertion. `test/data/backend_rejected_test.dart` now pins the mapping
+   itself, which is the layer that was actually wrong.
+
+**Everything else audited clean.** Both tiers, both sides:
+
+- Allowances agree three ways — `LpAllowances` ↔ `ALLOWANCE_DEFAULTS` ↔
+  `.env.alastpuff` (5/100 coach, 1/3 posts, 5 SOS, 30-day history).
+- `MODEL_FREE` is `gemini-3.5-flash-lite`, the same id `MODEL_MODERATION`
+  already runs on every post — so the free coach model is proven live, not
+  newly exercised.
+- The panic flow still never reaches a paywall: a spent AI session falls
+  through to the coach (`panic_screens.dart`), and the coach's own cap CTA
+  stays suppressed for 20 minutes after a craving.
+- The launch paywall waits on `EntitlementStore.settled` (2.5s timeout) and
+  passes `settled:` into the policy, so a subscriber whose entitlement has not
+  resolved is never shown it.
+- `requireCaller` needs only a uid, so `refreshEntitlement` works for the
+  anonymous session a guest holds when buying during onboarding.
+- `REVENUECAT_SECRET_API_KEY` appears in `.env.alastpuff` only inside a
+  comment — no plain-env/Secret-Manager collision to block the deploy.
+- `npm run build` emits `lib/src/handlers/refreshEntitlement.js` and exports it
+  from the built barrel.
+
+**Verified against the shipped artifact,** not just the source: a release APK
+builds (63.2MB), and its `libapp.so` contains no `design frames`, no `/frames`,
+neither invented testimonial quote, and no `BETA TESTER` — while
+`obRatingQuoteBadge` is present in all five locales.
+
+Gates: `flutter analyze` clean · `flutter test` **943** · `npm run verify`
+**210** · `npm run test:integration` **273** · `npm run test:rules` **47**.
+
+### 19b. Deployed — Sep 3 2026
+
+`firebase deploy --only functions` on `alastpuff`, us-central1. **23 updated,
+`refreshEntitlement` created** — 24 services, all reporting Ready. The
+predeploy hook re-ran `npm run verify` (210) before anything shipped.
+
+Verified on the deployed revision rather than in the source:
+
+- `ENTITLEMENT_MODE = 'mirror'` on the live containers. **The free/premium
+  split is now in force in production** — five coach messages and one ordinary
+  post a day for a free account, and a reason to buy Premium.
+- The allowances landed with it: `FREE_DAILY_COACH_MESSAGES=5`,
+  `PREMIUM_DAILY_COACH_MESSAGES=100`, `FREE_DAILY_POSTS=1`,
+  `PREMIUM_DAILY_POSTS=3`, `DAILY_SOS_POSTS=5`, `AI_COST_PANIC=false`.
+- `refreshEntitlement` is Ready with `REVENUECAT_SECRET_API_KEY` bound **from
+  Secret Manager**, not as a plain environment variable — the collision that
+  blocked the Sep 2 deploy did not recur.
+- **`rcWebhook`'s URL is unchanged** (`rcwebhook-2tjpt4pvaq-uc.a.run.app`), so
+  the endpoint configured in the RevenueCat dashboard still resolves. An
+  updated 2nd-gen function keeps its URL; a deleted-and-recreated one would
+  not, and that would have silently stopped every entitlement mirroring.
+
+One process note worth keeping: the first read of the deployed config appeared
+to show `ENTITLEMENT_MODE=0`, which would have meant the flip had not taken.
+It was a bad `--format=value(...)` piped through `tr ',' '
+'`, splitting
+gcloud's dict rendering mid-record. Read deployed config as JSON; a formatting
+artifact that looks like a config bug costs a round of panic.
+
+**Still open, and the deploy does not close them:** `S1-11` (a real Play /
+App Store sandbox purchase must flip the mirror — the Test Store proved the
+path, the real stores have not), `S1-14` (grace periods against a forced
+billing failure), 48h of watching `limit_reached` and `entitlement_changed`,
+and `RC_ACCEPT_SANDBOX=true` must go **off** before the public build.

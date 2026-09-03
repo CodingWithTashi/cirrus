@@ -26,7 +26,7 @@ abstract final class LpLinks {
   /// The address both legal pages already publish, so this discloses nothing
   /// new. Rendered as visible text wherever it is tappable: if no mail app
   /// handles it, the reader can still see who to write to.
-  static const supportEmail = 'developer.kharag@gmail.com';
+  static const supportEmail = 'support@cirrusquit.com';
   static final support = Uri.parse('mailto:$supportEmail');
 
   /// Opens [url] in the browser. Returns whether anything handled it.

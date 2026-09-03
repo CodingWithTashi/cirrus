@@ -762,15 +762,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get obRatingSubtitle => '30 secondes. Passable. Sans rancune.';
 
   @override
-  String get obRatingBetaTester => 'BÊTA-TESTEUR';
-
-  @override
-  String get obRatingQuote1 =>
-      '« Le bouton panique m\'a fait passer la première semaine. J\'aurais craqué au jour 3 sans lui. »';
-
-  @override
-  String get obRatingQuote2 =>
-      '« La première appli qui ne me parle pas comme un médecin ou ma mère. »';
+  String get obRatingQuoteBadge => 'AVIS RÉEL';
 
   @override
   String get obRatingCta => 'Noter Cirrus';
@@ -3020,17 +3012,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get trialEndingNotifTitle => 'Ton essai se termine demain';
-
-  @override
-  String get frameMapTitle => 'Les 52 écrans du design';
-
-  @override
-  String get frameMapNote =>
-      'Chaque écran des quatre handoffs, à un tap. Les lignes chargent le parcours démo ou les réponses du quiz si besoin.';
-
-  @override
-  String get frameMapEdgeNote =>
-      'Ces états s\'activeront avec le backend — une app en mémoire n\'a ni hors-ligne ni erreurs serveur à montrer honnêtement.';
 
   @override
   String get seedPostWin30 =>

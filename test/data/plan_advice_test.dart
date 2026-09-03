@@ -192,4 +192,7 @@ class _StubServerState implements ServerStateRepository {
     if (failure != null) throw failure!;
     return insight;
   }
+
+  @override
+  Future<bool> refreshEntitlement() async => false;
 }

@@ -220,6 +220,21 @@ abstract interface class ServerStateRepository {
   /// The most recent weekly report, or null when none has been generated —
   /// free tier, a short week, or a model outage the cron skipped silently.
   Future<WeeklyInsight?> latestInsight();
+
+  /// Asks the server to re-read this account's subscription from the store
+  /// and rewrite its own mirror, without waiting for the store's webhook.
+  ///
+  /// Called right after a purchase or a restore, and for one reason: the app
+  /// becomes Premium the moment the store sheet returns, while the server's
+  /// mirror lags a webhook round-trip. In that window the app shows Premium
+  /// and the server still meters the free allowance — so the person who just
+  /// paid is the one who meets a wall.
+  ///
+  /// Carries no tier and asks for none: the server takes the answer from the
+  /// store, never from us. Returns true when the mirror now says premium or
+  /// trial. **Never throws** — a failure means "not yet", and the webhook
+  /// lands the same write on its own; nothing about a purchase depends on it.
+  Future<bool> refreshEntitlement();
 }
 
 /// Subscriptions: what is on sale, what this account owns, and the two

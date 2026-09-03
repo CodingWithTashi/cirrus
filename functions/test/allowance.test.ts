@@ -1,5 +1,11 @@
-import {describe, expect, it} from 'vitest';
-import {ALLOWANCE_DEFAULTS, allowance, readAllowance} from '../src/config';
+import {afterEach, describe, expect, it, vi} from 'vitest';
+import {
+  ALLOWANCE_DEFAULTS,
+  ENTITLEMENT_MODE,
+  allowance,
+  readAllowance,
+} from '../src/config';
+import {ungated} from '../src/lib/usage';
 
 /**
  * The guard between a missing config value and a silent product outage.
@@ -93,6 +99,46 @@ describe('readAllowance', () => {
     for (const [name, expected] of Object.entries(ALLOWANCE_DEFAULTS)) {
       const read = readAllowance[name as keyof typeof readAllowance];
       expect(read(), name).toBe(expected);
+    }
+  });
+});
+
+/**
+ * The same lesson, pointing the other way.
+ *
+ * `allowance()` exists because an unset param resolves to 0 and 0 fails
+ * toward "refuse everybody". `ENTITLEMENT_MODE` has the opposite hazard: its
+ * default used to be `ungated`, which fails toward *giving the product away*.
+ * An unloaded `.env`, a new project, a deploy bound to the wrong config, and
+ * every caller is silently premium — no error, no log, no refusal, and no
+ * revenue. That was the live state of production from Aug 29 to Sep 3 2026.
+ *
+ * A default is a decision about what happens when nobody decided. This one
+ * has to be the safe direction.
+ */
+describe('ENTITLEMENT_MODE', () => {
+  const as = (value: string) => {
+    vi.spyOn(ENTITLEMENT_MODE, 'value').mockReturnValue(value);
+    return ungated();
+  };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('opens the gates only for the exact word', () => {
+    expect(as('ungated')).toBe(true);
+  });
+
+  it('treats an unresolved param as gated, not as free-for-all', () => {
+    // What a param actually resolves to when nothing supplies a value —
+    // no `.env` for the active project, a deploy bound to the wrong config.
+    // The comparison is against the exact string, so empty falls through to
+    // the mirror rather than to "everybody is premium".
+    expect(as('')).toBe(false);
+  });
+
+  it('treats anything it does not recognise as gated', () => {
+    for (const value of ['mirror', 'MIRROR', 'Ungated', 'ungated ', 'true', 'off']) {
+      expect(as(value), value).toBe(false);
     }
   });
 });

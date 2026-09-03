@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -278,18 +277,6 @@ class SettingsScreen extends ConsumerWidget {
               value: languageValue(),
               onTap: () => _showLanguageSheet(context, ref),
             ),
-            // Debug builds only. The frame map is a developer navigator: it
-            // opens every screen in the app, and for anyone without a journey
-            // it seeds the demo day-12 fixture — which then syncs to Firestore
-            // like any other mutation. Shipping that two taps from Settings
-            // put a stranger's fake progress on a real account.
-            if (kDebugMode)
-              row(
-                emoji: '🗺️',
-                label: l10n.frameMapTitle,
-                value: '',
-                onTap: () => context.push(Routes.frames),
-              ),
             // Founder-only. `isModeratorProvider` reads the signed token's
             // `admin` claim, so a non-admin never sees this row and a client
             // that forced the route would still be refused by the callables.

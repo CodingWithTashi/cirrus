@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import '../api/firebase/functions_client.dart';
 import '../dto/journey_codec.dart';
 import 'firebase_common.dart';
 
@@ -14,15 +15,22 @@ import 'firebase_common.dart';
 /// that denial is the entire reason entitlement can live here safely. The two
 /// things the crons produce (`planAdvice`, `insights/*`) were being written
 /// nightly with nothing on the client reading them; this class is the reader.
+///
+/// [refreshEntitlement] is the one method here that is not a document read,
+/// and it is still not a write: it asks a callable to refresh the mirror from
+/// the store. The client never writes this tree, which is the whole point.
 class FirebaseServerStateRepository implements ServerStateRepository {
   FirebaseServerStateRepository({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
+    LpFunctions? functions,
   }) : _auth = auth ?? FirebaseAuth.instance,
-       _db = firestore ?? FirebaseFirestore.instance;
+       _db = firestore ?? FirebaseFirestore.instance,
+       _functions = functions ?? LpFunctions();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
+  final LpFunctions _functions;
 
   DocumentReference<Map<String, dynamic>>? get _userDoc {
     final uid = _auth.currentUser?.uid;
@@ -91,6 +99,21 @@ class FirebaseServerStateRepository implements ServerStateRepository {
       );
     });
   }
+
+  @override
+  Future<bool> refreshEntitlement() async {
+    if (_auth.currentUser == null) return false;
+    try {
+      final answer = await _functions.call('refreshEntitlement');
+      final tier = answer['tier'];
+      return tier == 'premium' || tier == 'trial';
+    } on Object {
+      // Deliberately swallows everything. This call is an optimisation on a
+      // write the webhook performs anyway; a purchase that succeeded must
+      // never look like it failed because a follow-up round-trip did.
+      return false;
+    }
+  }
 }
 
 /// The fake-backend stand-in.
@@ -107,4 +130,10 @@ class NoopServerStateRepository implements ServerStateRepository {
 
   @override
   Future<WeeklyInsight?> latestInsight() async => null;
+
+  /// The fake backend has no mirror to refresh — its entitlement row IS the
+  /// answer the gates read, and it is already current the moment a purchase
+  /// resolves. False means "nothing was refreshed", never "not premium".
+  @override
+  Future<bool> refreshEntitlement() async => false;
 }

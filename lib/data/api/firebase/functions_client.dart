@@ -138,6 +138,20 @@ class LpFunctions {
 /// who you are" from "we don't trust this build". A caller who is demonstrably
 /// signed in and still hears `unauthenticated` was refused as an app, not as a
 /// person — that is App Check, and it becomes [BackendRejectedException].
+///
+/// **`permission-denied` is deliberately NOT mapped.** It reads like an App
+/// Check refusal and used to be folded into [BackendRejectedException], but
+/// exactly one callable raises it — `createPost`, for a free account whose
+/// ordinary post a subscription WOULD have let through — and that meaning is
+/// the opposite of a rejected build: it is the app's single most valuable
+/// upgrade door. Folding it destroyed the distinction the server goes out of
+/// its way to draw (`permission-denied` = "upgrading helps" vs
+/// `resource-exhausted` = "come back tomorrow"), so
+/// `FirebaseCommunityRepository` — which catches the raw code and turns it
+/// into a [ContentRefusal] — never saw it, and a free user who had spent the
+/// day's post got "couldn't post, tap to retry" on a retry that could never
+/// succeed. It was unreachable while `ENTITLEMENT_MODE=ungated` made every
+/// caller premium, and went live with the flip to `mirror` (docs/10 §19).
 Object mapCallableError(
   FirebaseFunctionsException error, {
   required bool signedIn,
@@ -147,6 +161,5 @@ Object mapCallableError(
     signedIn
         ? const BackendRejectedException()
         : const InvalidCredentialsException(),
-  'permission-denied' => const BackendRejectedException(),
   _ => error,
 };

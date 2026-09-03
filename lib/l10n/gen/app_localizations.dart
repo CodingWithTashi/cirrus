@@ -1412,23 +1412,11 @@ abstract class AppLocalizations {
   /// **'30 seconds. Skippable. No hard feelings.'**
   String get obRatingSubtitle;
 
-  /// No description provided for @obRatingBetaTester.
+  /// No description provided for @obRatingQuoteBadge.
   ///
   /// In en, this message translates to:
-  /// **'BETA TESTER'**
-  String get obRatingBetaTester;
-
-  /// No description provided for @obRatingQuote1.
-  ///
-  /// In en, this message translates to:
-  /// **'\"The panic button got me through week one. I\'d have caved on day 3 without it.\"'**
-  String get obRatingQuote1;
-
-  /// No description provided for @obRatingQuote2.
-  ///
-  /// In en, this message translates to:
-  /// **'\"First app that didn\'t talk to me like a doctor or my mom.\"'**
-  String get obRatingQuote2;
+  /// **'REAL REVIEW'**
+  String get obRatingQuoteBadge;
 
   /// No description provided for @obRatingCta.
   ///
@@ -4986,24 +4974,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your trial ends tomorrow'**
   String get trialEndingNotifTitle;
-
-  /// No description provided for @frameMapTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'All 52 design frames'**
-  String get frameMapTitle;
-
-  /// No description provided for @frameMapNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Every frame from the four handoffs, one tap away. Rows load the demo journey or quiz answers as needed.'**
-  String get frameMapNote;
-
-  /// No description provided for @frameMapEdgeNote.
-  ///
-  /// In en, this message translates to:
-  /// **'These states go live with the backend — an in-memory app has no offline or server errors to show honestly.'**
-  String get frameMapEdgeNote;
 
   /// No description provided for @seedPostWin30.
   ///

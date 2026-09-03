@@ -16,7 +16,6 @@ import '../../features/coach/coach_screen.dart';
 import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
 import '../../features/day1/day1_screen.dart';
-import '../../features/frame_map/frame_map_screen.dart';
 import '../../features/health/health_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/insight/insight_screen.dart';
@@ -80,8 +79,6 @@ abstract final class Routes {
   /// What Ember remembers, and the button that takes it back.
   static const memories = '/coach/memories';
   static const slip = '/slip';
-  static const frames = '/frames';
-  static const framesEdge = '/frames/edge';
 }
 
 /// Root navigator key — gives app-level error surfaces (app_errors.dart) a
@@ -318,11 +315,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ModerationScreen(),
       ),
       GoRoute(path: Routes.slip, builder: (_, _) => const SlipFlow()),
-      GoRoute(path: Routes.frames, builder: (_, _) => const FrameMapScreen()),
-      GoRoute(
-        path: Routes.framesEdge,
-        builder: (_, _) => const EdgeStatesPreviewScreen(),
-      ),
     ],
   );
 });

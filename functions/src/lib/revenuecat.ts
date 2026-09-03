@@ -299,8 +299,9 @@ export async function deleteSubscriber(
  * RevenueCat lists one (its access horizon: through grace, past an early
  * renewal); only without one does the subscription's own latest end stand
  * in, and then a past end fails closed. With no subscription at all, an
- * active entitlement on its own is a promotional grant (the beta cohort's
- * lifetime Premium is exactly this), premium with no store row behind it —
+ * active entitlement on its own is a promotional grant — a comp issued in the
+ * RevenueCat dashboard for a refund, a press account or a support case:
+ * premium with no store row behind it —
  * recognised only when our entitlement's id is resolved, so a stray grant
  * for some other entitlement never unlocks this one.
  */

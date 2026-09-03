@@ -26,9 +26,9 @@ import {
   REVENUECAT_SECRET_API_KEY,
   REVENUECAT_WEBHOOK_TOKEN,
 } from '../config';
-import {FieldValue, Timestamp, type UserDoc, db, userDoc} from '../lib/firestore';
+import {mirrorEntitlement} from '../lib/entitlementMirror';
 import {log} from '../lib/logger';
-import {fetchSubscriber, RevenueCatUnavailable} from '../lib/revenuecat';
+import {RevenueCatUnavailable} from '../lib/revenuecat';
 
 export const rcWebhook = onRequest(
   {
@@ -91,21 +91,16 @@ export const rcWebhook = onRequest(
         log.warn('rcWebhook.orphan', {uid, type});
         continue;
       }
-      const ref = userDoc(uid);
-      const current = ((await ref.get()).data() as UserDoc | undefined)
-        ?.entitlement;
-      if (eventId !== null && current?.lastEventId === eventId) {
-        log.info('rcWebhook.duplicate', {uid, type, eventId});
-        continue;
-      }
-
-      // Stamped BEFORE the read: two deliveries for one customer can run at
-      // once (RevenueCat dispatches BILLING_ISSUE / CANCELLATION / EXPIRATION
-      // together), and the one that read earlier must not land later.
-      const fetchedAtMs = Date.now();
-      let snapshot;
+      // The write itself is shared with `refreshEntitlement` — see
+      // `lib/entitlementMirror.ts` for why both doors exist and why neither
+      // trusts its caller about the content.
+      let result;
       try {
-        snapshot = await fetchSubscriber(uid, {acceptSandbox});
+        result = await mirrorEntitlement(uid, {
+          acceptSandbox,
+          eventId,
+          eventType: type,
+        });
       } catch (error) {
         // A non-2xx makes RevenueCat retry (5, 10, 20, 40, 80 min) — the
         // right outcome for a snapshot we could not read, whatever stopped
@@ -120,38 +115,8 @@ export const rcWebhook = onRequest(
         res.status(500).send('revenuecat unavailable');
         return;
       }
-
-      const written = await db.runTransaction(async (tx) => {
-        const current = ((await tx.get(ref)).data() as UserDoc | undefined)
-          ?.entitlement;
-        if ((current?.snapshotAt ?? 0) > fetchedAtMs) return false;
-        tx.set(
-          ref,
-          {
-            entitlement: {
-              tier: snapshot.tier,
-              productId: snapshot.productId,
-              plan: snapshot.plan,
-              expiresAt:
-                snapshot.expiresAtMs === null
-                  ? null
-                  : Timestamp.fromMillis(snapshot.expiresAtMs),
-              willRenew: snapshot.willRenew,
-              store: snapshot.store,
-              environment: snapshot.environment,
-              managementUrl: snapshot.managementUrl,
-              lastEventId: eventId,
-              lastEventType: type,
-              snapshotAt: fetchedAtMs,
-              updatedAt: FieldValue.serverTimestamp(),
-            },
-          },
-          {merge: true},
-        );
-        return true;
-      });
-      if (written) {
-        log.info('rcWebhook.mirrored', {uid, type, tier: snapshot.tier});
+      if (result.written) {
+        log.info('rcWebhook.mirrored', {uid, type, tier: result.tier});
       } else {
         log.info('rcWebhook.stale_snapshot', {uid, type});
       }

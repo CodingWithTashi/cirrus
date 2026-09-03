@@ -30,7 +30,7 @@
 
 **F1 — Shock edutainment (faceless).** The Puff Count 8.3M-view formula: "what's actually inside a vape," "what 200 puffs a day does to your money," nicotine math visualized. Entertainment first, app appears only in the last 2 seconds. Highest viral ceiling.
 
-**F2 — Founder journey (face).** "I spent 5 years building a community app that made $0. Now I'm building a quit-vaping app in public. Day 12." Build-in-public + underdog story = indie/startup audience AND quitters. Weekly episodes: revenue screenshots (even $0), design reveals, decision votes ("$2.99 or $4.99? you decide"). This audience becomes your beta testers and first reviewers.
+**F2 — Founder journey (face).** "I spent 5 years building a community app that made $0. Now I'm building a quit-vaping app in public. Day 12." Build-in-public + underdog story = indie/startup audience AND quitters. Weekly episodes: revenue screenshots (even $0), design reveals, decision votes ("$2.99 or $4.99? you decide"). This audience is now the *only* first-reviewer source, the beta cohort having been descoped (`docs/08 §7 #29`).
 
 **F3 — App dopamine demos (faceless).** Screen recordings: typing 200 → 🔴 "Severe dependence" badge; the $1,300/year counter rolling; hold-to-commit confetti; Panic Button breathing at 2 a.m.; Ember the flame growing from spark to blaze. The product IS the content — this is what made Cal AI's CPI collapse.
 
@@ -52,8 +52,8 @@ Organic quitting content is allowed, but: don't glamorize devices (no hero shots
 ## 3. REDDIT PLAYBOOK (beta engine + honest reviews)
 
 - Home subs: r/QuitVaping (the big one), r/stopsmoking, r/decidingtobebetter; build-in-public: r/SideProject, r/indiehackers (+ X/Twitter #buildinpublic).
-- **The 10:1 rule:** ten genuinely helpful comments (answer craving questions as a human, share your story) for every one mention of the app. Message mods BEFORE any beta-recruitment post; ask permission, offer free lifetime premium to the sub's beta cohort.
-- Sep beta post (after 2+ weeks of real participation): "I built a quit-vaping app with an AI panic button — 50 free lifetime spots for this community, brutal feedback wanted." That thread = testers + testimonials + your first honest reviews at launch.
+- **The 10:1 rule:** ten genuinely helpful comments (answer craving questions as a human, share your story) for every one mention of the app.
+- > ⚠️ **Superseded Sep 3 2026 (founder) — `docs/08 §7 #29`.** This section used to plan a beta-recruitment post offering **"50 free lifetime spots"** to r/QuitVaping, sourcing testers, testimonials and the first reviews from one thread. **No cohort was recruited and none will be; Cirrus ships direct to production.** Nothing below depends on it any more, and three things it was quietly load-bearing for are now open: the **D3 testimonial quotes** have no real source (`S6-2` — a launch blocker, since the fallback is two invented five-star reviews), there is **no pre-launch crash signal** (a staged Play rollout replaces it, `S5-8`), and there is **no organic first-review source** at launch. Recruiting a cohort later remains available; it is simply not the plan.
 - Never astroturf, never fake accounts. One sockpuppet scandal kills a quit-app brand permanently.
 
 ---
@@ -112,11 +112,11 @@ Views · follower delta · profile-link taps · downloads · onboarding completi
 
 ## 9. LAUNCH-WEEK CHECKLIST (Oct 15)
 
-- [ ] 20+ real beta testimonials collected (feeds Doc 2 D3 screen)
+- [ ] 🚨 **D3 testimonials resolved** — the cohort that was to supply them is descoped, and the shipped fallback is two invented five-star quotes (`docs/08 §7 #29`, `S6-2`). Cut them, hold them, or source real consented ones. **Launch blocker.**
 - [ ] App Store page: screenshots, keywords, privacy labels ("Data not collected for tracking")
 - [ ] Superwall: paywall live + test #1 armed (3-day vs 7-day trial)
 - [ ] RevenueCat products verified in sandbox + production
 - [ ] Crash-free ≥ 99.5% on TestFlight cohort
-- [ ] Reddit thank-you post to beta cohort (they carry your first reviews)
+- [ ] ~~Reddit thank-you post to beta cohort~~ — descoped with the cohort (`docs/08 §7 #29`). **The first-review gap it leaves is not yet filled.**
 - [ ] "We're live" video across all channels + waitlist email
 - [ ] Weekly scorecard template ready; Mixpanel funnel dashboard saved

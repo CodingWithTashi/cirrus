@@ -27,6 +27,7 @@ export {remoderateHeld} from './handlers/remoderate';
 export {taperRecalc} from './handlers/taperRecalc';
 export {pruneDevices} from './handlers/pruneDevices';
 export {weeklyInsight} from './handlers/weeklyInsight';
+export {refreshEntitlement} from './handlers/refreshEntitlement';
 export {rcWebhook} from './handlers/rcWebhook';
 export {createPost} from './handlers/createPost';
 export {createReply} from './handlers/createReply';
