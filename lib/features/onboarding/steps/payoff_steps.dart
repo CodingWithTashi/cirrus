@@ -545,6 +545,11 @@ class RatingStep extends ConsumerWidget {
     return StepBody(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
+        // Balances the Spacer above the CTA when there are no quote cards to
+        // fill the middle. Without it the ask sits jammed against the status
+        // bar over an empty half-screen, which reads as a screen that failed
+        // to load rather than one with nothing to show.
+        if (quotes.isEmpty) const Spacer(),
         Text(l10n.obRatingTitle, style: LpType.title(lp.textPrimary, size: 28)),
         const SizedBox(height: 8),
         Text(l10n.obRatingSubtitle, style: LpType.body14(lp.textSecondary)),

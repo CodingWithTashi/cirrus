@@ -26,7 +26,7 @@ flutter test                             # unit + widget suites
 ./tool/device.ps1                        # run on a device against real Firebase (Windows)
 ./tool/device.ps1 -Test                  # the on-device end-to-end suites
 flutter build appbundle --release --dart-define-from-file=.dart_defines.json
-
+ flutter build appbundle --release 
 cd functions
 npm install                              # first run
 npm run verify                           # typecheck + lint + tests — the deploy gate

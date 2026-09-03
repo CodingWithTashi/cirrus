@@ -2,7 +2,7 @@ name: last_puff
 description: "Cirrus — the honest, AI-native quit-vaping app."
 publish_to: 'none'
 
-version: 1.0.8+9
+version: 1.0.9+10
 
 environment:
   sdk: ^3.11.4

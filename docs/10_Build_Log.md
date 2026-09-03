@@ -2124,3 +2124,66 @@ App Store sandbox purchase must flip the mirror — the Test Store proved the
 path, the real stores have not), `S1-14` (grace periods against a forced
 billing failure), 48h of watching `limit_reached` and `entitlement_changed`,
 and `RC_ACCEPT_SANDBOX=true` must go **off** before the public build.
+
+---
+
+## 20. THE RELEASE APK THAT COULD NEVER WORK (Sep 3)
+
+Founder, after a device run showed no testimonials: *"I keep getting this issue
+again and again. I just build apk and install `flutter build apk --release
+--dart-define-from-file=.dart_defines.json --dart-define=LP_ANALYTICS=on`."*
+
+That command cannot work, and it is not obvious why — which is the whole
+problem. `app_check_setup.dart` picks its provider on `kDebugMode`. A
+`--release` build takes the other branch, so `LP_APPCHECK_DEBUG_TOKEN` is read
+into a constant nothing consults and the app attests with **Play Integrity**.
+Play Integrity cannot vouch for an APK Google has never seen, so no token is
+minted, the SDK sends something that is not a JWT, and the backend answers
+every callable with `Decoding App Check token failed`. Production logs, from
+that run:
+
+```
+Callable request verification failed: AppCheck token was rejected.
+FirebaseAppCheckError: Decoding App Check token failed.
+Make sure you passed the entire string JWT
+```
+
+**It surfaced as a missing testimonial**, which is the point worth keeping.
+Nothing said "App Check". `matchedTestimonials` failed like everything else,
+the D3 screen fell back to its bundled quotes, and the fallback made the
+failure invisible — for weeks. Deleting those quotes in §18 is what finally
+exposed it. A fallback that hides a broken fetch is not a safety net; it is a
+silence.
+
+### Why it kept recurring
+
+`logAppCheckStatus()` — the diagnostic written for exactly this — opened with
+`if (!kDebugMode) return;`. The one build mode that cannot obtain a token was
+the one mode that said nothing about it. Debug builds got a loud banner;
+release builds got silence and four layers of downstream errors that read like
+the network.
+
+### The fix, in three parts
+
+1. **`logAppCheckStatus()` runs in every build mode.** A build that cannot get
+   a token says so at launch, and a non-debug build is told why (Play
+   Integrity cannot attest a sideload) and what to do instead.
+2. **`activateAppCheck()` announces the ignored define.** `!kDebugMode &&
+   token.isNotEmpty` is always a mistake — the define does nothing there — so
+   it prints, naming both working paths.
+3. **`./tool/device.ps1 -Analytics`.** The reason to reach for `--release` was
+   the analytics funnel, and it was never a good one: `LP_ANALYTICS=on`
+   overrides the `kReleaseMode` check in *any* build mode. The switch exists so
+   that wanting analytics on device never again means building release.
+
+**What is deliberately NOT the fix:** letting a release build use the debug
+token. A registered debug token bypasses attestation project-wide, so it is a
+credential; shipping one inside an APK hands anyone who unzips it a free pass
+to every callable. `test/app_check_diagnostics_test.dart` pins that the
+providers stay gated on `kDebugMode`, alongside both diagnostics.
+
+A genuine release build can only be exercised from the Play **internal
+testing** track, installed from Play, with the Play app-signing SHA-256
+registered in Firebase. That is a property of Play Integrity, not of this app.
+
+`flutter analyze` clean · `flutter test` **947**.
