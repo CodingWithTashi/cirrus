@@ -344,9 +344,16 @@ void main() {
       );
       await tester.tap(find.text(l10n.paywallFreeLink));
       await tester.pumpAndSettle();
+      // Named rather than read off the front of the list: Home's own nudge
+      // gate is premium-only, so it has already fired a `gate_shown` of its
+      // own before this route was ever pushed, and `propsOf` answers the
+      // FIRST occurrence. Counting this door's impressions also says the
+      // thing the denominator actually needs — that it was impressed once.
       expect(
-        analytics.propsOf('gate_shown')?['source'],
-        'free_plan',
+        analytics
+            .propsOfAll('gate_shown')
+            .where((props) => props['source'] == 'free_plan'),
+        hasLength(1),
         reason: 'the impression is the denominator for this door',
       );
 

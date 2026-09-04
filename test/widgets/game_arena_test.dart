@@ -649,7 +649,15 @@ void main() {
       expect(find.text(l10n.gameLockedTitle(l10n.gameNameTiles)), findsOneWidget);
       expect(find.byType(TileField), findsNothing);
       expect(find.byType(OrbsField), findsNothing);
-      expect(analytics.propsOf('gate_shown')?['source'], 'panic_game');
+      // This door by name, not whichever impression landed first: `bootFree`
+      // starts on Home, whose nudge card is itself premium-gated, so a
+      // `gate_shown` of its own is already recorded before the arena opens.
+      expect(
+        analytics
+            .propsOfAll('gate_shown')
+            .where((props) => props['source'] == 'panic_game'),
+        hasLength(1),
+      );
       // Nothing was played, so nothing is claimed: no round, no best, and
       // `lastGame` still names the game they can actually open.
       expect(analytics.names, isNot(contains('game_finished')));
