@@ -161,6 +161,15 @@ Object mapCallableError(
     signedIn
         ? const BackendRejectedException()
         : const InvalidCredentialsException(),
+  // The one exception to the paragraph above, and it does not weaken it: a
+  // permission refusal read out of an `unknown`'s WORDS can only have come
+  // from the streaming path, and `aiCoachChat` is the only callable that
+  // streams. `createPost` — the sole raiser of a real `permission-denied`,
+  // and the upgrade door that paragraph protects — goes over the plain
+  // `call`, which never loses its code, so it can never arrive this way.
+  // Guarding on the raw code keeps the two apart: the door stays a door.
+  'permission-denied' when error.code == 'unknown' =>
+    const BackendRejectedException(),
   _ => error,
 };
 
