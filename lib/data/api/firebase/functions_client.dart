@@ -155,7 +155,7 @@ class LpFunctions {
 Object mapCallableError(
   FirebaseFunctionsException error, {
   required bool signedIn,
-}) => switch (error.code) {
+}) => switch (callableErrorCode(error)) {
   'unavailable' || 'deadline-exceeded' => const NoConnectionException(),
   'unauthenticated' =>
     signedIn
@@ -163,3 +163,35 @@ Object mapCallableError(
         : const InvalidCredentialsException(),
   _ => error,
 };
+
+/// The error's code — recovered from its message when the code says nothing.
+///
+/// The plugin's **streaming** path on Apple platforms flattens every failure
+/// to `unknown` and keeps only the SDK's `localizedDescription`
+/// (`FunctionsStreamHandler.swift`), which for a `FunctionsError` is the
+/// server's status message ("Unauthenticated") or the code's own name
+/// ("UNAUTHENTICATED"). So an App Check refusal of `aiCoachChat` on an
+/// iPhone arrived here as `unknown`, fell through the switch above, and the
+/// coach told a user who was demonstrably online that the signal had dropped
+/// — the exact costume this file exists to take off. The plain `call` path
+/// keeps its codes, which is why `syncUserContext` on the same device said
+/// "this build got bounced" while the coach said "check your connection".
+///
+/// Only `unknown` is read this way; a real code is never second-guessed.
+String callableErrorCode(FirebaseFunctionsException error) {
+  if (error.code != 'unknown') return error.code;
+  final words = (error.message ?? '').toLowerCase();
+  if (words.contains('unauthenticated')) return 'unauthenticated';
+  if (words.contains('permission')) return 'permission-denied';
+  // NSURLError descriptions for a dead link: "The Internet connection appears
+  // to be offline.", "The network connection was lost.", "The request timed
+  // out." — and the gRPC names the SDK falls back to.
+  if (words.contains('offline') ||
+      words.contains('network connection') ||
+      words.contains('timed out') ||
+      words.contains('unavailable') ||
+      words.contains('deadline')) {
+    return 'unavailable';
+  }
+  return error.code;
+}

@@ -457,6 +457,34 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                               locale: locale,
                             ),
                           ],
+                          // A dropped reply gets a button, not just an
+                          // apology. Retyping the message was the only way
+                          // to try again, and during the Day-1 walkthrough —
+                          // where this reply is the one thing the step waits
+                          // for — that read as a dead end. Only the last
+                          // line, and only the connection case: a refused
+                          // build fails the same way every time until the
+                          // build is fixed, and a retry there would promise
+                          // what it cannot deliver.
+                          if (m.template == CoachTemplate.connectionLost &&
+                              i == coach.messages.length - 1 &&
+                              !coach.isTyping) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 160,
+                                child: LpButton(
+                                  l10n.errorRetry,
+                                  style: LpButtonStyle.surface,
+                                  height: 40,
+                                  fontSize: 15,
+                                  glow: false,
+                                  onTap: _retry,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 12),
                         ],
                         if (coach.isTyping) _TypingBubble(coachName: coachName),
@@ -589,6 +617,18 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       // watched on a normal screen, not through the barrier's 88% wash. The
       // tour's locks stay until the reply completes the step.
       Day1Spotlight.dismissOverlay();
+      unawaited(_finishTourStepAfter(sent));
+    } else {
+      unawaited(sent);
+    }
+  }
+
+  /// "Run it back" under a dropped reply: the same message, asked again. Rides
+  /// the same completion path as a fresh send, so a retry that lands during
+  /// the walkthrough ticks the step exactly as a first-time answer would.
+  void _retry() {
+    final sent = ref.read(coachStoreProvider.notifier).retryLast();
+    if (ref.read(day1TourStepProvider) == Day1TourStep.meetCoach) {
       unawaited(_finishTourStepAfter(sent));
     } else {
       unawaited(sent);

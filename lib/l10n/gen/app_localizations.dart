@@ -2227,6 +2227,12 @@ abstract class AppLocalizations {
   /// **'Skip setup for now'**
   String get day1Skip;
 
+  /// No description provided for @day1TourBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to setup'**
+  String get day1TourBack;
+
   /// No description provided for @day1TourLogTitle.
   ///
   /// In en, this message translates to:

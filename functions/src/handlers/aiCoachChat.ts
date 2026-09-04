@@ -313,6 +313,12 @@ export const aiCoachChat = onCall(
       // on the critical path of every answer and add a full model round-trip
       // to it — the exact cost the kill switch exists to avoid, paid by
       // everyone. A client that cannot stream gets the static chips.
+      //
+      // In practice that is ONE path: `FirebaseCoachRepository` re-asks over
+      // the plain `call` when a stream ends without a result (the
+      // platform-specific stream-error gotcha in CLAUDE.md). So the turns that
+      // lose their chips are exactly the turns already recovering from a
+      // failed stream — which is where an extra round-trip would hurt most.
       streaming
         ? suggestFollowUps(model, caller.uid, userText, reply, panicIntensity)
         : Promise.resolve<string[]>([]),

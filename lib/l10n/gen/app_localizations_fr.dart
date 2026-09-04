@@ -1269,6 +1269,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get day1Skip => 'Passer la configuration pour l\'instant';
 
   @override
+  String get day1TourBack => 'Retour à la configuration';
+
+  @override
   String get day1TourLogTitle => 'C\'est toute l\'appli.';
 
   @override

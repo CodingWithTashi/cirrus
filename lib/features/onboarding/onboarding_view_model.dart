@@ -383,8 +383,16 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// Returns false when already at the first step (caller pops the route).
   bool back() {
     final order = ObStep.values;
+    // The building animation advances itself a moment later; a back that
+    // landed on `pace` would be overtaken by that timer, which then logs
+    // `pace` as completed a second time and lands on `building` again.
+    if (state.step == ObStep.building) return true;
     var i = order.indexOf(state.step) - 1;
     if (state.step == ObStep.tried) i = order.indexOf(ObStep.birthYear);
+    // And nobody backs INTO it either: it sits between pace and reveal in
+    // the order, so a plain step back from the reveal replayed the animation
+    // and delivered the user to the reveal again — back as a loop.
+    if (state.step == ObStep.reveal) i = order.indexOf(ObStep.pace);
     if (i < 0) return false;
     state = state.copyWith(step: order[i]);
     return true;

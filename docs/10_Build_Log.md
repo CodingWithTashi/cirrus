@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3)
 
 ---
 
@@ -1795,6 +1795,29 @@ A throwaway account (`qa-notif-sep2@…`) through the real 21-step onboarding, n
 
 **One test fixed on the way past.** `premium_gate_test`'s "the craving-forecast nudge is a Premium card" was red, and it was not this change: it reads the real wall clock. Home picks one card from a priority chain and `showMoodPrompt` is `mood == null && now.hour >= 18`; the seeded fixture logs no mood for today, so from 6pm local BOTH tiers rendered the mood prompt, neither rendered the nudge, and the difference the test asserts was 0. It passed every morning and failed every evening. The case now checks a mood in first. `flutter test` 867 green, `flutter analyze` clean. Worth a product look separately: the craving-forecast card is suppressed by the mood prompt from 6pm — which is when danger hours usually are.
 
+## 17. THE IPHONE 15 TESTFLIGHT PASS (Sep 2) — three reports, one of them a P1
+
+The first TestFlight build went out to an iPhone 15 and came back with three reports. Everything below was found in the report, reproduced in a widget test or on the iPhone 15 simulator, and fixed; nothing here needed the device.
+
+**1. The spend step did not fit (Continue below the fold).** The step's content is fixed-size — a hero number, the yearly card, three chips, a keypad and a CTA — and at the design frames' sizes it needs ~780 logical pixels. A Pixel 8 gives the step 800+; an iPhone 15 gives it ~707 once the status bar (59), the home indicator (34) and the progress header (52) have taken theirs, so Continue sat ~120 px below the fold and every change to the amount meant a scroll to reach it. `StepDensity` (`steps/step_body.dart`) now reads the step's own height once and the spend step draws every fixed size from it: hero 72→60, yearly 40→32, card and keypad padding tightened, chips one size down, keys 50→44 — the same elements, shorter. Nothing changes on a phone tall enough for the frames' sizes. `test/widgets/spend_step_layout_test.dart` renders the step **with the bundled Space Grotesk and Inter** (the test font draws square glyphs, which is why `screen_layout_test` cannot assert on fit) at iPhone 15, 15 Pro Max, Pixel 8 with gesture nav and Pixel 8 with the 3-button bar, and asserts a zero scroll extent with the CTA and the whole keypad inside the safe area on every one.
+
+**2. The coach-name CTA sat on a spinner for 3–4 s.** `JourneyStore.reserveCoachName` awaited the `setCoachName` callable with no bound. Its own doc said "a timeout accepts the name locally" — and nothing ever imposed one, so a cold start (behind an App Check attempt that, on this build, had to fail first — see 3) was the whole wait. The wait is now `JourneyStore.coachNameBudget` (1.5 s): a warm guard answers well inside it and a definite no still blocks; past it the name is kept and the callable finishes on its own — a late acceptance still lands the server copy, a late refusal simply never does, which is the policy that was already written down. `test/data/coach_name_budget_test.dart`.
+
+**3. P1 — "the AI chat failed and I am stuck on this screen from the walkthrough."** Two causes, one for each half of the sentence.
+
+*Why the chat failed:* the release provider is `AppleAppAttestProvider`, and App Attest refuses to mint a key for a binary without `com.apple.developer.devicecheck.appattest-environment`. `Runner.entitlements` carried only Sign in with Apple. So every callable on the TestFlight build was rejected as `unauthenticated` — coach, panic, community, user sync — and the coach said so in its own words ("the server didn't recognise this app"). This was `S0-24` on the board, listed as "before the first TestFlight build"; the build went first. The entitlement is in the file now (`production`; TestFlight and the App Store run App Attest in production regardless of the value). **The founder half is still open:** Firebase console → App Check → the iOS app → App Attest with Team ID `PZFFFQ5T9X`, then a new TestFlight build. Until that is done a release iOS build fails every callable exactly as this one did.
+
+*Why it was a dead end:* step two of the Day-1 walkthrough holds the app closed until Ember answers. On Android a failed reply had the system back gesture (pauses the tour, returns to the checklist). An iPhone has no back at all; the tooltip's own "Maybe later" had come down the moment the composer was focused (that dismissal is deliberate — QA L4, §13); and the four tabs were dimmed and dead. A locked screen with nothing on it that said why or offered a way out. Two changes: **the tab bar shows the exit while a lesson has the app locked** (`_TourExit` in `app_shell.dart` — "Back to setup", same verb and same effect as the tooltip's link and the back gesture: to the checklist, ticking nothing), and **a dropped coach reply carries "Run it back"** (`CoachStore.retryLast`, rendered under a trailing `connectionLost` line only — a refused build fails identically every time, so it gets no button). A retry that lands completes the step exactly as a first answer would. `test/widgets/day1_tour_exit_test.dart`, `test/widgets/coach_retry_test.dart`; the on-device `g_day1_tour` "tab bar" case now asserts the exit rather than the dead tabs.
+
+**3c. Onboarding was forward-only on iPhone.** The header chevron was shown only on the twelve quiz steps, because the condition was "has a progress bar". Android's system back reaches `PopScope` from any step, so nobody saw it there; on an iPhone the chevron IS back, and six screens (reveal, coach name, why-words, commit, rating, notifications) had none. `OnboardingState.canGoBack` now names the three steps that have no previous one worth returning to (welcome, under-18 with its own "let me fix that", the building animation) and the header shows the chevron on every other step, progress bar or not. Two bugs fell out of writing the test: `back()` from the reveal landed on `building` (it sits between pace and reveal in the enum), which replayed the animation and delivered the user to the reveal again — back as a loop, and already true of the Android gesture; and the commit step's 1.4 s advance timer called `next()` unconditionally, so a back during the celebration was undone a second later. Both fixed; `test/widgets/onboarding_back_test.dart`.
+
+**Gates:** `flutter analyze` clean; `flutter test` **892 green**. On the iPhone 15 simulator (`LP_BACKEND=fake`, a throwaway walkthrough script driven through the `integration_test` harness): the spend step at $20, the coach-name step and the why-words step rendered with the chevron, step two of the walkthrough entered from the checklist, a reply dropped by pulling the connection, "Run it back" after restoring it — the retry landed, ticked task 2 and the tour moved on to step three. Two things to know from that run: `log_puff_tap_test` and `quick_log_and_goal_sheet_test` window their bursts on the real wall clock (`log_feedback.dart`), so they fail under heavy CPU load (a concurrent Xcode archive) and pass alone — pre-existing, not touched here; and the dev Mac ran out of disk mid-session (a 22-minute simulator build died on `ENOSPC`), so the on-device pass of these fixes on the physical iPhone is still the founder's to do with the next TestFlight build.
+
+### Sep 2, later — the coach's "signal dropped" on the iPhone 15 simulator was App Check wearing the offline costume
+
+The founder ran the simulator build by hand (no `--dart-define-from-file=.dart_defines.json`, so the SDK minted a throwaway debug token — `A63C6C5C-…` in the unified log, not the pinned `77fee369…`) and every callable was refused. Settings said the right thing ("This build got bounced"); the coach said "Signal dropped mid-thought". Same refusal, two verdicts, because the coach is the only feature on the **streaming** callable path and `cloud_functions` 6.4.0 loses the error code there: `FunctionsStreamHandler.swift` emits every failure as `unknown` + `localizedDescription`, and `StreamResponseSubscriber.kt` emits nothing (`onError` → `endOfStream`). `mapCallableError` passed `unknown` through, the store's fallback is `connectionLost`, and on Android the repository's "ended without an envelope" branch threw `NoConnectionException` by construction. So a sideloaded Android release (Play Integrity fails) or a mis-registered iOS build would have told every user to check their wifi — exactly the failure `test/data/backend_rejected_test.dart` was written against, one layer down.
+
+**Landed:** `callableErrorCode` (`functions_client.dart`) recovers the code from the words when — and only when — the code is `unknown`; `FirebaseCoachRepository.streamReply` re-asks `aiCoachChat` over the plain `call` when the stream ends before a single word (the server answers the whole envelope when the client does not stream; nothing is answered twice because nothing was streamed). Six new mapping cases in `backend_rejected_test.dart`. The launch command that avoids the whole thing on macOS is in CLAUDE.md: `flutter run -d <ios> --dart-define=LP_BACKEND=firebase --dart-define-from-file=.dart_defines.json`.
 
 ## 17. THE SECOND CONSOLE QUESTION (Sep 2) — the advertising ID we never asked for
 
@@ -2439,3 +2462,72 @@ Two environment findings, both of which cost a run:
 2. **The USB transport re-enumerates mid-run** and kills the suite outright
    (`adb: device '41311FDJH002AM' not found`). `adb tcpip 5555` plus
    `adb connect <ip>:5555` held for nine consecutive suite runs.
+
+---
+
+## 22. THE ARCHIVE THAT NAMED THE WRONG POD (Sep 3)
+
+Product → Archive failed on:
+
+```
+/Users/kunchoktashi/dev/flutter/last_puff/ios/Runner/GeneratedPluginRegistrant.m:12:9
+Module 'amplitude_flutter' not found
+```
+
+Line 12 is `@import amplitude_flutter;`. Read at face value it is a story about
+Amplitude — a bad podspec, a Swift-module problem, a version skew between
+`pubspec.lock` (4.7.1) and the podspec (which still says 4.4.0, because the
+plugin author never bumped it). All three were checked. All three were fine.
+
+### What was actually wrong
+
+Nothing in the repo. `flutter build ipa --no-codesign` archived clean in 342s
+and produced a 582MB `.xcarchive` with `amplitude_flutter.framework` sitting in
+`Runner.app/Frameworks` alongside the other 39.
+
+The archive that failed was run against **`ios/Runner.xcodeproj`**. CocoaPods
+does not put pods in the app project; it writes a second, separate
+`Pods.xcodeproj` and stitches the two together in `Runner.xcworkspace`. Open the
+bare project and the pods are not in the build graph at all.
+
+The proof is in DerivedData, and it is unambiguous. Every `Runner-<hash>` tree
+records the file it belongs to:
+
+```
+Runner-gpfkmbfrlkmvqxfknwuoophzvdge/info.plist → .../last_puff/ios/Runner.xcodeproj    ← the failures
+Runner-gqcacswcpzvwdldqpojzmnuqnffy/info.plist → .../last_puff/ios/Runner.xcworkspace  ← the good builds
+```
+
+and counting Pods work in the two `.xcactivitylog`s settles it:
+
+| build | `from project 'Pods'` lines |
+| --- | --- |
+| archive from `Runner.xcodeproj` | **0** |
+| archive from `Runner.xcworkspace` | ~6,158 |
+
+Zero. Not "amplitude_flutter failed to compile" — *no pod was ever built*, and
+the log carries no complaint about that, because a missing target is not an
+error, it is just a graph nobody asked for.
+
+### Why it accuses Amplitude specifically
+
+`GeneratedPluginRegistrant.m` imports its plugins in alphabetical order and
+`amplitude_flutter` sorts first, so it is the first `@import` clang reaches. The
+compile stops there. Every one of the eighteen plugins is equally missing; the
+diagnostic only ever has room to name one, and it will always name whichever
+plugin happens to sort first. Rename the app's dependencies tomorrow and the
+same failure reports a different pod. **The pod named in this error is evidence
+of alphabetical order, not of a broken pod.**
+
+That is the trap: the message points at a real, specific, recently-added
+dependency and invites you to go audit it.
+
+### The rule
+
+Archive with `flutter build ipa` — it runs `pod install` and drives the
+workspace itself, which is why it never sees this. If you archive from Xcode,
+the window must be **`Runner.xcworkspace`**. And when a Flutter iOS build
+reports a missing plugin module, count the `from project 'Pods'` lines in the
+log *before* opening the plugin's podspec.
+
+Pinned as a gotcha in `CLAUDE.md`. No code changed — there was nothing to fix.

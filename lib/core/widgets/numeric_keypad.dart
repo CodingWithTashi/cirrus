@@ -11,10 +11,19 @@ class NumericKeypad extends StatelessWidget {
     super.key,
     required this.onDigit,
     required this.onBackspace,
+    this.keyHeight = 50,
+    this.gap = 8,
   });
 
   final ValueChanged<int> onDigit;
   final VoidCallback onBackspace;
+
+  /// Row height. A step short on vertical room passes a smaller one; the
+  /// keys stay comfortably above the 44-point touch minimum either way.
+  final double keyHeight;
+
+  /// Space between rows and between keys in a row.
+  final double gap;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +45,7 @@ class NumericKeypad extends StatelessWidget {
                 },
           haptic: false,
           child: Container(
-            height: 50,
+            height: keyHeight,
             alignment: Alignment.center,
             decoration: filled
                 ? BoxDecoration(
@@ -64,7 +73,7 @@ class NumericKeypad extends StatelessWidget {
     Widget row(List<Widget> keys) => Row(
       children: [
         for (var i = 0; i < keys.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+          if (i > 0) SizedBox(width: gap),
           keys[i],
         ],
       ],
@@ -81,7 +90,7 @@ class NumericKeypad extends StatelessWidget {
           row([
             for (final d in digits) key(label: '$d', onTap: () => onDigit(d)),
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: gap),
         ],
         row([
           key(filled: false),

@@ -28,7 +28,13 @@ class OnboardingFlow extends ConsumerWidget {
     final vm = ref.read(onboardingProvider.notifier);
     final lp = context.lp;
 
-    final showHeader = state.progress != null;
+    // The header exists for the chevron; the progress bar joins it on the
+    // twelve quiz questions. The two used to be one condition, which made the
+    // Phase D screens forward-only on iOS — there is no system back there, so
+    // the chevron is the only back (see `OnboardingState.canGoBack`; every
+    // quiz step can go back, which `onboarding_back_test` pins).
+    final progress = state.progress;
+    final showHeader = state.canGoBack;
 
     final step = switch (state.step) {
       ObStep.welcome => const WelcomeStep(),
@@ -81,20 +87,19 @@ class OnboardingFlow extends ConsumerWidget {
                           if (!vm.back()) exitFlow();
                         },
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: GlowProgressBar(
-                          value: state.progress!.$1 / state.progress!.$2,
+                      if (progress != null) ...[
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: GlowProgressBar(
+                            value: progress.$1 / progress.$2,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        context.l10n.obProgressOf(
-                          state.progress!.$1,
-                          state.progress!.$2,
+                        const SizedBox(width: 12),
+                        Text(
+                          context.l10n.obProgressOf(progress.$1, progress.$2),
+                          style: LpType.displaySmall(lp.textSecondary),
                         ),
-                        style: LpType.displaySmall(lp.textSecondary),
-                      ),
+                      ],
                     ],
                   ),
                 ),

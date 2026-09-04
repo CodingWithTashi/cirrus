@@ -1264,6 +1264,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get day1Skip => 'Saltar a configuração por agora';
 
   @override
+  String get day1TourBack => 'Voltar à configuração';
+
+  @override
   String get day1TourLogTitle => 'É esta a app toda.';
 
   @override

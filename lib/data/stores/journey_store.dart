@@ -661,6 +661,11 @@ class JourneyStore extends Notifier<JourneyState?> {
     );
   }
 
+  /// How long [reserveCoachName] waits for the server guard before keeping
+  /// the name on the client's say-so. Long enough for a warm callable on a
+  /// slow mobile link, short enough that a cold start never reads as a hang.
+  static const coachNameBudget = Duration(milliseconds: 1500);
+
   /// Sends a chosen coach name to the server guard, then keeps it locally.
   ///
   /// Returns false only on a definite refusal. Offline, a timeout, or any
@@ -672,10 +677,21 @@ class JourneyStore extends Notifier<JourneyState?> {
   ///
   /// Usable before a journey exists (the onboarding step runs pre-paywall),
   /// which is why the local write is conditional and the callable is not.
+  ///
+  /// The wait is bounded by [coachNameBudget]. The policy above always said a
+  /// timeout accepts — but nothing ever imposed one, so the step's CTA sat on
+  /// a spinner for the whole of a cold start (3–4 s on an iPhone whose App
+  /// Check attempt also has to fail first). A warm guard answers well inside
+  /// the budget and still blocks on a definite no; past it, the name is kept
+  /// and the callable finishes on its own — a late acceptance still lands the
+  /// server copy, a late refusal simply never does.
   Future<bool> reserveCoachName(String name) async {
     var accepted = true;
     try {
-      accepted = await ref.read(coachNameRepositoryProvider).reserve(name);
+      accepted = await ref
+          .read(coachNameRepositoryProvider)
+          .reserve(name)
+          .timeout(coachNameBudget);
     } on Object {
       accepted = true;
     }

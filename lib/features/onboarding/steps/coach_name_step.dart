@@ -65,7 +65,9 @@ class _CoachNameStepState extends ConsumerState<CoachNameStep> {
     });
     // Blocks only on a definite no. A timeout or no connection accepts it
     // locally and moves on: this is the user's own private word, and losing
-    // the funnel to a moderation round-trip is the worse failure.
+    // the funnel to a moderation round-trip is the worse failure. The store
+    // bounds the wait (`JourneyStore.coachNameBudget`), so the spinner below
+    // is a beat, never a cold start.
     final accepted = await ref
         .read(quitStoreProvider.notifier)
         .reserveCoachName(name);

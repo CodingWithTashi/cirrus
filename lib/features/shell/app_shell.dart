@@ -119,7 +119,6 @@ class _AppShellState extends ConsumerState<AppShell> {
       final selected = shell.currentIndex == branch;
       return Expanded(
         child: PressScale(
-          enabled: !locked,
           onTap: () {
             // `goBranch` swaps the IndexedStack branch without pushing a
             // route, so LpAnalyticsObserver never sees a tab change — these
@@ -138,9 +137,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 Icon(
                   icon,
                   size: 21,
-                  color: locked
-                      ? lp.textFaint.withValues(alpha: 0.4)
-                      : (selected ? lp.voltText : lp.textFaint),
+                  color: selected ? lp.voltText : lp.textFaint,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -181,52 +178,105 @@ class _AppShellState extends ConsumerState<AppShell> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  tab(branch: 0, icon: Icons.circle, label: l10n.navHome),
-                  tab(
-                    branch: 1,
-                    icon: Icons.bar_chart_rounded,
-                    label: l10n.navStats,
-                  ),
-                  PressScale(
-                    // The second, unmarked way to log a puff. During the
-                    // walkthrough it has to be shut too: step one teaches the
-                    // Home button, and a user who found this instead would tick
-                    // the box without meeting the control being taught.
-                    enabled: !locked,
-                    onTap: quickLog,
-                    onHoldStart: startHold,
-                    onHoldEnd: endHold,
-                    haptic: false,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: lp.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: lp.border, width: 1.5),
-                      ),
-                      child: Icon(
-                        Icons.add_rounded,
-                        color: lp.voltText,
-                        size: 24,
-                      ),
+              // While a lesson holds the app closed, the bar IS the door out.
+              // The tooltip's own "Maybe later" is the way out only while the
+              // tooltip is up, and it comes down the moment the lesson's real
+              // action begins (focusing the composer, tapping send). After
+              // that, an Android user had the system back gesture; an iPhone
+              // has no back at all — so a coach reply that failed left them
+              // on a locked screen with four dead tabs and nothing that
+              // said why. Same exit as the gesture, same verb as the
+              // tooltip: back to the checklist, ticking nothing.
+              child: locked
+                  ? _TourExit(
+                      onTap: () => ref.read(day1TourProvider.notifier).pause(),
+                    )
+                  : Row(
+                      children: [
+                        tab(branch: 0, icon: Icons.circle, label: l10n.navHome),
+                        tab(
+                          branch: 1,
+                          icon: Icons.bar_chart_rounded,
+                          label: l10n.navStats,
+                        ),
+                        PressScale(
+                          // The second, unmarked way to log a puff. Not on screen
+                          // at all during the walkthrough (the bar is the exit
+                          // then): step one teaches the Home button, and a user
+                          // who found this instead would tick the box without
+                          // meeting the control being taught.
+                          onTap: quickLog,
+                          onHoldStart: startHold,
+                          onHoldEnd: endHold,
+                          haptic: false,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: lp.surface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: lp.border, width: 1.5),
+                            ),
+                            child: Icon(
+                              Icons.add_rounded,
+                              color: lp.voltText,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        tab(
+                          branch: 2,
+                          icon: Icons.diamond_outlined,
+                          label: l10n.navCommunity,
+                        ),
+                        tab(
+                          branch: 3,
+                          icon: Icons.auto_awesome,
+                          label: l10n.navCoach,
+                        ),
+                      ],
                     ),
-                  ),
-                  tab(
-                    branch: 2,
-                    icon: Icons.diamond_outlined,
-                    label: l10n.navCommunity,
-                  ),
-                  tab(
-                    branch: 3,
-                    icon: Icons.auto_awesome,
-                    label: l10n.navCoach,
-                  ),
-                ],
-              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The tab bar's contents while the Day-1 walkthrough has the app locked: one
+/// control, back to the checklist. Sized to the tab row it stands in for, so
+/// nothing above it moves when the lock lifts.
+class _TourExit extends StatelessWidget {
+  const _TourExit({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return SizedBox(
+      height: 50,
+      child: Center(
+        child: PressScale(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 15,
+                  color: lp.voltText,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.day1TourBack,
+                  style: LpType.body14(lp.voltText, weight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
         ),

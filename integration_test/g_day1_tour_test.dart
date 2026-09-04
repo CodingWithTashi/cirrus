@@ -81,22 +81,40 @@ void main() {
     expect(e2e.container.read(day1TourStepProvider), Day1TourStep.meetCoach);
   });
 
-  testWidgets('the tab bar is shut while a step is live', (tester) async {
+  testWidgets('the tab bar is the exit while a step is live, not a tab bar', (
+    tester,
+  ) async {
     // The tab bar lives OUTSIDE whichever branch screen owns the showcase, so
     // no overlay barrier reaches it. It is the hole the whole gate would have
-    // had, and the reason `AppShell` knows about the walkthrough at all.
+    // had, and the reason `AppShell` knows about the walkthrough at all. It
+    // used to show four dimmed, dead tabs — which on an iPhone, with no
+    // system back, was a locked screen with no door (Sep 2 2026 TestFlight
+    // report). Now it shows the door.
     final e2e = await openDay1(tester);
     await e2e.tapText(e2e.l10n.day1Task1);
     await e2e.settle();
 
-    await e2e.tapText(e2e.l10n.navCommunity);
-    await e2e.settle();
-
     expect(
-      e2e.showing(e2e.l10n.homeLogPuff),
-      isTrue,
-      reason: 'a tab switch escaped the walkthrough: ${e2e.texts()}',
+      e2e.showing(e2e.l10n.navCommunity),
+      isFalse,
+      reason: 'a tab is on screen mid-lesson: ${e2e.texts()}',
     );
+    expect(e2e.showing(e2e.l10n.homeLogPuff), isTrue);
+
+    // The exit sits under the showcase barrier while the tooltip is up (the
+    // tooltip's own "Maybe later" serves then); it becomes reachable once
+    // the highlight comes down, which is what the real move's first touch
+    // does. Take it down the way the tour does, then use the bar.
+    await e2e.tap(find.text(e2e.l10n.commonMaybeLater), why: 'tooltip later');
+    await e2e.settle();
+    if (e2e.container.read(day1TourLockedProvider)) {
+      await e2e.tapText(e2e.l10n.day1TourBack);
+      await e2e.settle();
+    }
+
+    expect(e2e.showing(e2e.l10n.day1Title), isTrue, reason: e2e.texts().join());
+    expect(e2e.container.read(quitStoreProvider)!.day1TasksDone, isEmpty);
+    expect(e2e.container.read(day1TourLockedProvider), isFalse);
   });
 
   testWidgets('skipping setup opens the app and ticks nothing', (tester) async {
