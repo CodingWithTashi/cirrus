@@ -19,7 +19,7 @@ void main() {
     expect(LpAllowances.premiumCoachMessages, 100);
     expect(LpAllowances.freePosts, 1);
     expect(LpAllowances.premiumPosts, 3);
-    expect(LpAllowances.sosPosts, 5);
+    expect(LpAllowances.sosPosts, 3);
   });
 
   test('a free account is never given more than a subscriber', () {
@@ -79,10 +79,32 @@ void main() {
     });
   });
 
-  test('the free history window outlasts the taper program', () {
-    // The taper runs 30 days (`P=30`). A shorter window means a free account
-    // cannot see whether its own plan is working — on data already sitting in
-    // its own journey document.
-    expect(LpAllowances.freeHistoryDays, greaterThanOrEqualTo(30));
+  test('the free history window is a week, and that is a decision', () {
+    // It was 30, raised there on the morning of Sep 3 2026 so a free account
+    // could see its own taper working (`P=30`), and cut back to 7 the same
+    // day (docs/12 §5c). The argument for 30 was never refuted — it was
+    // traded: Stats is where the product's central question gets answered,
+    // and a free tier that answers it in full leaves nothing to sell.
+    //
+    // Pinned exactly rather than as a bound, because both directions are
+    // wrong by accident: longer gives the answer away, shorter cannot show a
+    // week.
+    expect(LpAllowances.freeHistoryDays, 7);
+  });
+
+  test('the SOS pin window is the one the feed and the server use', () {
+    // `CommunityState.visible` pins by it, the composer refuses by it, and
+    // `createPost`'s SOS_COOLDOWN_MS is the same hour in milliseconds. Three
+    // copies of one number, and the refusal only says something true —
+    // "yours is still up there" — while they agree.
+    expect(LpAllowances.sosPinWindow, const Duration(hours: 1));
+    expect(LpAllowances.sosPinWindow.inMilliseconds, 60 * 60 * 1000);
+  });
+
+  test('the health gate is a floor, low enough to leave an arc to sell', () {
+    // `health_screen.dart` takes `max(freeHealthNodes, hereIndex + 1)`, so
+    // this can never lock a node the reader has already reached — it only
+    // ever hides the future. Four is the first 24 hours.
+    expect(LpAllowances.freeHealthNodes, 4);
   });
 }

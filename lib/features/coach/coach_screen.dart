@@ -143,6 +143,55 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         CoachChip.progress => context.l10n.coachChipProgress,
       };
 
+  /// The chip the user last tapped, while the box still holds exactly it.
+  ///
+  /// The four static chips carry PROTOCOL ROUTING — `sendChip` hands the
+  /// server `chip: 'craving'` rather than free text — and that routing has to
+  /// survive every locale, which is why it was originally recovered by
+  /// comparing the typed text against each localized label.
+  ///
+  /// That comparison is no longer safe on its own. Ember's suggestions are
+  /// free prose in the user's language, and one of them could land on a
+  /// static label by coincidence ("I'm craving" is a plausible thing for the
+  /// model to suggest) — which would file a follow-up as a protocol chip.
+  /// Remembering which chip was tapped removes the guess entirely.
+  CoachChip? _tappedChip;
+
+  /// Drops a suggestion into the composer. The user still sends it — Frame 36:
+  /// chips prefill, they never post on your behalf.
+  void _prefill(String text, {CoachChip? staticChip}) {
+    _input.text = text;
+    _input.selection = TextSelection.collapsed(offset: _input.text.length);
+    setState(() => _tappedChip = staticChip);
+  }
+
+  Widget _chip({
+    required String label,
+    required bool accent,
+    required VoidCallback onTap,
+  }) {
+    final lp = context.lp;
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: lp.surface,
+          borderRadius: BorderRadius.circular(LpDimens.rChip),
+          border: Border.all(color: lp.border, width: 1.5),
+        ),
+        child: Text(
+          label,
+          style: LpType.body13(
+            accent ? lp.voltText : lp.textPrimary,
+            weight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// A divider renders when the calendar day turns or the thread went quiet
   /// for a while. Un-stamped messages (legacy turns, the seeded greeting)
   /// never force one — they group with whatever came before.
@@ -267,6 +316,21 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     // is worse than no number.
     final freeLeft = coach.messagesLeft ?? 0;
     final showCounter = store.showsAllowance;
+    // Ember's suggestions for THIS turn, from the newest Ember bubble.
+    //
+    // The static four are right for a cold open and useless as a reply: after
+    // a specific answer, the useful next tap follows that answer. So the
+    // model writes them per turn and the openers are what shows when it did
+    // not — a fresh thread, a restored transcript, the cap, mid-craving, or
+    // any backend that has not learned the field.
+    //
+    // Read off the message rather than held on the store so a suggestion can
+    // never outlive the reply it belongs to: the moment the user sends
+    // something, the newest Ember bubble is the streaming one, which carries
+    // none, and the row falls back on its own.
+    final followUps = coach.messages.lastOrNull?.role == CoachRole.ember
+        ? coach.messages.last.followUps
+        : const <String>[];
 
     // Day-1 step two used to complete from a listener here, which counted
     // the seeded greeting — an ember message that appears without a word
@@ -399,47 +463,33 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       ],
                     ),
             ),
-            // Quick chips.
+            // Quick chips — Ember's own follow-ups when it wrote some,
+            // otherwise the four openers.
             SizedBox(
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  for (final chip in CoachChip.values) ...[
-                    PressScale(
-                      // Frame 36: chips prefill the composer — the user
-                      // stays in control of the send.
-                      onTap: () {
-                        _input.text = _chipLabel(context, chip.index);
-                        _input.selection = TextSelection.collapsed(
-                          offset: _input.text.length,
-                        );
-                        setState(() {});
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 9,
-                        ),
-                        decoration: BoxDecoration(
-                          color: lp.surface,
-                          borderRadius: BorderRadius.circular(LpDimens.rChip),
-                          border: Border.all(color: lp.border, width: 1.5),
-                        ),
-                        child: Text(
+                  if (followUps.isEmpty)
+                    for (final chip in CoachChip.values)
+                      _chip(
+                        label: _chipLabel(context, chip.index),
+                        // The one that leads, because it is the reason most
+                        // people open this screen at 11pm.
+                        accent: chip == CoachChip.craving,
+                        onTap: () => _prefill(
                           _chipLabel(context, chip.index),
-                          style: LpType.body13(
-                            chip == CoachChip.craving
-                                ? lp.voltText
-                                : lp.textPrimary,
-                            weight: FontWeight.w600,
-                          ),
+                          staticChip: chip,
                         ),
+                      )
+                  else
+                    for (final suggestion in followUps)
+                      _chip(
+                        label: suggestion,
+                        accent: false,
+                        onTap: () => _prefill(suggestion),
                       ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -520,14 +570,20 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final panic = _panicIntensity;
     setState(() => _panicIntensity = null);
     final store = ref.read(coachStoreProvider.notifier);
-    // A prefilled chip sent unedited keeps its protocol routing in every
-    // locale (the keyword matcher is a demo-only English heuristic).
-    final chipIndex = CoachChip.values.indexWhere(
-      (chip) => _chipLabel(context, chip.index) == text,
-    );
-    final sent = chipIndex == -1
+    // A prefilled STATIC chip sent unedited keeps its protocol routing in
+    // every locale (the keyword matcher is a demo-only English heuristic).
+    // Anchored on which chip was tapped, not on matching the text back
+    // against the labels: Ember's suggestions are free prose and one of them
+    // could coincide with a label, which would file a follow-up as a protocol
+    // chip. Edited text is a normal message either way.
+    final tapped = _tappedChip;
+    final chip = tapped != null && _chipLabel(context, tapped.index) == text
+        ? tapped
+        : null;
+    _tappedChip = null;
+    final sent = chip == null
         ? store.send(text, panicIntensity: panic)
-        : store.sendChip(CoachChip.values[chipIndex], panicIntensity: panic);
+        : store.sendChip(chip, panicIntensity: panic);
     if (ref.read(day1TourStepProvider) == Day1TourStep.meetCoach) {
       // The lesson's tap happened; the highlight comes down so the reply is
       // watched on a normal screen, not through the barrier's 88% wash. The

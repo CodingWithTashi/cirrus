@@ -290,6 +290,10 @@ class CoachStore extends Notifier<CoachState> {
           // streamed when the envelope omits it.
           text: done.text ?? (streamed.isEmpty ? null : streamed),
           sentAt: DateTime.now(),
+          // Carried onto the message, not held on the store: the chip row
+          // reads the newest Ember bubble, so a suggestion can never outlive
+          // the reply it was written for.
+          followUps: done.followUps,
         ),
       ],
     );

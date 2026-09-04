@@ -11,6 +11,7 @@ abstract final class CoachReplyCodec {
     if (reply.text != null) 'text': reply.text,
     if (reply.messagesLeft != null) 'messagesLeft': reply.messagesLeft,
     if (reply.isFreeTier != null) 'tier': reply.isFreeTier! ? 'free' : 'premium',
+    if (reply.followUps.isNotEmpty) 'followUps': reply.followUps,
   };
 
   static CoachReply decode(Map<String, dynamic> json) => CoachReply(
@@ -35,5 +36,17 @@ abstract final class CoachReplyCodec {
       null => null,
       _ => false,
     },
+    // Absent, empty, or full of things that are not strings all decode the
+    // same way — an empty list, which the chip row reads as "show the four
+    // static chips". That is the state a client built before this field
+    // existed is permanently in, and the state every restored transcript is
+    // in, so it has to be the quiet default rather than an error.
+    //
+    // Blank entries are dropped like `text` is, for the same reason: a chip
+    // with nothing written on it is worse than one chip fewer.
+    followUps: [
+      for (final item in json['followUps'] as List<dynamic>? ?? const [])
+        if (item is String && item.trim().isNotEmpty) item.trim(),
+    ],
   );
 }

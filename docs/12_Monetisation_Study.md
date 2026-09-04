@@ -1,7 +1,7 @@
 # 📄 DOC 12 — MONETISATION STUDY
 ## Project "LastPuff" / store name "Cirrus" — the free/premium split, the gates, and the paywall
 
-**Version:** 1.0 · **Created:** Sep 3, 2026 · **Depends on:** Docs 1–7, `docs/08` (board), `docs/11` (AI flow) · **Status:** LIVE — the study of record for tier decisions.
+**Version:** 1.1 · **Created:** Sep 3, 2026 · **Revised:** Sep 3, 2026 (§5c — the tightening) · **Depends on:** Docs 1–7, `docs/08` (board), `docs/11` (AI flow) · **Status:** LIVE — the study of record for tier decisions.
 
 > **Purpose:** an evidence-first redesign of what is free, what is paid, where the doors sit, and how any of it is measured. Phase 1 is a **verification pass against the code**, because the specs and the shipped build already disagree. Phase 2 is external evidence, every figure carrying a source and a date. Phase 3 is the resolution. The sequenced work lives on `docs/08 §4`.
 >
@@ -321,6 +321,116 @@ Two structural changes came out of the same pass: `claimDailyPost`'s bucket is *
 
 ---
 
+## 5c. THE TIGHTENING — Sep 3, 2026 (evening)
+
+**§4.1 and §5b describe the morning. This describes the same day's evening, and where the two
+disagree, this section wins.**
+
+The founder ran the build on a device after §5b landed and reported four things, of which
+three were the same finding: *"I feel like we are very generous with users. Everyone will
+just stick with free only."* That is a judgement about the whole tier, not about any one gate,
+and it is the founder's to make — so three decisions taken that morning were **reversed the
+same day**, knowingly and with their original arguments on the record.
+
+### What reversed, and what was traded away
+
+| Line | Morning (§4.1) | Evening | What the reversal costs |
+|---|---|---|---|
+| **Free Stats history** | 30 days (`S5-14`) | **7 days** | The morning's argument was real and is not refuted: the taper program runs 30 days (`P=30`), so a 7-day window cannot show a taper working, on data already in the user's own document. It is traded deliberately — **Stats is where the product's central question gets answered, and a free tier that answers it in full has nothing left to sell.** The Month pill and the forecast heatmap stay Premium alongside it |
+| **SOS posts** | 5/day, own counter (`S5-15`) | **3/day, plus one live SOS at a time** | Little. Five was chosen as "generous enough that no real crisis meets it" and three still is. The real change is the **60-minute cooldown**, which matches the feed's own pin window: a second SOS while yours is still pinned is not a second call for help, it is the same person occupying the top of the feed twice — the "pinning megaphone" the separate allowance was created to prevent and did not |
+| **Health timeline** | `max(7, hereIndex+1)` nodes | **`max(4, hereIndex+1)`** | Nothing structural. It is still a **floor, never a ceiling**, so §2.4's correction holds exactly: a node the reader has already reached is never locked. Four is the first 24 hours — the stretch a day-1 quitter is living through — and everything past it is the long arc, which is what Premium is for |
+| **Panic arcade** | free and unbounded | **Orbs free; Tiles and Blocks Premium** | See below. This is the one that touches §4.2 |
+
+### The panic door, and why this is not a reversal of §4.2
+
+`S5-13` deleted the panic paywall door because *"selling mid-craving is the worst moment for
+both parties: the least considered purchase and the likeliest one-star naming the exact thing
+this product positions against."* That reasoning is intact and the flow itself is untouched —
+breathing, the why step, the three loop-breakers, the coach and the SOS composer are all still
+completely free and carry no door at all.
+
+What changed is inside the **arena**, and three things keep it on the right side of that line:
+
+1. **Orbs is `GameCatalog.entries.first`, and `resolveFor` clamps to it.** A free account's
+   default game is a free one — including a lapsed subscriber whose stored `lastGame` is
+   Blocks, and including a `?g=blocks` deep link. **Nobody LANDS on a lock.** The card is
+   reached only by deliberately tapping a pill marked with a padlock, which is a question the
+   user asked rather than an offer put in their way.
+2. **The card leads with `Play Orbs`,** a filled button that starts a free board in one tap.
+   `See Premium` is a text link beside it. Somebody mid-craving came for a board, and they get
+   one without reading a price.
+3. **It is never shown mid-round.** `_switchTo` stops the ticker before the card takes the
+   field's slot, and the round panel, the paused veil and the switcher are all pinned
+   door-free by `test/widgets/panic_session_test.dart`.
+
+That test was **extended rather than deleted**: `panic_screens.dart` must still contain no
+`paywallFrom` at all, and the arena is allowed exactly one, on the lock card.
+
+### The composer's missing floor
+
+A separate finding from the same device pass, and the reason the SOS work was reachable at
+all: the panic flow opens the composer **pre-tagged `sos`**, so publishing was one tap away
+with the tag already chosen — and `canPost` required only `text.trim().isNotEmpty`. **`"a"`
+published, and because a live SOS pins to the top of the feed for an hour, it pinned.**
+
+`PostQuality` (`lib/domain/logic/community_rules.dart`, mirrored by `postQuality` in
+`functions/src/ai/prefilter.ts`) is the floor: 12 characters, 3 words, 2 distinct words, 3
+letters and 4 distinct letters for a post; a much looser bar for a reply, which had no
+validation of any kind beyond a length cap. It runs **before any allowance is claimed**, like
+the slur check, so junk never costs its author a slot — and the client refuses first so the
+words are still in the box to edit, rather than "not published" after the composer has closed
+(`docs/09` issue 6).
+
+The bar is deliberately low. `help me please`, `i want to vape` and `i cant i cant i cant` all
+publish. **A gate that turns away a real cry for help costs far more than the noise it
+filters**, which is the whole reason the numbers are where they are rather than higher.
+
+### The Free screen
+
+`FreePlanScreen` was five ✓ rows and one button, and that button was *Start with Free*: a
+person who reached it was shown nothing they did not already have and given no reason ever to
+leave. Premium was one grey line of reassurance at the bottom.
+
+It is now a **Free-vs-Pro comparison table** — ten rows, every figure read from `LpAllowances`
+rather than typed — with **Pro as the primary button and Free demoted to a text link**. The
+free path stays plainly visible and one tap away, which is what Apple 3.1.2 and Play actually
+require; it is the same shape the D5 paywall already uses in reverse. No guilt copy: the rows
+state facts, and the Free column is simply shorter, which is true.
+
+It is also the app's **thirteenth door** and the first that measures the people who reach Free
+and reconsider — `gate_shown`/`gate_tapped` with `source: 'free_plan'`.
+
+Two copy fixes fell out of it. `freePlanFeat3` hardcoded "5 coach messages a day" and
+`freePlanFeat5` hardcoded "one post a day", in five ARB files each; both are now interpolated
+from the constants the app enforces. And `paywallFeatPanic` sold "Panic button: a 60-second
+craving killer" — the panic button has always been free and is staying free, so the line now
+names what Premium actually adds: all three arena games.
+
+### The coach's chips
+
+Not a monetisation change, but it landed in the same pass and it is the founder's answer to
+"we still have a lot of room to improve" on retention. The quick chips under the thread were
+four frozen strings rendered identically on every turn forever. Right for a cold open, useless
+as a reply. `aiCoachChat` now returns 3–4 follow-ups written in the **user's own voice** from
+the exchange that just happened, and the app shows those in place of the openers. See
+`docs/11 §3` for the pipeline and its cost (~5% of a turn, with a kill switch).
+
+### Gates
+
+`flutter analyze` clean · `flutter test` **978** · `npm run verify` **217** ·
+`npm run test:integration` **284** · `npm run test:rules` **47** · **on-device 68/68 on a
+Pixel 8** (Android 17), 51 against the fake backend and the 17-case `f_firebase_backend`
+suite against **production**. `eval:moderation` was not required (no moderation prompt
+changed) and `eval:coach` is not re-gated — `EMBER_SYSTEM_PROMPT` and
+`buildCoachInstruction` are byte-identical, and the follow-up prompt is its own separate call.
+
+**Shipped to production Sep 3 2026** (founder-approved): all 24 functions redeployed behind a
+clean gate, `DAILY_SOS_POSTS=5→3`, `COACH_FOLLOWUPS=true`. The follow-up chips are verified
+against the deployed `aiCoachChat`, not just against a stub — the fake coach returns none by
+design, so that surface has no other harness. See `docs/10 §21.7`.
+
+---
+
 ## 6. REGISTER — what this study overrides
 
 These rows belong in `docs/08 §7`.
@@ -328,7 +438,10 @@ These rows belong in `docs/08 §7`.
 | Spec text | Superseded by |
 |---|---|
 | `docs/01 §10` "Community: Read + react" (free) | **1 post/day any tag, SOS uncapped** (§4.1) |
-| `docs/01 §10` "Stats history: 7 days" (free) | **30 days** (§4.1) |
+| `docs/01 §10` "Stats history: 7 days" (free) | ~~30 days (§4.1)~~ → **back to 7 days** (§5c, same day) |
+| §4.1 "SOS refused for no tier", 5/day | **3/day, plus one live SOS at a time** (§5c) |
+| §4.1 / §5b free health nodes `max(7, hereIndex+1)` | **`max(4, hereIndex+1)`** — still a floor (§5c) |
+| §4.1 "the panic arcade is never gated" | **Orbs free; Tiles and Blocks Premium** — the flow itself stays door-free (§5c) |
 | `docs/02 §4` "Try everything free for 3 days" and `docs/02 §6` test 1 | **7 days**, already resolved as `docs/08 §7 #14`; §3.2 is the evidence, and §5 retires the 7-vs-3 test |
 | `docs/02 §5` "Upgrade prompts … max 1/day" | Only `launch` was ever throttled. Restated: **lock cards are honest labelling and always render; the unrequested full-screen paywall is capped to plan days {3, 7, 14, 30}** (§4.2) |
 | `docs/02 §4` feature checklist "Panic Button + buddy ping" | Buddy is descoped (`docs/08 §7 #13`); the panic **AI** never routes to the paywall (§4.1) |

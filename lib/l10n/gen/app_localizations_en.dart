@@ -914,7 +914,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallFeatCoach => 'Unlimited AI coach that remembers your why';
 
   @override
-  String get paywallFeatPanic => 'Panic button: a 60-second craving killer';
+  String get paywallFeatPanic => 'All three panic games, not just Orbs';
 
   @override
   String get paywallFeatPlan => 'A plan that adapts when you slip';
@@ -1121,25 +1121,78 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get freePlanTitle => 'Free gets you moving.';
+  String get freePlanColFree => 'FREE';
+
+  @override
+  String get freePlanColPro => 'PRO';
+
+  @override
+  String get freeCompareLog => 'Puff log + streaks';
+
+  @override
+  String get freeCompareMoney => 'Money-saved ticker';
+
+  @override
+  String get freeCompareCoach => 'Coach messages';
+
+  @override
+  String get freeCompareGames => 'Panic games';
+
+  @override
+  String get freeComparePosts => 'Community posts';
+
+  @override
+  String get freeCompareHistory => 'Stats history';
+
+  @override
+  String get freeCompareHealth => 'Health timeline';
+
+  @override
+  String get freeComparePlan => 'Plan adapts nightly';
+
+  @override
+  String get freeCompareForecast => 'Craving forecasts';
+
+  @override
+  String get freeCompareReport => 'Weekly report';
+
+  @override
+  String freeComparePerDay(int n) {
+    return '$n/day';
+  }
+
+  @override
+  String freeCompareDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String freeCompareNodes(int n) {
+    return '$n nodes';
+  }
+
+  @override
+  String get freeCompareForever => 'Forever';
+
+  @override
+  String get freeCompareAll => 'All';
+
+  @override
+  String freePlanProCta(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Try Pro free for $days days',
+      one: 'Try Pro free for a day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get freePlanTitle => 'You\'re on Free.';
 
   @override
   String get freePlanSubtitle => 'Yours forever. No countdown, no nagging.';
-
-  @override
-  String get freePlanFeat1 => 'Puff log + streaks';
-
-  @override
-  String get freePlanFeat2 => 'Money-saved ticker';
-
-  @override
-  String get freePlanFeat3 => '5 coach messages a day';
-
-  @override
-  String get freePlanFeat4 => 'Panic Button, any time you need it';
-
-  @override
-  String get freePlanFeat5 => 'Community — read, react, one post a day';
 
   @override
   String get freePlanUpgradeNote =>
@@ -1516,6 +1569,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gameNameOrbs => 'Orbs';
+
+  @override
+  String gameLockedTitle(String game) {
+    return '$game is a Premium game.';
+  }
+
+  @override
+  String gameLockedBody(String game) {
+    return '$game is yours free, always — and it works just as well.';
+  }
+
+  @override
+  String gameLockedPlayFree(String game) {
+    return 'Play $game';
+  }
 
   @override
   String get gameHintTiles => 'Tap the bottom tile in its lane.';
@@ -2172,6 +2240,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityRuleSourcing =>
       'Where-to-buy and for-sale talk isn\'t allowed here. Edit it and try again.';
+
+  @override
+  String get communityTooShort =>
+      'A few more words — enough that someone can actually help.';
+
+  @override
+  String get communityTooRepetitive =>
+      'Say it in your own words — that\'s what gets an answer.';
+
+  @override
+  String get communitySosStillUp =>
+      'Your SOS is still at the top of the feed. People are seeing it.';
 
   @override
   String communityDailyCapReached(int limit) {

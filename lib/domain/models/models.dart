@@ -355,7 +355,8 @@ class CoachMessage {
        template = null,
        chipEcho = null,
        args = const {},
-       showWeekCard = false;
+       showWeekCard = false,
+       followUps = const [];
 
   /// A quick-chip tap echoed into the thread as the user's message.
   const CoachMessage.chip({
@@ -366,7 +367,8 @@ class CoachMessage {
        template = null,
        text = null,
        args = const {},
-       showWeekCard = false;
+       showWeekCard = false,
+       followUps = const [];
 
   const CoachMessage.ember({
     required this.id,
@@ -375,6 +377,7 @@ class CoachMessage {
     this.showWeekCard = false,
     this.text,
     this.sentAt,
+    this.followUps = const [],
   }) : role = CoachRole.ember,
        chipEcho = null;
 
@@ -402,6 +405,13 @@ class CoachMessage {
 
   /// Renders the inline "YOUR WEEK" stat card under this message.
   final bool showWeekCard;
+
+  /// What the user might tap to say next — see [CoachReply.followUps].
+  ///
+  /// Lives on the MESSAGE rather than on the store so the chip row can read
+  /// the latest one without a second source of truth, and so a suggestion can
+  /// never outlive the reply it belongs to.
+  final List<String> followUps;
 }
 
 /// The coach backend's reply envelope: *what* Ember says (template + the
@@ -416,6 +426,7 @@ class CoachReply {
     this.text,
     this.messagesLeft,
     this.isFreeTier,
+    this.followUps = const [],
   });
 
   final CoachTemplate template;
@@ -444,6 +455,21 @@ class CoachReply {
 
   /// Whether [messagesLeft] describes a capped free allowance worth showing.
   final bool? isFreeTier;
+
+  /// Three or four things the user might tap to say next, in their own voice,
+  /// written by the model from THIS exchange.
+  ///
+  /// The quick chips under the thread were four frozen strings that rendered
+  /// identically on every turn forever. Right for a cold open — "I'm craving"
+  /// is exactly what somebody opening the app at 11pm wants to tap — and
+  /// useless as a reply, because once Ember has answered a specific thing the
+  /// useful next tap is a follow-up to that one.
+  ///
+  /// Empty is the normal fallback and means "show the static chips": an older
+  /// backend, a restored transcript, or a turn the server deliberately did
+  /// not suggest for — mid-craving above all, where a menu of four things to
+  /// say is the opposite of what breath-and-presence mode is for.
+  final List<String> followUps;
 }
 
 /// One step of Ember answering.

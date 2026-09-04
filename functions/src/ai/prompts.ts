@@ -205,6 +205,51 @@ frustration with the app or its features, and any profanity aimed at oneself,
 one's cravings, the app, the product, or nobody at all, whether frustrated or
 celebratory.`;
 
+/**
+ * Three or four things the USER might say next, offered as taps.
+ *
+ * The coach's quick chips were four frozen strings — "I'm craving", "Rough
+ * day", "I slipped", "Show my progress" — rendered identically on every turn
+ * forever. Right for a cold open and useless as a reply: after Ember has
+ * answered a specific thing, the most useful next tap is a follow-up to THAT,
+ * not the same four openers.
+ *
+ * Two properties this prompt is fighting for, both of which a model gets
+ * wrong by default:
+ *
+ * 1. **They are the user's words, not the coach's.** A suggestion is dropped
+ *    straight into the composer, so anything phrased as advice ("try a walk")
+ *    reads as the app putting words in the user's mouth about their own quit.
+ * 2. **They must fit a chip.** The row is one line of horizontally scrolling
+ *    pills; a sentence wraps to nothing useful. Hence the hard word cap, and
+ *    the length bound `parseFollowUps` enforces on top of it.
+ *
+ * Kept OUT of `buildCoachInstruction` deliberately: that function is
+ * byte-pinned by `test/prompts.test.ts` and graded by `npm run eval:coach`,
+ * and this runs as its own cheap call with its own tiny context. Nothing here
+ * can change what Ember says.
+ */
+export const FOLLOW_UP_PROMPT = `You suggest what a user might tap to say next in a quit-vaping coaching chat.
+
+Given the user's last message and the coach's reply, return ONLY JSON:
+{"followUps":["...","...","..."]}
+
+Rules:
+- 3 or 4 suggestions, each written in the USER's first-person voice, as if
+  they typed it. Never advice, never the coach's voice, never a question the
+  coach would ask.
+- Maximum 5 words each. They render as small tappable chips, so anything
+  longer is cut off on screen.
+- Each one must move the conversation somewhere DIFFERENT: a follow-up
+  question, a disagreement, an admission, a change of subject, "that helped".
+  Three variations of the same thought are worth one suggestion, not three.
+- Specific to what was actually just said. If the coach mentioned a walk, "i
+  cant leave work" is a real next message; "tell me more" is not.
+- Plain text, no emoji, no quotes, no numbering, no trailing punctuation.
+- Same language as the conversation.
+- If nothing useful fits, return {"followUps":[]}. An empty list is a fine
+  answer and better than filler.`
+
 /** docs/04 §5 — Sunday weekly insight. Returns strict JSON. */
 export function insightPrompt(alias: string, coachName?: string): string {
   return `You are ${coachName ?? 'Ember'} writing ${alias}'s weekly report. Return ONLY valid JSON: {"headline": at most 8 words, "pattern": one plain-English behavior pattern from the data, "win": the week's best moment with real numbers, "watchout": one risk for next week, "move": one concrete suggestion}. Warm best-friend voice, no invented data.`;

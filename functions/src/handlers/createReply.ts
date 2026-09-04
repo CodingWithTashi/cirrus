@@ -18,7 +18,7 @@
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
-import {prefilter} from '../ai/prefilter';
+import {prefilter, replyQuality} from '../ai/prefilter';
 import {db, FieldValue, postsCol} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
 
@@ -37,6 +37,15 @@ export const createReply = onCall(
     // Same door as createPost: a slur is refused before anything is written.
     if (prefilter(text)?.action === 'block') {
       throw new HttpsError('invalid-argument', 'That breaks the community rules.');
+    }
+
+    // …and the same "was anything said" floor, at a much lower bar than a
+    // post's. A reply is a nod as often as it is a paragraph, so "thanks" and
+    // "yes yes" both pass and only "aaaaaa" and an emoji wall do not.
+    // Replying is free and uncapped, which makes it the wider spam surface of
+    // the two even though it is the quieter one.
+    if (replyQuality(text) !== null) {
+      throw new HttpsError('invalid-argument', 'Say a little more than that.');
     }
 
     const parent = await postsCol().doc(postId).get();

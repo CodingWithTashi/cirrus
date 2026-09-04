@@ -131,7 +131,7 @@ void main() {
       // A blurred button must not be a working button.
       await open(tester, Routes.health);
       expect(find.byType(AbsorbPointer), findsWidgets);
-      expect(find.text(l10n.premiumPitchHealth(l10n.healthM2w)), findsOneWidget);
+      expect(find.text(l10n.premiumPitchHealth(l10n.healthM48h)), findsOneWidget);
     });
   });
 
@@ -197,11 +197,11 @@ void main() {
   });
 
   group('per surface', () {
-    testWidgets('Health: the first week is open, the year behind it is gated', (
+    testWidgets('Health: the first day is open, the year behind it is gated', (
       tester,
     ) async {
       final container = await open(tester, Routes.health);
-      expect(find.text(l10n.premiumPitchHealth(l10n.healthM2w)), findsOneWidget);
+      expect(find.text(l10n.premiumPitchHealth(l10n.healthM48h)), findsOneWidget);
       await reveal(tester, find.text(l10n.premiumLockCta));
       await tester.tap(find.text(l10n.premiumLockCta));
       await tester.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
       tester,
     ) async {
       await open(tester, Routes.health, premium: true);
-      expect(find.text(l10n.premiumPitchHealth(l10n.healthM2w)), findsNothing);
+      expect(find.text(l10n.premiumPitchHealth(l10n.healthM48h)), findsNothing);
     });
 
     testWidgets('Stats: free is told its window, and Month is the door', (
@@ -240,20 +240,19 @@ void main() {
       expect(container.read(routerProvider).state.uri.path, Routes.stats);
     });
 
-    testWidgets('Stats: the free window is long enough to see a taper work', (
+    testWidgets('Stats: the free window really is a week of days', (
       tester,
     ) async {
-      // The note is copy; this is the clamp. It was 7 days — SHORTER than the
-      // 30-day taper program (`P=30`) — so a free account could not see
-      // whether its own plan was working, on data already sitting in its own
-      // journey document. Asserted against the engine's own window rather
-      // than a literal, so shortening one without the other fails here.
-      expect(
-        LpAllowances.freeHistoryDays,
-        greaterThanOrEqualTo(30),
-        reason: 'a free window shorter than the taper hides the whole point',
-      );
-
+      // The note is copy; this is the clamp, and the clamp has to bite or the
+      // note is a lie. It was 30 for a few hours on Sep 3 2026 — long enough
+      // to hold the whole taper program — and was cut back to 7 the same day
+      // (docs/12 §5c): Stats is where the product's central question gets
+      // answered, and a free tier that answers it in full has nothing left to
+      // sell.
+      //
+      // Asserted against the constant rather than a literal, so the screen
+      // and the allowance can never disagree about what "your last N days"
+      // means.
       final container = await open(tester, Routes.stats);
       final journey = container.read(quitStoreProvider)!;
       final now = container.read(todayProvider)!.now;
@@ -261,11 +260,16 @@ void main() {
         LpDate.dayStart(now),
         -(LpAllowances.freeHistoryDays - 1),
       );
-      // Every seeded day is inside the free window now; none is dropped.
+      // The day-12 fixture is longer than the window, which is the whole
+      // reason there is something behind the Month pill.
       expect(
         journey.days.values.where((d) => d.date.isBefore(floor)),
-        isEmpty,
-        reason: 'the day-12 fixture must fit inside a 30-day free window',
+        isNotEmpty,
+        reason: 'a window that drops nothing is not a window',
+      );
+      expect(
+        journey.days.values.where((d) => !d.date.isBefore(floor)).length,
+        lessThanOrEqualTo(LpAllowances.freeHistoryDays),
       );
     });
 
@@ -509,7 +513,7 @@ void main() {
       final container = await openComposer(tester, premium: true);
       final store = container.read(communityStoreProvider.notifier);
       for (var i = 0; i < LpAllowances.premiumPosts; i++) {
-        store.addPost(text: 'post $i', tag: PostTag.win);
+        store.addPost(text: 'winning post number $i', tag: PostTag.win);
       }
       await tester.pumpAndSettle();
 
@@ -539,14 +543,14 @@ void main() {
         PostStatus.live,
       );
 
-      store.addPost(text: 'sneaky', tag: PostTag.win);
+      store.addPost(text: 'sneaking a second one in', tag: PostTag.win);
       await tester.pumpAndSettle();
       final posts = container.read(communityStoreProvider).posts;
       expect(posts.length, before + 2);
       expect(posts.first.status, PostStatus.blocked);
 
       // And an SOS still lands, from its own untouched allowance.
-      store.addPost(text: 'help', tag: PostTag.sos);
+      store.addPost(text: 'someone please help', tag: PostTag.sos);
       await tester.pumpAndSettle();
       expect(
         container.read(communityStoreProvider).posts.first.status,

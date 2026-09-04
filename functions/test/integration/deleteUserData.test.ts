@@ -113,7 +113,7 @@ describe('deleteUserData — what goes', () => {
 
   it('drops the authorship mappings that could re-identify them', async () => {
     await makeUser('alice');
-    await createPost.run(request({text: 'day 12', tag: 'win'}, 'alice'));
+    await createPost.run(request({text: 'day 12 and holding', tag: 'win'}, 'alice'));
 
     await deleteUserData.run(request({}, 'alice'));
 
@@ -145,7 +145,7 @@ describe('deleteUserData — what stays', () => {
     await makeUser('bob');
     // Bob owns the thread; Alice replies and then leaves.
     const {postId} = await createPost.run(
-      request({text: 'rough night', tag: 'sos'}, 'bob'),
+      request({text: 'rough night, help', tag: 'sos'}, 'bob'),
     );
     await postsCol().doc(postId).update({status: 'live'});
     const {replyId} = await createReply.run(

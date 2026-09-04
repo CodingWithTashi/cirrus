@@ -337,6 +337,70 @@ Three live bugs were found and fixed on the way, none of them on the plan:
 
 A self-review pass over the diff found four more, all in the new code and all fixed: a **lost `paywall_viewed`** (the report is deferred a frame, but the "reported" flag was set synchronously, so a pop inside that frame skipped both paths), **`ref` in `dispose()`** on the same path — the gotcha this repo has scars from, and untested — a **coach wall mislabelled free** when the backend sent no tier, and a **mutating read** in the fake (`_sessionOrGuest()` binds a guest session as a side effect). See `docs/12 §5b`.
 
+#### S5b — the tightening (Sep 3, evening)
+
+The founder ran the build on a device hours after the eight above landed:
+*"I feel like we are very generous with users. Everyone will just stick with free only."*
+Three of those eight reversed the same day. `docs/12 §5c` is the decision record, `docs/10 §21`
+the engineering log.
+
+- [x] `S5-22` **A floor under the composer.** The panic flow opens it pre-tagged `sos`, so
+  posting was one tap away with the tag chosen — and `canPost` asked only for non-empty text,
+  so `"a"` published *and pinned to the top of the feed for an hour*. `PostQuality`
+  (12 chars / 3 words / 2 distinct words / 3 letters / 4 distinct letters), mirrored by
+  `postQuality` in `prefilter.ts`, ahead of the allowance so junk costs no slot. Replies get a
+  looser version; `createReply.ts` had no validation at all. Bar kept deliberately low —
+  `help me please` publishes. `test/domain/post_quality_test.dart`
+- [x] `S5-23` **One live SOS at a time.** `claimDailyPost` gained a `cooldownMs` and writes
+  `sosUsage.lastAtMs` on the doc it already reads; a second SOS inside the 60-minute pin
+  window is refused with `already-exists` (its own code — "come back tomorrow" is wrong for
+  something that clears within the hour) and spends no slot
+- [x] `S5-24` **Orbs free; Tiles and Blocks Premium.** Orbs is `entries.first` and
+  `resolveFor` clamps to it, so nobody *lands* on a lock — not a lapsed subscriber whose
+  `lastGame` is Blocks, not a `?g=` link. `Play Orbs` leads the card; `See Premium` is a text
+  link. Never mid-round. **`S5-13` is not reversed:** the flow itself stays door-free, and
+  `panic_session_test.dart`'s source-scan is extended to pin exactly one door, on the card
+- [x] `S5-25` **Three limits tighten.** `freeHistoryDays` 30 → **7** (a real reversal of
+  `S5-14`, traded knowingly — Stats is where the product's central question gets answered),
+  `sosPosts` 5 → **3**, health free nodes `max(7, …)` → **`max(4, …)`** (still a floor, so
+  nothing already reached is ever locked). `premium_gate_test.dart`'s `>= 30` pin is inverted
+  **and its reason rewritten**
+- [x] `S5-26` **The Free screen sells.** Five ✓ rows and a *Start with Free* button became a
+  ten-row Free-vs-Pro table with **every figure read from `LpAllowances`**, Pro as the primary
+  button and Free as a text link (still one tap — Apple 3.1.2). The app's **13th door**,
+  `source: 'free_plan'`, and the first that measures who reaches Free and reconsiders. Retired
+  `freePlanFeat1–5`, two of which hardcoded an allowance in five ARBs each; `paywallFeatPanic`
+  stopped selling the free panic button
+- [x] `S5-27` **Ember suggests what to say next.** The four quick chips were frozen strings on
+  every turn forever. `aiCoachChat` returns 3–4 follow-ups in the **user's** voice from the
+  exchange that just happened, riding the `CoachDone` envelope (they cannot stream) and the
+  existing `Promise.all` (they cannot delay the first token). Skipped mid-craving, on the cap
+  and on every failure path. ~5% of a turn, `COACH_FOLLOWUPS` kills it without a deploy.
+  `docs/11 §3`
+
+- [x] `S5-28` **On-device coverage for the four new surfaces** — four cases in
+  `i_monetisation` (the arena opens playable for a free account and for a lapsed one, the
+  locked pill answers with the card, *Play Orbs* leads, *See Premium* is tagged and closes
+  back; the SOS composer through a real IME; the Free table at real size) and two in
+  `f_firebase_backend` (the deployed `aiCoachChat` returns chip-sized follow-ups, and none
+  mid-craving). **It caught a regression the widget suite could not:** `h_panic_games` reached
+  for `TileField` straight after the loop card and landed on Orbs
+
+**Gates:** `flutter analyze` clean · `flutter test` **978** · `npm run verify` **217** ·
+`npm run test:integration` **284** · `npm run test:rules` **47** · **on-device 68/68 on a
+Pixel 8** (Android 17) — 51 against the fake backend plus the whole 17-case
+`f_firebase_backend` suite against **production**. `eval:moderation` not required (no
+moderation prompt changed); `eval:coach` not re-gated (`EMBER_SYSTEM_PROMPT` and
+`buildCoachInstruction` byte-identical).
+
+**Deployed to `alastpuff` Sep 3 2026**, founder-approved: all 24 functions updated behind a
+clean `verify` gate, with `DAILY_SOS_POSTS=5→3` and `COACH_FOLLOWUPS=true`.
+
+One config trap caught by a red test rather than by production: `COACH_FOLLOWUPS` read as
+`=== 'true'` would have been **off** on any project whose `.env` never named it, because an
+unset deploy-time param resolves to the empty string. It reads `!== 'false'` now — the third
+time this repo has been bitten by that shape (`MODEL_*`, the allowance params).
+
 **Exit criteria:** both submissions in review · crash-free ≥ 99.5% · acceptance checklist green.
 
 ---
@@ -419,6 +483,8 @@ Resolutions already in code (from `CLAUDE.md`) plus contradictions found across 
 | 27 | Trial length A/B — docs/02 §6 test 1 (3-day vs 7-day) | **Retired unrun** (`docs/12 §5`). 5–9-day trials convert 37.4% against 25.5% at ≤4 days (RevenueCat 2026), and H&F is 54% on 5–9 days. Testing it would serve ≥1,000 users the known-worse arm |
 | 28 | Price ladder order — docs/08 §2 lever 2 leads with "$3.99/wk test" | **Annual price first: $59.99/yr for new users, grandfathering existing.** $39.99/yr sits in Adapty's *low-priced* annual band ($17 install LTV vs $70 for high-priced — a 4.1× spread) and annual holds 61% of H&F revenue at 19.9% Day-380 retention; weekly is the worst-retaining plan we sell (5.5%) |
 | 29 | The beta cohort — docs/06 §3's "50 free lifetime spots" for 30–50 recruited r/QuitVaping testers, and everything built on it (`S1-12` founder grant, `S2-10` closed testing, `S3-12` tester-seeded feed, `S5-8` cohort crash-free, `S6-2` tester testimonials, `S6-4` thank-you post) | **Descoped — there is no cohort and never was** (founder, Sep 3 2026). Cirrus ships direct to production. Three consequences, none of them bookkeeping: (a) `S1-12` was the only thing blocking the `ENTITLEMENT_MODE=mirror` flip on a *promise* rather than on correctness — the flip is now gated solely on not refusing a paying customer (`docs/12 §4.4`); (b) **the D3 testimonials lose their source**, so `payoff_steps.dart:484` falls back forever to two invented five-star quotes on the screen before the paywall — `S6-2`, and a launch blocker; (c) there is **no pre-launch crash signal and no organic first-review source** — a staged Play rollout replaces the former, nothing yet replaces the latter |
+| 30 | `docs/12 §4.1` (morning of Sep 3) — free Stats history **30 days**, SOS **5/day**, health free nodes **7**, the panic arcade never gated | **All four tightened the same evening** (`docs/12 §5c`, `S5-25`/`S5-24`): **7 days**, **3 SOS/day plus one live at a time**, **4 health nodes**, and **Tiles/Blocks behind Premium with Orbs free**. Founder judgement on the tier as a whole — *"everyone will just stick with free only"* — not a refutation of any single morning argument. The 30-day case in particular stands on its merits and was traded knowingly: the taper runs 30 days, so 7 cannot show one working, and that is precisely why it is the thing Premium sells |
+| 31 | `S5-13` "the panic flow never reaches a paywall" vs a Premium panic game | **Both hold, because the flow and the arena are different screens.** `panic_screens.dart` still contains no `paywallFrom` at all; the arena's one door lives on a lock card that a free account can only reach by tapping a padlocked pill, never by opening the arena and never mid-round. `test/widgets/panic_session_test.dart` pins both halves |
 
 ---
 

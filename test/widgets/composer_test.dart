@@ -182,7 +182,7 @@ void main() {
     final container = await openComposer(tester);
     final store = container.read(communityStoreProvider.notifier);
     for (var i = 0; i < LpAllowances.premiumPosts; i++) {
-      store.addPost(text: 'post $i', tag: PostTag.vent);
+      store.addPost(text: 'venting post number $i', tag: PostTag.vent);
     }
     await tester.pumpAndSettle();
 
@@ -203,7 +203,7 @@ void main() {
     final container = await openComposer(tester);
     final store = container.read(communityStoreProvider.notifier);
     for (var i = 0; i < LpAllowances.premiumPosts; i++) {
-      store.addPost(text: 'post $i', tag: PostTag.vent);
+      store.addPost(text: 'venting post number $i', tag: PostTag.vent);
     }
     await tester.pumpAndSettle();
     expect(

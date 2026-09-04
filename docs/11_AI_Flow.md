@@ -48,7 +48,22 @@ flowchart TD
     R --> S{Every 4th exchange}
     S -- yes --> T["GENERATE on cheap model:<br/>fold last turns into ≤120-word summary<br/>no numbers allowed — they'd go stale"]
     T --> U[("users/{uid}.coachSummary overwritten")]
+    R --> P{Mid-craving?}
+    P -- yes --> X
+    P -- no --> Q["GENERATE on cheap model:<br/>3-4 things the USER might say next → JSON<br/>~250 in / 40 out tokens"]
+    Q --> O[Follow-up chips ride the reply envelope]
 ```
+
+**All three run inside one `Promise.all`**, so on a turn where extraction fires they cost
+roughly no extra wall-clock at all. None of them can delay the first token — that left on
+the stream long before this block is reached — and none of them can fail a reply: each
+swallows its own errors and returns nothing.
+
+**The follow-up chips** (added Sep 3 2026, `docs/12 §5c`) replaced four frozen strings that
+rendered identically on every turn forever. They see only the last exchange, never the card,
+the summary or the memories: what comes next in *this* exchange is not a question the rest of
+the stack answers. They are skipped entirely mid-craving — the panic rider is breath and
+presence only, and a menu of four things to say is the opposite of that.
 
 So the full loop is exactly what you sketched: **data (journey) → deterministic feed (card) +
 message → embedding → Firestore vector search → Gemini → response → extraction → embedding →
@@ -62,6 +77,7 @@ Three-layer memory, by freshness and cost:
 | Rolling summary | cheap-model generation | every 4th exchange | ~250 | ~$0.0002 / 4 turns |
 | Vector memories | extraction + embeddings | on new facts | ~150 | ~$0.0001 / turn |
 | Last 10 messages | Firestore | live | ~600 | $0 |
+| Follow-up chips | cheap-model generation | every non-panic turn | — (output only) | ~$0.00005 / turn |
 
 ## 4. Cost per turn (flash-class list rates, input measured in prod at 1.4–1.8K)
 
@@ -70,8 +86,16 @@ Three-layer memory, by freshness and cost:
 | Reply generation (premium) | ~2,000 in / ~100 out | ~$0.00085 |
 | Fact extraction (cheap model) | ~760 | ~$0.0001 |
 | Summary, amortized over 4 turns | ~1,500 / 4 | ~$0.00005 |
+| Follow-up chips (cheap model) | ~250 in / ~40 out | ~$0.00005 |
 | Embeddings (1 query + occasional docs) | ~100 | ~$0.00002 |
 | **Total per premium turn** | | **≈ $0.001** |
+
+The chips are ~5% of a turn and the only line here that produces nothing the user asked for,
+which is why they have their own kill switch — `COACH_FOLLOWUPS=false` in
+`functions/.env.alastpuff` stops them without a deploy, and the app falls back to the four
+static openers. The param is read as `!== 'false'`, never `=== 'true'`: an unset deploy-time
+param resolves to the empty string, and reading *that* as "off" would silently disable the
+feature on any project whose `.env` never named it.
 
 ## 5. Economics at 1,000 subscribers on the weekly plan ($2.99/week)
 
@@ -85,6 +109,10 @@ Monthly, unit-economics snapshot (excludes churn, refunds, staff):
 | AI generation + embeddings | ~6 msgs/day avg × 30 × 1,000 × $0.001 | −$180 |
 | Infra (2 warm instances, Firestore ops, functions compute) | | −$50 |
 | **Contribution margin** | | **≈ $10,780 (~98% of net)** |
+
+The $0.001 line already absorbs the follow-up chips: the itemised sum moved from ~$0.00102 to
+~$0.00107 when they landed, which is inside the rounding this table has always carried. The
+figures below are unchanged.
 
 Sensitivity: every user averaging a heavy 20 msgs/day → AI ≈ $600/mo (still 5% of net).
 Absolute worst case is **bounded by design**: the 100/day cap makes maximum exposure

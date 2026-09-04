@@ -15,7 +15,7 @@ import {createHash} from 'node:crypto';
 import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {readAllowance, REGION} from '../config';
-import {prefilter} from '../ai/prefilter';
+import {postQuality, prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
@@ -32,6 +32,13 @@ const MAX_POST_CHARS = 500;
 
 /** The app's local post id (`p<micros>`); anything else gets a fresh id. */
 const CLIENT_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * How long one SOS holds the top of the feed, and therefore how long before
+ * the same person may post another. Mirrors `LpAllowances.sosPinWindow` on
+ * the client and `CommunityState.visible`'s 60-minute pin.
+ */
+const SOS_COOLDOWN_MS = 60 * 60 * 1000;
 
 export const createPost = onCall(
   {region: REGION, enforceAppCheck: true, memory: '256MiB'},
@@ -75,6 +82,16 @@ export const createPost = onCall(
       throw new HttpsError('invalid-argument', 'That breaks the community rules.');
     }
 
+    // "Was anything said?" — the floor under the composer's own check. The
+    // panic flow opens the composer pre-tagged `sos`, so publishing is one
+    // tap away with the tag already chosen, and a live SOS pins to the top of
+    // the feed for an hour: `"a"` used to publish, and it pinned. Ahead of
+    // the allowance for the same reason the slur check is — junk never costs
+    // its author a slot.
+    if (postQuality(text, tag === 'sos') !== null) {
+      throw new HttpsError('invalid-argument', 'Say a little more than that.');
+    }
+
     // Posting is an ALLOWANCE, not a wall (docs/12 §4.1). It used to be
     // refused outright for a free account, which left the feature we call our
     // moat read-only for exactly the people a subscriber pays to read — while
@@ -101,14 +118,30 @@ export const createPost = onCall(
       dayKeyIn(new Date(), caller.timeZone),
       limit,
       sos ? 'sosUsage' : 'postUsage',
+      // One live SOS at a time. A live SOS pins to the top of the feed for an
+      // hour (docs/03 §9), so a second one posted five minutes later is not a
+      // second call for help — it is the same person occupying the top of the
+      // feed twice. The window matches the pin exactly, so the rule reads as
+      // "while yours is still up there".
+      sos ? SOS_COOLDOWN_MS : 0,
+      keyed ? String(clientId) : undefined,
     );
     if (!claim.allowed) {
-      // Two different refusals, because they need two different answers on
-      // screen. A free account that a subscription WOULD have let through
+      // Three different refusals, because they need three different answers
+      // on screen. A free account that a subscription WOULD have let through
       // gets the upgrade-shaped code the client turns into a door; anyone a
       // subscription would not help gets "come back tomorrow" and no door.
       // The client cannot make this call itself — it would have to trust its
       // own tier, which is the one thing it must never be trusted about.
+      if (claim.cooldownMsLeft !== undefined) {
+        // Deliberately NOT the daily-cap code: "come back tomorrow" is wrong
+        // for something that clears within the hour, and this one is about a
+        // post that is still up rather than an allowance that is spent.
+        throw new HttpsError(
+          'already-exists',
+          'Your SOS is still at the top of the feed.',
+        );
+      }
       if (!sos && tier === 'free' && premiumLimit > limit) {
         throw new HttpsError('permission-denied', 'Premium posts more often.');
       }

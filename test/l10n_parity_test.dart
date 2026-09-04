@@ -104,6 +104,16 @@ void main() {
       'gameSubtitle',
       'gameRoundDone',
       'survivedGameTiles',
+      // The Free screen became a Free-vs-Pro comparison (Sep 3 2026,
+      // docs/12 §5c). These five were the old bullet list, and two of them
+      // hardcoded an allowance ("5 coach messages a day", "one post a day")
+      // that `LpAllowances` now supplies — bringing either back would
+      // reintroduce a number that drifts from the one the app enforces.
+      'freePlanFeat1',
+      'freePlanFeat2',
+      'freePlanFeat3',
+      'freePlanFeat4',
+      'freePlanFeat5',
     ];
     for (final locale in locales) {
       for (final key in retired) {

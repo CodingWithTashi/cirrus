@@ -38,6 +38,11 @@ function request(data: unknown, uid = 'alice'): CallableRequest<unknown> {
   } as unknown as CallableRequest<unknown>;
 }
 
+/// 520 characters of real words, for the length-limit cases. A single
+/// repeated character is no longer a valid post however long it is — the
+/// quality floor asks for words, not bytes — so the fixture has to be prose.
+const LONG = 'day twelve and still here, '.repeat(20);
+
 const post = (text = 'day 12 and still here', tag = 'win') => ({
   text,
   tag,
@@ -66,7 +71,7 @@ afterEach(() => {
 beforeEach(() => {
   vi.spyOn(FREE_DAILY_POSTS, 'value').mockReturnValue(1);
   vi.spyOn(PREMIUM_DAILY_POSTS, 'value').mockReturnValue(3);
-  vi.spyOn(DAILY_SOS_POSTS, 'value').mockReturnValue(5);
+  vi.spyOn(DAILY_SOS_POSTS, 'value').mockReturnValue(3);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -135,11 +140,15 @@ describe('createPost — input validation', () => {
   });
 
   it('rejects text over the 500-character limit', async () => {
-    await expect(createPost.run(request(post('x'.repeat(501))))).rejects.toThrow();
+    // `requireText` trims first, so the 501st character has to be one that
+    // survives a trim — LONG's repeat boundary is a space.
+    await expect(
+      createPost.run(request(post(`${LONG.slice(0, 500)}x`))),
+    ).rejects.toThrow();
   });
 
   it('accepts text exactly at the limit', async () => {
-    await expect(createPost.run(request(post('x'.repeat(500))))).resolves.toHaveProperty('postId');
+    await expect(createPost.run(request(post(LONG.slice(0, 500))))).resolves.toHaveProperty('postId');
   });
 
   it('requires a tag', async () => {
@@ -148,20 +157,20 @@ describe('createPost — input validation', () => {
   });
 
   it('rejects a tag outside the allowed set', async () => {
-    await expect(createPost.run(request(post('hi', 'spam')))).rejects.toThrow();
+    await expect(createPost.run(request(post('a perfectly fine post', 'spam')))).rejects.toThrow();
   });
 });
 
 describe('createPost — the 3-a-day cap', () => {
   it('allows three posts and refuses the fourth', async () => {
     for (let i = 0; i < 3; i++) {
-      await expect(createPost.run(request(post(`post ${i}`)))).resolves.toBeDefined();
+      await expect(createPost.run(request(post(`a good post number ${i}`)))).resolves.toBeDefined();
     }
-    await expect(createPost.run(request(post('the fourth')))).rejects.toThrow();
+    await expect(createPost.run(request(post('the fourth one today')))).rejects.toThrow();
   });
 
   it('meters each author separately', async () => {
-    for (let i = 0; i < 3; i++) await createPost.run(request(post(`a${i}`), 'alice'));
+    for (let i = 0; i < 3; i++) await createPost.run(request(post(`alice post number ${i}`), 'alice'));
     await expect(
       createPost.run(request(post('bob is fresh'), 'bob')),
     ).resolves.toBeDefined();
@@ -172,7 +181,7 @@ describe('createPost — the 3-a-day cap', () => {
   // a spam cap becomes decorative.
   it('holds the cap when posts arrive concurrently', async () => {
     const results = await Promise.allSettled(
-      Array.from({length: 5}, (_, i) => createPost.run(request(post(`burst ${i}`)))),
+      Array.from({length: 5}, (_, i) => createPost.run(request(post(`burst post number ${i}`)))),
     );
     const created = results.filter((r) => r.status === 'fulfilled');
 
@@ -201,7 +210,7 @@ describe('createPost — refuses rule-breaking text at the door', () => {
   it('spends no cap slot on a refusal', async () => {
     await expect(createPost.run(request(post(slur)))).rejects.toThrow();
     for (let i = 0; i < 3; i++) {
-      await expect(createPost.run(request(post(`post ${i}`)))).resolves.toBeDefined();
+      await expect(createPost.run(request(post(`a good post number ${i}`)))).resolves.toBeDefined();
     }
   });
 
@@ -230,7 +239,7 @@ describe('createPost — posting is an allowance, not a wall', () => {
   });
 
   it('gives a free account its one post a day', async () => {
-    const {postId} = await createPost.run(request(post('a win', 'win')));
+    const {postId} = await createPost.run(request(post('a real win today', 'win')));
     expect((await postsCol().doc(postId).get()).exists).toBe(true);
     expect(
       (await db.collection('users').doc('alice').get()).get('postUsage'),
@@ -238,8 +247,8 @@ describe('createPost — posting is an allowance, not a wall', () => {
   });
 
   it('refuses the second with the upgrade-shaped code, spending no slot', async () => {
-    await createPost.run(request(post('a win', 'win')));
-    await expect(createPost.run(request(post('another', 'win')))).rejects.toMatchObject({
+    await createPost.run(request(post('a real win today', 'win')));
+    await expect(createPost.run(request(post('another win today', 'win')))).rejects.toMatchObject({
       // `permission-denied`, not `resource-exhausted`: a subscription WOULD
       // have let this through, and the client turns exactly this code into a
       // door. It cannot make that call itself without trusting its own tier.
@@ -258,7 +267,7 @@ describe('createPost — posting is an allowance, not a wall', () => {
     });
     for (let i = 0; i < 3; i++) {
       await expect(
-        createPost.run(request(post(`win ${i}`, 'win'), 'prem')),
+        createPost.run(request(post(`win number ${i} today`, 'win'), 'prem')),
       ).resolves.toBeDefined();
     }
     await expect(
@@ -277,7 +286,7 @@ describe('createPost — posting is an allowance, not a wall', () => {
     });
     for (let i = 0; i < 3; i++) {
       await expect(
-        createPost.run(request(post(`win ${i}`, 'win'), 'trialist')),
+        createPost.run(request(post(`win number ${i} today`, 'win'), 'trialist')),
       ).resolves.toBeDefined();
     }
   });
@@ -291,12 +300,27 @@ describe('createPost — posting is an allowance, not a wall', () => {
         updatedAt: new Date(),
       },
     });
-    await createPost.run(request(post('day 12', 'win'), 'lapsed'));
+    await createPost.run(request(post('day 12 and holding', 'win'), 'lapsed'));
     await expect(
       createPost.run(request(post('day 12 again', 'win'), 'lapsed')),
     ).rejects.toMatchObject({code: 'permission-denied'});
   });
 });
+
+/// Ages this author's last SOS out of its 60-minute pin, without waiting an
+/// hour. Touches only the timestamp, so the day's counter is untouched — the
+/// two rules are separate and the tests below need to exercise them apart.
+async function expirePin(uid: string): Promise<void> {
+  const ref = db.collection('users').doc(uid);
+  const usage = (await ref.get()).get('sosUsage') as
+    | {day: string; count: number}
+    | undefined;
+  if (usage === undefined) return;
+  await ref.set(
+    {sosUsage: {...usage, lastAtMs: Date.now() - 61 * 60 * 1000}},
+    {merge: true},
+  );
+}
 
 describe('createPost — an SOS spends its own allowance', () => {
   const previous = process.env['ENTITLEMENT_MODE'];
@@ -316,8 +340,8 @@ describe('createPost — an SOS spends its own allowance', () => {
   it('survives a spent ordinary allowance', async () => {
     // The rule this protects: nobody is told they are out of posts while
     // asking for help. A shared counter would have refused this.
-    await createPost.run(request(post('a win', 'win')));
-    await expect(createPost.run(request(post('another', 'win')))).rejects.toThrow();
+    await createPost.run(request(post('a real win today', 'win')));
+    await expect(createPost.run(request(post('another win today', 'win')))).rejects.toThrow();
 
     await expect(
       createPost.run(request(post('please talk to me', 'sos'))),
@@ -325,23 +349,52 @@ describe('createPost — an SOS spends its own allowance', () => {
   });
 
   it('does not spend the ordinary allowance either', async () => {
-    await createPost.run(request(post('help', 'sos')));
+    await createPost.run(request(post('please help me out', 'sos')));
     // The free post is still there to use.
-    await expect(createPost.run(request(post('a win', 'win')))).resolves.toBeDefined();
+    await expect(createPost.run(request(post('a real win today', 'win')))).resolves.toBeDefined();
     const user = await db.collection('users').doc('alice').get();
     expect(user.get('sosUsage')).toMatchObject({count: 1});
     expect(user.get('postUsage')).toMatchObject({count: 1});
   });
 
-  it('is still bounded — a pinned post is not an unlimited megaphone', async () => {
-    // SOS posts pin to the top of the feed for an hour, so "uncapped" would
-    // hand anyone who wanted one a permanent billboard.
-    for (let i = 0; i < 5; i++) {
-      await expect(createPost.run(request(post(`help ${i}`, 'sos')))).resolves.toBeDefined();
+  it('refuses a second SOS while the first is still pinned', async () => {
+    // The rule that actually stops the megaphone (docs/12 §5c). An SOS holds
+    // the top of the feed for an hour, so a second one five minutes later is
+    // not a second call for help — it is the same person up there twice.
+    await createPost.run(request(post('please help me out', 'sos')));
+    await expect(
+      createPost.run(request(post('someone talk to me', 'sos'))),
+    ).rejects.toMatchObject({
+      // Its OWN code. `resource-exhausted` would put "come back tomorrow"
+      // on screen for something that clears within the hour.
+      code: 'already-exists',
+    });
+  });
+
+  it('a refused cooldown spends no slot, so the day is not burned', async () => {
+    await createPost.run(request(post('please help me out', 'sos')));
+    await expect(
+      createPost.run(request(post('someone talk to me', 'sos'))),
+    ).rejects.toThrow();
+    const user = await db.collection('users').doc('alice').get();
+    expect(user.get('sosUsage')).toMatchObject({count: 1});
+  });
+
+  it('is still bounded once the pin expires', async () => {
+    // Past the cooldown, the day's allowance is what remains — and it is a
+    // small number, because a pinning post cannot be uncapped.
+    for (let i = 0; i < DAILY_SOS_POSTS.value(); i++) {
+      await expect(
+        createPost.run(request(post(`help me please number ${i}`, 'sos'))),
+      ).resolves.toBeDefined();
+      await expirePin('alice');
     }
-    await expect(createPost.run(request(post('help 6', 'sos')))).rejects.toMatchObject({
+    await expect(
+      createPost.run(request(post('one more time please', 'sos'))),
+    ).rejects.toMatchObject({
       // Not `permission-denied`: no subscription buys more of these, so
-      // there is no door to offer.
+      // there is no door to offer. And not `already-exists`: the pin is gone,
+      // the allowance is what is spent.
       code: 'resource-exhausted',
     });
   });
@@ -351,8 +404,8 @@ describe('createPost — idempotent on the client id', () => {
   // The app's retry re-sends a post whose response was lost. Without this a
   // committed-but-unheard send became two posts and two cap slots.
   it('the same clientId twice is one post and one cap slot', async () => {
-    const first = await createPost.run(request({...post('once'), clientId: 'p1'}));
-    const second = await createPost.run(request({...post('once'), clientId: 'p1'}));
+    const first = await createPost.run(request({...post('once and only once'), clientId: 'p1'}));
+    const second = await createPost.run(request({...post('once and only once'), clientId: 'p1'}));
     expect(second.postId).toBe(first.postId);
     expect((await postsCol().get()).size).toBe(1);
     const usage = (await db.collection('users').doc('alice').get()).get('postUsage') as {
@@ -362,14 +415,14 @@ describe('createPost — idempotent on the client id', () => {
   });
 
   it('another user with the same clientId gets their own post', async () => {
-    const a = await createPost.run(request({...post('mine'), clientId: 'p1'}, 'alice'));
-    const b = await createPost.run(request({...post('mine'), clientId: 'p1'}, 'bob'));
+    const a = await createPost.run(request({...post('mine and only mine'), clientId: 'p1'}, 'alice'));
+    const b = await createPost.run(request({...post('mine and only mine'), clientId: 'p1'}, 'bob'));
     expect(a.postId).not.toBe(b.postId);
   });
 
   it('an unusable clientId falls back to a fresh id every time', async () => {
-    const a = await createPost.run(request({...post('x'), clientId: 'no spaces here!'}));
-    const b = await createPost.run(request({...post('x'), clientId: 'no spaces here!'}));
+    const a = await createPost.run(request({...post('a fresh id every time'), clientId: 'no spaces here!'}));
+    const b = await createPost.run(request({...post('a fresh id every time'), clientId: 'no spaces here!'}));
     expect(a.postId).not.toBe(b.postId);
   });
 });

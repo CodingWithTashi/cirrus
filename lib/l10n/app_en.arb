@@ -539,7 +539,7 @@
   "paywallTitleUpgrade": "Go further with Premium.",
   "paywallRevealLabel": "YOUR PLAN",
   "paywallFeatCoach": "Unlimited AI coach that remembers your why",
-  "paywallFeatPanic": "Panic button: a 60-second craving killer",
+  "paywallFeatPanic": "All three panic games, not just Orbs",
   "paywallFeatPlan": "A plan that adapts when you slip",
   "paywallFeatForecasts": "Craving forecasts for your danger hours",
   "paywallFeatCommunity": "Community that answers your SOS",
@@ -706,6 +706,52 @@
     }
   },
   "premiumPitchNudge": "A {hour} spike is due. Premium forecasts your risky hours before they land.",
+  "freePlanColFree": "FREE",
+  "freePlanColPro": "PRO",
+  "freeCompareLog": "Puff log + streaks",
+  "freeCompareMoney": "Money-saved ticker",
+  "freeCompareCoach": "Coach messages",
+  "freeCompareGames": "Panic games",
+  "freeComparePosts": "Community posts",
+  "freeCompareHistory": "Stats history",
+  "freeCompareHealth": "Health timeline",
+  "freeComparePlan": "Plan adapts nightly",
+  "freeCompareForecast": "Craving forecasts",
+  "freeCompareReport": "Weekly report",
+  "freeComparePerDay": "{n}/day",
+  "@freeComparePerDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "freeCompareDays": "{days} days",
+  "@freeCompareDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "freeCompareNodes": "{n} nodes",
+  "@freeCompareNodes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "freeCompareForever": "Forever",
+  "freeCompareAll": "All",
+  "freePlanProCta": "{days, plural, =1{Try Pro free for a day} other{Try Pro free for {days} days}}",
+  "@freePlanProCta": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "@premiumPitchNudge": {
     "placeholders": {
       "hour": {
@@ -713,13 +759,8 @@
       }
     }
   },
-  "freePlanTitle": "Free gets you moving.",
+  "freePlanTitle": "You're on Free.",
   "freePlanSubtitle": "Yours forever. No countdown, no nagging.",
-  "freePlanFeat1": "Puff log + streaks",
-  "freePlanFeat2": "Money-saved ticker",
-  "freePlanFeat3": "5 coach messages a day",
-  "freePlanFeat4": "Panic Button, any time you need it",
-  "freePlanFeat5": "Community — read, react, one post a day",
   "freePlanUpgradeNote": "Upgrade any time — your streak and history come with you.",
   "freePlanCta": "Start with Free",
   "winbackBadge": "ONE-TIME FOUNDING OFFER",
@@ -982,6 +1023,30 @@
   "gameNameTiles": "Tiles",
   "gameNameBlocks": "Blocks",
   "gameNameOrbs": "Orbs",
+  "gameLockedTitle": "{game} is a Premium game.",
+  "@gameLockedTitle": {
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "gameLockedBody": "{game} is yours free, always — and it works just as well.",
+  "@gameLockedBody": {
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "gameLockedPlayFree": "Play {game}",
+  "@gameLockedPlayFree": {
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
   "gameHintTiles": "Tap the bottom tile in its lane.",
   "gameHintBlocks": "Drag to move · tap to turn · flick down to drop",
   "gameHintOrbs": "A few orbs glow. Keep your eyes on them as they move, then tap them.",
@@ -1505,6 +1570,9 @@
   "communityKindnessNote": "Be kind — everyone here is mid-fight. No brand names, no where-to-buy.",
   "communityRuleSlur": "This can't be posted — slurs and hate aren't allowed here.",
   "communityRuleSourcing": "Where-to-buy and for-sale talk isn't allowed here. Edit it and try again.",
+  "communityTooShort": "A few more words — enough that someone can actually help.",
+  "communityTooRepetitive": "Say it in your own words — that's what gets an answer.",
+  "communitySosStillUp": "Your SOS is still at the top of the feed. People are seeing it.",
   "communityDailyCapReached": "That's {limit} today — the counter resets at midnight.",
   "@communityDailyCapReached": {
     "placeholders": {

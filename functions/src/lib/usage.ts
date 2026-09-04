@@ -27,6 +27,12 @@ export interface QuotaClaim {
   /** Messages used today AFTER this claim (unchanged when denied). */
   readonly used: number;
   readonly limit: number;
+  /**
+   * Set only when the refusal was a COOLDOWN rather than a spent allowance —
+   * milliseconds still to wait. The two need different words on screen:
+   * "come back tomorrow" is wrong for something that clears in ten minutes.
+   */
+  readonly cooldownMsLeft?: number;
 }
 
 /**
@@ -161,22 +167,72 @@ export type PostBucket = 'postUsage' | 'sosUsage';
  * REQUIRED, with no default: the whole point of the split is that an SOS and
  * an ordinary post are different, and a default would let a future caller
  * quietly spend the wrong one.
+ *
+ * [retryKey], when given, is the client's own id for this attempt. A claim
+ * carrying the same key as the last one is a RETRY of it, not a second
+ * attempt, and skips the cooldown. `createPost` already returns early for a
+ * `clientId` whose document exists — this covers the narrow window where the
+ * claim committed and the batch that follows it did not, which would
+ * otherwise answer a legitimate "tap to retry" with "your SOS is still up"
+ * about a post that never landed.
+ *
+ * [cooldownMs], when given, additionally refuses a claim made too soon after
+ * the last one. It exists for the SOS bucket: an SOS pins to the top of the
+ * feed for an hour, so three a day arriving in the same minute is three
+ * simultaneous megaphones rather than three calls for help. The timestamp
+ * rides the counter the transaction already reads and writes, so it costs no
+ * extra read — and it is refused BEFORE the counter moves, so a rejected
+ * attempt never spends the day's allowance.
  */
 export async function claimDailyPost(
   uid: string,
   todayKey: string,
   limit: number,
   bucket: PostBucket,
+  cooldownMs = 0,
+  retryKey?: string,
 ): Promise<QuotaClaim> {
   return db.runTransaction(async (tx) => {
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
     const usage = (snap.data() as UserDoc | undefined)?.[bucket];
-    const used = usage && usage.day === todayKey ? usage.count : 0;
+    const used = usage !== undefined && usage.day === todayKey ? usage.count : 0;
 
     if (used >= limit) return {allowed: false, used, limit};
 
-    tx.set(ref, {[bucket]: {day: todayKey, count: used + 1}}, {merge: true});
-    return {allowed: true, used: used + 1, limit};
+    const now = Date.now();
+    // Read UNCONDITIONALLY, never behind the same-day check the counter uses.
+    // `lastAtMs` is a wall-clock timestamp and the pin window is wall-clock
+    // too; scoping it to the day key meant an SOS at 23:55 and another at
+    // 00:05 both passed — two of the same person's posts pinned to the top of
+    // the feed at once, which is the exact thing the cooldown exists to stop.
+    // The day key also comes from the CLIENT's timezone, so a caller could
+    // have flipped it on demand.
+    const isRetry =
+      retryKey !== undefined && usage?.lastKey === retryKey;
+    if (!isRetry && cooldownMs > 0 && typeof usage?.lastAtMs === 'number') {
+      const left = usage.lastAtMs + cooldownMs - now;
+      // A clock that jumped backwards would otherwise lock someone out for
+      // however long the jump was; `left <= cooldownMs` bounds it.
+      if (left > 0 && left <= cooldownMs) {
+        return {allowed: false, used, limit, cooldownMsLeft: left};
+      }
+    }
+
+    tx.set(
+      ref,
+      {
+        [bucket]: {
+          day: todayKey,
+          // A retry re-uses the slot it already spent rather than taking a
+          // second one.
+          count: isRetry ? used : used + 1,
+          lastAtMs: now,
+          ...(retryKey !== undefined ? {lastKey: retryKey} : {}),
+        },
+      },
+      {merge: true},
+    );
+    return {allowed: true, used: isRetry ? used : used + 1, limit};
   });
 }

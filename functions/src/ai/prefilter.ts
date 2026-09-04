@@ -147,3 +147,98 @@ export function prefilter(text: string): Verdict | null {
   }
   return null;
 }
+
+/**
+ * Is there actually a message here?
+ *
+ * A different question from `prefilter`, which asks whether something may be
+ * said. This asks whether anything WAS said, and it is the floor under the
+ * composer's own check: the client refuses first so the words are still there
+ * to edit, and this refuses a client that skipped it.
+ *
+ * It exists because the panic flow opens the composer pre-tagged `sos`, so a
+ * post is one tap away with the tag already chosen — and a live SOS pins to
+ * the top of the feed for an hour. `"a"` used to publish, and it pinned.
+ *
+ * Runs BEFORE any allowance is claimed, like the slur check above: junk never
+ * costs its author a slot.
+ *
+ * Mirrors `PostQuality` in `lib/domain/logic/community_rules.dart`
+ * value-for-value; `test/domain/post_quality_test.dart` reads this file and
+ * fails if the two drift, the same discipline the slur lists are held to.
+ *
+ * **Assumes a space-separated script**, as all five shipped locales are. The
+ * word rules would need to become script-aware before shipping zh/ja/th.
+ */
+export const POST_QUALITY = {
+  minPostChars: 12,
+  /**
+   * An SOS asks for less. This gate is reached from the composer the panic
+   * flow opens pre-tagged `sos`, and a wrongly-refused cry for help costs far
+   * more than the junk post it would have caught. Only the character floor
+   * moves — every anti-noise rule still applies.
+   */
+  minSosChars: 10,
+  /** A reply is allowed to be "thanks". */
+  minReplyChars: 6,
+  minPostWords: 3,
+  /** Two, not three, so "i cant i cant" still reaches the feed. */
+  minDistinctWords: 2,
+  minLetters: 3,
+  minPostDistinctLetters: 4,
+  minReplyDistinctLetters: 3,
+} as const;
+
+export type PostQualityIssue = 'tooShort' | 'repetitive';
+
+function checkQuality(
+  text: string,
+  minChars: number,
+  minWords: number,
+  minDistinctLetters: number,
+): PostQualityIssue | null {
+  const collapsed = text.trim().replace(/\s+/gu, ' ');
+  if (collapsed.length < minChars) return 'tooShort';
+
+  const words = collapsed.split(' ').filter((w) => w.length > 0);
+  if (words.length < minWords) return 'tooShort';
+
+  // Only meaningful once there are enough words for repetition to BE
+  // repetition — a two-word reply is not "the same thing over and over".
+  if (
+    words.length >= POST_QUALITY.minPostWords &&
+    new Set(words.map((w) => w.toLowerCase())).size <
+      POST_QUALITY.minDistinctWords
+  ) {
+    return 'repetitive';
+  }
+
+  const letters = [...collapsed.toLowerCase()].filter((c) => /\p{L}/u.test(c));
+  if (letters.length < POST_QUALITY.minLetters) return 'tooShort';
+  if (new Set(letters).size < minDistinctLetters) return 'repetitive';
+  return null;
+}
+
+/**
+ * The issue with [text] as a post, or null when it is fine to publish.
+ *
+ * `sos` lowers only the character floor (see `minSosChars`).
+ */
+export function postQuality(text: string, sos = false): PostQualityIssue | null {
+  return checkQuality(
+    text,
+    sos ? POST_QUALITY.minSosChars : POST_QUALITY.minPostChars,
+    POST_QUALITY.minPostWords,
+    POST_QUALITY.minPostDistinctLetters,
+  );
+}
+
+/** The issue with [text] as a reply. Lower bar in every dimension. */
+export function replyQuality(text: string): PostQualityIssue | null {
+  return checkQuality(
+    text,
+    POST_QUALITY.minReplyChars,
+    1,
+    POST_QUALITY.minReplyDistinctLetters,
+  );
+}

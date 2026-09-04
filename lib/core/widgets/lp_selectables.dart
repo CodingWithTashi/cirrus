@@ -212,7 +212,8 @@ class StaticChip extends StatelessWidget {
 }
 
 /// Segmented pill control (Stats: Day / Week / Month; the arena's game
-/// switcher). A pill in [badges] wears a small volt dot at its corner.
+/// switcher). A pill in [badges] wears a small volt dot at its corner; a pill
+/// in [locked] wears a padlock there instead.
 class SegmentedPills extends StatelessWidget {
   const SegmentedPills({
     super.key,
@@ -220,12 +221,25 @@ class SegmentedPills extends StatelessWidget {
     required this.selectedIndex,
     required this.onChanged,
     this.badges = const {},
+    this.locked = const {},
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
   final Set<int> badges;
+
+  /// Pills that need a subscription, marked with a padlock.
+  ///
+  /// **Still tappable, deliberately.** [onChanged] fires for a locked index
+  /// exactly as for any other, and the caller answers it — with an
+  /// explanation and a way through, not with nothing. A disabled control
+  /// teaches the user nothing except that the app is broken.
+  ///
+  /// A locked pill never also shows its [badges] dot: "no best yet" is
+  /// trivially true of a game you have never been able to play, so the dot
+  /// there is noise competing with the mark that matters.
+  final Set<int> locked;
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +278,17 @@ class SegmentedPills extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (badges.contains(i) && i != selectedIndex)
+                  if (locked.contains(i))
+                    Positioned(
+                      top: 0,
+                      right: 1,
+                      child: Icon(
+                        Icons.lock,
+                        size: 9,
+                        color: i == selectedIndex ? lp.onVolt : lp.textFaint,
+                      ),
+                    )
+                  else if (badges.contains(i) && i != selectedIndex)
                     Positioned(
                       top: 1,
                       right: 3,

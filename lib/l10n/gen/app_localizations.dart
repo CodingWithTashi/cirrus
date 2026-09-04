@@ -1685,7 +1685,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallFeatPanic.
   ///
   /// In en, this message translates to:
-  /// **'Panic button: a 60-second craving killer'**
+  /// **'All three panic games, not just Orbs'**
   String get paywallFeatPanic;
 
   /// No description provided for @paywallFeatPlan.
@@ -1993,10 +1993,118 @@ abstract class AppLocalizations {
   /// **'A {hour} spike is due. Premium forecasts your risky hours before they land.'**
   String premiumPitchNudge(String hour);
 
+  /// No description provided for @freePlanColFree.
+  ///
+  /// In en, this message translates to:
+  /// **'FREE'**
+  String get freePlanColFree;
+
+  /// No description provided for @freePlanColPro.
+  ///
+  /// In en, this message translates to:
+  /// **'PRO'**
+  String get freePlanColPro;
+
+  /// No description provided for @freeCompareLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Puff log + streaks'**
+  String get freeCompareLog;
+
+  /// No description provided for @freeCompareMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Money-saved ticker'**
+  String get freeCompareMoney;
+
+  /// No description provided for @freeCompareCoach.
+  ///
+  /// In en, this message translates to:
+  /// **'Coach messages'**
+  String get freeCompareCoach;
+
+  /// No description provided for @freeCompareGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Panic games'**
+  String get freeCompareGames;
+
+  /// No description provided for @freeComparePosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Community posts'**
+  String get freeComparePosts;
+
+  /// No description provided for @freeCompareHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Stats history'**
+  String get freeCompareHistory;
+
+  /// No description provided for @freeCompareHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Health timeline'**
+  String get freeCompareHealth;
+
+  /// No description provided for @freeComparePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan adapts nightly'**
+  String get freeComparePlan;
+
+  /// No description provided for @freeCompareForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'Craving forecasts'**
+  String get freeCompareForecast;
+
+  /// No description provided for @freeCompareReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report'**
+  String get freeCompareReport;
+
+  /// No description provided for @freeComparePerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}/day'**
+  String freeComparePerDay(int n);
+
+  /// No description provided for @freeCompareDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String freeCompareDays(int days);
+
+  /// No description provided for @freeCompareNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} nodes'**
+  String freeCompareNodes(int n);
+
+  /// No description provided for @freeCompareForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Forever'**
+  String get freeCompareForever;
+
+  /// No description provided for @freeCompareAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get freeCompareAll;
+
+  /// No description provided for @freePlanProCta.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Try Pro free for a day} other{Try Pro free for {days} days}}'**
+  String freePlanProCta(int days);
+
   /// No description provided for @freePlanTitle.
   ///
   /// In en, this message translates to:
-  /// **'Free gets you moving.'**
+  /// **'You\'re on Free.'**
   String get freePlanTitle;
 
   /// No description provided for @freePlanSubtitle.
@@ -2004,36 +2112,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yours forever. No countdown, no nagging.'**
   String get freePlanSubtitle;
-
-  /// No description provided for @freePlanFeat1.
-  ///
-  /// In en, this message translates to:
-  /// **'Puff log + streaks'**
-  String get freePlanFeat1;
-
-  /// No description provided for @freePlanFeat2.
-  ///
-  /// In en, this message translates to:
-  /// **'Money-saved ticker'**
-  String get freePlanFeat2;
-
-  /// No description provided for @freePlanFeat3.
-  ///
-  /// In en, this message translates to:
-  /// **'5 coach messages a day'**
-  String get freePlanFeat3;
-
-  /// No description provided for @freePlanFeat4.
-  ///
-  /// In en, this message translates to:
-  /// **'Panic Button, any time you need it'**
-  String get freePlanFeat4;
-
-  /// No description provided for @freePlanFeat5.
-  ///
-  /// In en, this message translates to:
-  /// **'Community — read, react, one post a day'**
-  String get freePlanFeat5;
 
   /// No description provided for @freePlanUpgradeNote.
   ///
@@ -2634,6 +2712,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Orbs'**
   String get gameNameOrbs;
+
+  /// No description provided for @gameLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{game} is a Premium game.'**
+  String gameLockedTitle(String game);
+
+  /// No description provided for @gameLockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{game} is yours free, always — and it works just as well.'**
+  String gameLockedBody(String game);
+
+  /// No description provided for @gameLockedPlayFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Play {game}'**
+  String gameLockedPlayFree(String game);
 
   /// No description provided for @gameHintTiles.
   ///
@@ -3600,6 +3696,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Where-to-buy and for-sale talk isn\'t allowed here. Edit it and try again.'**
   String get communityRuleSourcing;
+
+  /// No description provided for @communityTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'A few more words — enough that someone can actually help.'**
+  String get communityTooShort;
+
+  /// No description provided for @communityTooRepetitive.
+  ///
+  /// In en, this message translates to:
+  /// **'Say it in your own words — that\'s what gets an answer.'**
+  String get communityTooRepetitive;
+
+  /// No description provided for @communitySosStillUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your SOS is still at the top of the feed. People are seeing it.'**
+  String get communitySosStillUp;
 
   /// No description provided for @communityDailyCapReached.
   ///

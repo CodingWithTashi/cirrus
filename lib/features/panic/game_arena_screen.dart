@@ -12,6 +12,7 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../data/stores/journey_store.dart';
 import '../../data/stores/providers.dart';
@@ -60,6 +61,11 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   late final PanicViewModel _session = ref.read(panicProvider.notifier);
   late final AnalyticsSink _analytics = ref.read(analyticsProvider);
 
+  /// Where this reader is in their own quit, read once in [initState]:
+  /// Riverpod forbids `ref` on the way out, and the gate events fire from
+  /// callbacks that can outlive the frame.
+  late final int? _planDay = _store.journey?.plan.dayNumber(DateTime.now());
+
   late GameEntry _entry;
   late GameSession _run;
   late final Ticker _ticker = createTicker(_onTick);
@@ -84,14 +90,28 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   /// Non-null once the round is over: the panel replaces the field.
   GameOutcome? _outcome;
 
+  /// The Premium game this reader just tapped, if any: the lock card replaces
+  /// the field until they pick something they can play. Never set mid-round —
+  /// [_switchTo] stops the clock before it lands here — so nobody is
+  /// interrupted by an offer while a round is running.
+  GameEntry? _locked;
+
   @override
   void initState() {
     super.initState();
-    _store; // resolve the three now, while ref is still usable
+    _store; // resolve them now, while ref is still usable
     _session;
     _analytics;
+    _planDay;
     _lifecycle = AppLifecycleListener(onInactive: _pause, onPause: _pause);
-    _entry = GameCatalog.resolve(widget.initial ?? _store.journey?.lastGame);
+    // Tier-aware, so a locked game is never the LANDING spot: a lapsed
+    // subscriber whose `lastGame` is Blocks, or a `?g=blocks` link, opens on
+    // Orbs and plays. The lock is met by tapping a locked pill, never by
+    // walking in mid-craving (docs/12 §4.2, §5c).
+    _entry = GameCatalog.resolveFor(
+      widget.initial ?? _store.journey?.lastGame,
+      premium: ref.read(isPremiumProvider),
+    );
     _startSession();
     // After the frame, never during the build that pushed us: a journey
     // commit while a route settles is the "navigate before you mutate" bug.
@@ -265,28 +285,62 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   }
 
   void _switchTo(GameId id) {
-    if (id == _entry.id) return;
+    if (id == _entry.id && _locked == null) return;
     final entry = GameCatalog.of(id);
     if (entry == null) return;
+    // A locked game answers with the card, not with silence and not with a
+    // round it cannot finish. Nothing is recorded and `lastGame` does not
+    // move: they never played it.
+    if (entry.premium && !ref.read(isPremiumProvider)) {
+      LpHaptics.light();
+      _ticker.stop();
+      // Once per card, not once per tap. Tapping the same padlocked pill
+      // again while its card is already up is the same impression, and
+      // counting it twice inflates the denominator every `gate_tapped` ratio
+      // is read against.
+      if (_locked?.id != entry.id) {
+        _analytics.gateShown('panic_game', planDay: _planDay);
+      }
+      setState(() => _locked = entry);
+      return;
+    }
     LpHaptics.light();
+    // Dismissing the lock card back onto the game already on screen is not a
+    // switch: no `game_switched` row in the funnel, and — the part that costs
+    // the user something — no new session either. `_startSession` rebuilds
+    // the whole 5-round chain from scratch, so somebody 40 seconds into
+    // round 3 of Orbs who tapped a padlocked pill out of curiosity would come
+    // back to round 1. Put the board back and restart the clock instead.
+    if (id == _entry.id) {
+      setState(() {
+        _locked = null;
+        _lastTick = Duration.zero;
+        _ticker.start();
+      });
+      return;
+    }
     _analytics.gameSwitched(from: _entry.id, to: id);
     _ticker.stop();
     _store.setLastGame(id);
     setState(() {
+      _locked = null;
       _entry = entry;
       _startSession();
     });
   }
 
   void _pause() {
-    if (!mounted || _outcome != null || _paused) return;
+    // The lock card has already stopped the clock; pausing "over" it would
+    // arm a resume that starts the ticker again with the card still up, and
+    // the round would tick down behind it.
+    if (!mounted || _outcome != null || _paused || _locked != null) return;
     _ticker.stop();
     _run.pause();
     setState(() => _paused = true);
   }
 
   void _resume() {
-    if (!_paused) return;
+    if (!_paused || _locked != null) return;
     _run.resume();
     _lastTick = Duration.zero;
     _ticker.start();
@@ -316,6 +370,27 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
     final lp = context.lp;
     final l10n = context.l10n;
     final outcome = _outcome;
+    final premium = ref.watch(isPremiumProvider);
+    // Watched, not read: a purchase made from this very card must unlock the
+    // board underneath it without a second tap.
+    final locked = premium ? null : _locked;
+    if (premium && _locked != null) {
+      // They bought it. Open the game they asked for, on the next frame —
+      // `build` stays free of side effects.
+      final wanted = _locked!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _switchTo(wanted.id);
+        // …but the paywall is still ON TOP of this route: `See Premium`
+        // pushes it and the arena stays mounted underneath, so the
+        // entitlement arrives here while nobody can see the board. Starting
+        // the clock now would run a whole 60-second round behind the paywall
+        // and hand them a finished panel, a recorded score and a
+        // `game_finished` event for a round they never played. Park it paused
+        // instead; the veil is already the "tap to pick it up" state.
+        if (!(ModalRoute.of(context)?.isCurrent ?? true)) _pause();
+      });
+    }
     final reduced = MediaQuery.disableAnimationsOf(context);
     // The game itself still moves under reduced motion; decoration does not.
     _particles.enabled = !reduced;
@@ -385,11 +460,12 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
                     const SizedBox(height: 10),
                     GameSwitcher(
                       entries: entries,
-                      selected: _entry.id,
+                      selected: locked?.id ?? _entry.id,
                       fresh: {
                         for (final e in entries)
                           if (!bests.containsKey(e.id)) e.id,
                       },
+                      premium: premium,
                       onChanged: _switchTo,
                     ),
                   ],
@@ -407,7 +483,26 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
                   children: [
                     AnimatedSwitcher(
                       duration: reduced ? Duration.zero : LpMotion.normal,
-                      child: outcome == null
+                      child: locked != null
+                          ? _LockedGameCard(
+                              key: ValueKey('locked-${locked.id.name}'),
+                              game: locked.id,
+                              free: GameCatalog.entries
+                                  .firstWhere((e) => !e.premium)
+                                  .id,
+                              onPlayFree: () => _switchTo(
+                                GameCatalog.entries
+                                    .firstWhere((e) => !e.premium)
+                                    .id,
+                              ),
+                              onSeePremium: () {
+                                _analytics.gateTapped('panic_game');
+                                context.push(
+                                  Routes.paywallFrom('panic_game'),
+                                );
+                              },
+                            )
+                          : outcome == null
                           ? KeyedSubtree(
                               key: ObjectKey(_run),
                               child: _entry.field(
@@ -436,7 +531,7 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
                               onPassed: _itPassed,
                             ),
                     ),
-                    if (outcome == null)
+                    if (outcome == null && locked == null)
                       IgnorePointer(
                         child: RepaintBoundary(
                           child: CustomPaint(
@@ -450,7 +545,7 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
                           ),
                         ),
                       ),
-                    if (outcome == null && _entry.showsHint)
+                    if (outcome == null && locked == null && _entry.showsHint)
                       Positioned(
                         top: 6,
                         left: 24,
@@ -467,12 +562,85 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
                           ),
                         ),
                       ),
-                    if (_paused && outcome == null)
+                    if (_paused && outcome == null && locked == null)
                       PausedVeil(onResume: _resume, onPassed: _itPassed),
                   ],
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What a free account meets when it taps Tiles or Blocks.
+///
+/// Two things about this card are deliberate and should not be "improved".
+///
+/// **Play Orbs is the filled button; See Premium is a text link.** This screen
+/// is reached mid-craving, and docs/12 §4.2 removed the panic paywall door
+/// precisely because a purchase decision at 9/10 intensity is the least
+/// considered one a person has. The card's job is to get them back onto a
+/// board in one tap; selling is the secondary action, offered because the
+/// alternative — a dead pill — teaches nothing and sells nothing either.
+///
+/// **It is not an [LpPremiumGate].** That widget blurs a real child so the
+/// thing behind the lock is visible; a game that has not started has nothing
+/// to blur, and a blurred empty field would be a lock over nothing.
+class _LockedGameCard extends StatelessWidget {
+  const _LockedGameCard({
+    super.key,
+    required this.game,
+    required this.free,
+    required this.onPlayFree,
+    required this.onSeePremium,
+  });
+
+  /// The game they asked for.
+  final GameId game;
+
+  /// The one that is theirs anyway.
+  final GameId free;
+  final VoidCallback onPlayFree;
+  final VoidCallback onSeePremium;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 26, color: lp.voltText),
+            const SizedBox(height: 12),
+            Text(
+              l10n.gameLockedTitle(game.label(context)),
+              textAlign: TextAlign.center,
+              style: LpType.titleSm(lp.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.gameLockedBody(free.label(context)),
+              textAlign: TextAlign.center,
+              style: LpType.body14(lp.textSecondary),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: 220,
+              child: LpButton(
+                l10n.gameLockedPlayFree(free.label(context)),
+                height: 48,
+                fontSize: 15,
+                onTap: onPlayFree,
+              ),
+            ),
+            const SizedBox(height: 4),
+            LpTextButton(l10n.premiumLockCta, onTap: onSeePremium),
           ],
         ),
       ),

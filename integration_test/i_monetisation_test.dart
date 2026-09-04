@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/core/widgets/lp_premium_gate.dart';
+import 'package:last_puff/core/utils/lp_pricing.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/logic/allowances.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -228,5 +230,248 @@ void main() {
     expect(uri.path, Routes.coach);
     // The craving rides along, so Ember answers in its PANIC MODE voice.
     expect(uri.queryParameters['panic'], '9');
+  });
+
+  testWidgets('the arena opens playable for a free account, and the lock is '
+      'something they have to go and tap', (tester) async {
+    // The rule the whole design turns on: a free account must never LAND on a
+    // lock mid-craving. On a device because the arena owns a Ticker, a frame
+    // clock and an AnimatedSwitcher — the lock card takes the field's slot in
+    // it, and nothing in a widget test disposes a real one.
+    final e2e = await freeAccount(tester);
+    unawaited(e2e.container.read(routerProvider).push(Routes.game));
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    expect(
+      e2e.showing(e2e.l10n.gameNameOrbs),
+      isTrue,
+      reason: 'no game switcher; on screen: ${e2e.texts()}',
+    );
+    // Orbs is the only field a free account should be looking at, and it is
+    // playing — no lock, no offer, no round it cannot finish.
+    expect(
+      e2e.showing(e2e.l10n.gameLockedTitle(e2e.l10n.gameNameTiles)),
+      isFalse,
+      reason: 'a free account LANDED on a lock; on screen: ${e2e.texts()}',
+    );
+
+    // The lock is met only by asking for it.
+    await e2e.tapText(e2e.l10n.gameNameTiles);
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(
+      e2e.showing(e2e.l10n.gameLockedTitle(e2e.l10n.gameNameTiles)),
+      isTrue,
+      reason: 'no lock card after tapping Tiles; on screen: ${e2e.texts()}',
+    );
+
+    // …and "Play Orbs" leads, because somebody mid-craving came for a board.
+    await e2e.tapText(e2e.l10n.gameLockedPlayFree(e2e.l10n.gameNameOrbs));
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(
+      e2e.showing(e2e.l10n.gameLockedTitle(e2e.l10n.gameNameTiles)),
+      isFalse,
+      reason: 'the card did not clear; on screen: ${e2e.texts()}',
+    );
+
+    // The door exists, is tagged, and closes back onto the arena.
+    await e2e.tapText(e2e.l10n.gameNameBlocks);
+    await e2e.waitFor(const Duration(seconds: 1));
+    await e2e.tapText(e2e.l10n.premiumLockCta);
+    await e2e.waitFor(const Duration(seconds: 2));
+    expectPaywallFrom(e2e, 'panic_game');
+
+    e2e.container.read(routerProvider).pop();
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(e2e.container.read(routerProvider).state.uri.path, Routes.game);
+  });
+
+  testWidgets('a subscriber plays all three', (tester) async {
+    // The other side of the same gate, and the reason `resolveFor` reads the
+    // tier rather than hiding the pills: a payer sees no padlock anywhere.
+    final e2e = await E2E.boot(tester);
+    await e2e.waitFor(const Duration(seconds: 2));
+    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.tapSpan(e2e.l10n.authLogIn);
+    await e2e.enterField(e2e.l10n.authEmailLabel, 'maya@quitmail.com');
+    await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret1');
+    await e2e.tapText(e2e.l10n.authLogIn);
+    await e2e.waitFor(const Duration(seconds: 3));
+    expect(e2e.container.read(isPremiumProvider), isTrue);
+
+    unawaited(e2e.container.read(routerProvider).push(Routes.game));
+    await e2e.waitFor(const Duration(seconds: 2));
+    await e2e.tapText(e2e.l10n.gameNameTiles);
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(
+      e2e.showing(e2e.l10n.gameLockedTitle(e2e.l10n.gameNameTiles)),
+      isFalse,
+      reason: 'a subscriber met a lock; on screen: ${e2e.texts()}',
+    );
+  });
+
+  testWidgets('the SOS composer refuses a one-tap non-post, with a real '
+      'keyboard', (tester) async {
+    // `"a"` used to publish from here — and because a live SOS pins to the top
+    // of the feed for an hour, it pinned. On a device because this is the one
+    // harness with a real IME: the composer autofocuses, the keyboard eats the
+    // viewport, and the blocker has to stay visible under the text box.
+    final e2e = await freeAccount(tester);
+    unawaited(
+      e2e.container
+          .read(routerProvider)
+          .push('${Routes.compose}?tag=${PostTag.sos.name}'),
+    );
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    await tester.enterText(find.byType(TextField), 'a');
+    await e2e.settle();
+    expect(
+      e2e.showing(e2e.l10n.communityTooShort),
+      isTrue,
+      reason: 'a one-character SOS was postable; on screen: ${e2e.texts()}',
+    );
+
+    await tester.enterText(find.byType(TextField), 'help help help help');
+    await e2e.settle();
+    expect(
+      e2e.showing(e2e.l10n.communityTooRepetitive),
+      isTrue,
+      reason: 'one word repeated was postable; on screen: ${e2e.texts()}',
+    );
+
+    // And the bar stays low enough for somebody with shaking hands.
+    await tester.enterText(find.byType(TextField), 'help me please');
+    await e2e.settle();
+    expect(
+      e2e.showing(e2e.l10n.communityTooShort) ||
+          e2e.showing(e2e.l10n.communityTooRepetitive),
+      isFalse,
+      reason: 'a real cry for help was refused; on screen: ${e2e.texts()}',
+    );
+
+    final before = e2e.container.read(communityStoreProvider).posts.length;
+    await e2e.tapText(e2e.l10n.communityComposerPost);
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      e2e.container.read(communityStoreProvider).posts.length,
+      before + 1,
+      reason: 'the valid SOS did not post',
+    );
+
+    // One live SOS at a time: the second is refused while the first is pinned.
+    unawaited(
+      e2e.container
+          .read(routerProvider)
+          .push('${Routes.compose}?tag=${PostTag.sos.name}'),
+    );
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      e2e.showing(e2e.l10n.communitySosStillUp),
+      isTrue,
+      reason: 'a second SOS was offered; on screen: ${e2e.texts()}',
+    );
+  });
+
+  testWidgets('a reply too thin to publish never leaves the composer', (
+    tester,
+  ) async {
+    // The one that shipped broken. `createReply` gained a quality floor
+    // server-side with no client counterpart, and `addReply` does
+    // `.ignore()` on the failure — so "ok" on somebody's SOS went into the
+    // author's own thread, awarded them the helpedSos badge, was rejected by
+    // the callable, and was seen by nobody. A silent drop is the worst shape
+    // a refusal can take, and only a real tree shows the thread.
+    final e2e = await freeAccount(tester);
+    await e2e.tapText(e2e.l10n.navCommunity);
+    await e2e.waitFor(const Duration(seconds: 3));
+
+    // Somebody else's post, so replying is a normal reply.
+    final target = e2e.container
+        .read(communityStoreProvider)
+        .posts
+        .firstWhere((p) => !p.isMine);
+    unawaited(
+      e2e.container.read(routerProvider).push('/community/post/${target.id}'),
+    );
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    final field = find.byType(TextField);
+    expect(field, findsWidgets, reason: 'no reply box; on: ${e2e.texts()}');
+
+    int repliesNow() => e2e.container
+        .read(communityStoreProvider)
+        .posts
+        .firstWhere((p) => p.id == target.id)
+        .replies
+        .length;
+    final before = repliesNow();
+
+    // Refused, and refused BEFORE it is shown as sent — the whole point.
+    await tester.enterText(field.last, 'ok');
+    await e2e.settle();
+    await e2e.tap(
+      find.byIcon(Icons.arrow_upward_rounded).last,
+      why: 'send a two-letter reply',
+    );
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      repliesNow(),
+      before,
+      reason: '"ok" was accepted locally and would be dropped by the server',
+    );
+
+    // …and the bar stays low enough that a nod still counts.
+    await tester.enterText(field.last, 'thanks');
+    await e2e.settle();
+    await e2e.tap(find.byIcon(Icons.arrow_upward_rounded).last, why: 'send');
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      repliesNow(),
+      before + 1,
+      reason: '"thanks" is a real reply and must post',
+    );
+  });
+
+  testWidgets('the Free screen shows both columns and Pro is the button', (
+    tester,
+  ) async {
+    // Ten rows plus two headings do not fit a 360x640 viewport, and the screen
+    // used to be a fixed Column with a Spacer. Only a device renders it at the
+    // real size with the real text scale.
+    final e2e = await freeAccount(tester);
+    unawaited(e2e.container.read(routerProvider).push(Routes.paywall));
+    await e2e.waitFor(const Duration(seconds: 2));
+    await e2e.tapText(e2e.l10n.paywallFreeLink);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    expect(
+      e2e.showing(e2e.l10n.freePlanColPro),
+      isTrue,
+      reason: 'no Pro column; on screen: ${e2e.texts()}',
+    );
+    // The numbers are the ones the app enforces, not typed copy.
+    expect(
+      e2e.showing(
+        e2e.l10n.freeComparePerDay(LpAllowances.premiumCoachMessages),
+      ),
+      isTrue,
+      reason: "Pro's coach allowance is missing; on screen: ${e2e.texts()}",
+    );
+    expect(
+      e2e.showing(e2e.l10n.freeCompareDays(LpAllowances.freeHistoryDays)),
+      isTrue,
+    );
+    // Free is demoted but never hidden (Apple 3.1.2).
+    expect(e2e.showing(e2e.l10n.freePlanCta), isTrue);
+
+    // Pro pops back onto the paywall underneath rather than stacking a second.
+    await e2e.tapText(e2e.l10n.freePlanProCta(LpPricing.trialDays));
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      e2e.container.read(routerProvider).state.uri.path,
+      Routes.paywall,
+      reason: 'Try Pro did not land on the paywall; on: ${e2e.texts()}',
+    );
+    expect(e2e.showing(e2e.l10n.freePlanColPro), isFalse);
   });
 }

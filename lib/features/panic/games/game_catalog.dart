@@ -47,9 +47,16 @@ class GameEntry {
     required this.field,
     this.sparkOnHit = false,
     this.showsHint = true,
+    this.premium = false,
   });
 
   final GameId id;
+
+  /// Whether a subscription is needed to play it (founder decision Sep 3
+  /// 2026, docs/12 §5c). Orbs is free forever and is [entries]`.first`, so a
+  /// free account's default game is always a playable one — the lock is only
+  /// ever met by deliberately tapping a locked pill, never on arrival.
+  final bool premium;
 
   /// The combo the ghost number appears at.
   final int ghostFrom;
@@ -69,21 +76,14 @@ class GameEntry {
 }
 
 /// The games the arena offers, in switcher order.
+///
+/// **Orbs is first, and that is load-bearing.** [resolve] falls back to
+/// `entries.first`, and [resolveFor] clamps to the first FREE entry, so the
+/// arena's default — for a new user, and for anyone whose subscription has
+/// lapsed — is a game they can actually play. Nobody meets a lock by opening
+/// the arena mid-craving; they meet it only by tapping a locked pill.
 abstract final class GameCatalog {
   static const List<GameEntry> entries = [
-    GameEntry(
-      id: GameId.tiles,
-      ghostFrom: 3,
-      create: _tiles,
-      field: _tileField,
-    ),
-    // A clear is a rarer beat than a tile hit: the ghost shows from two.
-    GameEntry(
-      id: GameId.blocks,
-      ghostFrom: 2,
-      create: _blocks,
-      field: _blocksField,
-    ),
     GameEntry(
       id: GameId.orbs,
       ghostFrom: 3,
@@ -91,6 +91,21 @@ abstract final class GameCatalog {
       field: _orbsField,
       sparkOnHit: true,
       showsHint: false,
+    ),
+    GameEntry(
+      id: GameId.tiles,
+      ghostFrom: 3,
+      create: _tiles,
+      field: _tileField,
+      premium: true,
+    ),
+    // A clear is a rarer beat than a tile hit: the ghost shows from two.
+    GameEntry(
+      id: GameId.blocks,
+      ghostFrom: 2,
+      create: _blocks,
+      field: _blocksField,
+      premium: true,
     ),
   ];
 
@@ -100,6 +115,20 @@ abstract final class GameCatalog {
   /// The entry for [id], or the first game when unknown or null.
   static GameEntry resolve(GameId? id) =>
       (id == null ? null : of(id)) ?? entries.first;
+
+  /// The game to OPEN on for a reader of this tier.
+  ///
+  /// Clamps to a free game whenever [premium] is false, which covers the two
+  /// ways a locked game would otherwise be the landing spot: a stored
+  /// `lastGame` from a subscription that has since lapsed, and a `?g=` deep
+  /// link. Both would put a purchase decision in front of somebody at 9/10
+  /// craving intensity before they had asked for one, which is exactly what
+  /// docs/12 §4.2 removed from this flow.
+  static GameEntry resolveFor(GameId? id, {required bool premium}) {
+    final entry = resolve(id);
+    if (premium || !entry.premium) return entry;
+    return entries.firstWhere((e) => !e.premium);
+  }
 
   static PanicGame _tiles(math.Random? random) => TileGame(random: random);
   static PanicGame _blocks(math.Random? random) => BlocksGame(random: random);

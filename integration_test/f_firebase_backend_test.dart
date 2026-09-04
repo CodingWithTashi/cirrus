@@ -329,6 +329,59 @@ void main() {
     );
   });
 
+  testWidgets('Ember suggests what to say next, and they fit a chip', (
+    tester,
+  ) async {
+    // The deployed `aiCoachChat` writes these; nothing local can prove it.
+    // The fake coach returns none by design, so `LP_BACKEND=fake` cannot see
+    // this surface at all — this is the only harness that can.
+    final e2e = await session(tester);
+
+    final turn = await ask(
+      e2e.container.read(coachRepositoryProvider),
+      text: 'work has been brutal this week and i keep reaching for it',
+    );
+
+    expect(
+      turn.reply.followUps,
+      isNotEmpty,
+      reason: 'no follow-ups from the deployed function; '
+          'template=${turn.reply.template}, text=${turn.reply.text}',
+    );
+    expect(turn.reply.followUps.length, lessThanOrEqualTo(4));
+    for (final suggestion in turn.reply.followUps) {
+      // The row is one line of horizontally scrolling pills, so a suggestion
+      // longer than this is a sentence wearing a chip's clothes.
+      expect(
+        suggestion.length,
+        lessThanOrEqualTo(40),
+        reason: 'a suggestion would not fit a chip: "$suggestion"',
+      );
+      expect(suggestion.trim(), suggestion);
+      expect(suggestion, isNot(contains('\n')));
+    }
+  });
+
+  testWidgets('nothing is suggested to somebody mid-craving', (tester) async {
+    // The panic rider is breath and presence only — thirty words, one step at
+    // a time. A menu of four things to say next is the opposite of that, and
+    // the server is the side that decides it.
+    final e2e = await session(tester);
+
+    final turn = await ask(
+      e2e.container.read(coachRepositoryProvider),
+      text: 'i cant do this',
+      panicIntensity: 9,
+    );
+
+    expect(
+      turn.reply.followUps,
+      isEmpty,
+      reason: 'the server offered a menu at 9/10 intensity: '
+          '${turn.reply.followUps}',
+    );
+  });
+
   testWidgets('Ember remembers something told in an earlier conversation', (
     tester,
   ) async {

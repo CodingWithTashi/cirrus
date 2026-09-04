@@ -66,7 +66,7 @@ describe('allowance', () => {
       premiumCoachMessages: 100,
       freePosts: 1,
       premiumPosts: 3,
-      sosPosts: 5,
+      sosPosts: 3,
     });
   });
 

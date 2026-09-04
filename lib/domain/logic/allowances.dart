@@ -38,23 +38,60 @@ abstract final class LpAllowances {
   /// docs/03 §9 — a subscriber's ordinary posts per local day.
   static const int premiumPosts = 3;
 
-  /// docs/12 §4.1 — the SOS allowance, spent from its OWN counter.
+  /// docs/12 §4.1, revised §5c — the SOS allowance, spent from its OWN
+  /// counter.
   ///
   /// Separate for two reasons that pull in opposite directions and are both
   /// non-negotiable: nobody may be refused a call for help because they used
   /// their ordinary posts earlier, and an SOS pins to the top of the feed for
   /// an hour, so an unbounded one would be a pinning megaphone for whoever
-  /// wanted it. Generous enough that no real crisis meets it.
-  static const int sosPosts = 5;
+  /// wanted it.
+  ///
+  /// **Three, not five** (founder decision Sep 3 2026). Five was chosen as
+  /// "generous enough that no real crisis meets it", and three still is —
+  /// paired with [sosPinWindow], which is the rule that actually stops the
+  /// megaphone: a second SOS while yours is still pinned is not a second call
+  /// for help.
+  static const int sosPosts = 3;
 
-  /// docs/12 §4.1 — how many days of Stats history a free account sees.
+  /// How long a live SOS pins to the top of the feed — and therefore how long
+  /// before the same person may post another.
+  ///
+  /// One window, used three ways: `CommunityState.visible` pins by it, the
+  /// composer refuses by it, and `createPost`'s `SOS_COOLDOWN_MS` enforces
+  /// it. Matching the pin exactly is what lets the refusal say something true
+  /// ("yours is still up there") rather than name an arbitrary number.
+  static const Duration sosPinWindow = Duration(hours: 1);
+
+  /// How many days of Stats history a free account sees.
   ///
   /// Client-only, unlike everything else here: the days are already in the
   /// user's own `journeys/{uid}` document, so this is presentation, not
   /// enforcement, and a server check would cost a read per render and buy
-  /// nothing. It was 7 — shorter than the 30-day taper program itself, so a
-  /// free account could not see whether its own plan was working.
-  static const int freeHistoryDays = 30;
+  /// nothing.
+  ///
+  /// **Seven** (founder decision Sep 3 2026, reversing the 30 that
+  /// docs/12 §4.1 chose that morning). The argument for 30 was real — the
+  /// taper program runs 30 days, so a 7-day window cannot show a taper
+  /// working — and it is knowingly traded away: a free tier that answers the
+  /// product's central question in full leaves nothing to sell, and Stats is
+  /// where that question is asked. The Month pill and the forecast heatmap
+  /// stay Premium alongside it.
+  static const int freeHistoryDays = 7;
+
+  /// How many health-timeline milestones a free account sees.
+  ///
+  /// A FLOOR, never a ceiling: `health_screen.dart` takes
+  /// `max(freeHealthNodes, hereIndex + 1)`, so a node the reader has already
+  /// reached is never locked however far along they are. The gate only ever
+  /// hides the future — which is better than docs/01 §10's "basic milestones"
+  /// and must not be regressed (docs/12 §2.4).
+  ///
+  /// Four is the first 24 hours (20 min, 8h, 12h, 24h) — the stretch a day-1
+  /// quitter is actually living through, and the one they can reach today.
+  /// Everything past it is the long arc, and the long arc is what Premium is
+  /// for.
+  static const int freeHealthNodes = 4;
 
   /// The allowance a post of this kind spends.
   ///

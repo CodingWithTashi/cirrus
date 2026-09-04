@@ -81,7 +81,7 @@ export const ALLOWANCE_DEFAULTS = {
   premiumCoachMessages: 100,
   freePosts: 1,
   premiumPosts: 3,
-  sosPosts: 5,
+  sosPosts: 3,
 } as const;
 
 /**
@@ -233,6 +233,28 @@ export const AI_COST_PANIC = defineString('AI_COST_PANIC', {default: 'false'});
  * change.
  */
 export const MAX_OUTPUT_TOKENS = 2000;
+
+/**
+ * Whether a coach turn also suggests what the user might tap to say next.
+ *
+ * A kill switch, not a feature flag: the suggestions are one extra cheap-model
+ * call per turn (~5% on the ~$0.001 premium turn, docs/11 §4) and they ride
+ * the same `Promise.all` as memory extraction, so if that call ever starts
+ * failing or costing more than it is worth, this turns it off without a
+ * deploy. Off simply means the app falls back to its four static chips, which
+ * is what it showed for the first year.
+ *
+ * Read as `!== 'false'` at the call site, never `=== 'true'`: an unset param
+ * resolves to the EMPTY STRING, and a switch that reads that as "off" turns
+ * the feature off for every project whose `.env` never mentioned it, while
+ * looking exactly like a policy decision. Same trap `allowance()` above
+ * exists for, pointed the same way — the unresolved case must fail toward the
+ * intended default.
+ */
+export const COACH_FOLLOWUPS = defineString('COACH_FOLLOWUPS', {
+  default: 'true',
+  description: "Set 'false' to stop suggesting follow-ups on coach turns.",
+});
 
 /** Conversation turns kept in context (docs/04 §3). Never the full history. */
 export const COACH_CONTEXT_TURNS = 10;

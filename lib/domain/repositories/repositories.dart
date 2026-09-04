@@ -364,6 +364,12 @@ enum ContentRefusal {
   /// Posting is Premium (docs/01 §10: free reads and reacts). An SOS post is
   /// never refused for this — nobody is paywalled mid-crisis (docs/07 §8).
   premium,
+
+  /// An SOS while this author's previous one is still pinned to the top of
+  /// the feed. Its OWN reason, never [dailyCap]: "come back tomorrow" is
+  /// wrong for something that clears within the hour, and this refusal is
+  /// about a post that is still up rather than an allowance that is spent.
+  sosCooldown,
 }
 
 /// The backend understood the CONTENT and said no to it — a community post

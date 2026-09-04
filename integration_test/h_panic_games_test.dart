@@ -53,6 +53,12 @@ void main() {
     );
     await e2e.tapText(e2e.l10n.panicLoopGame);
     await e2e.waitFor(const Duration(seconds: 1));
+    // The card lands on the arena's default, which is Orbs since it became
+    // the free game (docs/12 §5c). Everything below drives the Tiles board
+    // specifically, so take the pill the way a person would — this account is
+    // the seeded subscriber, so nothing is locked for it.
+    await e2e.tapText(e2e.l10n.gameNameTiles);
+    await e2e.waitFor(const Duration(seconds: 1));
   }
 
   testWidgets(

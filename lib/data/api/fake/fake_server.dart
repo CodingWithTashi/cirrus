@@ -243,6 +243,17 @@ class FakeServer {
       throw const ContentRefusedException(ContentRefusal.rules);
     }
 
+    // "Was anything said?" — the floor `createPost` puts under the composer's
+    // own check, in the same place and ahead of the allowance, so the demo
+    // backend refuses `"a"` exactly as production does.
+    if (PostQuality.checkPost(
+          post['text'] as String? ?? '',
+          sos: post['tag'] == 'sos',
+        ) !=
+        null) {
+      throw const ContentRefusedException(ContentRefusal.rules);
+    }
+
     // Posting is an ALLOWANCE, not a wall (docs/12 §4.1) — the same rule
     // `createPost` enforces through `tierFor` and `claimDailyPost`, read here
     // from the fake's own entitlement row and its own posts.
@@ -262,6 +273,12 @@ class FakeServer {
         !sos && !entitled ? ContentRefusal.premium : ContentRefusal.dailyCap,
       );
     }
+    // One live SOS at a time, mirroring `createPost`'s SOS_COOLDOWN_MS. The
+    // window matches the feed's own pin, so the refusal is true rather than
+    // arbitrary: yours is still up there.
+    if (sos && _lastSosAt() != null) {
+      throw const ContentRefusedException(ContentRefusal.sosCooldown);
+    }
     // `held`, not `pending`: this is the verdict, not the wait for one. The
     // real mirror says the same (MIRROR_STATUS in moderatePost.ts).
     stored['status'] = CommunityRules.violates(stored['text'] as String? ?? '')
@@ -270,6 +287,25 @@ class FakeServer {
     _postAuthors[id] = _sessionOrGuest();
     posts.insert(0, stored);
     return id;
+  }
+
+  /// When the caller's own SOS last landed, if it is still pinned.
+  ///
+  /// The fake's counterpart to the `sosUsage.lastAtMs` timestamp
+  /// `claimDailyPost` writes — read off the stored posts, because the fake's
+  /// whole contract is that a read reflects what was written.
+  DateTime? _lastSosAt() {
+    final me = _readerId;
+    final now = DateTime.now();
+    for (final p in posts) {
+      if (_postAuthors[p['id']] != me || p['tag'] != 'sos') continue;
+      final raw = p['createdAt'];
+      final at = raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
+      if (at != null && now.difference(at) < LpAllowances.sosPinWindow) {
+        return at;
+      }
+    }
+    return null;
   }
 
   /// The caller's own posts stored today in one allowance bucket.

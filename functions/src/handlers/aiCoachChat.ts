@@ -17,6 +17,7 @@ import type {CallableRequest, CallableResponse} from 'firebase-functions/v2/http
 import {
   AI_COST_PANIC,
   COACH_CONTEXT_TURNS,
+  COACH_FOLLOWUPS,
   COACH_MIN_INSTANCES,
   COACH_SUMMARY_EVERY,
   COACH_SUMMARY_MAX_CHARS,
@@ -32,6 +33,7 @@ import {buildMemoryCard} from '../ai/memoryCard';
 import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
 import {
   COACH_SUMMARY_PROMPT,
+  FOLLOW_UP_PROMPT,
   MEMORY_EXTRACTION_PROMPT,
   buildCoachInstruction,
 } from '../ai/prompts';
@@ -68,6 +70,20 @@ interface CoachReplyEnvelope {
    */
   messagesLeft?: number;
   tier?: SubscriptionTier;
+  /**
+   * Three or four things the user might tap to say next, in their own voice.
+   *
+   * Its own top-level field rather than an entry in `args`, which is typed
+   * `Record<string, string | number>` — and it could not ride the stream
+   * either: `CallableResponse<string>` carries plain text chunks that the app
+   * appends straight into the visible bubble, so anything structured has to
+   * arrive with this envelope.
+   *
+   * Additive and always optional. A client built before the field ignores it
+   * and keeps showing its four static chips, which is also what happens when
+   * the model returns nothing useful.
+   */
+  followUps?: string[];
 }
 
 export const aiCoachChat = onCall(
@@ -277,13 +293,29 @@ export const aiCoachChat = onCall(
     // it, so neither delays an answer. Both swallow their own failures; a
     // lost memory or a stale summary must never turn a delivered reply into
     // an error.
-    await Promise.all([
+    //
+    // The follow-up suggestions join them here rather than running before the
+    // return, because all three are independent of each other and of the
+    // reply the user already has. On a turn where extraction runs, the
+    // suggestions cost roughly no extra wall-clock at all; on a turn where it
+    // does not, they delay the ENVELOPE (never the first token, which left
+    // long ago on the streaming path).
+    const [, , followUps] = await Promise.all([
       learnFrom(model, caller.uid, userText, reply, card.todayKey),
       maybeUpdateSummary(model, caller.uid, summary, [
         ...history,
         {role: 'user', text: userText},
         {role: 'model', text: reply},
       ]),
+      // Streaming only. On the streaming path the user has had the whole
+      // reply for a while and this just decides when the chips appear; on the
+      // unary path NOTHING has been delivered yet, so the same call would sit
+      // on the critical path of every answer and add a full model round-trip
+      // to it — the exact cost the kill switch exists to avoid, paid by
+      // everyone. A client that cannot stream gets the static chips.
+      streaming
+        ? suggestFollowUps(model, caller.uid, userText, reply, panicIntensity)
+        : Promise.resolve<string[]>([]),
     ]);
 
     return {
@@ -297,9 +329,156 @@ export const aiCoachChat = onCall(
       text: reply,
       messagesLeft,
       tier,
+      // Omitted when empty rather than sent as `[]`: the app treats an empty
+      // list and an absent field identically (both fall back to the static
+      // chips), and not sending it keeps the payload honest about whether
+      // anything was actually suggested.
+      ...(followUps.length > 0 ? {followUps} : {}),
     };
   },
 );
+
+/**
+ * Three or four things the user might tap to say next. Never throws, never
+ * blocks a reply that is already written.
+ *
+ * Gated four ways, because this is the second thing in the loop that costs
+ * money without producing anything the user asked for:
+ *
+ *   1. `COACH_FOLLOWUPS` turns it off entirely, without a deploy.
+ *   2. **Never mid-craving.** The panic rider is breath and presence only —
+ *      thirty words, one step at a time — and a menu of four things to say
+ *      next is the exact opposite of that. Somebody at 9/10 does not need
+ *      options; they need the next breath.
+ *   3. It runs on the CHEAP model regardless of tier. Producing four short
+ *      strings in fixed JSON is a structured-output task, not a
+ *      conversational one, and the premium model buys nothing here.
+ *   4. It sees only the last exchange — about 250 input tokens, not the
+ *      1.4-2.2K the reply itself needed. The whole card, summary and memory
+ *      stack would tell it nothing extra about what comes next in THIS
+ *      exchange.
+ */
+async function suggestFollowUps(
+  model: TextModel,
+  uid: string,
+  userText: string,
+  reply: string,
+  panicIntensity: number | null,
+): Promise<string[]> {
+  // Read as "off only when explicitly off". A deploy-time param resolves to
+  // the EMPTY STRING when nothing supplies a value — no `.env` for the active
+  // project, a typo'd key, a test harness — and `!== 'true'` would turn the
+  // feature off in exactly those cases while looking like a policy decision.
+  // Same lesson as `allowance()` in `config.ts`, pointed the same way: the
+  // unresolved case has to fail toward the intended default.
+  if (COACH_FOLLOWUPS.value().trim().toLowerCase() === 'false') return [];
+  if (panicIntensity !== null) return [];
+  try {
+    const result = await model.generate({
+      model: MODEL_FREE.value(),
+      systemInstruction: FOLLOW_UP_PROMPT,
+      turns: [{role: 'user', text: `USER: ${userText}\nCOACH: ${reply}`}],
+      maxOutputTokens: 120,
+      // Warm enough not to produce the same three chips every turn, cold
+      // enough to stay on the exchange it was given.
+      temperature: 0.6,
+      json: true,
+    });
+    return parseFollowUps(result.text);
+  } catch (error) {
+    log.warn('coach.followups_failed', {uid, error: String(error)});
+    return [];
+  }
+}
+
+/**
+ * Strips code fences and validates shape. Anything malformed yields [].
+ *
+ * Same discipline as [parseMemories], and exported for the same reason: this
+ * is a boundary where model output becomes something a user can tap, so it is
+ * worth pinning against the shapes a model actually emits when it improvises.
+ *
+ * The length bound is a layout constraint, not a taste one — the chips render
+ * in a single-line horizontally scrolling row, and a suggestion much longer
+ * than a chip is a sentence wearing one's clothes.
+ *
+ * It is [MAX_CHIP_CHARS] rather than the 40 it started at because the app
+ * ships five languages and the prompt asks for five words: five German or
+ * Portuguese words pass 40 routinely ("Ich kann meine Arbeit nicht verlassen"
+ * is 37 before any compound), so the tighter bound would have quietly made
+ * this an English-only feature. The row scrolls, so a longer chip costs a
+ * little swiping; a dropped one costs the whole suggestion. Drops are logged
+ * with a reason now, so the ratio is visible rather than inferred.
+ */
+export function parseFollowUps(raw: string): string[] {
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/, '')
+    .trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    log.warn('coach.followups_dropped', {
+      reason: 'not json',
+      sample: cleaned.slice(0, 120),
+    });
+    return [];
+  }
+  if (parsed === null || typeof parsed !== 'object') {
+    log.warn('coach.followups_dropped', {
+      reason: 'not an object',
+      sample: cleaned.slice(0, 120),
+    });
+    return [];
+  }
+  const list = (parsed as Record<string, unknown>)['followUps'];
+  if (!Array.isArray(list)) {
+    log.warn('coach.followups_dropped', {
+      reason: 'followUps not an array',
+      sample: cleaned.slice(0, 120),
+    });
+    return [];
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    if (typeof item !== 'string') continue;
+    // Collapse newlines too: a chip is one line by construction, and a model
+    // that returns a two-line suggestion means the second line to be read.
+    const text = item.replace(/\s+/gu, ' ').trim();
+    if (text.length < 2 || text.length > MAX_CHIP_CHARS) {
+      // Logged, because a silent length filter on a five-language feature is
+      // indistinguishable from a model that returned nothing.
+      log.warn('coach.followups_dropped', {
+        reason: 'length',
+        chars: text.length,
+      });
+      continue;
+    }
+    const key = text.toLowerCase();
+    // Four chips that say the same thing are one chip and three wasted taps.
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(text);
+    if (out.length === MAX_FOLLOW_UPS) break;
+  }
+  return out;
+}
+
+/** As many as the chip row can show without the first one scrolling away. */
+const MAX_FOLLOW_UPS = 4;
+
+/**
+ * The longest a suggestion may be and still read as a chip.
+ *
+ * Wide enough for five words in German and Portuguese, which is what the
+ * prompt asks for — a 40-character bound made the feature English-only in
+ * practice.
+ */
+const MAX_CHIP_CHARS = 56;
 
 /** Embeds one string, or null when the provider is unhappy. Never throws. */
 async function embedOrNull(

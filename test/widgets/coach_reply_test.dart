@@ -178,4 +178,186 @@ void main() {
     // Rendered from ARB, not left blank and not showing a raw enum name.
     expect(find.textContaining('Signal dropped mid-thought'), findsOneWidget);
   });
+
+  group("Ember's follow-ups replace the four openers", () {
+    // The chips were four frozen strings — "I'm craving", "Rough day", "I
+    // slipped", "Show my progress" — rendered identically on every turn
+    // forever. Right for a cold open and useless as a reply: once Ember has
+    // answered a specific thing, the useful next tap follows THAT.
+    const suggestions = ['what if it doesnt', 'give me one thing', 'i caved'];
+
+    Future<AppLocalizations> pumpCoach(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: LpTheme.midnight(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const CoachScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return AppLocalizations.delegate.load(const Locale('en'));
+    }
+
+    testWidgets('a fresh thread still opens with the four static chips', (
+      tester,
+    ) async {
+      // Nobody has said anything yet, so there is nothing to follow up on.
+      // This is the case the static four were always right for.
+      final container = containerWith(
+        const CoachReply(template: CoachTemplate.generic1, text: spoken),
+      );
+      final l10n = await pumpCoach(tester, container);
+
+      expect(find.text(l10n.coachChipCraving), findsOneWidget);
+      expect(find.text(l10n.coachChipRoughDay), findsOneWidget);
+      expect(find.text(l10n.coachChipSlipped), findsOneWidget);
+      expect(find.text(l10n.coachChipProgress), findsOneWidget);
+    });
+
+    testWidgets('a reply with suggestions swaps the row for them', (
+      tester,
+    ) async {
+      final container = containerWith(
+        const CoachReply(
+          template: CoachTemplate.generic1,
+          text: spoken,
+          followUps: suggestions,
+        ),
+      );
+      final l10n = await pumpCoach(tester, container);
+
+      await container.read(coachStoreProvider.notifier).send('rough night');
+      await tester.pumpAndSettle();
+
+      for (final suggestion in suggestions) {
+        expect(find.text(suggestion), findsOneWidget, reason: suggestion);
+      }
+      // Swapped, not appended: eight chips in a one-line scroller means the
+      // useful ones are off screen.
+      expect(find.text(l10n.coachChipCraving), findsNothing);
+      expect(find.text(l10n.coachChipProgress), findsNothing);
+    });
+
+    testWidgets('a reply without them keeps the openers', (tester) async {
+      // The permanent state of an older backend, a restored transcript, a
+      // capped turn and every mid-craving reply.
+      final container = containerWith(
+        const CoachReply(template: CoachTemplate.generic1, text: spoken),
+      );
+      final l10n = await pumpCoach(tester, container);
+
+      await container.read(coachStoreProvider.notifier).send('rough night');
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.coachChipCraving), findsOneWidget);
+    });
+
+    testWidgets('tapping one prefills the composer, and does not send it', (
+      tester,
+    ) async {
+      // Frame 36, unchanged: a chip fills the box and the user still presses
+      // send. Putting words in somebody's mouth about their own quit and
+      // then posting them is not a shortcut, it is a lie.
+      final container = containerWith(
+        const CoachReply(
+          template: CoachTemplate.generic1,
+          text: spoken,
+          followUps: suggestions,
+        ),
+      );
+      await pumpCoach(tester, container);
+      await container.read(coachStoreProvider.notifier).send('rough night');
+      await tester.pumpAndSettle();
+
+      final before = container.read(coachStoreProvider).messages.length;
+      await tester.tap(find.text(suggestions.first));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        suggestions.first,
+      );
+      expect(container.read(coachStoreProvider).messages.length, before);
+    });
+
+    testWidgets('a suggestion is sent as free text, never as a protocol chip', (
+      tester,
+    ) async {
+      // The trap this closes: the static chips used to be recovered by
+      // comparing the typed text back against each localized label, so a
+      // suggestion that happened to READ like one would have been filed as
+      // `chip: craving` — routing a follow-up down the protocol path in a
+      // language where the coincidence is likelier than it looks.
+      final craving = (await AppLocalizations.delegate.load(const Locale('en')))
+          .coachChipCraving;
+
+      // The model suggests the exact words of a static chip. Delivered the
+      // real way — through the repository — so this exercises the path a
+      // production reply takes, not a hand-placed message.
+      final speaking = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          coachRepositoryProvider.overrideWithValue(
+            _SpeakingCoach(
+              CoachReply(
+                template: CoachTemplate.generic1,
+                text: spoken,
+                followUps: [craving],
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(speaking.dispose);
+      speaking.read(quitStoreProvider.notifier).seedDemoJourney();
+      await pumpCoach(tester, speaking);
+      await speaking.read(coachStoreProvider.notifier).send('rough night');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(craving));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+      await tester.pumpAndSettle();
+
+      // A user message with TEXT on it, not a chip echo.
+      final sent = speaking
+          .read(coachStoreProvider)
+          .messages
+          .where((m) => m.role == CoachRole.user)
+          .last;
+      expect(sent.text, craving);
+      expect(sent.chipEcho, isNull);
+    });
+
+    testWidgets('a static chip sent unedited keeps its protocol routing', (
+      tester,
+    ) async {
+      // The other half: the four openers must still route as chips in every
+      // locale, because the fake backend's keyword matcher is English-only.
+      final container = containerWith(
+        const CoachReply(template: CoachTemplate.generic1, text: spoken),
+      );
+      final l10n = await pumpCoach(tester, container);
+
+      await tester.tap(find.text(l10n.coachChipSlipped));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+      await tester.pumpAndSettle();
+
+      final sent = container
+          .read(coachStoreProvider)
+          .messages
+          .where((m) => m.role == CoachRole.user)
+          .last;
+      expect(sent.chipEcho, CoachChip.slipped.index);
+      expect(sent.text, isNull);
+    });
+  });
 }

@@ -13,6 +13,7 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_premium_gate.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/logic/allowances.dart';
 
 /// Frame 39 — health recovery timeline, honestly anchored to the last
 /// logged puff (rolling anchor, docs/03 §6).
@@ -55,12 +56,14 @@ class HealthScreen extends ConsumerWidget {
     );
     if (hereIndex == -1) hereIndex = milestones.length;
 
-    // Free sees the first week of milestones; the rest of the year is Premium
-    // (docs/01 §10 "basic milestones" vs "full timeline"). The gated nodes
-    // still render — blurred — so the road ahead is visible, not hidden. The
-    // node the user is AT is always theirs to see, however far along: a week
-    // puff-free must not blur its own "you are here".
-    final freeNodes = math.max(7, hereIndex + 1);
+    // Free sees the first day of milestones (20 min / 8h / 12h / 24h); the
+    // rest of the year is Premium (docs/01 §10 "basic milestones" vs "full timeline"). The gated
+    // nodes still render — blurred — so the road ahead is visible, not hidden.
+    // The node the user is AT is always theirs to see, however far along: a
+    // week puff-free must not blur its own "you are here", which is why this
+    // is a `max` and `LpAllowances.freeHealthNodes` is a floor rather than a
+    // ceiling.
+    final freeNodes = math.max(LpAllowances.freeHealthNodes, hereIndex + 1);
     final premium = ref.watch(isPremiumProvider);
     Widget node(int i, (Duration, String, String, bool) milestone) =>
         _TimelineNode(

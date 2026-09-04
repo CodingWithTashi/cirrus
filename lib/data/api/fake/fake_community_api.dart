@@ -1,3 +1,5 @@
+import '../../../domain/logic/community_rules.dart';
+import '../../../domain/repositories/repositories.dart';
 import '../community_api.dart';
 import 'fake_server.dart';
 
@@ -41,6 +43,12 @@ class FakeCommunityApi implements CommunityApi {
     required String postId,
     required Map<String, dynamic> reply,
   }) => _server.respond(() {
+    // The same floor `createReply` enforces. Without it the demo backend
+    // accepts replies production drops, and no test on `LP_BACKEND=fake`
+    // could ever see the difference.
+    if (PostQuality.checkReply(reply['text'] as String? ?? '') != null) {
+      throw const ContentRefusedException(ContentRefusal.rules);
+    }
     _server.updatePost(
       postId,
       (p) => p['replies'] = [...(p['replies'] as List? ?? []), reply],

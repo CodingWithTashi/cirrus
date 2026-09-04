@@ -179,6 +179,19 @@ export interface Entitlement {
 export interface DailyCounter {
   readonly day: string;
   readonly count: number;
+  /**
+   * Epoch millis of the last claim, written by every `claimDailyPost` and
+   * read only by the buckets that carry a cooldown (`sosUsage`). Absent on
+   * every counter written before the field existed, which reads as "no
+   * cooldown pending" — the safe direction.
+   */
+  readonly lastAtMs?: number;
+  /**
+   * The client's own id for the attempt that last spent this bucket, so a
+   * retry of it can be told from a second attempt. Written only by the
+   * buckets that pass one (`sosUsage`).
+   */
+  readonly lastKey?: string;
 }
 
 export interface UserDoc {

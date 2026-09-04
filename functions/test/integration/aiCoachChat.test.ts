@@ -23,14 +23,20 @@ vi.mock('../../src/ai/gemini', () => ({
 }));
 
 import type {CallableRequest, CallableResponse} from 'firebase-functions/v2/https';
-import {aiCoachChat} from '../../src/handlers/aiCoachChat';
+import {aiCoachChat, parseFollowUps} from '../../src/handlers/aiCoachChat';
 import {ModelUnavailableError} from '../../src/ai/model';
-import {COACH_SUMMARY_PROMPT, MEMORY_EXTRACTION_PROMPT} from '../../src/ai/prompts';
+import {
+  COACH_SUMMARY_PROMPT,
+  FOLLOW_UP_PROMPT,
+  MEMORY_EXTRACTION_PROMPT,
+} from '../../src/ai/prompts';
 import {
   FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
+  MODEL_FREE,
   PREMIUM_DAILY_COACH_MESSAGES,
 } from '../../src/config';
+import {dayKeyIn} from '../../src/domain/dateKey';
 import {coachMessages, journeyDoc, userDoc} from '../../src/lib/firestore';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
@@ -101,6 +107,7 @@ interface Envelope {
   text?: string;
   messagesLeft?: number;
   tier?: string;
+  followUps?: string[];
 }
 
 const run = (
@@ -278,12 +285,13 @@ describe('streaming', () => {
     expect(reply.text).toBe('That wave is brutal.');
     // The REPLY came from the stream and nothing fell back to a blocking
     // generate. Asserting `generate` was never called at all would also be
-    // asserting that nothing was learned from the turn, which is a different
-    // feature that happens to share the method.
+    // asserting that nothing was learned from the turn and nothing was
+    // suggested for the next one — different features that happen to share
+    // the method — so this names the ones allowed to use it instead.
     expect(generateStream).toHaveBeenCalledTimes(1);
     for (const [request] of generate.mock.calls) {
-      expect((request as {systemInstruction: string}).systemInstruction).toBe(
-        MEMORY_EXTRACTION_PROMPT,
+      expect([MEMORY_EXTRACTION_PROMPT, FOLLOW_UP_PROMPT]).toContain(
+        (request as {systemInstruction: string}).systemInstruction,
       );
     }
   });
@@ -429,5 +437,174 @@ describe('auth', () => {
       } as unknown as CallableRequest<unknown>),
     ).rejects.toThrow();
     expect(generate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The follow-up suggestions (docs/12 §5c).
+ *
+ * Everything here defends one property: they are a nice-to-have riding on the
+ * end of a turn, and a turn must never be worse for them. They cannot delay
+ * the first token, cannot fail a reply, and cannot appear where a menu of
+ * options is the wrong thing to put in front of somebody.
+ */
+describe('follow-up suggestions', () => {
+  /** The follow-up call, whichever position in the batch it landed in. */
+  const followUpCalls = (): unknown[][] =>
+    generate.mock.calls.filter(
+      (call) =>
+        (call[0] as {systemInstruction: string}).systemInstruction ===
+        FOLLOW_UP_PROMPT,
+    );
+
+  /**
+   * Answers the follow-up call with [text] and every other call normally.
+   *
+   * The whole group drives the STREAMING path, because that is the only one
+   * the suggestions run on — and the only one the app uses. On the unary path
+   * nothing has been delivered yet, so the extra call would sit on the
+   * critical path of every answer.
+   */
+  const suggesting = (text: string): void => {
+    generateStream.mockImplementation(function* () {
+      yield {type: 'text', text: 'That wave breaks.'};
+      yield {type: 'usage', inputTokens: 900, outputTokens: 12};
+    });
+    generate.mockImplementation((request: {systemInstruction: string}) =>
+      Promise.resolve(
+        request.systemInstruction === FOLLOW_UP_PROMPT
+          ? {text, inputTokens: 240, outputTokens: 22}
+          : {text: 'That wave breaks.', inputTokens: 900, outputTokens: 12},
+      ),
+    );
+  };
+
+  /** A streaming turn, which is what every real client makes. */
+  const streamed = (data: Record<string, unknown> = {}): Promise<Envelope> => {
+    const {request, response} = streamingCaller(data);
+    return run(request, response);
+  };
+
+  it("rides the envelope, in the user's own voice", async () => {
+    suggesting(
+      '{"followUps":["what if it doesnt","i already caved","that helped"]}',
+    );
+
+    const reply = await streamed();
+
+    expect(reply.followUps).toEqual([
+      'what if it doesnt',
+      'i already caved',
+      'that helped',
+    ]);
+    // The cheap model, always: four short strings in fixed JSON is a
+    // structured-output task, and the premium model buys nothing here.
+    const [call] = followUpCalls();
+    expect((call?.[0] as {model: string}).model).toBe(MODEL_FREE.value());
+    expect((call?.[0] as {json: boolean}).json).toBe(true);
+  });
+
+  it('never suggests anything mid-craving', async () => {
+    // The panic rider is breath and presence only — thirty words, one step at
+    // a time. A menu of four things to say next is the opposite of that, and
+    // somebody at 9/10 does not need options.
+    suggesting('{"followUps":["never shown"]}');
+    const reply = await streamed({text: 'i cant do this', panicIntensity: 9});
+
+    expect(reply.followUps).toBeUndefined();
+    expect(followUpCalls()).toHaveLength(0);
+  });
+
+  it('costs a unary client nothing at all', async () => {
+    // A client that cannot stream has had NOTHING yet when this block runs,
+    // so the extra round-trip would be added to the wait for the answer
+    // itself. It gets the static chips instead.
+    suggesting('{"followUps":["not for you"]}');
+    const reply = await run(caller());
+
+    expect(reply.text).toBe('That wave breaks.');
+    expect(reply.followUps).toBeUndefined();
+    expect(followUpCalls()).toHaveLength(0);
+  });
+
+  it('answers normally when the suggestion call fails', async () => {
+    generateStream.mockImplementation(function* () {
+      yield {type: 'text', text: 'That wave breaks.'};
+      yield {type: 'usage', inputTokens: 900, outputTokens: 12};
+    });
+    generate.mockImplementation((request: {systemInstruction: string}) =>
+      request.systemInstruction === FOLLOW_UP_PROMPT
+        ? Promise.reject(new Error('suggester exploded'))
+        : Promise.resolve({
+            text: 'That wave breaks.',
+            inputTokens: 900,
+            outputTokens: 12,
+          }),
+    );
+
+    const reply = await streamed();
+
+    // The reply the user asked for is untouched, the message still counted,
+    // and the field is simply absent — which the app reads as "show the four
+    // static chips".
+    expect(reply.text).toBe('That wave breaks.');
+    expect(reply.followUps).toBeUndefined();
+    expect(await usedToday()).toBe(1);
+  });
+
+  it('omits the field rather than sending an empty list', async () => {
+    suggesting('{"followUps":[]}');
+    const reply = await streamed();
+    expect(reply.followUps).toBeUndefined();
+  });
+
+  it('suggests nothing on a turn that never reached the model', async () => {
+    // A cap costs no model call by design, so it cannot cost one for this
+    // either — and there is nothing to follow up on.
+    await userDoc('alice').set(
+      {aiUsage: {day: dayKeyIn(new Date(), 'UTC'), msgCount: 5}},
+      {merge: true},
+    );
+    vi.spyOn(PREMIUM_DAILY_COACH_MESSAGES, 'value').mockReturnValue(5);
+
+    const reply = await streamed();
+
+    expect(reply.template).toBe('capReached');
+    expect(reply.followUps).toBeUndefined();
+    expect(followUpCalls()).toHaveLength(0);
+  });
+});
+
+describe('parseFollowUps', () => {
+  it('takes at most four, deduplicated', () => {
+    expect(
+      parseFollowUps(
+        '{"followUps":["one","two","THREE","three","four","five"]}',
+      ),
+    ).toEqual(['one', 'two', 'THREE', 'four']);
+  });
+
+  it('drops anything that would not fit a chip', () => {
+    // The row is one line of horizontally scrolling pills. The bound is wide
+    // enough for five words in German and Portuguese — at the 40 it started
+    // at, "Ich kann meine Arbeit nicht verlassen" would have been dropped and
+    // the feature would have been English-only in practice.
+    const long = 'a'.repeat(57);
+    expect(
+      parseFollowUps(`{"followUps":["ok","${long}","x",7,null,"  spaced  "]}`),
+    ).toEqual(['ok', 'spaced']);
+  });
+
+  it('collapses a multi-line suggestion onto one line', () => {
+    expect(parseFollowUps('{"followUps":["what\\nnow"]}')).toEqual(['what now']);
+  });
+
+  it('survives fences, and yields nothing for anything malformed', () => {
+    expect(parseFollowUps('```json\n{"followUps":["ok then"]}\n```')).toEqual([
+      'ok then',
+    ]);
+    for (const junk of ['', 'not json', '[]', '{"followUps":"nope"}', 'null']) {
+      expect(parseFollowUps(junk), junk).toEqual([]);
+    }
   });
 });

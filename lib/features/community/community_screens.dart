@@ -467,6 +467,11 @@ enum _BlockerTone {
   /// The text breaks a community rule. Final, and nobody's tier changes it.
   rule,
 
+  /// There is not enough here to publish yet. Nobody has done anything
+  /// wrong and nothing is locked — the fix is to keep typing — so this must
+  /// never wear the red styling of a rule, nor carry a door.
+  thin,
+
   /// The allowance is spent and a subscription would raise it — the one case
   /// that carries a door.
   upgrade,
@@ -546,10 +551,31 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     final spent = _allowance(ref, sos: sos);
     final outOfPosts = spent.used >= spent.limit;
     final upgradeHelps = outOfPosts && !premium && !sos;
+    // One live SOS at a time (docs/12 §5c). Only checked for an SOS draft,
+    // because it is only SOS posts that pin — an ordinary post while your SOS
+    // is up is fine, and greying that out would be a rule nobody asked for.
+    final pinned = sos
+        ? ref.read(communityStoreProvider.notifier).liveSosOfMine(
+            ref.read(nowProvider)(),
+          )
+        : null;
     // Text and tone decided together, in one switch, so they can never
     // disagree: a spent allowance is not an error and must not wear the red
     // "you broke a rule" styling — it is "come back tomorrow", and for a free
     // account it is an offer.
+    //
+    // Null on an EMPTY box, so the allowance arms below still speak on open:
+    // somebody who has already posted today should learn it before they type
+    // a paragraph, and the Post button already says "not yet" for an empty
+    // field — a line under a box nobody has touched is scolding them for not
+    // having started.
+    final quality = _text.text.trim().isEmpty
+        ? null
+        : PostQuality.checkPost(_text.text, sos: sos);
+    // The quality gate comes BEFORE the allowance arms on purpose: a draft
+    // that is not postable yet has not met any wall, and telling somebody
+    // they are out of posts for a "." they were never going to publish is
+    // both wrong and an upsell for nothing.
     final ({String text, _BlockerTone tone})? blocked =
         switch (CommunityRules.check(_text.text)) {
           CommunityRuleViolation.slur => (
@@ -560,15 +586,29 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
             text: l10n.communityRuleSourcing,
             tone: _BlockerTone.rule,
           ),
-          null when upgradeHelps => (
-            text: l10n.premiumPitchCompose(LpAllowances.premiumPosts),
-            tone: _BlockerTone.upgrade,
-          ),
-          null when outOfPosts => (
-            text: l10n.communityDailyCapReached(spent.limit),
-            tone: _BlockerTone.spent,
-          ),
-          null => null,
+          null => switch (quality) {
+            PostQualityIssue.tooShort => (
+              text: l10n.communityTooShort,
+              tone: _BlockerTone.thin,
+            ),
+            PostQualityIssue.repetitive => (
+              text: l10n.communityTooRepetitive,
+              tone: _BlockerTone.thin,
+            ),
+            null when pinned != null => (
+              text: l10n.communitySosStillUp,
+              tone: _BlockerTone.spent,
+            ),
+            null when upgradeHelps => (
+              text: l10n.premiumPitchCompose(LpAllowances.premiumPosts),
+              tone: _BlockerTone.upgrade,
+            ),
+            null when outOfPosts => (
+              text: l10n.communityDailyCapReached(spent.limit),
+              tone: _BlockerTone.spent,
+            ),
+            null => null,
+          },
         };
     final blocker = blocked?.text;
     final canPost =
@@ -714,6 +754,8 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                               switch (blocked.tone) {
                                 _BlockerTone.rule => Icons.block_rounded,
                                 _BlockerTone.upgrade => Icons.lock_outline,
+                                // Keep going, that is all.
+                                _BlockerTone.thin => Icons.edit_outlined,
                                 // Nothing is wrong and nothing is locked —
                                 // the allowance simply resets at midnight.
                                 _BlockerTone.spent => Icons.schedule_rounded,
@@ -722,6 +764,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                               color: switch (blocked.tone) {
                                 _BlockerTone.rule => lp.dangerText,
                                 _BlockerTone.upgrade => lp.voltText,
+                                _BlockerTone.thin => lp.textSecondary,
                                 _BlockerTone.spent => lp.textSecondary,
                               },
                             ),
@@ -924,6 +967,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         controller: _reply,
                         style: LpType.body14(lp.textPrimary),
                         textInputAction: TextInputAction.send,
+                        onChanged: (_) => setState(() {}),
                         onSubmitted: (_) => _send(post),
                         decoration: InputDecoration(
                           border: InputBorder.none,
@@ -932,20 +976,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         ),
                       ),
                     ),
-                    PressScale(
-                      onTap: () => _send(post),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSos ? lp.oxygen : lp.volt,
-                        ),
-                        child: Icon(
-                          Icons.arrow_upward_rounded,
-                          size: 18,
-                          color: lp.onVolt,
+                    // Dimmed rather than dead: `_send` refuses anything
+                    // `createReply` would refuse, and a control that silently
+                    // does nothing reads as a broken app.
+                    Opacity(
+                      opacity: _replyReady(_reply.text) ? 1 : 0.4,
+                      child: PressScale(
+                        onTap: () => _send(post),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSos ? lp.oxygen : lp.volt,
+                          ),
+                          child: Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: lp.onVolt,
+                          ),
                         ),
                       ),
                     ),
@@ -961,11 +1011,22 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   void _send(Post post) {
     final text = _reply.text.trim();
-    if (text.isEmpty) return;
+    // The same floor `createReply` enforces. Without it the callable refuses
+    // "ok" server-side, `addReply` ignores the failure, and the reply sits in
+    // the author's own thread forever while nobody else can see it — the
+    // worst shape a refusal can take. The bar is far lower than a post's:
+    // "thanks" and "yes yes" are real replies.
+    if (text.isEmpty || PostQuality.checkReply(text) != null) return;
     _reply.clear();
     LpHaptics.light();
     ref.read(communityStoreProvider.notifier).addReply(post.id, text);
   }
+}
+
+/// Whether [text] is postable as a reply — what greys the send arrow.
+bool _replyReady(String text) {
+  final trimmed = text.trim();
+  return trimmed.isNotEmpty && PostQuality.checkReply(trimmed) == null;
 }
 
 class _ReplyBubble extends ConsumerWidget {

@@ -922,8 +922,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get paywallFeatCoach => 'Unbegrenzter KI-Coach, der dein Warum kennt';
 
   @override
-  String get paywallFeatPanic =>
-      'Panik-Button: Verlangen in 60 Sekunden gekillt';
+  String get paywallFeatPanic => 'Alle drei Panik-Spiele, nicht nur Orbs';
 
   @override
   String get paywallFeatPlan =>
@@ -1134,33 +1133,86 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get freePlanTitle => 'Gratis bringt dich ins Rollen.';
+  String get freePlanColFree => 'FREE';
+
+  @override
+  String get freePlanColPro => 'PRO';
+
+  @override
+  String get freeCompareLog => 'Zug-Protokoll + Serien';
+
+  @override
+  String get freeCompareMoney => 'Sparzähler';
+
+  @override
+  String get freeCompareCoach => 'Coach-Nachrichten';
+
+  @override
+  String get freeCompareGames => 'Panik-Spiele';
+
+  @override
+  String get freeComparePosts => 'Community-Posts';
+
+  @override
+  String get freeCompareHistory => 'Statistik-Verlauf';
+
+  @override
+  String get freeCompareHealth => 'Gesundheits-Zeitstrahl';
+
+  @override
+  String get freeComparePlan => 'Plan passt sich nächtlich an';
+
+  @override
+  String get freeCompareForecast => 'Craving-Prognosen';
+
+  @override
+  String get freeCompareReport => 'Wochenbericht';
+
+  @override
+  String freeComparePerDay(int n) {
+    return '$n/Tag';
+  }
+
+  @override
+  String freeCompareDays(int days) {
+    return '$days Tage';
+  }
+
+  @override
+  String freeCompareNodes(int n) {
+    return '$n Stufen';
+  }
+
+  @override
+  String get freeCompareForever => 'Alles';
+
+  @override
+  String get freeCompareAll => 'Alle';
+
+  @override
+  String freePlanProCta(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Pro $days Tage gratis testen',
+      one: 'Pro einen Tag gratis testen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get freePlanTitle => 'Du bist auf Free.';
 
   @override
   String get freePlanSubtitle =>
-      'Für immer deins. Kein Countdown, kein Genörgel.';
-
-  @override
-  String get freePlanFeat1 => 'Zug-Log + Serien';
-
-  @override
-  String get freePlanFeat2 => 'Spar-Ticker';
-
-  @override
-  String get freePlanFeat3 => '5 Coach-Nachrichten am Tag';
-
-  @override
-  String get freePlanFeat4 => 'Panik-Button, wann immer du ihn brauchst';
-
-  @override
-  String get freePlanFeat5 => 'Community — lesen, reagieren, ein Post am Tag';
+      'Für immer deins. Kein Countdown, kein Nerven.';
 
   @override
   String get freePlanUpgradeNote =>
-      'Upgrade jederzeit — Serie und Verlauf ziehen mit.';
+      'Jederzeit upgraden — Serie und Verlauf kommen mit.';
 
   @override
-  String get freePlanCta => 'Mit Gratis starten';
+  String get freePlanCta => 'Mit Free starten';
 
   @override
   String get winbackBadge => 'EINMALIGES GRÜNDER-ANGEBOT';
@@ -1532,6 +1584,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get gameNameOrbs => 'Kugeln';
+
+  @override
+  String gameLockedTitle(String game) {
+    return '$game ist ein Premium-Spiel.';
+  }
+
+  @override
+  String gameLockedBody(String game) {
+    return '$game gehört dir gratis, für immer — und funktioniert genauso gut.';
+  }
+
+  @override
+  String gameLockedPlayFree(String game) {
+    return '$game spielen';
+  }
 
   @override
   String get gameHintTiles => 'Tipp die unterste Kachel in ihrer Spur.';
@@ -2194,6 +2261,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get communityRuleSourcing =>
       'Bezugsquellen und Verkaufsangebote sind hier nicht erlaubt. Bearbeite den Text und versuch es noch mal.';
+
+  @override
+  String get communityTooShort =>
+      'Ein paar Worte mehr — genug, damit dir jemand wirklich helfen kann.';
+
+  @override
+  String get communityTooRepetitive =>
+      'Sag es mit deinen eigenen Worten — das bekommt Antworten.';
+
+  @override
+  String get communitySosStillUp =>
+      'Dein SOS steht noch oben im Feed. Die Leute sehen es.';
 
   @override
   String communityDailyCapReached(int limit) {

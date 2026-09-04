@@ -38,6 +38,20 @@ enum CommunityRuleViolation {
   sourcing,
 }
 
+/// Why a post is too thin to publish. Two kinds, because they need two
+/// different sentences: one asks for more, the other asks for words.
+///
+/// Neither is a rule violation — nobody has done anything wrong — so the
+/// composer renders these in its neutral tone, never the red one.
+enum PostQualityIssue {
+  /// Not enough there yet: too short, or not enough words to act on.
+  tooShort,
+
+  /// Long enough, but it is the same thing over and over ("aaaaaaaaaaaaaa",
+  /// "help help help help") or has no letters in it at all.
+  repetitive,
+}
+
 abstract final class CommunityRules {
   /// Verbatim from `prefilter.ts` (`SLURS`). Every entry must be unambiguous
   /// in all five app locales; see that file for the false friends left out.
@@ -179,4 +193,121 @@ abstract final class CommunityRules {
   static final List<RegExp> _brandMatchers = [
     for (final term in brands) _wholeWord(term),
   ];
+}
+
+/// Is there actually a message here?
+///
+/// Separate from [CommunityRules] on purpose: that class answers "may this be
+/// said", this one answers "was anything said". A slur is refused forever; a
+/// two-character post is refused until the person types a few more words, and
+/// the two must never wear the same styling or the same tone.
+///
+/// It exists because the panic flow opens the composer **pre-tagged `sos`**,
+/// so publishing is one tap away with the tag already chosen — and a live SOS
+/// pins to the top of the feed for an hour. `"a"` used to publish, and it
+/// pinned. The bar is deliberately low enough that a real cry for help clears
+/// it: "help me please" and "i want to vape" both pass.
+///
+/// Mirrored value-for-value by `postQuality` in `functions/src/ai/prefilter.ts`
+/// and pinned across the two by `test/domain/post_quality_test.dart`, which
+/// reads the TypeScript file — the same discipline
+/// `test/domain/community_rules_test.dart` applies to the slur lists. The
+/// server is the floor; this exists so the refusal happens under the text box
+/// with the words still there to edit, rather than as "not published" after
+/// the composer has closed.
+///
+/// **Assumes a space-separated script.** All five shipped locales
+/// (en/es/fr/de/pt) are; the word rules would have to become script-aware
+/// before shipping Chinese, Japanese or Thai.
+abstract final class PostQuality {
+  /// A post is a thing somebody is meant to answer, so it asks for a
+  /// sentence.
+  static const int minPostChars = 12;
+
+  /// …but an SOS asks for less.
+  ///
+  /// This gate is reached from the composer the panic flow opens PRE-TAGGED
+  /// `sos`, by somebody at high craving intensity with shaking hands, and a
+  /// wrongly-refused cry for help is the most expensive false positive in
+  /// the app — far more expensive than the junk post it would have caught.
+  /// Ten lets "i need help" (11) and "help me now" (11) through; twelve
+  /// refused both, which nobody noticed because the accept list happened to
+  /// start at "help me please" (14).
+  ///
+  /// Only the character floor moves. Every anti-noise rule below applies to
+  /// an SOS unchanged, so "a", "asdf", "..." and "😭😭😭" are still refused.
+  static const int minSosChars = 10;
+
+  /// A reply is allowed to be "thanks". It only has to be *words*.
+  static const int minReplyChars = 6;
+
+  static const int minPostWords = 3;
+
+  /// Kills a wall of one word repeated. Two, not three, so "i cant i cant"
+  /// still reaches the feed.
+  static const int minDistinctWords = 2;
+
+  /// Letters, not characters: refuses "12345678 90 12" and any emoji wall.
+  static const int minLetters = 3;
+
+  /// Distinct letters, which is what separates "aaaa bbb aaaa" from a
+  /// sentence. Lower for replies so "yes yes" survives.
+  static const int minPostDistinctLetters = 4;
+  static const int minReplyDistinctLetters = 3;
+
+  /// The issue with [text] as a post, or null when it is fine to send.
+  ///
+  /// [sos] lowers only the character floor — see [minSosChars].
+  static PostQualityIssue? checkPost(String text, {bool sos = false}) => _check(
+    text,
+    minChars: sos ? minSosChars : minPostChars,
+    minWords: minPostWords,
+    minDistinctLetters: minPostDistinctLetters,
+  );
+
+  /// The issue with [text] as a reply. Lower bar in every dimension: a reply
+  /// is a nod as often as it is a paragraph, and refusing "thanks" would cost
+  /// far more than the noise it filters.
+  static PostQualityIssue? checkReply(String text) => _check(
+    text,
+    minChars: minReplyChars,
+    minWords: 1,
+    minDistinctLetters: minReplyDistinctLetters,
+  );
+
+  static PostQualityIssue? _check(
+    String text, {
+    required int minChars,
+    required int minWords,
+    required int minDistinctLetters,
+  }) {
+    final collapsed = text.trim().replaceAll(_whitespace, ' ');
+    if (collapsed.length < minChars) return PostQualityIssue.tooShort;
+
+    final words = collapsed.split(' ').where((w) => w.isNotEmpty).toList();
+    if (words.length < minWords) return PostQualityIssue.tooShort;
+
+    // Only meaningful once there are enough words for repetition to BE
+    // repetition — a two-word reply is not "the same thing over and over".
+    if (words.length >= minPostWords &&
+        words.map((w) => w.toLowerCase()).toSet().length < minDistinctWords) {
+      return PostQualityIssue.repetitive;
+    }
+
+    final letters = [
+      for (final rune in collapsed.toLowerCase().runes)
+        if (_letter.hasMatch(String.fromCharCode(rune)))
+          String.fromCharCode(rune),
+    ];
+    if (letters.length < minLetters) return PostQualityIssue.tooShort;
+    if (letters.toSet().length < minDistinctLetters) {
+      return PostQualityIssue.repetitive;
+    }
+    return null;
+  }
+
+  static final RegExp _whitespace = RegExp(r'\s+');
+
+  /// Any Unicode letter, so accented and non-Latin scripts count as letters.
+  static final RegExp _letter = RegExp(r'\p{L}', unicode: true);
 }

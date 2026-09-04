@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
+import 'package:last_puff/domain/logic/allowances.dart';
+import 'package:last_puff/core/widgets/lp_buttons.dart';
 import 'package:last_puff/core/utils/lp_format.dart';
 import 'package:last_puff/domain/logic/plan_reveal.dart';
 import 'package:last_puff/core/utils/lp_pricing.dart';
@@ -256,6 +258,106 @@ void main() {
     ) async {
       await open(tester, Routes.paywallFree);
       expect(find.text(l10n.freePlanTitle), findsOneWidget);
+
+      // Ten rows, each naming what Free gets AND what Pro gets. The screen
+      // used to be five ✓ rows with no mention of Premium at all, which told
+      // a reader nothing about the choice they had just made.
+      for (final label in [
+        l10n.freeCompareLog,
+        l10n.freeCompareMoney,
+        l10n.freeCompareCoach,
+        l10n.freeCompareGames,
+        l10n.freeComparePosts,
+        l10n.freeCompareHistory,
+        l10n.freeCompareHealth,
+        l10n.freeComparePlan,
+        l10n.freeCompareForecast,
+        l10n.freeCompareReport,
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(find.text(l10n.freePlanColFree), findsOneWidget);
+      expect(find.text(l10n.freePlanColPro), findsOneWidget);
+    });
+
+    testWidgets('every number on the table is one the app enforces', (
+      tester,
+    ) async {
+      // The old rows hardcoded "5 coach messages a day" and "one post a day"
+      // in five ARB files each. A ten-row table of typed numbers would be
+      // wrong the first time any allowance moved, and wrong in the direction
+      // that reads as a lie — so all of them come from `LpAllowances`.
+      await open(tester, Routes.paywallFree);
+
+      expect(
+        find.text(l10n.freeComparePerDay(LpAllowances.freeCoachMessages)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.freeComparePerDay(LpAllowances.premiumCoachMessages)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.freeComparePerDay(LpAllowances.freePosts)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.freeCompareDays(LpAllowances.freeHistoryDays)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.freeCompareNodes(LpAllowances.freeHealthNodes)),
+        findsOneWidget,
+      );
+      // Orbs by name, because it is the panic game a free account keeps.
+      expect(find.text(l10n.gameNameOrbs), findsOneWidget);
+    });
+
+    testWidgets('Pro is the button and Free is still one tap away', (
+      tester,
+    ) async {
+      // The single biggest lever on this screen, and the one rule it must
+      // not break: demoting Free is fine, hiding it is not (Apple 3.1.2,
+      // Play). Both controls are present; only their weight changed.
+      final container = await open(tester, Routes.paywallFree);
+      final trial = LpPricing.trialDays;
+
+      expect(find.widgetWithText(LpButton, l10n.freePlanProCta(trial)),
+          findsOneWidget);
+      expect(find.widgetWithText(LpTextButton, l10n.freePlanCta),
+          findsOneWidget);
+
+      // Free still completes, and still reports itself as a choice.
+      await tester.tap(find.text(l10n.freePlanCta));
+      await tester.pumpAndSettle();
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+    });
+
+    testWidgets('"Try Pro" is a tagged door back to the paywall', (
+      tester,
+    ) async {
+      final analytics = RecordingAnalytics();
+      final container = await open(
+        tester,
+        Routes.paywall,
+        analytics: analytics,
+      );
+      await tester.tap(find.text(l10n.paywallFreeLink));
+      await tester.pumpAndSettle();
+      expect(
+        analytics.propsOf('gate_shown')?['source'],
+        'free_plan',
+        reason: 'the impression is the denominator for this door',
+      );
+
+      await tester.tap(find.text(l10n.freePlanProCta(LpPricing.trialDays)));
+      await tester.pumpAndSettle();
+
+      expect(analytics.propsOf('gate_tapped'), {'source': 'free_plan'});
+      // It POPS: the paywall pushed this screen, so there is one underneath
+      // already and a push would stack a second.
+      expect(container.read(routerProvider).state.uri.path, Routes.paywall);
+      expect(find.text(l10n.freePlanTitle), findsNothing);
     });
   });
 

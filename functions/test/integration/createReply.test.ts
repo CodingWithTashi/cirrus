@@ -37,7 +37,7 @@ async function seedPost(id: string, status: string): Promise<void> {
   await postsCol().doc(id).set({
     alias: 'SteadyFalcon42',
     tag: 'sos',
-    text: 'rough night',
+    text: 'rough night, help',
     reactions: {},
     reportCount: 0,
     status,
@@ -56,6 +56,10 @@ const reply = (text = 'you have got this') => ({
   avatarEmoji: '\u{1F98A}',
   timeZone: 'America/Toronto',
 });
+
+/// 320 characters of real words. A single repeated character is no longer a
+/// valid reply however long it is — the quality floor asks for words.
+const LONG = 'you have got this, keep going, '.repeat(12);
 
 describe('createReply — inherits the post anonymity contract', () => {
   it('writes the reply under its parent post', async () => {
@@ -106,12 +110,12 @@ describe('createReply — validation', () => {
 
   // docs/03 §9: replies cap at 300 characters, tighter than a post's 500.
   it('rejects text over the 300-character limit', async () => {
-    await expect(createReply.run(request(reply('x'.repeat(301))))).rejects.toThrow();
+    await expect(createReply.run(request(reply(LONG.slice(0, 301))))).rejects.toThrow();
   });
 
   it('accepts text exactly at the limit', async () => {
     await expect(
-      createReply.run(request(reply('x'.repeat(300)))),
+      createReply.run(request(reply(LONG.slice(0, 300)))),
     ).resolves.toHaveProperty('replyId');
   });
 

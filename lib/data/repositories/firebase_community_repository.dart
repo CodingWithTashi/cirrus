@@ -169,6 +169,8 @@ class FirebaseCommunityRepository implements CommunityRepository {
           throw const ContentRefusedException(ContentRefusal.dailyCap);
         case 'permission-denied':
           throw const ContentRefusedException(ContentRefusal.premium);
+        case 'already-exists':
+          throw const ContentRefusedException(ContentRefusal.sosCooldown);
       }
       rethrow;
     }

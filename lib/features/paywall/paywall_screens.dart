@@ -11,6 +11,7 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
+import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
@@ -26,7 +27,9 @@ import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../domain/logic/plan_reveal.dart';
+import '../../domain/logic/allowances.dart';
 import '../../domain/logic/billing_catalog.dart';
+import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/pricing_math.dart';
 import '../../domain/models/models.dart';
 import '../onboarding/onboarding_view_model.dart';
@@ -1009,7 +1012,32 @@ class _TrialTimeline extends StatelessWidget {
   }
 }
 
-/// D5b — pure positive framing of Free. No guilt copy anywhere.
+/// D5b — what Free is, next to what Pro is, with every number named.
+///
+/// It used to be five ✓ rows and one button, and that button was *Start with
+/// Free*: a person who reached this screen was shown nothing they did not
+/// already have and given no reason to ever leave. Premium was one grey line
+/// of reassurance at the bottom.
+///
+/// Three deliberate decisions, all founder calls of Sep 3 2026 (docs/12 §5c):
+///
+/// 1. **A side-by-side table, not a list.** The reader is already comparing;
+///    this does the comparison honestly instead of making them guess. Real
+///    numbers ("5/day" against "100/day", "7 days" against "Forever") argue
+///    far harder than adjectives, and every one of them is read from
+///    [LpAllowances] rather than typed — the old `freePlanFeat3` hardcoded
+///    "5" and `freePlanFeat5` hardcoded "one post a day", in five ARB files
+///    each, which is exactly the drift a ten-row table would multiply.
+/// 2. **Pro is the button; Free is a link.** The single biggest lever on the
+///    screen. The free path stays plainly visible and one tap away, which is
+///    what Apple 3.1.2 and Play's rules actually require — it is the same
+///    shape the D5 paywall already uses in reverse.
+/// 3. **No guilt copy, still.** The rows state facts and nothing scolds. The
+///    Free column is not framed as a loss; it is simply shorter, which is
+///    true.
+///
+/// The screen is `push`ed from the paywall, so *Try Pro* pops back to the
+/// paywall that is already underneath rather than stacking a second one.
 class FreePlanScreen extends ConsumerStatefulWidget {
   const FreePlanScreen({super.key});
 
@@ -1020,8 +1048,52 @@ class FreePlanScreen extends ConsumerStatefulWidget {
 class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
   bool _busy = false;
 
+  /// This screen is the app's thirteenth door, and the first one that
+  /// measures the people who reach Free and come back. Captured in
+  /// [initState] alongside the sink, because Riverpod forbids `ref` on the
+  /// way out and both are read from callbacks.
+  late final AnalyticsSink _analytics;
+  int? _planDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _analytics = ref.read(analyticsProvider);
+    final journey = ref.read(quitStoreProvider);
+    _planDay = journey?.plan.dayNumber(ref.read(nowProvider)());
+    // Deferred a frame: a sink can reach a platform channel and `build` has
+    // to stay side-effect free — the same rule `LpPremiumGate` follows.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _analytics.gateShown(_source, planDay: _planDay);
+    });
+  }
+
+  /// The analytics door name. New, and deliberately its own: a Pro tap from
+  /// HERE is a different event from one at the paywall itself — this is
+  /// somebody who had already chosen Free and reconsidered, which is the
+  /// most interesting cohort on the funnel.
+  static const _source = 'free_plan';
+
+  /// Back to the paywall. It `push`ed this screen, so popping lands on the
+  /// one already underneath; the `go` is the fallback for a direct arrival
+  /// at `/paywall/free`, where pushing would stack a second paywall.
+  void _seePro() {
+    // Not while `_continueFree` is in flight. Onboarding's `complete()` is an
+    // await, and popping this screen underneath it means the `context.go` to
+    // day 1 never runs against a mounted tree — the account is created and
+    // the user is left sitting on the paywall.
+    if (_busy) return;
+    _analytics.gateTapped(_source);
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+    } else {
+      router.go(Routes.paywallFrom(_source));
+    }
+  }
+
   Future<void> _continueFree() async {
-    ref.read(analyticsProvider).freeContinued();
+    _analytics.freeContinued();
     final fromOnboarding = ref.read(quitStoreProvider) == null;
     if (fromOnboarding) {
       setState(() => _busy = true);
@@ -1046,54 +1118,208 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
   Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
+    // The live trial length when the store has answered, the founder-locked
+    // figure when it has not — the same fallback order the paywall uses, and
+    // never a number this screen invented.
+    final offering = ref.watch(offeringsProvider).valueOrNull;
+    final int? trialDays = offering != null && offering.plans.isNotEmpty
+        ? offering[PlanPeriod.yearly]?.trialDays
+        : LpPricing.trialDays;
 
-    Widget item(String label) => Padding(
-      padding: const EdgeInsets.only(bottom: 11),
-      child: LpCard(
-        radius: LpDimens.rInput,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        child: Row(
-          children: [
-            Text(
-              '✓',
-              style: LpType.body15(lp.voltText, weight: FontWeight.w700),
+    // Every figure here is the constant the app actually enforces. A table
+    // that quoted its own numbers would be wrong the first time one moved,
+    // and would be wrong in the direction that reads as a lie.
+    final rows = <(String, String, String)>[
+      (l10n.freeCompareLog, _tick, _tick),
+      (l10n.freeCompareMoney, _tick, _tick),
+      (
+        l10n.freeCompareCoach,
+        l10n.freeComparePerDay(LpAllowances.freeCoachMessages),
+        l10n.freeComparePerDay(LpAllowances.premiumCoachMessages),
+      ),
+      (
+        l10n.freeCompareGames,
+        GameId.orbs.label(context),
+        l10n.freeCompareAll,
+      ),
+      (
+        l10n.freeComparePosts,
+        l10n.freeComparePerDay(LpAllowances.freePosts),
+        l10n.freeComparePerDay(LpAllowances.premiumPosts),
+      ),
+      (
+        l10n.freeCompareHistory,
+        l10n.freeCompareDays(LpAllowances.freeHistoryDays),
+        l10n.freeCompareForever,
+      ),
+      (
+        l10n.freeCompareHealth,
+        l10n.freeCompareNodes(LpAllowances.freeHealthNodes),
+        l10n.freeCompareAll,
+      ),
+      (l10n.freeComparePlan, _none, _tick),
+      (l10n.freeCompareForecast, _none, _tick),
+      (l10n.freeCompareReport, _none, _tick),
+    ];
+
+    /// One value cell. A tick is volt in the Pro column and muted in the
+    /// Free one; an em dash is always muted, and is never styled as a
+    /// failure — Free having less is a fact, not a scolding.
+    Widget cell(String value, {required bool pro}) => Expanded(
+      flex: 3,
+      child: Text(
+        value,
+        textAlign: TextAlign.center,
+        style: value == _tick
+            ? LpType.body14(
+                pro ? lp.voltText : lp.textSecondary,
+                weight: FontWeight.w700,
+              )
+            : LpType.body13(
+                value == _none
+                    ? lp.textFaint
+                    : pro
+                    ? lp.textPrimary
+                    : lp.textSecondary,
+                weight: pro ? FontWeight.w700 : FontWeight.w500,
+              ),
+      ),
+    );
+
+    Widget row((String, String, String) r, {required bool last}) => Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: last
+          ? null
+          : BoxDecoration(
+              border: Border(bottom: BorderSide(color: lp.border)),
             ),
-            const SizedBox(width: 12),
-            Text(label, style: LpType.body14(lp.textPrimary)),
-          ],
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 7,
+            child: Text(r.$1, style: LpType.body13(lp.textPrimary)),
+          ),
+          cell(r.$2, pro: false),
+          cell(r.$3, pro: true),
+        ],
       ),
     );
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(l10n.freePlanTitle, style: LpType.title(lp.textPrimary)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.freePlanSubtitle,
-                style: LpType.body14(lp.textSecondary),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Scrolls, because ten rows plus two headings do not fit a
+            // 360×640 viewport — the old five-row Column with a Spacer did,
+            // and this one would have overflowed on the smallest phone we
+            // support.
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.freePlanTitle,
+                      style: LpType.title(lp.textPrimary),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.freePlanSubtitle,
+                      style: LpType.body14(lp.textSecondary),
+                    ),
+                    const SizedBox(height: 22),
+                    // The Pro column carries the accent; the Free one is
+                    // plain. Nothing else on the card competes with it.
+                    Row(
+                      children: [
+                        const Expanded(flex: 7, child: SizedBox.shrink()),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            l10n.freePlanColFree,
+                            textAlign: TextAlign.center,
+                            style: LpType.caption11(
+                              lp.textFaint,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            decoration: BoxDecoration(
+                              color: lp.voltSoft,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              l10n.freePlanColPro,
+                              textAlign: TextAlign.center,
+                              style: LpType.caption11(
+                                lp.voltText,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LpCard(
+                      radius: LpDimens.rCard,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Column(
+                        children: [
+                          for (final (i, r) in rows.indexed)
+                            row(r, last: i == rows.length - 1),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    LpNoteCard(l10n.freePlanUpgradeNote),
+                  ],
+                ),
               ),
-              const SizedBox(height: 26),
-              item(l10n.freePlanFeat1),
-              item(l10n.freePlanFeat2),
-              item(l10n.freePlanFeat3),
-              item(l10n.freePlanFeat4),
-              item(l10n.freePlanFeat5),
-              const Spacer(),
-              LpNoteCard(l10n.freePlanUpgradeNote),
-              const SizedBox(height: 14),
-              LpButton(l10n.freePlanCta, busy: _busy, onTap: _continueFree),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: Column(
+                children: [
+                  LpButton(
+                    trialDays == null
+                        ? l10n.paywallCtaSubscribe
+                        : l10n.freePlanProCta(trialDays),
+                    height: 54,
+                    // Carries the spinner for the Free path below it, which is
+                    // now a text link and has nowhere to show one. Without
+                    // this, `complete()` runs with no sign on screen that
+                    // anything is happening.
+                    busy: _busy,
+                    onTap: _seePro,
+                  ),
+                  const SizedBox(height: 4),
+                  // Still one tap, still plainly labelled. Demoted, never
+                  // hidden: this screen exists because somebody chose Free,
+                  // and taking that away would be the dark pattern.
+                  LpTextButton(
+                    l10n.freePlanCta,
+                    onTap: _busy ? null : _continueFree,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  /// The two glyphs the table uses as values. Not localized on purpose —
+  /// they are marks, not words, and every locale reads them the same.
+  static const String _tick = '✓';
+  static const String _none = '—';
 }
 
 /// D5c — one-time founding offer, and the copy says so: opening it burns it.

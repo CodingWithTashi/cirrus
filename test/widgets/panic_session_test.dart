@@ -178,6 +178,41 @@ void main() {
       expect(source, isNot(contains('Routes.paywall')));
     });
 
+    test('the arena is the only place in panic that may carry a door', () {
+      // Tiles and Blocks are Premium since Sep 3 2026 (docs/12 §5c), so the
+      // arena DOES carry a `panic_game` door — the one exception, and one
+      // that is only ever reached by deliberately tapping a locked pill.
+      //
+      // Pinned in both directions on purpose. The flow's own steps must stay
+      // door-free (above), and the arena's door must stay behind the lock
+      // card rather than migrating onto the board, the round panel or the
+      // paused veil, any of which would put an offer in front of somebody
+      // mid-round.
+      for (final file in [
+        'lib/features/panic/games/round_panel.dart',
+        'lib/features/panic/games/paused_veil.dart',
+        'lib/features/panic/games/game_switcher.dart',
+      ]) {
+        expect(
+          File(file).readAsStringSync(),
+          isNot(contains('paywall')),
+          reason: '$file must not sell anything',
+        );
+      }
+      final arena = File('lib/features/panic/game_arena_screen.dart')
+          .readAsStringSync();
+      expect(
+        arena,
+        contains("paywallFrom('panic_game')"),
+        reason: 'the lock card is the door, and it is tagged',
+      );
+      expect(
+        'paywallFrom'.allMatches(arena).length,
+        1,
+        reason: 'exactly one door in the arena, on the lock card',
+      );
+    });
+
     /// The coach mounted on its own, entered the way the panic option enters
     /// it, with the cap as its next answer.
     ///

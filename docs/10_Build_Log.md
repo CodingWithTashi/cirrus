@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3)
 
 ---
 
@@ -2187,3 +2187,255 @@ testing** track, installed from Play, with the Play app-signing SHA-256
 registered in Firebase. That is a property of Play Integrity, not of this app.
 
 `flutter analyze` clean · `flutter test` **947**.
+
+---
+
+## 21. THE GENEROSITY PASS (Sep 3) — a free tier with nothing to leave, and a chip row that never changed
+
+Four findings from a device pass, hours after `docs/12 §5b` shipped the eight
+changes that *loosened* the free tier. The founder's words: *"I feel like we
+are very generous with users. I feel like everyone will just stick with free
+only."*
+
+That is a judgement about the whole tier rather than about any one gate, so
+three decisions taken that morning were reversed the same evening, with their
+original arguments left on the record rather than deleted. `docs/12 §5c` is the
+decision record; this is what the code did.
+
+### 21.1 `"a"` published, and it pinned
+
+The panic flow opens the composer **pre-tagged `sos`** (`panic_screens.dart`,
+the middle loop-breaker), so posting was one tap away with the tag already
+chosen. `canPost` asked only for `text.trim().isNotEmpty`.
+
+A live SOS pins to the top of the community feed for an hour. So a
+one-character post did not merely land in the feed — it landed *at the top of
+it*, above every real one, for an hour.
+
+`PostQuality` (`lib/domain/logic/community_rules.dart`) is the floor, mirrored
+value-for-value by `postQuality` in `functions/src/ai/prefilter.ts` and pinned
+across the two by `test/domain/post_quality_test.dart`, which reads the
+TypeScript file the way `community_rules_test.dart` already reads its slur
+list. Five rules, applied in order:
+
+| Rule | Refuses |
+|---|---|
+| ≥ 12 chars (whitespace collapsed) | `a`, `asdf`, `...`, `😭😭😭` |
+| ≥ 3 words | `aaaaaaaaaaaaaa`, `asdfasdfasdf` |
+| ≥ 2 **distinct** words | `help help help help` |
+| ≥ 3 Unicode letters | `12345678 90 12`, emoji walls |
+| ≥ 4 distinct letters | `aaaa bbb aaaa` |
+
+**The bar is deliberately low, and that is the design.** `help me please` (14
+chars), `i want to vape` and `i cant i cant i cant` all publish. A gate that
+turns away a real cry for help costs far more than the noise it filters, which
+is why the numbers are where they are and not higher. Replies get a much looser
+version — 6 characters and no word minimum, so `thanks` and `yes yes` still
+post — and `createReply.ts` had no validation of any kind before this beyond a
+length cap, which made it the wider spam surface of the two.
+
+It runs **before any allowance is claimed**, exactly where the slur check sits,
+so junk never costs its author a slot. And the client checks first so the
+refusal appears under the box with the words still there to edit, rather than
+as "not published" after the composer has already closed (`docs/09` issue 6).
+
+**One live SOS at a time.** The other half of the same finding: the SOS
+allowance is its own counter precisely because a pinned post is a megaphone,
+and three a day arriving in the same minute is three simultaneous megaphones
+rather than three calls for help. `claimDailyPost` gained an optional
+`cooldownMs` and writes `sosUsage.lastAtMs` alongside the counter it already
+read and wrote — no extra read — and refuses a second SOS inside the pin window
+with its own code, `already-exists`. Not `resource-exhausted`: "come back
+tomorrow" is the wrong sentence for something that clears within the hour. A
+refused cooldown spends no slot, so the day is not burned by it.
+`LpAllowances.sosPinWindow` is the one hour, and the feed's own pin, the
+composer's refusal and `SOS_COOLDOWN_MS` all read it.
+
+### 21.2 The arena gets a lock, and the flow does not
+
+Founder decision: **Orbs free forever; Tiles and Blocks Premium.**
+
+`docs/12 §4.2` had deleted the panic paywall door that morning, on the grounds
+that a purchase decision at 9/10 craving intensity is the least considered one
+a person has. That reasoning is intact, and the flow is untouched — breathing,
+the why step, all three loop-breakers, the coach and the SOS composer stay
+completely free and carry no door.
+
+Three things keep the arena on the right side of that line:
+
+1. **Orbs is `GameCatalog.entries.first`, and `resolveFor(id, premium:)` clamps
+   to it.** Nobody *lands* on a lock: not a new user, not a lapsed subscriber
+   whose stored `lastGame` is Blocks, not a `?g=blocks` deep link. The card is
+   reached only by tapping a pill wearing a padlock, which is a question the
+   user asked.
+2. **`Play Orbs` is the filled button;** `See Premium` is a text link beside
+   it. Somebody mid-craving came for a board and gets one in a tap.
+3. **Never mid-round.** `_switchTo` stops the ticker before the card takes the
+   field's slot in the `AnimatedSwitcher`, and the particle layer, the hint and
+   the paused veil are all suppressed under it.
+
+`SegmentedPills` grew a `locked` set that draws a padlock in the same corner
+the "no best yet" dot uses, and suppresses that dot there — a game you have
+never been able to play trivially has no best, so the dot is noise competing
+with the mark that means something. The pill stays **tappable**: a disabled
+control answers with silence and teaches nothing.
+
+`LpPremiumGate` was deliberately not reused. It blurs a real child so the thing
+behind the lock stays visible, and a game that has not started has nothing to
+blur.
+
+`test/widgets/panic_session_test.dart`'s source-scan was **extended, not
+deleted**: `panic_screens.dart` must still contain no `paywallFrom` at all, the
+round panel / paused veil / switcher must contain no `paywall` at all, and the
+arena is allowed **exactly one**, on the lock card.
+
+### 21.3 Three limits tightened, one of them a reversal with a real cost
+
+| Constant | Was | Now |
+|---|---|---|
+| `freeHistoryDays` | 30 | **7** |
+| `sosPosts` | 5 | **3** |
+| health free nodes | `max(7, hereIndex+1)` | **`max(4, hereIndex+1)`** |
+
+The history one is a genuine reversal of `S5-14`, taken that morning, and the
+argument against it was never refuted: the taper runs 30 days, so a 7-day
+window cannot show a taper working. It is traded knowingly — Stats is where the
+product's central question gets answered, and a free tier that answers it in
+full leaves nothing to sell. `test/widgets/premium_gate_test.dart` had pinned
+`freeHistoryDays >= 30` with a reason string arguing for it; the pin is
+inverted **and its reason rewritten**, because a stale comment left next to a
+changed number is how the next reader inherits the wrong decision.
+
+The health change keeps the invariant `docs/12 §2.4` calls out: `freeHealthNodes`
+is a **floor, never a ceiling**, so a node the reader has already reached is
+never locked however far along they are — the gate only ever hides the future.
+
+### 21.4 The Free screen had nothing to leave
+
+`FreePlanScreen` was five ✓ rows and one button, and that button was *Start
+with Free*. A person who reached it saw nothing they did not already have and
+was given no reason ever to leave; Premium was one grey line at the bottom.
+
+It is a **Free-vs-Pro comparison table** now — ten rows, **every figure read
+from `LpAllowances`** — with Pro as the filled primary button and *Start with
+Free* demoted to a text link below it. The free path stays plainly visible and
+one tap away, which is what Apple 3.1.2 and Play require; it is the same shape
+the D5 paywall already uses in reverse. No guilt copy: the rows state facts and
+the Free column is simply shorter, which is true.
+
+It is also the app's **thirteenth door**, and the first that measures the
+people who reach Free and reconsider (`gate_shown` / `gate_tapped` with
+`source: 'free_plan'`). It pops rather than pushes — the paywall pushed this
+screen, so a push would stack a second paywall on top of the first.
+
+Two honesty fixes fell out of building it. `freePlanFeat3` hardcoded "5 coach
+messages a day" and `freePlanFeat5` hardcoded "one post a day", **in five ARB
+files each**; a ten-row table of typed numbers would have multiplied exactly
+that drift, so all ten read the constants the app enforces. And
+`paywallFeatPanic` sold "Panic button: a 60-second craving killer" — the panic
+button has always been free and is staying free, so the line now names what
+Premium actually adds: all three arena games. The five retired `freePlanFeat*`
+keys are in `l10n_parity_test.dart`'s `retired` list, which is what makes a
+retirement enforceable rather than aspirational.
+
+### 21.5 The chip row that never changed
+
+Not a monetisation change; the fourth finding. The quick chips under Ember's
+thread were four frozen strings — `I'm craving`, `Rough day`, `I slipped`,
+`Show my progress` — rendered identically on every turn forever. Right for a
+cold open. Useless as a reply: once Ember has answered a specific thing, the
+useful next tap follows *that*.
+
+`aiCoachChat` now returns 3–4 follow-ups written **in the user's own voice**,
+and the app renders those in place of the openers. The mechanics, and the
+constraints that shaped them:
+
+- **They cannot stream.** `LpFunctions.stream` carries plain `String` partials
+  straight into the visible bubble, so anything structured has to ride the
+  `CoachDone` envelope. And `CoachReplyEnvelope.args` is typed
+  `Record<string, string | number>`, so they needed their own top-level field.
+- **They ride the existing `Promise.all`** with memory extraction and the
+  rolling summary. On a turn where extraction fires they cost roughly no extra
+  wall-clock; they can never delay the first token, which left on the stream
+  long before that block is reached.
+- **Never mid-craving.** The panic rider is breath and presence only — thirty
+  words, one step at a time — and a menu of four things to say next is the
+  opposite of that. Also skipped on the cap, on both `connectionLost` branches
+  and on the no-journey greeting: a turn that never reached the model must not
+  cost a model call for this either.
+- **Cheap model, ~250 input tokens.** It sees only the last exchange. What
+  comes next in *this* exchange is not a question the card, the summary or the
+  memories answer.
+- **Not persisted.** `history()` reads only `{role, text, ts}`, so a restored
+  thread shows the openers again — which is the "opened the app fresh" case
+  they were always right for.
+
+One trap closed on the way. The four static chips carry protocol routing
+(`sendChip` sends `chip: 'craving'`, not free text), and that routing used to
+be recovered by comparing the typed text back against each localized label. A
+model suggestion could coincide with a label — "I'm craving" is a plausible
+thing for it to suggest — and would have been filed as a protocol chip. The
+screen remembers **which chip was tapped** instead, so there is no guess left
+to get wrong.
+
+**And one config trap, caught by a red test rather than by production.**
+`COACH_FOLLOWUPS` was read as `=== 'true'`. A deploy-time param resolves to the
+**empty string** when nothing supplies a value, so that reading turns the
+feature off for any project whose `.env` never named it — silently, while
+looking exactly like a policy decision. It reads `!== 'false'` now, the same
+direction `allowance()` already fails in. This repo has the scar twice over
+(`MODEL_*`, the allowance params); it is three times now.
+
+### 21.6 Gates
+
+`flutter analyze` clean · `flutter test` **978** · `npm run verify` **217** ·
+`npm run test:integration` **284** · `npm run test:rules` **47** ·
+**on-device 68/68 on a Pixel 8** (Android 17) — 51 against the fake backend
+and the whole 17-case `f_firebase_backend` suite against **production**, after
+the deploy.
+
+`eval:moderation` was not required — no moderation prompt changed.
+`eval:coach` is **not** re-gated: `EMBER_SYSTEM_PROMPT` and
+`buildCoachInstruction` are byte-identical (`test/prompts.test.ts` still pins
+them), and `FOLLOW_UP_PROMPT` is its own separate call with its own tiny
+context, so nothing here can change what Ember says.
+
+### 21.7 What the device found that nothing local could
+
+Four new cases went into `i_monetisation` and two into `f_firebase_backend`,
+because three of this session's four surfaces cannot be seen anywhere else.
+
+- **The arena.** A free account opens on a playing Orbs board — including the
+  case that matters, a lapsed subscriber whose stored `lastGame` is Blocks.
+  Tapping a padlocked pill shows the card and starts no round; *Play Orbs*
+  plays; *See Premium* opens `source=panic_game` and closes back onto the
+  arena. Only a device disposes a real `Ticker` and a real `AnimatedSwitcher`.
+- **The composer, through a real IME.** `"a"` and `help help help help` are
+  refused under the box with the words still there; `help me please` posts;
+  the second SOS is refused while the first is pinned. The keyboard eats the
+  viewport here in a way no widget test reproduces.
+- **The Free comparison table** at real size and real text scale — ten rows
+  plus two headings, on a screen where the old five-row `Column` with a
+  `Spacer` used to fit and this would not have.
+- **The follow-up chips against the DEPLOYED function.** The fake coach
+  returns none by design, so `LP_BACKEND=fake` shows the static four and can
+  never exercise this at all. `f_firebase_backend` now asserts that the real
+  `aiCoachChat` returns 3–4 suggestions that each fit a chip, and that it
+  returns **none** at 9/10 craving intensity.
+
+**And one regression the device caught that the widget suite could not:**
+`h_panic_games`' `intoTheArena` taps the loop card and then reaches straight
+for `TileField`. With Orbs as the default it landed on the wrong board and the
+whole file failed. It takes the Tiles pill now, the way a person would.
+
+Two environment findings, both of which cost a run:
+
+1. **`flutter test integration_test` over the whole directory does not work on
+   this device.** The suites interleave and a second `adb install` arrives
+   while another is running — `Error: ADB exited with exit code 1 / Performing
+   Streamed Install / failed to install app-debug.apk:` with an empty reason —
+   after which every remaining test cascades to "did not complete". Run one
+   file at a time.
+2. **The USB transport re-enumerates mid-run** and kills the suite outright
+   (`adb: device '41311FDJH002AM' not found`). `adb tcpip 5555` plus
+   `adb connect <ip>:5555` held for nine consecutive suite runs.

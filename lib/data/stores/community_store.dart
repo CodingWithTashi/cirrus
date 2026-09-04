@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/analytics/lp_events.dart';
+import '../../domain/logic/allowances.dart';
 import '../../domain/logic/community_rules.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
@@ -43,10 +44,10 @@ class CommunityState {
           ..sort((a, b) {
             final aSos =
                 a.tag == PostTag.sos &&
-                now.difference(a.createdAt).inMinutes < 60;
+                now.difference(a.createdAt) < LpAllowances.sosPinWindow;
             final bSos =
                 b.tag == PostTag.sos &&
-                now.difference(b.createdAt).inMinutes < 60;
+                now.difference(b.createdAt) < LpAllowances.sosPinWindow;
             if (aSos != bSos) return aSos ? -1 : 1;
             return b.createdAt.compareTo(a.createdAt);
           });
@@ -194,6 +195,34 @@ class CommunityStore extends Notifier<CommunityState> {
         .length;
   }
 
+  /// My SOS that is still holding the top of the feed, or null.
+  ///
+  /// One live SOS at a time (docs/12 §5c). A live SOS pins for
+  /// [LpAllowances.sosPinWindow], so a second one posted five minutes later is
+  /// not a second call for help — it is the same person occupying the top of
+  /// the feed twice, which is the "pinning megaphone" the separate allowance
+  /// was created to prevent and did not.
+  ///
+  /// A post the server never accepted does not count: `failed` never reached
+  /// anyone, `capped` and `blocked` are not on the feed, and a door refusal
+  /// claimed no slot. `createPost` enforces the same window from its own
+  /// timestamp, which is the copy that actually decides.
+  Post? liveSosOfMine(DateTime now) {
+    for (final post in state.posts) {
+      if (!post.isMine || post.tag != PostTag.sos) continue;
+      if (post.status == PostStatus.failed ||
+          post.status == PostStatus.capped ||
+          post.status == PostStatus.blocked) {
+        continue;
+      }
+      if (_refusedAtDoor.contains(post.id)) continue;
+      if (now.difference(post.createdAt) < LpAllowances.sosPinWindow) {
+        return post;
+      }
+    }
+    return null;
+  }
+
   /// Optimistic: the post is in the author's feed at once, marked `pending`
   /// — every post is born pending on the backend and only the server flips
   /// it live. Once the backend acknowledges, the local copy is rebound to
@@ -223,8 +252,8 @@ class CommunityStore extends Notifier<CommunityState> {
       serverId = await _repo.addPost(local);
     } on ContentRefusedException catch (refusal) {
       // The server refused the content itself. Final either way, so no
-      // retry is offered — but the three reasons read differently, and two of
-      // them are allowances rather than content judgements.
+      // retry is offered — but the four reasons read differently, and three
+      // of them are allowances rather than content judgements.
       switch (refusal.reason) {
         case ContentRefusal.rules:
           // Not a limit: nothing about this post would be allowed at any tier,
@@ -233,6 +262,14 @@ class CommunityStore extends Notifier<CommunityState> {
           _setStatus(local.id, PostStatus.blocked);
         case ContentRefusal.dailyCap:
           _reportLimit(LpLimit.communityCap);
+          _setStatus(local.id, PostStatus.capped);
+        case ContentRefusal.sosCooldown:
+          // The composer gates this too, so reaching here is a client that
+          // skipped it — or, legitimately, a second SOS sent from a second
+          // device. Filed as `capped` (an allowance, not a judgement), and
+          // it claimed no slot, so it must not count against today's three.
+          _reportLimit(LpLimit.communityCap);
+          _refusedAtDoor.add(local.id);
           _setStatus(local.id, PostStatus.capped);
         case ContentRefusal.premium:
           // The composer gates this before the send; reaching here means a

@@ -369,6 +369,49 @@ void main() {
 
       expect(decoded.text, isNull);
     });
+
+    test("Ember's follow-up suggestions survive the round trip", () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        text: 'Fifteen minutes and it breaks.',
+        followUps: ['what if it doesnt', 'give me something', 'i already caved'],
+      );
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(CoachReplyCodec.encode(reply)))
+            as Map<String, dynamic>,
+      );
+
+      expect(decoded.followUps, reply.followUps);
+    });
+
+    test('a backend that omits the suggestions falls back to the chips', () {
+      // Empty, never null: the chip row reads "no suggestions" as "show the
+      // four openers", which is what every client did before this field and
+      // what every restored transcript still does.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': const <String, Object>{},
+        'showWeekCard': false,
+        'text': 'hello',
+      });
+
+      expect(decoded.followUps, isEmpty);
+    });
+
+    test('a blank or non-string suggestion is dropped, not rendered', () {
+      // A chip with nothing written on it is worse than one chip fewer, and
+      // the list is model output — it is worth being strict about.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': const <String, Object>{},
+        'showWeekCard': false,
+        'text': 'hello',
+        'followUps': ['  keep going  ', '   ', 7, null, 'and again'],
+      });
+
+      expect(decoded.followUps, ['keep going', 'and again']);
+    });
   });
   group('EntitlementCodec', () {
     test('an active subscription survives a full JSON round-trip', () {

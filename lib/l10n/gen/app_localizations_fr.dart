@@ -921,7 +921,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Coach IA illimité qui se souvient de ton pourquoi';
 
   @override
-  String get paywallFeatPanic => 'Bouton panique : tue l\'envie en 60 secondes';
+  String get paywallFeatPanic =>
+      'Les trois jeux anti-craving, pas seulement Orbs';
 
   @override
   String get paywallFeatPlan => 'Un plan qui s\'adapte quand tu craques';
@@ -1130,33 +1131,86 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get freePlanTitle => 'Le Gratuit te met en route.';
+  String get freePlanColFree => 'FREE';
+
+  @override
+  String get freePlanColPro => 'PRO';
+
+  @override
+  String get freeCompareLog => 'Journal de bouffées + séries';
+
+  @override
+  String get freeCompareMoney => 'Compteur d\'économies';
+
+  @override
+  String get freeCompareCoach => 'Messages au coach';
+
+  @override
+  String get freeCompareGames => 'Jeux anti-craving';
+
+  @override
+  String get freeComparePosts => 'Posts dans la communauté';
+
+  @override
+  String get freeCompareHistory => 'Historique des stats';
+
+  @override
+  String get freeCompareHealth => 'Frise santé';
+
+  @override
+  String get freeComparePlan => 'Le plan s\'adapte chaque soir';
+
+  @override
+  String get freeCompareForecast => 'Prévisions de cravings';
+
+  @override
+  String get freeCompareReport => 'Rapport hebdo';
+
+  @override
+  String freeComparePerDay(int n) {
+    return '$n/jour';
+  }
+
+  @override
+  String freeCompareDays(int days) {
+    return '$days jours';
+  }
+
+  @override
+  String freeCompareNodes(int n) {
+    return '$n étapes';
+  }
+
+  @override
+  String get freeCompareForever => 'Tout';
+
+  @override
+  String get freeCompareAll => 'Tout';
+
+  @override
+  String freePlanProCta(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Essaie Pro gratuitement $days jours',
+      one: 'Essaie Pro gratuitement un jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get freePlanTitle => 'Tu es en Free.';
 
   @override
   String get freePlanSubtitle =>
-      'À toi pour toujours. Pas de compte à rebours, pas de harcèlement.';
-
-  @override
-  String get freePlanFeat1 => 'Journal de taffes + séries';
-
-  @override
-  String get freePlanFeat2 => 'Compteur d\'économies';
-
-  @override
-  String get freePlanFeat3 => '5 messages de coach par jour';
-
-  @override
-  String get freePlanFeat4 => 'Bouton panique, chaque fois que tu en as besoin';
-
-  @override
-  String get freePlanFeat5 => 'Communauté — lire, réagir, un post par jour';
+      'À toi pour toujours. Pas de compte à rebours, pas de relances.';
 
   @override
   String get freePlanUpgradeNote =>
-      'Passe à Premium quand tu veux — ta série et ton historique te suivent.';
+      'Passe à Pro quand tu veux — ta série et ton historique te suivent.';
 
   @override
-  String get freePlanCta => 'Commencer en Gratuit';
+  String get freePlanCta => 'Commencer avec Free';
 
   @override
   String get winbackBadge => 'OFFRE FONDATEUR · UNE SEULE FOIS';
@@ -1529,6 +1583,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get gameNameOrbs => 'Orbes';
+
+  @override
+  String gameLockedTitle(String game) {
+    return '$game est un jeu Premium.';
+  }
+
+  @override
+  String gameLockedBody(String game) {
+    return '$game est à toi gratuitement, pour toujours — et ça marche aussi bien.';
+  }
+
+  @override
+  String gameLockedPlayFree(String game) {
+    return 'Jouer à $game';
+  }
 
   @override
   String get gameHintTiles => 'Tape la tuile du bas dans sa colonne.';
@@ -2188,6 +2257,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get communityRuleSourcing =>
       'Pas de « où acheter » ni de ventes ici. Modifie et réessaie.';
+
+  @override
+  String get communityTooShort =>
+      'Quelques mots de plus — assez pour qu\'on puisse vraiment t\'aider.';
+
+  @override
+  String get communityTooRepetitive =>
+      'Dis-le avec tes mots — c\'est ça qui déclenche une réponse.';
+
+  @override
+  String get communitySosStillUp =>
+      'Ton SOS est toujours en haut du fil. Les gens le voient.';
 
   @override
   String communityDailyCapReached(int limit) {

@@ -90,7 +90,7 @@ void main() {
   test('retry is only for a post that failed', () async {
     final c = await feed();
     final store = c.read(communityStoreProvider.notifier);
-    const text = 'week two';
+    const text = 'week two and still here';
     store.addPost(text: text, tag: PostTag.milestone);
     await pumpEventQueue();
     expect(mine(c, text).status, PostStatus.live);
