@@ -35,6 +35,8 @@ void main() {
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
       launchPaywallShownCount: 3,
+      celebratedMilestones: {'spark', 'weekFlame'},
+      armedMilestone: 'weekFlame',
     );
 
     await SettingsPersistence.save(saved);
@@ -43,6 +45,11 @@ void main() {
 
     expect(loaded.themeMode, ThemeMode.dark);
     expect(loaded.locale?.languageCode, 'fr');
+    // A promise already made must not be made twice on the next launch.
+    expect(loaded.celebratedMilestones, {'spark', 'weekFlame'});
+    // Which one is on the device clock has to survive too, or switching
+    // notifications off after a restart cannot hand it back.
+    expect(loaded.armedMilestone, 'weekFlame');
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -95,6 +102,8 @@ void main() {
       'winbackShown',
       'launchPaywallShownDay',
       'launchPaywallShownCount',
+      'celebratedMilestones',
+      'armedMilestone',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });

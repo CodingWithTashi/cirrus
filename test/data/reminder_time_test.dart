@@ -185,6 +185,7 @@ class _RecordingSink implements ReminderSink {
   @override
   Future<void> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
   }) async {}

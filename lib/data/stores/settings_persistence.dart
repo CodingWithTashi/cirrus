@@ -28,6 +28,8 @@ abstract final class SettingsPersistence {
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
+  static const _celebrated = 'settings.celebratedMilestones';
+  static const _armedMilestone = 'settings.armedMilestone';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -55,6 +57,10 @@ abstract final class SettingsPersistence {
         launchPaywallShownCount:
             prefs.getInt(_launchPaywallCount) ??
             defaults.launchPaywallShownCount,
+        celebratedMilestones:
+            prefs.getStringList(_celebrated)?.toSet() ??
+            defaults.celebratedMilestones,
+        armedMilestone: prefs.getString(_armedMilestone),
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -77,6 +83,16 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
       await prefs.setInt(_launchPaywallCount, state.launchPaywallShownCount);
+      await prefs.setStringList(
+        _celebrated,
+        state.celebratedMilestones.toList(),
+      );
+      final armed = state.armedMilestone;
+      if (armed == null) {
+        await prefs.remove(_armedMilestone);
+      } else {
+        await prefs.setString(_armedMilestone, armed);
+      }
       final day = state.launchPaywallShownDay;
       if (day == null) {
         await prefs.remove(_launchPaywallDay);

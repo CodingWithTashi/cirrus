@@ -10,7 +10,9 @@ import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
 import '../data/backend_mode.dart';
 import '../data/stores/providers.dart';
+import '../data/stores/widget_mirror.dart';
 import '../domain/logic/reminder_planner.dart';
+import '../domain/models/journey_state.dart';
 import '../domain/models/models.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
@@ -40,7 +42,9 @@ class LastPuffApp extends ConsumerWidget {
           // reminder copy has to be in the user's language.
           _ServerStateSync(
             child: _PushSync(
-              child: _ReminderSync(child: child ?? const SizedBox.shrink()),
+              child: _ReminderSync(
+                child: _WidgetSync(child: child ?? const SizedBox.shrink()),
+              ),
             ),
           ),
           const Align(alignment: Alignment.topCenter, child: OfflineBanner()),
@@ -111,6 +115,11 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
         // The nudge is about the hour ahead; Home is where it is lived. The
         // redirect still sends a signed-out phone to sign-in.
         _router.go(Routes.home);
+      case ReminderKind.milestone:
+        // The badge it is about lives on the milestones grid, which is a
+        // pushed detail screen with a back chevron — so `push`, not `go`,
+        // or it would land there with nothing to go back to.
+        if (path != Routes.milestones) _router.push(Routes.milestones);
     }
   }
 
@@ -143,12 +152,155 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
               entitlement: entitlement,
               trialTitle: l10n.trialEndingNotifTitle,
               trialBody: l10n.trialEndingPush,
+              milestoneTitle: l10n.milestoneNotifTitle,
+              milestoneBody: (badgeId) => _milestoneBody(l10n, badgeId),
+              // Marked when the celebration is SCHEDULED, not when it fires:
+              // nothing observes a notification going off, so an unmarked
+              // badge would re-arm on every resume for ever.
+              onMilestoneScheduled: ref
+                  .read(settingsStoreProvider.notifier)
+                  .markMilestonesCelebrated,
+              onMilestonesWithdrawn: ref
+                  .read(settingsStoreProvider.notifier)
+                  .releaseArmedMilestone,
               now: now,
             )
             .ignore();
       });
     }
     return child;
+  }
+}
+
+/// The celebration copy for one badge.
+///
+/// Resolved here, under the `Localizations` scope, and passed down as a plain
+/// String — the scheduler has no `BuildContext` and a notification fired in the
+/// wrong language is worse than none. The ids are
+/// `MilestoneReminderPlanner.celebrated`; anything else falls back to the
+/// title's own line rather than an empty bubble.
+String _milestoneBody(AppLocalizations l10n, String badgeId) => switch (badgeId) {
+  'spark' => l10n.milestoneNotifSpark,
+  'weekFlame' => l10n.milestoneNotifWeekFlame,
+  'twoWeekFlame' => l10n.milestoneNotifTwoWeekFlame,
+  'inferno' => l10n.milestoneNotifInferno,
+  'freedomDay' => l10n.milestoneNotifFreedomDay,
+  _ => l10n.milestoneNotifTitle,
+};
+
+/// Keeps the home-screen widget in step with the journey, and picks up the
+/// puffs it logged while the app was closed.
+///
+/// Renders nothing. Sits inside [_ReminderSync] so it is under a
+/// `Localizations` scope: the widget draws localized copy, and pushing it from
+/// here is what lets the native layout ship with no `res/values-*/strings.xml`
+/// of its own — ARB stays the single source, and a language change in Settings
+/// repaints the widget on the next push for free.
+///
+/// Does nothing on the fake backend, where [widgetCoordinatorProvider] is null
+/// and there is no home screen to talk to.
+class _WidgetSync extends ConsumerStatefulWidget {
+  const _WidgetSync({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_WidgetSync> createState() => _WidgetSyncState();
+}
+
+class _WidgetSyncState extends ConsumerState<_WidgetSync> {
+  AppLifecycleListener? _listener;
+  ProviderSubscription<JourneyState?>? _session;
+
+  @override
+  void initState() {
+    super.initState();
+    final coordinator = ref.read(widgetCoordinatorProvider);
+    if (coordinator == null) return;
+
+    // Constructed here rather than lazily: the listener registers itself with
+    // the binding on construction.
+    _listener = AppLifecycleListener(onResume: _drain);
+
+    // Cold launch. `restoreSession` resolves inside the splash, roughly a
+    // second and a half in, and every other session-establishing path
+    // (email, Apple, Google, a brand-new journey) lands on the same
+    // transition — so this one hook covers all of them without polling, and
+    // without firing before there is a day map to apply anything to.
+    _session = ref.listenManual<JourneyState?>(quitStoreProvider, (
+      previous,
+      next,
+    ) {
+      if (previous == null && next != null) {
+        _drain();
+      } else if (previous != null && next == null) {
+        // Signed out or deleted. Whatever the widget queued belonged to that
+        // account, and on a shared phone the next person to sign in must not
+        // inherit it.
+        unawaited(coordinator.discardQueued());
+      }
+    });
+  }
+
+  void _drain() {
+    final coordinator = ref.read(widgetCoordinatorProvider);
+    if (coordinator == null) return;
+    // Every foreground re-pushes the mirror even if nothing changed. `push`
+    // skips identical content, so a repaint that failed for any reason would
+    // otherwise never be retried and the widget would sit there stale; one
+    // trip through the app now puts it right whatever went wrong.
+    coordinator.invalidate();
+    // After the day clock has been refreshed by _ServerStateSync's own resume
+    // handler, so a queue that spans midnight is folded in against the right
+    // today. Fire-and-forget: nothing on screen waits for it.
+    unawaited(
+      coordinator.drain(
+        ref.read(quitStoreProvider.notifier),
+        now: ref.read(nowProvider)(),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _session?.close();
+    _listener?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinator = ref.watch(widgetCoordinatorProvider);
+    if (coordinator == null) return widget.child;
+
+    final journey = ref.watch(quitStoreProvider);
+    // Watched for the dependency as much as the value: it recomputes when the
+    // day turns, which is what refreshes the widget's day number at midnight
+    // without a single line of scheduling.
+    final snapshot = ref.watch(todayProvider);
+    final l10n = AppLocalizations.of(context);
+
+    final mirror = buildMirror(
+      journey: journey,
+      snapshot: snapshot,
+      copy: WidgetCopy(
+        day: l10n.widgetDay,
+        leftAhead: l10n.widgetLeftAhead,
+        leftTight: l10n.widgetLeftTight,
+        overLimit: l10n.widgetOverLimit,
+        emptyTitle: l10n.widgetEmptyTitle,
+        emptyBody: l10n.widgetEmptyBody,
+      ),
+      now: ref.read(nowProvider)(),
+    );
+
+    // After the frame, so logging a puff never blocks its own rebuild on a
+    // platform channel — the same reason _ReminderSync defers its sync.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      coordinator.push(mirror, now: ref.read(nowProvider)()).ignore();
+    });
+
+    return widget.child;
   }
 }
 

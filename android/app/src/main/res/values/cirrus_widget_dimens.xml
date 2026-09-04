@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="cw_radius">20dp</dimen>
+    <dimen name="cw_pad">14dp</dimen>
+    <!-- 48dp is the touch-target floor. A widget button below it is the single
+         most common complaint on any home-screen widget. -->
+    <dimen name="cw_btn_h">48dp</dimen>
+    <dimen name="cw_minus_w">54dp</dimen>
+</resources>

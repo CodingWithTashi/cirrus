@@ -49,6 +49,13 @@ dependencies:
   showcaseview: ^5.1.0
   purchases_flutter: ^10.10.1
   package_info_plus: ^10.2.1
+  # The home-screen widget bridge (docs/03 §10). MUST stay a real dependency:
+  # Flutter's Gradle plugin strips dev-dependency plugins from RELEASE builds
+  # (PluginHandler.kt), so under `dev_dependencies` the widget works under
+  # `flutter run` and silently vanishes from the Play bundle — the same shape
+  # as the B18 receivers that fired into nothing. `test/android_widget_test.dart`
+  # fails if it moves back.
+  home_widget: ^0.9.4
 
 
 dev_dependencies:

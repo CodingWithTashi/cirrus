@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Midnight Ember is already the dark palette, so night is the same set.
+     The file exists so the two are pinned equal by name (see the note in
+     values/cirrus_widget_colors.xml) and so a future Daylight variant has one
+     obvious place to go. -->
+<resources>
+    <color name="cw_surface">#161A22</color>
+    <color name="cw_surface_low">#10131A</color>
+    <color name="cw_border">#232A36</color>
+    <color name="cw_text">#FFFFFF</color>
+    <color name="cw_text_dim">#9AA3B2</color>
+    <color name="cw_volt">#C8F542</color>
+    <color name="cw_volt_track">#1FC8F542</color>
+    <color name="cw_volt_line">#33C8F542</color>
+    <color name="cw_on_volt">#0A0C10</color>
+    <color name="cw_danger">#FF5C5C</color>
+    <color name="cw_danger_line">#80FF5C5C</color>
+</resources>

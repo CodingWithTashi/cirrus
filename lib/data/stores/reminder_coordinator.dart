@@ -12,10 +12,11 @@ import 'settings_store.dart';
 /// not re-hit the OS scheduler, or a heavy logging day would cancel and
 /// rebuild the same alarms hundreds of times.
 ///
-/// Two independent schedules live here, each with its own fingerprint: the
-/// repeating danger-hour nudges (ids 1000–1023) and the one-shot trial-ending
-/// reminder (id 2000). Independent on purpose — a puff tap must never wipe
-/// the trial reminder, which is exactly what a shared cancel-all used to do.
+/// Three independent schedules live here, each with its own fingerprint: the
+/// repeating danger-hour nudges (ids 1000–1023), the one-shot trial-ending
+/// reminder (id 2000), and the milestone celebration (3000+). Independent on
+/// purpose — a puff tap must never wipe the trial reminder, which is exactly
+/// what a shared cancel-all used to do.
 class ReminderCoordinator {
   ReminderCoordinator(this._sink);
 
@@ -29,6 +30,9 @@ class ReminderCoordinator {
   /// Fingerprint of the last applied trial-ending reminder.
   String? _trialApplied;
 
+  /// Fingerprint of the last scheduled milestone celebration.
+  String? _milestoneApplied;
+
   /// Reminder taps, for the app to route on. See [ReminderSink.opened].
   Stream<ReminderKind> get opened => _sink.opened;
 
@@ -40,16 +44,28 @@ class ReminderCoordinator {
     Entitlement entitlement = const Entitlement.none(),
     String trialTitle = '',
     String trialBody = '',
+    String milestoneTitle = '',
+    String Function(String badgeId)? milestoneBody,
+    void Function(String armed, Set<String> covers)? onMilestoneScheduled,
+    void Function()? onMilestonesWithdrawn,
     DateTime Function() now = DateTime.now,
   }) async {
     // Signed out, or notifications declined: clear the device rather than
     // simply stopping — yesterday's schedule would otherwise keep firing at
     // someone who has explicitly opted out. Everything goes, both schedules.
     if (journey == null || !settings.notificationsOn) {
-      if (_applied != _cleared || _trialApplied != _cleared) {
+      if (_applied != _cleared ||
+          _trialApplied != _cleared ||
+          _milestoneApplied != _cleared) {
         _applied = _cleared;
         _trialApplied = _cleared;
+        _milestoneApplied = _cleared;
         await _sink.cancelAll();
+        // `cancelAll` takes the milestone ids with it, and the badge is marked
+        // settled at scheduling time — so without this the celebration is not
+        // withdrawn, it is destroyed: switching notifications back on finds
+        // nothing owed and never re-arms it.
+        onMilestonesWithdrawn?.call();
       }
       return;
     }
@@ -62,6 +78,57 @@ class ReminderCoordinator {
       title: trialTitle,
       body: trialBody,
     );
+    if (milestoneBody != null) {
+      await _syncMilestone(
+        journey,
+        settings,
+        now: now(),
+        title: milestoneTitle,
+        body: milestoneBody,
+        onScheduled: onMilestoneScheduled,
+      );
+    }
+  }
+
+  /// Schedules the celebration owed for a badge already earned.
+  ///
+  /// **Never withdrawn.** Unlike the trial reminder, whose reason can evaporate
+  /// — converted, lapsed, toggled off — an earned badge stays earned. And the
+  /// moment one is marked celebrated the planner answers null, so a
+  /// cancel-on-null branch here would delete the very notification the previous
+  /// sync had just armed. Only the top-level notifications-off `cancelAll`
+  /// takes it down.
+  Future<void> _syncMilestone(
+    JourneyState journey,
+    SettingsState settings, {
+    required DateTime now,
+    required String title,
+    required String Function(String badgeId) body,
+    void Function(String armed, Set<String> covers)? onScheduled,
+  }) async {
+    final celebration = MilestoneReminderPlanner.plan(
+      earnedBadges: journey.earnedBadges,
+      celebratedBadges: settings.celebratedMilestones,
+      now: now,
+      quietStartHour: settings.quietStartHour,
+      quietEndHour: settings.quietEndHour,
+      enabled: settings.notificationsOn,
+    );
+    if (celebration == null) return;
+
+    final fingerprint =
+        '${celebration.reminder.id}@${celebration.badgeId}'
+        '@${celebration.reminder.at.toIso8601String()}';
+    if (fingerprint == _milestoneApplied) return;
+    _milestoneApplied = fingerprint;
+
+    await _sink.scheduleOnce(
+      celebration.reminder,
+      kind: ReminderKind.milestone,
+      title: title,
+      body: body(celebration.badgeId),
+    );
+    onScheduled?.call(celebration.badgeId, celebration.covers);
   }
 
   Future<void> _syncDangerHours(
@@ -118,7 +185,12 @@ class ReminderCoordinator {
       // is withdrawn along with the reason for it.
       await _sink.cancel(TrialReminderPlanner.id);
     } else {
-      await _sink.scheduleOnce(reminder, title: title, body: body);
+      await _sink.scheduleOnce(
+        reminder,
+        kind: ReminderKind.trial,
+        title: title,
+        body: body,
+      );
     }
   }
 

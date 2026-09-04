@@ -172,6 +172,72 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <!-- Home-screen widget (docs/03 SS10, docs/08 B14/B21). One provider,
+             two layouts: it reflows from 2x2 to 4x2 rather than shipping two
+             entries in the picker.
+
+             NOT exported. Every filter below carries either a protected system
+             action (APPWIDGET_UPDATE, sent only by AppWidgetService) or one of
+             our own two, which only the PendingIntents this provider hands the
+             launcher can fire. Exported, any app on the device could broadcast
+             .PLUS and write puffs into someone's own record.
+
+             android:name comes first because test/android_widget_test.dart and
+             test/android_manifest_test.dart both read receivers with
+             `<receiver[^>]*android:name="([^"]+)"` - an attribute that lands
+             after the opening tag's `>` is invisible to them.
+
+             No new permission, and none needed: the tap is a broadcast to our
+             own component, and the repaint across midnight is
+             updatePeriodMillis (an inexact, batched, non-wakeup alarm the
+             framework owns). Nothing here goes near SCHEDULE_EXACT_ALARM. -->
+        <receiver
+            android:name="com.quitvape.last_puff.widget.CirrusWidgetProvider"
+            android:label="@string/cw_picker_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="com.quitvape.last_puff.widget.PLUS"/>
+                <action android:name="com.quitvape.last_puff.widget.MINUS"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cirrus_widget_info"/>
+        </receiver>
+
+        <!-- Delivers the midnight repaint. The day number and the count both
+             change at local midnight and nothing repaints a widget on its own;
+             home_widget arms one alarm per provider for the next scheduled
+             time and this receiver both consumes it and arms the following
+             one. It also re-arms everything after a reboot or an app update,
+             which is what RECEIVE_BOOT_COMPLETED - already declared above for
+             flutter_local_notifications - does double duty for.
+
+             The plugin deliberately does NOT declare this itself, precisely so
+             that apps which never schedule an update do not inherit the boot
+             permission. An unregistered receiver never gets the alarm and the
+             widget silently shows yesterday until the 30-minute
+             updatePeriodMillis floor catches it; HomeWidgetScheduler only logs
+             a warning.
+
+             INEXACT, and that is the point: HomeWidgetScheduler calls
+             canScheduleExactAlarms() and falls back to setAndAllowWhileIdle
+             when it is false, which it always is here. The plugin documents a
+             third action for this filter,
+             SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED; it is deliberately
+             OMITTED, because it can only ever fire for an app holding that
+             permission - which this one never will (founder decision Sep 2
+             2026) - and it would put that string into a manifest whose test
+             file exists to keep it out. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

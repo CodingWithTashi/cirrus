@@ -72,8 +72,8 @@
 | 48b | Slip — adjust | bumped curve reflow, +2 days honest stretch, dimmed-flame card, coach path | ✅ |
 | 49 | Profile | Freedom-Day countdown hero, Your Why, lifetime stats, alias/avatar editor | ✅ |
 | 50 | Settings | account, subscription lifecycle routes, notifications + inline danger-hours editor, privacy export/delete, Appearance, Language (added), sign out | ✅ |
-| 51 | Push set | lock-screen mock reference — in-app renderings exist (D4 danger-hour preview, trial-ending push); OS push delivery is FCM phase | 🔌 |
-| 52 | Widgets + states | empty-stats state ✅ · offline pill + error card built as `LpOfflineBanner`/`LpErrorCard` (`core/widgets/lp_misc.dart`) 📐 — surfaced when real IO exists · iOS/Android home-screen widgets = native WidgetKit phase (docs/05 §3) | ✅ / 📐 / 🔌 |
+| 51 | Push set | all three now real. #1 danger-hour = on-device `ReminderKind.danger`; #2 **streak celebration = `ReminderKind.milestone`, added Sep 4 2026** — fires at 08:00 the morning after one of the five flame badges is earned, and only ever for a badge already permanently held; #3 "buddy SOS" = the `sosReply` push from `moderateReply` (the buddy framing went with Quit Buddies). Two pushes exist the frame never drew: `insightReady` and the trial-ending reminder | ✅* |
+| 52 | Widgets + states | empty-stats state ✅ · offline pill + error card ✅ (`OfflineBanner`, `LpErrorState`, mounted app-wide) · **Android home-screen widget ✅ Sep 4 2026** — one resizable provider, day number above the count, `+`/`−` that log while the app is dead · **lock-screen widget: Android has none for phones**, so that frame is iOS-only and waits on the Xcode target | ✅ / ✅ / 🔌 iOS |
 
 ## Run 2 Light — `LastPuff Run 2 Light.dc.html` (Daylight Ember) — priority 4 (last)
 

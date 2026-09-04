@@ -883,7 +883,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Um toque antes das tuas horas de perigo e outro antes de o teste acabar.';
+      'Nada de spam. Um aviso antes das suas horas de risco, outro antes de a avaliação acabar, e uma palavra quando você bate um marco.';
 
   @override
   String get obNotifPreviewTime => 'Sex 21:54';
@@ -897,7 +897,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'Um aviso antes de o teste acabar — sem cobranças surpresa';
+      'Um aviso antes de a avaliação acabar, e uma comemoração de cada marco';
 
   @override
   String get obNotifBullet3 => 'Mais nada — marketing nunca';
@@ -3171,4 +3171,45 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get slipCurveNoteJustHappened =>
       'Dois dias extra, mesmo destino. Acontece. O registo continua honesto e amanhã é um dia limpo.';
+
+  @override
+  String get widgetDay => 'dia %1\$d';
+
+  @override
+  String get widgetLeftAhead => '%1\$d de folga · está adiantado';
+
+  @override
+  String get widgetLeftTight => '%1\$d de folga · apertado, mas dá';
+
+  @override
+  String get widgetOverLimit => 'passou a linha de hoje · sem culpa';
+
+  @override
+  String get widgetEmptyTitle => 'Comece seu plano';
+
+  @override
+  String get widgetEmptyBody => 'Toque para abrir Cirrus';
+
+  @override
+  String get milestoneNotifTitle => 'Venha ver sua chama';
+
+  @override
+  String get milestoneNotifSpark =>
+      'Três dias limpos. O mais difícil ficou para trás — sua chama está acesa.';
+
+  @override
+  String get milestoneNotifWeekFlame =>
+      'Uma semana inteira. Sete dias que você não sabia se tinha.';
+
+  @override
+  String get milestoneNotifTwoWeekFlame =>
+      'Duas semanas. DUAS SEMANAS. Sua chama virou fogueira.';
+
+  @override
+  String get milestoneNotifInferno =>
+      'Trinta dias. Ninguém te deu isso de presente.';
+
+  @override
+  String get milestoneNotifFreedomDay =>
+      'Dia da Liberdade. O plano acabou, e quem terminou foi você.';
 }

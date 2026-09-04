@@ -2531,3 +2531,139 @@ reports a missing plugin module, count the `from project 'Pods'` lines in the
 log *before* opening the plugin's podspec.
 
 Pinned as a gotcha in `CLAUDE.md`. No code changed — there was nothing to fix.
+
+---
+
+## 23. THE WIDGET THE STORE HAD ALREADY SOLD (Sep 4) — and the notification seventeen badges never got
+
+Two of the 52 design frames were never finished, and a cross-check found both: frame 52's home-screen widget did not exist, and frame 51's streak celebration did not exist. The forcing function was **B21** — the live Play listing advertises the widget twice — so this was a shipping-honesty fix, not a feature.
+
+### The widget
+
+`CirrusWidgetProvider`, the first hand-written native code in this repo. One resizable provider (2x2 → 4x2), **day number on top, count below**, with a `+` and a `−`.
+
+**The design's two frames collapse into one.** Android has no phone lock-screen widget — Google removed them in 5.0 and Android 14 brought them back for tablets only — so the lock-screen frame is iOS-only. And `RemoteViews` has no long-click API (there is no `setOnLongClickPendingIntent`, and the launcher swallows long-press to move the widget anyway), so the correction affordance is a persistent `−` rather than the long-press first chosen.
+
+**The architecture is an outbox, which `docs/03 §2` already specified**: *"widget logs queue via App Group storage and flush on next app/widget process wake."* The widget never touches Firebase. It appends a timestamped event; the app drains it through the same `JourneyStore.logPuff(at:)` the in-app button uses, so day keys, hour buckets, over-limit transitions and the repair-token wallet have exactly one implementation. A second copy of that maths in Kotlin is how `streakEngine.ts` and `streak_engine.dart` drifted (B12).
+
+**Every shared key has exactly one writer.** Neither `SharedPreferences` nor `UserDefaults` offers compare-and-swap, so a key written by both processes is a read-modify-write race and a tap can simply vanish. `lp.outbox` and `lp.seq` are the widget's; `lp.cursor` and `lp.mirror` are the app's. Dart never writes the queue — it reads what is above the cursor, applies it, and publishes a new cursor. The widget prunes below that cursor on its next append, which is what bounds the queue.
+
+**Three bugs found and fixed on the way:**
+
+1. **`lastPuffAt` moved backwards.** `logPuff` set it unconditionally, and every caller in `lib/` passed `at: null`, so nothing had ever exercised it. A tap queued at 23:50 and drained at 09:00 would have dragged the health timeline's anchor back overnight and handed the user recovery milestones they had not earned. It now only ever moves forward — a no-op for all four existing callers.
+2. **`undoPuffs` was today-only.** A `−` tapped at 23:58 and drained at 00:04 would have taken a puff off *today*, corrupting two days at once: the one that keeps a puff it did not have and the one that loses one it did. It takes an `at` now, like `logPuff`.
+3. **The milestone planner rolled the day with `LpDate.addDays`**, which deliberately lands on local midnight because it exists to build day keys — so the celebration lost its 08:00. It read correctly only because the default 23→8 quiet window pushed midnight back up to 08:00; anyone who widened their quiet hours would have been congratulated at midnight. Caught by a test, pinned by two more.
+
+**The drain is one document write, not N.** `journeys/{uid}` is a whole-document `set()`, so twelve queued events would have been twelve unordered fire-and-forget writes of strictly superseded states — eleven of them waste, and any one of them the last thing the server saw if the app died. `applyPendingPuffs` holds the write back. It deliberately does **not** await it: Firestore's write future completes on *server* ack, so awaiting would hang for a whole offline session, and a cursor that waits for that ack never advances — which is precisely how the next launch double-counts. The SDK's own mutation queue is durable, so "called" is as good as "landed".
+
+**Device verification** (Pixel 8, Android 17, process killed with `am kill` — never `force-stop`, which sets `FLAG_STOPPED` and makes Android drop every broadcast to the package): a tap cold-started the process and appended one event; the sequence `+1 −1 −1 −1` tracked 3→2→1→0 and the next `−` was refused at zero with no event written; the drain applied a net −1 exactly and moved the cursor to 5; three relaunches over the same queue changed nothing; the next append pruned all five drained events.
+
+**Two things worth knowing.** `home_widget` drags in `androidx.work`, which adds the `FOREGROUND_SERVICE` permission and a startup initializer this app never uses — left in place because removing an androidx component's permission risks a crash for no user-visible gain, but it is the B19 shape and worth a look before submission. And `home_widget` was sitting in `dev_dependencies`: Flutter's Gradle plugin strips dev-dependency plugins from **release** builds, so the widget would have worked perfectly in every debug build and silently vanished from the Play bundle — the same shape as the B18 receivers. `test/android_widget_test.dart` fails if it moves back.
+
+### The celebration
+
+`ReminderKind.milestone`, id 3000+. The name is not a choice: `test/copy_honesty_test.dart` is keyed off the enum and retires its own ban on the word the day a value called exactly that exists. The permission screen sold "milestone celebrations" in five languages while seventeen badges unlocked in silence; that copy is honest again now, and the ban on the word *streak* stays, because there is still no streak-risk reminder.
+
+**It only ever celebrates a badge already earned.** `earnedBadges` is a set union that never removes, so a scheduled celebration is a statement about something that has permanently happened — no forward-guessing a streak that might break tonight, which is the only way this notification could lie. Five moments across a 30-day plan: the ember-family badges at 3, 7, 14 and 30 days, plus Freedom Day. The other twelve are deliberately silent — they are all earned while the person is already looking at the app.
+
+### The day-rollover pass (same day, on device)
+
+Two more bugs, both found only by driving the clock on a real phone — neither
+was reachable from a unit test, and both were silent.
+
+1. **The widget never repainted when the app pushed a mirror.** `home_widget`
+   resolves `androidName` as `"<applicationId>.<value>"`, so passing a
+   fully-qualified provider name there looked up
+   `com.quitvape.last_puff.com.quitvape.last_puff.widget.CirrusWidgetProvider`,
+   threw `ClassNotFoundException` inside the plugin, returned an error across
+   the channel, and was swallowed by the write-behind catch. The mirror updated
+   every time; the pixels never did. It reads exactly like "the widget is
+   laggy" rather than like a bug. The parameter is `qualifiedAndroidName`, and
+   the gate test now pins both the name and the parameter it travels in.
+2. **Nothing repainted the widget at midnight with the app closed.** The day
+   number and the count both change there, and the only fallback was the
+   30-minute `updatePeriodMillis` floor. `HomeWidgetScheduler` now arms the next
+   seven local midnights whenever the day turns, delivered to
+   `HomeWidgetScheduledUpdateReceiver` — which the plugin deliberately does not
+   declare itself, so an app that forgets gets silence and a log line. Inexact
+   (`setAndAllowWhileIdle`, a one-hour window) and therefore **no new
+   permission**: `USE_EXACT_ALARM` is the one Play rejected this app for in the
+   first place, and the device pass proved it is not needed.
+
+**The matrix, on a Pixel 8 (Android 17), clock driven with `cmd alarm set-time`:**
+
+| Case | Result |
+|---|---|
+| Day 1 → 2, app opened | widget `day 2 · 0 · /90`, matches mirror |
+| Day 2 → 3 → 4 → 5, **app closed throughout** | `day 3 · /85`, `day 4 · /81`, `day 5 · /76` — the taper curve exactly, while the mirror stayed frozen on day 2 |
+| Day 8 (past the 7-day limit window) | `day 8`, count only, **no limit drawn** — it refuses to guess |
+| 3 taps on day 5, app closed | widget `3`, all three events stamped `2026-09-08` |
+| App opened after those taps | mirror `day 5 · 3 · /76`, cursor advanced, no double count |
+| 2 taps with the app **backgrounded** | widget `5` at once, mirror `3`; on resume both read `5` |
+| 6th `−` at zero | `refused`, no event written |
+| Reboot, app never launched | midnight alarm re-armed by `BOOT_COMPLETED` |
+| Clock restored | back to `day 1 · 35 · /95`, untouched |
+
+The day number is recomputed natively from the plan's start date on every
+render, so a missed repaint costs stale pixels and never a wrong number — and
+a tap on a stale widget still files the puff on the day it really happened,
+because `CirrusOutbox.append` re-reads the clock at tap time.
+
+### The reconciliation pass
+
+The 30-minute repaint floor is accepted as a display lag. What is not
+acceptable is the two sides ever *settling* on different numbers, so the drain
+was audited for every way it could fail to converge. One live bug and four
+holes.
+
+**The bug, caught on device.** Applying the drained events commits the journey,
+which triggers the app's own mirror push — and that push renders while the
+cursor is still at its old value, so the widget draws
+`newCount + theSameEventsStillPending` and reads one too high. Moving the
+cursor a moment later makes that number wrong, and because the mirror content
+has not changed since, the fingerprint skips every subsequent push. The widget
+showed **2 against a journey of 1, permanently**. A drain now always ends by
+repainting *after* the cursor lands.
+
+**The four holes, all closed:**
+
+1. **A refused write used to advance the cursor.** `save()` was fire-and-forget,
+   so a write the backend rejected outright — no signed-in account being the
+   realistic one — left the puffs in RAM only while the cursor moved past them.
+   A cold start reloaded a journey that never received them. Now the write is
+   awaited and the three outcomes are distinguished: **completes** → advance;
+   **times out** → advance, because Firestore's own mutation queue is durable
+   from the moment `set()` is called and a cursor that waits for a server ack
+   never advances offline; **throws** → do not advance.
+2. **...and the throw case had to become transactional.** Holding the cursor is
+   only right if the journey is also put back: otherwise the events stay queued
+   (correct) on top of a state that has already applied them (wrong), and the
+   next drain counts every one twice. The batch now rolls back to the exact
+   prior state.
+3. **A future-stamped event could mint a future day.** A clock that was wrong
+   when the tap happened would have `logPuff(at:)` create a day that has not
+   occurred, which then sits in the map as a confirmed day and can hand out a
+   streak nobody lived. Stamps are clamped to the drain's own clock.
+4. **A repaint that failed was never retried,** because `push` skips identical
+   content. Every foreground now invalidates the fingerprint first, so one trip
+   through the app heals the widget whatever went wrong.
+
+**Device evidence (Pixel 8, real Firebase):**
+
+| Case | Result |
+|---|---|
+| Tap during the stale window, just after midnight | pixels still read `day 1 · 35`; the tap computed `-> 1` — the display never contaminates the arithmetic |
+| That tap, after the app opened | `day 2 · 1`, day 1 still 35 |
+| 4 taps closed → open | widget 5 before and after the drain; mirror 5. The number never jumps |
+| 3 taps in airplane mode → open offline | drained to 8, widget and mirror agree |
+| Back online, flush, cold restart | still 8 — nothing lost, nothing doubled |
+| **12 concurrent taps**, app closed | exactly 12 applied; 8 → 20 |
+| Three kill/reopen cycles after that | 20, 20, 20 — no drift |
+| Clock restored | `day 1 · 35 · /95`, untouched |
+
+The invariant that makes the display lag harmless: **the count is recomputed
+from the clock at tap time, never read off the pixels.** A tap on a widget
+showing yesterday still files today's puff on today.
+
+`flutter analyze` 0 · `flutter test` **1111/1111**.
+

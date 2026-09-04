@@ -885,7 +885,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Pas de spam. Un rappel avant tes heures à risque, un autre avant la fin de ton essai.';
+      'Pas de spam. Un rappel avant tes heures à risque, un avant la fin de l’essai, et un mot quand tu atteins une étape.';
 
   @override
   String get obNotifPreviewTime => 'Ven 21:54';
@@ -899,7 +899,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'Un rappel avant la fin de ton essai — aucun prélèvement surprise';
+      'Un rappel avant la fin de l’essai, et une fête à chaque étape';
 
   @override
   String get obNotifBullet3 => 'Rien d\'autre — jamais de marketing';
@@ -3181,4 +3181,45 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get slipCurveNoteJustHappened =>
       'Deux jours de plus, même destination. Ça arrive. Le journal reste honnête, et demain est une journée propre.';
+
+  @override
+  String get widgetDay => 'jour %1\$d';
+
+  @override
+  String get widgetLeftAhead => '%1\$d restantes · tu es en avance';
+
+  @override
+  String get widgetLeftTight => '%1\$d restantes · juste, mais tu gères';
+
+  @override
+  String get widgetOverLimit => 'au-dessus de ta ligne · sans honte';
+
+  @override
+  String get widgetEmptyTitle => 'Commence ton plan';
+
+  @override
+  String get widgetEmptyBody => 'Touche pour ouvrir Cirrus';
+
+  @override
+  String get milestoneNotifTitle => 'Viens voir ta flamme';
+
+  @override
+  String get milestoneNotifSpark =>
+      'Trois jours nets. Le plus dur est derrière toi — ta flamme est allumée.';
+
+  @override
+  String get milestoneNotifWeekFlame =>
+      'Une semaine entière. Sept jours que tu n\'étais pas sûr d\'avoir.';
+
+  @override
+  String get milestoneNotifTwoWeekFlame =>
+      'Deux semaines. DEUX SEMAINES. Ta flamme est un brasier.';
+
+  @override
+  String get milestoneNotifInferno =>
+      'Trente jours. Personne ne te les a offerts.';
+
+  @override
+  String get milestoneNotifFreedomDay =>
+      'Jour de la Liberté. Le plan est fini, et tu l’as fini.';
 }

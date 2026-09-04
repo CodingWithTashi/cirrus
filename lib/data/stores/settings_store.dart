@@ -19,6 +19,8 @@ class SettingsState {
     this.winbackShown = false,
     this.launchPaywallShownDay,
     this.launchPaywallShownCount = 0,
+    this.celebratedMilestones = const {},
+    this.armedMilestone,
   });
 
   final ThemeMode themeMode;
@@ -52,6 +54,25 @@ class SettingsState {
   /// round again.
   final int launchPaywallShownCount;
 
+  /// Badge ids whose celebration has already been SCHEDULED.
+  ///
+  /// Marked at scheduling time, not at firing time: nothing observes a
+  /// notification going off, so an unmarked badge would re-schedule on every
+  /// resume for ever. Device-scoped rather than part of the journey on
+  /// purpose — the notification is a device's, and `journeys/{uid}` is
+  /// rewritten wholesale on every puff tap, which is where a server-shaped
+  /// field goes to die.
+  final Set<String> celebratedMilestones;
+
+  /// The badge whose celebration is currently on the device clock, if any.
+  ///
+  /// Tracked separately because [celebratedMilestones] means "settled", and
+  /// the two part company exactly once: switching notifications off cancels
+  /// every scheduled id, so the armed one has to become owed again or it is
+  /// lost for good — the badge stays earned, the planner sees it as settled,
+  /// and nothing ever re-arms it.
+  final String? armedMilestone;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
     Locale? Function()? locale,
@@ -63,6 +84,8 @@ class SettingsState {
     bool? winbackShown,
     String? launchPaywallShownDay,
     int? launchPaywallShownCount,
+    Set<String>? celebratedMilestones,
+    String? Function()? armedMilestone,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
     locale: locale != null ? locale() : this.locale,
@@ -77,6 +100,10 @@ class SettingsState {
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
     launchPaywallShownCount:
         launchPaywallShownCount ?? this.launchPaywallShownCount,
+    celebratedMilestones: celebratedMilestones ?? this.celebratedMilestones,
+    armedMilestone: armedMilestone != null
+        ? armedMilestone()
+        : this.armedMilestone,
   );
 }
 
@@ -135,6 +162,40 @@ class SettingsStore extends Notifier<SettingsState> {
       _commit(state.copyWith(trialReminderOn: on));
 
   void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
+
+  /// Records that [armed]'s celebration is on the clock and that every badge
+  /// in [covers] is settled.
+  ///
+  /// One write, not one per badge: a restored journey can settle four at once
+  /// and each `_commit` re-triggers the sync that called this.
+  void markMilestonesCelebrated(String armed, Set<String> covers) {
+    final next = {...state.celebratedMilestones, ...covers};
+    if (next.length == state.celebratedMilestones.length &&
+        state.armedMilestone == armed) {
+      return;
+    }
+    _commit(
+      state.copyWith(
+        celebratedMilestones: next,
+        armedMilestone: () => armed,
+      ),
+    );
+  }
+
+  /// Hands the armed celebration back to the planner, because the device no
+  /// longer holds it — notifications were switched off, which cancels every
+  /// scheduled id. Without this the badge stays "settled" for ever and the
+  /// promise is silently dropped when they are switched back on.
+  void releaseArmedMilestone() {
+    final armed = state.armedMilestone;
+    if (armed == null) return;
+    _commit(
+      state.copyWith(
+        celebratedMilestones: {...state.celebratedMilestones}..remove(armed),
+        armedMilestone: () => null,
+      ),
+    );
+  }
 
   /// Records that today's launch paywall was shown, so it is not shown again
   /// before the next local day.

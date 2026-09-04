@@ -19,10 +19,16 @@ abstract interface class ReminderSink {
     required String body,
   });
 
-  /// One notification at one instant — the trial-ending reminder. Replaces
-  /// any earlier one with the same id.
+  /// One notification at one instant — the trial-ending reminder and the
+  /// milestone celebration. Replaces any earlier one with the same id.
+  ///
+  /// [kind] becomes the payload, which is the only thing that tells a tap
+  /// where to land. It was hardcoded to `trial` while that was the only
+  /// one-shot; a second kind through the same door had to make it a parameter
+  /// or every milestone tap would have opened the trial-ending screen.
   Future<void> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
   });
@@ -80,6 +86,7 @@ class ReminderScheduler implements ReminderSink {
 
   static const _channelId = 'danger_hours';
   static const _trialChannelId = 'trial_reminders';
+  static const _milestoneChannelId = 'milestone_celebrations';
 
   Future<void> _ensureReady() async {
     if (_ready) return;
@@ -194,6 +201,7 @@ class ReminderScheduler implements ReminderSink {
   @override
   Future<void> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
   }) async {
@@ -207,9 +215,9 @@ class ReminderScheduler implements ReminderSink {
         // An absolute instant in the device's zone; the planner guarantees it
         // is in the future, which `zonedSchedule` insists on.
         scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
-        notificationDetails: _trialDetails(),
+        notificationDetails: _oneShotDetails(kind),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        payload: ReminderKind.trial.name,
+        payload: kind.name,
       );
     } on Object catch (error) {
       debugPrint('reminders: one-shot schedule failed — $error');
@@ -248,14 +256,29 @@ class ReminderScheduler implements ReminderSink {
     iOS: DarwinNotificationDetails(),
   );
 
-  NotificationDetails _trialDetails() => const NotificationDetails(
-    android: AndroidNotificationDetails(
-      _trialChannelId,
-      'Trial reminders',
-      channelDescription: 'The heads-up before a free trial ends.',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+  /// Channels are OS surface, not app copy, so these stay English like the
+  /// two above them. A celebration gets its own channel so someone who wants
+  /// the danger-hour nudge but not the confetti can say so in system settings.
+  NotificationDetails _oneShotDetails(ReminderKind kind) => switch (kind) {
+    ReminderKind.milestone => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _milestoneChannelId,
+        'Milestone celebrations',
+        channelDescription: 'The morning after you hit a streak milestone.',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      ),
+      iOS: DarwinNotificationDetails(),
     ),
-    iOS: DarwinNotificationDetails(),
-  );
+    _ => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _trialChannelId,
+        'Trial reminders',
+        channelDescription: 'The heads-up before a free trial ends.',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      ),
+      iOS: DarwinNotificationDetails(),
+    ),
+  };
 }

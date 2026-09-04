@@ -132,14 +132,20 @@ abstract final class ReminderPlanner {
           : hour >= start || hour < end);
 }
 
-/// One nudge at one instant — the trial-ending reminder. Unlike a
-/// [ReminderSlot] it does not repeat, so it is an absolute time, not a
-/// wall-clock hour.
 /// Which reminder a notification tap came from. Carried as the notification's
 /// payload (`kind.name`) and decoded back by the scheduler, so a tap can land
 /// on the screen the reminder was about rather than wherever the app last was.
-enum ReminderKind { danger, trial }
+///
+/// `milestone` is named, not chosen: `test/copy_honesty_test.dart` is keyed off
+/// these values and stops forbidding the word in the notification-permission
+/// copy the day a value called exactly that exists. The permission screen sold
+/// "milestone celebrations" in five languages while seventeen badges unlocked
+/// in silence; this is the value that makes the promise true.
+enum ReminderKind { danger, trial, milestone }
 
+/// One nudge at one instant — the trial-ending reminder and the milestone
+/// celebration. Unlike a [ReminderSlot] it does not repeat, so it is an
+/// absolute time, not a wall-clock hour.
 class OneShotReminder {
   const OneShotReminder({required this.id, required this.at});
 
@@ -204,4 +210,135 @@ abstract final class TrialReminderPlanner {
     if (!at.isAfter(now)) return null;
     return OneShotReminder(id: id, at: at);
   }
+}
+
+/// A celebration that is owed: which badge, and when to say so.
+class MilestoneCelebration {
+  const MilestoneCelebration({
+    required this.badgeId,
+    required this.covers,
+    required this.reminder,
+  });
+
+  /// The one being celebrated: the strongest that is owed.
+  final String badgeId;
+
+  /// Every badge this celebration settles, [badgeId] included.
+  ///
+  /// Usually just the one. It matters on a restored journey: `earnedBadges`
+  /// comes back from the server while the record of what has been celebrated
+  /// is device-local, so a reinstall can find four owed at once. Marking all
+  /// of them here is what stops the app scheduling four separate 08:00
+  /// notifications about milestones from weeks ago.
+  final Set<String> covers;
+
+  final OneShotReminder reminder;
+
+  @override
+  String toString() => 'MilestoneCelebration($badgeId, covers: $covers)';
+}
+
+/// Decides when a streak milestone is celebrated — the reminder the
+/// notification-permission screen has been promising since onboarding shipped
+/// (`test/copy_honesty_test.dart`), while seventeen badges unlocked in silence.
+///
+/// **It only ever celebrates a badge that is already earned.** `earnedBadges`
+/// is a set union that never removes anything, so a scheduled celebration is a
+/// statement about something that has already permanently happened. Nothing
+/// here forward-guesses a streak that might break tonight — which is the only
+/// way this notification could ever lie, and a quit app that congratulates you
+/// for a day you did not have is worse than one that says nothing.
+///
+/// The timing follows from that. `StreakEngine.currentStreak` counts today as
+/// soon as today is confirmed and holds, so the badge lands *during* the
+/// qualifying day and the celebration lands the following morning — which is
+/// also the beat the design frame draws it on.
+abstract final class MilestoneReminderPlanner {
+  /// 3000+. The danger-hour slots own 1000–1023 and the trial reminder owns
+  /// 2000, so a cancel here can never reach either — the rule that exists
+  /// because a `cancelAll()` on a puff-tap resync once took the trial reminder
+  /// down with it.
+  static const int idBase = 3000;
+
+  /// Morning, so it opens a day rather than closing one.
+  static const int hour = 8;
+
+  /// The five ember-family badges, weakest first.
+  ///
+  /// Streak achievements only: `spark` at 3 days, `weekFlame` at 7,
+  /// `twoWeekFlame` at 14, `inferno` at 30, and `freedomDay` at the end of the
+  /// plan. That is five moments across a 30-day programme, which is rare enough
+  /// that each one still means something.
+  ///
+  /// The other twelve badges are deliberately silent. `firstLog`,
+  /// `firstCraving`, `firstPost`, `hundredSaved` and the rest are all earned
+  /// while the person is already looking at the app — a push about something
+  /// they just did on screen is noise, and this is a permission you only get
+  /// asked for once. `test/domain/milestone_reminder_test.dart` pins the list
+  /// against the ember-family flag in the milestones grid so the two cannot
+  /// drift.
+  static const List<String> celebrated = [
+    'spark',
+    'weekFlame',
+    'twoWeekFlame',
+    'inferno',
+    'freedomDay',
+  ];
+
+  /// Null when nothing is owed: notifications off, nothing new earned, or
+  /// everything earned has already been celebrated.
+  ///
+  /// When two land together — `inferno` and `freedomDay` can — the strongest
+  /// wins, deterministically, so the same inputs always schedule the same
+  /// notification and the coordinator's fingerprint stays stable.
+  static MilestoneCelebration? plan({
+    required Set<String> earnedBadges,
+    required Set<String> celebratedBadges,
+    required DateTime now,
+    required int quietStartHour,
+    required int quietEndHour,
+    required bool enabled,
+  }) {
+    if (!enabled) return null;
+
+    final owedAll = {
+      for (final badge in celebrated)
+        if (earnedBadges.contains(badge) && !celebratedBadges.contains(badge))
+          badge,
+    };
+    if (owedAll.isEmpty) return null;
+    // The strongest wins. `celebrated` is ordered weakest-first, so this is
+    // the last one still owed.
+    final owed = celebrated.lastWhere(owedAll.contains);
+
+    // `DateTime(y, m, d + 1, h)` rather than `LpDate.addDays`: that helper
+    // deliberately lands on local MIDNIGHT because it exists to build day
+    // keys, and using it here silently threw the hour away. It still read
+    // correctly under the default 23→8 quiet window — 00:00 is quiet, so the
+    // correction below happened to push it back to 08:00 — and would have
+    // fired at midnight for anyone who widened their quiet hours. Same
+    // calendar arithmetic, same DST safety, hour kept.
+    var at = _at(now, hour);
+    if (!at.isAfter(now)) at = _at(now, hour, tomorrow: true);
+
+    // A celebration is never time-critical, so a quiet hour pushes it FORWARD
+    // to the end of the quiet window — never backward. Pulling it back is what
+    // used to make the trial reminder fire two days before the charge.
+    if (ReminderPlanner.isQuiet(at.hour, quietStartHour, quietEndHour)) {
+      at = _at(at, quietEndHour);
+      if (!at.isAfter(now)) at = _at(at, quietEndHour, tomorrow: true);
+    }
+
+    return MilestoneCelebration(
+      badgeId: owed,
+      covers: owedAll,
+      // One id per badge, and each badge is celebrated at most once ever, so
+      // an id is never reused and a second celebration can never replace a
+      // first that has not fired yet.
+      reminder: OneShotReminder(id: idBase + celebrated.indexOf(owed), at: at),
+    );
+  }
+
+  static DateTime _at(DateTime day, int hour, {bool tomorrow = false}) =>
+      DateTime(day.year, day.month, day.day + (tomorrow ? 1 : 0), hour);
 }
