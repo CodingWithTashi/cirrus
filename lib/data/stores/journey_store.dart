@@ -183,6 +183,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     if (before == null || events.isEmpty) return 0;
 
     var highest = 0;
+    _batchedPuffLogs = 0;
     _batching = true;
     try {
       for (final event in events) {
@@ -207,7 +208,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     // `undoPuffs` no-ops on a day it cannot find, so a batch of only those
     // leaves state untouched and has nothing to persist — but the events were
     // still consumed, so the cursor still moves.
-    if (next == null || identical(next, before)) return highest;
+    if (next == null || identical(next, before)) {
+      _flushBatchedPuffLogs();
+      return highest;
+    }
 
     // The write is awaited, and the THREE outcomes are deliberately not the
     // same thing:
@@ -238,10 +242,26 @@ class JourneyStore extends Notifier<JourneyState?> {
       // applied them (wrong), and the next drain counts every one of them
       // twice. The batch is all-or-nothing.
       state = before;
+      // Discarded, not flushed: none of these taps landed.
+      _batchedPuffLogs = 0;
       return 0;
     }
+    _flushBatchedPuffLogs();
     return highest;
   }
+
+  /// One `puff_logged` per widget tap that actually landed. Still one per tap
+  /// rather than per puff — the metric counts logging behaviour.
+  void _flushBatchedPuffLogs() {
+    final analytics = ref.read(analyticsProvider);
+    for (var i = 0; i < _batchedPuffLogs; i++) {
+      analytics.puffLogged();
+    }
+    _batchedPuffLogs = 0;
+  }
+
+  /// `puff_logged` events owed by the drain in progress. See [logPuff].
+  int _batchedPuffLogs = 0;
 
   /// How long a drain waits for the backend before assuming the write is
   /// queued rather than refused. Short: it runs on the launch path.
@@ -338,6 +358,12 @@ class JourneyStore extends Notifier<JourneyState?> {
     // the next person inheriting the last one's Premium.
     ref.read(analyticsProvider).reset();
     ref.read(entitlementProvider.notifier).unbind().ignore();
+    // Same shared-phone rule, third instance: the milestone ledger is
+    // device-scoped SharedPreferences with no uid in the key, and a settled
+    // badge makes the planner answer null — so without this the next person to
+    // sign in inherits this account's settled badges and never gets a single
+    // celebration.
+    ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
     // Release the push registration BEFORE the credential goes, and chain the
     // two rather than firing both: `syncUserContext` is a callable, so it
     // carries the caller's ID token, and a release that raced past
@@ -365,6 +391,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     await _auth.deleteAccount();
     ref.read(analyticsProvider).reset();
     ref.read(entitlementProvider.notifier).unbind().ignore();
+    // As in `signOut`: erasing the account must erase the device's record of
+    // what it already celebrated, or starting over on the same phone is a quit
+    // with no milestones at all.
+    ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
     // The server side of the push registry died with `recursiveDelete`; this
     // is the local half — without it the device keeps a live FCM token bound
     // to an account that no longer exists. After the await on purpose: a
@@ -399,7 +429,16 @@ class JourneyStore extends Notifier<JourneyState?> {
     // computed without. Emitted from the store, not the four views that call
     // logPuff, so a new entry point can't ship unmeasured. Once per tap, not
     // per puff: the metric counts logging behaviour, not inventory.
-    ref.read(analyticsProvider).puffLogged();
+    // Buffered during a drain: the batch is all-or-nothing, and a refused
+    // write rolls the journey back and leaves the events queued for the next
+    // drain. Emitting here would have already counted taps that did not land,
+    // and the replay would count them a second time — inflating the Weekly
+    // Active Quitters funnel this event exists to compute.
+    if (_batching) {
+      _batchedPuffLogs++;
+    } else {
+      ref.read(analyticsProvider).puffLogged();
+    }
     // The first puff ever logged also ticks Day-1 task zero below, whether or
     // not the checklist was the thing that sent them here.
     _reportDay1Task(s, 0);

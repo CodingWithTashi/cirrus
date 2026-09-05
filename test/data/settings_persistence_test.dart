@@ -21,6 +21,8 @@ void main() {
     expect(loaded.themeMode, defaults.themeMode);
     // A fresh install wears the free family, whatever the tier turns out to be.
     expect(loaded.palette, LpPalette.ember);
+    // Nothing adopted yet — the first sync with a journey in hand decides.
+    expect(loaded.milestonesAdopted, isFalse);
     expect(loaded.locale, isNull);
     expect(loaded.notificationsOn, defaults.notificationsOn);
     expect(loaded.dangerStartHour, defaults.dangerStartHour);
@@ -41,6 +43,7 @@ void main() {
       launchPaywallShownCount: 3,
       celebratedMilestones: {'spark', 'weekFlame'},
       armedMilestone: 'weekFlame',
+      milestonesAdopted: true,
     );
 
     await SettingsPersistence.save(saved);
@@ -57,6 +60,8 @@ void main() {
     // Which one is on the device clock has to survive too, or switching
     // notifications off after a restart cannot hand it back.
     expect(loaded.armedMilestone, 'weekFlame');
+    // Without this the next launch re-adopts, wiping the ledger it just read.
+    expect(loaded.milestonesAdopted, isTrue);
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -112,6 +117,7 @@ void main() {
       'launchPaywallShownCount',
       'celebratedMilestones',
       'armedMilestone',
+      'milestonesAdopted',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });

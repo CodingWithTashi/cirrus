@@ -32,6 +32,7 @@ abstract final class SettingsPersistence {
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
   static const _celebrated = 'settings.celebratedMilestones';
   static const _armedMilestone = 'settings.armedMilestone';
+  static const _milestonesAdopted = 'settings.milestonesAdopted';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -64,6 +65,8 @@ abstract final class SettingsPersistence {
             prefs.getStringList(_celebrated)?.toSet() ??
             defaults.celebratedMilestones,
         armedMilestone: prefs.getString(_armedMilestone),
+        milestonesAdopted:
+            prefs.getBool(_milestonesAdopted) ?? defaults.milestonesAdopted,
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -86,6 +89,7 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
+      await prefs.setBool(_milestonesAdopted, state.milestonesAdopted);
       await prefs.setInt(_launchPaywallCount, state.launchPaywallShownCount);
       await prefs.setStringList(
         _celebrated,

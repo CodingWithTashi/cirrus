@@ -101,6 +101,22 @@ class WidgetCoordinator {
     // next drain rather than losing them to a cold start.
     if (highest <= cursor) return 0;
 
+    // KNOWN, NARROW, AND DELIBERATELY NOT "FIXED": there is a window between
+    // the journey write becoming durable and this cursor landing. Firestore
+    // queues the mutation the moment `set()` is called, and
+    // `applyPendingPuffs` then waits up to `widgetFlushTimeout` for the ack —
+    // so a process death inside that wait replays these events onto a journey
+    // that already has them.
+    //
+    // Advancing the cursor first only moves the loss to the other side: a
+    // death between the cursor write and the save would drop the puffs
+    // instead. Neither ordering is right, because there is no transaction
+    // spanning a preferences file and a Firestore document, and this ordering
+    // is the one that fails toward "counted twice" rather than "silently
+    // lost". Closing it properly needs a two-phase intent record reconciled on
+    // the next launch, which is more machinery than a sub-3-second crash
+    // window on the launch path is worth. Revisit only if the field ever shows
+    // it happening.
     await _writeCursor(highest);
 
     // Repaint AFTER the cursor lands, always.
@@ -137,7 +153,21 @@ class WidgetCoordinator {
   /// last person's taps. This is the same per-account rule that made
   /// community post ownership a server answer rather than a session-scoped
   /// set.
-  Future<void> discardQueued() async {
+  /// Chained onto any drain in flight, for the same reason [drain] serialises
+  /// itself: a drain can sit for up to [JourneyStore.widgetFlushTimeout]
+  /// awaiting the journey write, and it finishes by writing its own cursor. A
+  /// discard that ran underneath it would be overwritten by that write, handing
+  /// the next account exactly the taps this method exists to throw away.
+  Future<void> discardQueued() {
+    final running = _inFlight;
+    final task = running == null
+        ? _discardQueued()
+        : running.then((_) => _discardQueued());
+    _inFlight = task.whenComplete(() => _inFlight = null);
+    return task;
+  }
+
+  Future<void> _discardQueued() async {
     final events = PendingPuffs.decode(
       await _store.read(PendingPuffs.outboxKey),
     );

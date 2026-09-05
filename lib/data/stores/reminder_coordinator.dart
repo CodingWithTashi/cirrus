@@ -48,6 +48,7 @@ class ReminderCoordinator {
     String Function(String badgeId)? milestoneBody,
     void Function(String armed, Set<String> covers)? onMilestoneScheduled,
     void Function()? onMilestonesWithdrawn,
+    void Function(Set<String> earned)? onMilestonesAdopted,
     DateTime Function() now = DateTime.now,
   }) async {
     // Signed out, or notifications declined: clear the device rather than
@@ -86,6 +87,7 @@ class ReminderCoordinator {
         title: milestoneTitle,
         body: milestoneBody,
         onScheduled: onMilestoneScheduled,
+        onAdopted: onMilestonesAdopted,
       );
     }
   }
@@ -105,7 +107,23 @@ class ReminderCoordinator {
     required String title,
     required String Function(String badgeId) body,
     void Function(String armed, Set<String> covers)? onScheduled,
+    void Function(Set<String> earned)? onAdopted,
   }) async {
+    // A ledger this device has never initialised for this account: adopt what
+    // is already earned as settled, and celebrate nothing. Everything in
+    // `earnedBadges` right now was earned before this device was watching —
+    // an upgrade across the build that added the ledger, or a sign-in on a
+    // phone whose ledger was just reset — and arming a celebration for it
+    // sends "Two weeks. TWO WEEKS." to somebody who did that a month ago.
+    //
+    // Returns rather than falling through: `plan` would otherwise read the
+    // pre-adoption ledger this same pass and arm exactly that push. The next
+    // sync (the next puff tap, at the latest) plans against the adopted one.
+    if (!settings.milestonesAdopted) {
+      onAdopted?.call(journey.earnedBadges);
+      return;
+    }
+
     final celebration = MilestoneReminderPlanner.plan(
       earnedBadges: journey.earnedBadges,
       celebratedBadges: settings.celebratedMilestones,

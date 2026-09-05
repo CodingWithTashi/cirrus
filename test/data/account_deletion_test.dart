@@ -59,6 +59,47 @@ void main() {
     );
   });
 
+  group('the milestone ledger is per account, not per phone', () {
+    // It lives in device-scoped SharedPreferences with no uid in the key, and
+    // a badge marked settled makes the planner answer null for ever. So
+    // without a reset the next person to sign in on a shared phone inherits
+    // this account's settled badges and never gets a single celebration.
+    test('signing out forgets it', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      final settings = c.read(settingsStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+
+      settings.adoptMilestones({'spark'});
+      settings.markMilestonesCelebrated('weekFlame', {'spark', 'weekFlame'});
+      expect(c.read(settingsStoreProvider).celebratedMilestones, isNotEmpty);
+
+      store.signOut();
+
+      final after = c.read(settingsStoreProvider);
+      expect(after.celebratedMilestones, isEmpty);
+      expect(after.armedMilestone, isNull);
+      expect(
+        after.milestonesAdopted,
+        isFalse,
+        reason: 'the next account adopts its own history, it does not inherit',
+      );
+    });
+
+    test('deleting the account forgets it too', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      final settings = c.read(settingsStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+      settings.adoptMilestones({'spark', 'weekFlame'});
+
+      await store.deleteAccount();
+
+      expect(c.read(settingsStoreProvider).celebratedMilestones, isEmpty);
+      expect(c.read(settingsStoreProvider).milestonesAdopted, isFalse);
+    });
+  });
+
   test('a failed deletion throws and leaves the session standing', () async {
     final c = harness(deletionFails: true);
     final store = c.read(quitStoreProvider.notifier);

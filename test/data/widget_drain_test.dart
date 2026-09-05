@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/widget_store.dart';
@@ -452,7 +454,99 @@ void main() {
       expect(c.read(quitStoreProvider)!.days[today]!.puffs, 4);
       expect(store.values[PendingPuffs.cursorKey], '2');
     });
+
+    test('and the refused taps are not reported to analytics twice', () async {
+      // `puff_logged` is the one event Weekly Active Quitters is computed
+      // from. A refused batch rolls the journey back and leaves the events
+      // queued, so counting them on the way in would count taps that never
+      // landed — and count them again on the retry.
+      final analytics = RecordingAnalytics();
+      final local = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(now: now, online: false, analytics: analytics),
+        ],
+      );
+      addTearDown(local.dispose);
+      final s = local.read(quitStoreProvider.notifier)..seedDemoJourney();
+      queue([puff(1), puff(2)]);
+
+      await coordinator.drain(s, now: now);
+      expect(
+        analytics.names.where((n) => n == 'puff_logged'),
+        isEmpty,
+        reason: 'nothing landed, so nothing was logged',
+      );
+
+      (local.read(connectivityProvider.notifier) as ToggleConnectivity).set(true);
+      await coordinator.drain(s, now: now);
+      expect(
+        analytics.names.where((n) => n == 'puff_logged').length,
+        2,
+        reason: 'two taps, counted once each, on the drain that landed',
+      );
+    });
   });
+
+  group('a discard racing a live drain', () {
+    test('leaves the queue discarded, not resurrected', () async {
+      // `discardQueued` runs from the sign-out listener while a drain may be
+      // mid-flight — a drain can sit for up to `widgetFlushTimeout` awaiting
+      // the journey write, and it finishes by writing its OWN cursor. Running
+      // underneath it, the discard is overwritten and the queue comes back.
+      final gate = Completer<void>();
+      final local = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(now: now),
+          journeyRepositoryProvider.overrideWith(
+            (ref) => _BlockingJourneys(
+              ApiJourneyRepository(ref.watch(journeyApiProvider)),
+              gate.future,
+            ),
+          ),
+        ],
+      );
+      addTearDown(local.dispose);
+      final s = local.read(quitStoreProvider.notifier)..seedDemoJourney();
+      queue([puff(1), puff(2)]);
+
+      final draining = coordinator.drain(s, now: now);
+      // Sign-out lands while the save is still blocked.
+      final discarding = coordinator.discardQueued();
+      gate.complete();
+      await draining;
+      await discarding;
+
+      expect(
+        cursor(),
+        '2',
+        reason: 'the discard must be the last word on the cursor',
+      );
+      expect(await coordinator.drain(s, now: now), 0);
+    });
+  });
+}
+
+/// Holds every save until its gate opens, so a drain can be caught in flight.
+class _BlockingJourneys implements JourneyRepository {
+  _BlockingJourneys(this._inner, this._gate);
+
+  final JourneyRepository _inner;
+  final Future<void> _gate;
+
+  @override
+  Future<JourneyState> create({
+    required UserProfile profile,
+    required QuitPlan plan,
+  }) => _inner.create(profile: profile, plan: plan);
+
+  @override
+  Future<void> save(JourneyState journey) async {
+    await _gate;
+    return _inner.save(journey);
+  }
+
+  @override
+  Future<void> delete() => _inner.delete();
 }
 
 

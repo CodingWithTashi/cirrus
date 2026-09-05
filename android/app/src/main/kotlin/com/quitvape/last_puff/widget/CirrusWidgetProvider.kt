@@ -199,9 +199,16 @@ class CirrusWidgetProvider : AppWidgetProvider() {
             if (today.over) R.drawable.cw_card_over else R.drawable.cw_card,
         )
 
-        val showBar = wide && today.knowsLimit
+        // `knowsLimit` is `limit >= 0` on purpose — a limit of 0 is a real,
+        // knowable limit on the last plan day and every maintenance day after
+        // it. But a bar needs something to be a fraction OF, and `0/0` was
+        // drawn as 100% full: a user who had logged nothing saw a completely
+        // full consumption bar. iOS already gates on `limit > 0`
+        // (`CirrusWidget.swift`); this is Android agreeing with it, so the two
+        // platforms stop rendering the same mirror differently.
+        val showBar = wide && today.knowsLimit && today.limit > 0
         val percent = if (today.limit <= 0) {
-            100
+            0
         } else {
             ((today.count * 100f) / today.limit).roundToInt().coerceIn(0, 100)
         }

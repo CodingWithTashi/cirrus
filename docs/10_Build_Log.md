@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5) · §25 The review pass (Sep 5)
 
 ---
 
@@ -2769,3 +2769,64 @@ render in a tree with no `Theme` at all.
 
 `flutter analyze` 0 · `flutter test` **1456/1456** (was 1111; the palette sweep
 in `screen_layout_test` went from 2 themes to 6).
+
+---
+
+## 25. THE REVIEW PASS (Sep 5) — six fixes the widget feature needed, and one it does not
+
+A `/code-review high` over the branch before committing the palettes. **Nothing
+against the palette work.** Seven findings, all in §23's widget/milestone code
+and one line of §24's. Six fixed, one documented and left alone.
+
+### The two that mattered
+
+**1. The milestone ledger was device-scoped with no reset.**
+`celebratedMilestones` lives in SharedPreferences with no uid in the key, and a
+badge marked settled makes `MilestoneReminderPlanner.plan` answer null for ever.
+So on a shared phone, the second person to sign in inherited the first person's
+settled badges and **would never have received a single milestone
+celebration** — silently, with nothing in any log. `discardQueued()` guards
+exactly this case for the widget outbox; the ledger simply never got the same
+treatment. `signOut`/`deleteAccount` now reset it, beside `analytics.reset()`
+and `EntitlementStore.unbind()`.
+
+**2. A ledger that has never been initialised is not an empty one.**
+Fixing (1) exposed the second half: a user upgrading across the build that
+introduced the key — and now anyone signing in after a reset — has a full
+`earnedBadges` and an empty ledger, so the first sync would arm *"Two weeks. TWO
+WEEKS."* for something they did a month ago.
+
+The fix is a `milestonesAdopted` flag rather than "is the ledger empty",
+because an empty ledger is **also** the honest state of somebody about to earn
+their first badge, and suppressing that one is the bug in the other direction.
+On first sync with a journey in hand, whatever is already earned is *adopted* as
+settled and nothing is announced. Three situations, one answer: fresh install
+(adopts nothing), upgrade (adopts the backlog), account switch (adopts the new
+account's history).
+
+Blast radius today was internal testers only — Play submission is still
+unshipped, so at launch every install is fresh and `earnedBadges` is empty. It
+would have become real for every updating user afterwards.
+
+### The other four
+
+| Fix | What it was |
+|---|---|
+| `puff_logged` replayed on a refused drain | Emitted inside the batch, before the write was known to land. A refused batch rolls the journey back and leaves the events queued, so the taps were counted once for a batch that never landed and again on the retry — inflating the WAQ funnel the event exists to compute. Now buffered and flushed only on success. |
+| `discardQueued()` racing a live drain | It did not chain `_inFlight`. A drain can sit up to `widgetFlushTimeout` awaiting the journey write and finishes by writing its own cursor, so a sign-out underneath it was overwritten and the previous account's taps came back. Now serialised the same way `drain` already was. |
+| Android widget drew a 100%-full bar at zero puffs | `knowsLimit` is `limit >= 0` on purpose — 0 is a real limit on the last plan day and every maintenance day after. But `percent` fell back to `100` for `limit <= 0`, so a user who had logged nothing saw a full consumption bar. **iOS already gated on `limit > 0`**; the two platforms were rendering the same mirror differently. |
+| Post-frame `ref.read` with no `mounted` guard | `_WidgetSyncState` reads a provider at end-of-frame; a tree replacement or test teardown in that window puts a `StateError` into the frame callback. |
+
+### The one left alone, on purpose
+
+**The drain's cursor window.** There is a gap between the journey write becoming
+durable and the cursor landing — Firestore queues the mutation on `set()`, and
+`applyPendingPuffs` then waits up to 3s for the ack, so a process death inside
+that wait replays the events. Advancing the cursor first only moves the loss to
+the other side. There is no transaction spanning a preferences file and a
+Firestore document; the current ordering is the one that fails toward "counted
+twice" rather than "silently lost", and closing it properly needs a two-phase
+intent record reconciled on the next launch. Written down at the call site
+rather than churned. Revisit if the field shows it happening.
+
+`flutter analyze` 0 · `flutter test` **1463/1463**.

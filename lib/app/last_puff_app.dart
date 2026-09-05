@@ -176,6 +176,11 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
               onMilestonesWithdrawn: ref
                   .read(settingsStoreProvider.notifier)
                   .releaseArmedMilestone,
+              // First sync for this account on this device: adopt what is
+              // already earned instead of celebrating it late.
+              onMilestonesAdopted: ref
+                  .read(settingsStoreProvider.notifier)
+                  .adoptMilestones,
               now: now,
             )
             .ignore();
@@ -310,6 +315,11 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
     // After the frame, so logging a puff never blocks its own rebuild on a
     // platform channel — the same reason _ReminderSync defers its sync.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Guarded: `ref.read` on a disposed ConsumerState throws, and this
+      // callback outlives the frame it was registered in — a tree replacement,
+      // a hot restart or a test teardown in that window would put a StateError
+      // into the frame callback rather than anywhere it could be handled.
+      if (!mounted) return;
       coordinator.push(mirror, now: ref.read(nowProvider)()).ignore();
     });
 

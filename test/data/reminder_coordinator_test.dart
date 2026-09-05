@@ -282,9 +282,16 @@ void main() {
       JourneyState journey, {
       Set<String> celebrated = const {},
       ReminderCoordinator? on,
+      // Every case below is about an account this device has already watched.
+      // The adoption path — a ledger that has never been initialised — has its
+      // own tests at the end of this group.
+      bool adopted = true,
     }) => (on ?? ReminderCoordinator(sink)).sync(
       journey: journey,
-      settings: SettingsState(celebratedMilestones: celebrated),
+      settings: SettingsState(
+        celebratedMilestones: celebrated,
+        milestonesAdopted: adopted,
+      ),
       title: title,
       body: body,
       milestoneTitle: 'Come see your flame',
@@ -353,7 +360,7 @@ void main() {
       // The hour moved: the danger schedule reapplies, the celebration must not.
       await coordinator.sync(
         journey: journeyWith({14: 30}).copyWith(earnedBadges: {'weekFlame'}),
-        settings: const SettingsState(),
+        settings: const SettingsState(milestonesAdopted: true),
         title: title,
         body: body,
         milestoneTitle: 'Come see your flame',
@@ -372,7 +379,7 @@ void main() {
 
       await ReminderCoordinator(sink).sync(
         journey: earned({'spark'}),
-        settings: const SettingsState(),
+        settings: const SettingsState(milestonesAdopted: true),
         title: title,
         body: body,
         milestoneTitle: 'Come see your flame',
@@ -400,7 +407,7 @@ void main() {
 
       await ReminderCoordinator(sink).sync(
         journey: earned({'spark', 'weekFlame', 'twoWeekFlame', 'inferno'}),
-        settings: const SettingsState(),
+        settings: const SettingsState(milestonesAdopted: true),
         title: title,
         body: body,
         milestoneTitle: 'Come see your flame',
@@ -451,6 +458,80 @@ void main() {
 
       expect(sink.scheduledOnce, isEmpty);
       expect(sink.cancels, 1);
+    });
+
+    group('a ledger this device has never initialised', () {
+      test('adopts what is already earned instead of celebrating it late',
+          () async {
+        // The case that bites every existing install the day it updates, and
+        // every account that signs in on a phone someone else used: badges
+        // earned before this device was watching must not wake the user at
+        // 08:00 with "Two weeks. TWO WEEKS." about a milestone from a month
+        // ago.
+        final sink = _FakeSink();
+        final adopted = <String>{};
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned({'spark', 'weekFlame', 'twoWeekFlame'}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          onMilestonesAdopted: adopted.addAll,
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+
+        expect(adopted, {'spark', 'weekFlame', 'twoWeekFlame'});
+        expect(
+          sink.scheduledOnce,
+          isEmpty,
+          reason: 'adoption settles the backlog, it does not announce it',
+        );
+      });
+
+      test('a fresh account adopts nothing and stays able to celebrate',
+          () async {
+        // The bug in the other direction: an empty ledger is ALSO the honest
+        // state of someone about to earn their first badge, which is why
+        // adoption is a flag rather than "is the ledger empty".
+        final sink = _FakeSink();
+        final adopted = <String>{};
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned(const {}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          onMilestonesAdopted: adopted.addAll,
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+        expect(adopted, isEmpty);
+
+        // Day 3 arrives on an adopted ledger: the celebration lands.
+        await sync(sink, earned({'spark'}));
+        expect(sink.scheduledOnce, hasLength(1));
+      });
+
+      test('the danger-hour and trial schedules still run', () async {
+        // Adoption returns early out of the MILESTONE sync only. A first
+        // launch must still arm the nudges it was always going to arm.
+        final sink = _FakeSink();
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned({'weekFlame'}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+
+        expect(sink.applied, hasLength(1));
+      });
     });
   });
 }

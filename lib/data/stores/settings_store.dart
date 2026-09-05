@@ -23,6 +23,7 @@ class SettingsState {
     this.launchPaywallShownCount = 0,
     this.celebratedMilestones = const {},
     this.armedMilestone,
+    this.milestonesAdopted = false,
   });
 
   final ThemeMode themeMode;
@@ -87,6 +88,23 @@ class SettingsState {
   /// and nothing ever re-arms it.
   final String? armedMilestone;
 
+  /// Whether [celebratedMilestones] has been initialised for the account now
+  /// signed in.
+  ///
+  /// False means "this device has never watched this account earn anything",
+  /// which is true in three places and needs the same answer in all of them: a
+  /// fresh install, the first launch after the build that introduced the
+  /// ledger, and a new account signing in on a phone whose ledger was just
+  /// reset. In each, whatever is already in `earnedBadges` was earned before
+  /// this device was watching, so it is ADOPTED as celebrated rather than
+  /// treated as owed — otherwise the first sync fires "Two weeks. TWO WEEKS."
+  /// at somebody who did that a month ago.
+  ///
+  /// Needed as a flag rather than inferred from an empty ledger, because an
+  /// empty ledger is also the honest state of a user about to earn their very
+  /// first badge — and suppressing that one is the bug in the other direction.
+  final bool milestonesAdopted;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
     LpPalette? palette,
@@ -101,6 +119,7 @@ class SettingsState {
     int? launchPaywallShownCount,
     Set<String>? celebratedMilestones,
     String? Function()? armedMilestone,
+    bool? milestonesAdopted,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
     palette: palette ?? this.palette,
@@ -120,6 +139,7 @@ class SettingsState {
     armedMilestone: armedMilestone != null
         ? armedMilestone()
         : this.armedMilestone,
+    milestonesAdopted: milestonesAdopted ?? this.milestonesAdopted,
   );
 }
 
@@ -218,6 +238,39 @@ class SettingsStore extends Notifier<SettingsState> {
       ),
     );
   }
+
+  /// Adopts [earned] as already celebrated, without arming anything.
+  ///
+  /// Called once per account, the first time the schedule is synced with a
+  /// journey in hand. See [SettingsState.milestonesAdopted] for why an empty
+  /// ledger is not enough to infer this.
+  void adoptMilestones(Set<String> earned) {
+    if (state.milestonesAdopted) return;
+    _commit(
+      state.copyWith(
+        celebratedMilestones: {...earned},
+        armedMilestone: () => null,
+        milestonesAdopted: true,
+      ),
+    );
+  }
+
+  /// Forgets the milestone ledger, because it belonged to the account that has
+  /// just left.
+  ///
+  /// The ledger is device-scoped SharedPreferences with no uid in the key, so
+  /// without this a shared phone hands the next person the last person's
+  /// settled badges — and since a settled badge makes the planner answer null,
+  /// they would never get a single celebration. Same per-account rule as
+  /// `analytics.reset()`, `EntitlementStore.unbind()` and
+  /// `WidgetCoordinator.discardQueued()` beside it.
+  void resetMilestoneLedger() => _commit(
+    state.copyWith(
+      celebratedMilestones: const {},
+      armedMilestone: () => null,
+      milestonesAdopted: false,
+    ),
+  );
 
   /// Records that today's launch paywall was shown, so it is not shown again
   /// before the next local day.
