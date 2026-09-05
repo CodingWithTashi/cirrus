@@ -215,6 +215,17 @@ const POSTS = [
     ],
   },
   {
+    slug: 'what-happens-when-you-quit-vaping',
+    eyebrow: 'QUITTING VAPING · DAY BY DAY',
+    headline: 'What happens when you quit vaping?',
+    blocks: [
+      { n: '~2h', label: 'nicotine half-life', color: VOLT },
+      { n: 'Day 2–3', label: 'the peak', color: EMBER },
+      { n: 'Week 2', label: 'habit takes over', color: EMBER },
+      { n: 'Month 3', label: 'the new normal', color: VOLT },
+    ],
+  },
+  {
     slug: 'how-to-choose-a-puff-counter-app',
     eyebrow: 'PUFF COUNTER APPS · WHAT TO LOOK FOR',
     headline: 'How to choose a puff counter app',

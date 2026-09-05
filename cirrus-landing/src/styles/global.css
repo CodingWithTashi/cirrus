@@ -847,6 +847,20 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   overflow-x: auto;
   margin-block: 2rem;
 }
+
+/* Safety net for a table written as a Markdown pipe table, which lands here
+   with no .table-wrap around it. There is no rehype plugin adding one, so
+   without this the table keeps its 30rem min-width, runs past a phone viewport,
+   and `body { overflow-x: hidden }` silently CLIPS the last column — no scroll
+   bar, no clue anything is missing. Three posts shipped that way. Becoming its
+   own block lets the columns reflow instead. .table-wrap is still the pattern
+   to write, because it also takes a tabindex and so is keyboard-scrollable. */
+.prose > table {
+  display: block;
+  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+}
 .table-wrap:focus-visible { outline: 2px solid var(--volt); outline-offset: 4px; }
 
 .prose table {
@@ -1004,9 +1018,16 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 }
 .share a:hover, .share button:hover { color: var(--volt); }
 
-/* ---------- end-of-post CTA ---------- */
+/* ---------- end-of-post CTA ----------
+   Scoped to `--end`, NOT the bare `.post-cta`. The sidebar card (PostCta.astro)
+   carries the same base class, and a global rule outranks nothing in a scoped
+   component style only where the component declares the same property — so the
+   half this block declared and the card did not leaked straight into the
+   sidebar: a 42rem max-width on a 14rem column, and `margin: 0.7rem 0 0` on
+   .post-cta__line, which zeroed the card's own margin-bottom and left the
+   button touching the text above it. */
 
-.post-cta {
+.post-cta--end {
   max-width: 42rem;
   margin: 3rem 0 0;
   padding: clamp(1.35rem, 4vw, 1.9rem);
@@ -1017,7 +1038,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
     radial-gradient(70% 120% at 95% 100%, rgb(255 138 0 / 0.12) 0%, transparent 62%),
     var(--slate);
 }
-.post-cta h2 {
+.post-cta--end h2 {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -1025,8 +1046,8 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   font-size: clamp(1.4rem, 3.6vw, 1.8rem);
   margin: 0.5rem 0 0;
 }
-.post-cta > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
-.post-cta .waitlist { margin-top: 1.2rem; }
+.post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
+.post-cta--end .waitlist { margin-top: 1.2rem; }
 
 /* ---------- post layout: article + sidebar ----------
    One column on a phone, two once there is genuinely room. The breakpoint is
@@ -1053,7 +1074,10 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
     top: 2rem;
     margin-top: clamp(40px, 7vw, 72px);
   }
-  .post-side .related { border-top: 0; padding-top: 0; margin-top: 0; }
+  /* The card above it is already a bordered box, so the rule and its padding
+     are redundant here — but the gap is not. It was 0, which ran "Keep reading"
+     straight into the bottom border of the card. */
+  .post-side .related { border-top: 0; padding-top: 0; margin-top: 2rem; }
 }
 
 /* ---------- related posts ---------- */
