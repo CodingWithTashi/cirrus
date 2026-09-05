@@ -387,4 +387,63 @@ void main() {
     );
     expect(pubspec.substring(0, split).contains('home_widget'), isTrue);
   });
+
+  group('a widget with no journey shows a message, never a counter', () {
+    // Founder rule, Sep 5 2026: the home screen outlives the session, so a
+    // widget still counting for a signed-out account is the shared-phone leak
+    // in its most public form — and unlike the outbox, this one the next
+    // person can see. Signed out, freshly installed, account deleted: the
+    // empty card, and nothing that looks like anyone's data.
+    //
+    // The Dart half is pinned in `widget_mirror_test.dart`; these three are
+    // the native half, which no compiler and no Dart test can reach.
+    final data = read('$widgetKotlin/CirrusWidgetData.kt');
+    final provider = read('$widgetKotlin/CirrusWidgetProvider.kt');
+
+    test('an absent, stale or unreadable mirror reads as no journey', () {
+      // Three doors into the same answer: no document at all (fresh install),
+      // a schema this build does not know, and a parse failure.
+      expect(
+        data,
+        contains('prefs.getString(CirrusKeys.MIRROR, null) ?: return absent'),
+      );
+      expect(
+        data,
+        contains('if (json.optInt("v", -1) != CirrusKeys.SCHEMA) return absent'),
+      );
+      expect(data, contains('absent'), reason: 'the catch falls back too');
+      expect(RegExp(r'catch \(error: Throwable\)').hasMatch(data), isTrue);
+    });
+
+    test('a tap is refused while there is no journey', () {
+      // Without this the buttons keep working on a stale card and the count
+      // climbs for an account nobody is signed in to.
+      expect(
+        data.replaceAll(RegExp(r'\s+'), ' '),
+        contains('val mirror = CirrusMirror.read(prefs) if (!mirror.hasJourney) return null'),
+      );
+    });
+
+    test('the empty card hides the active one, and returns before drawing it', () {
+      // `cw_active` carries the count, the day number and both buttons. The
+      // early return is what guarantees none of their setters run.
+      final empty = provider.substring(
+        provider.indexOf('if (!mirror.hasJourney) {'),
+      );
+      final body = empty.substring(0, empty.indexOf('return views') + 12);
+      expect(body, contains('R.id.cw_active, View.GONE'));
+      expect(body, contains('R.id.cw_empty, View.VISIBLE'));
+      expect(
+        body,
+        isNot(contains('R.id.cw_count')),
+        reason: 'the empty branch must never set a number',
+      );
+      expect(
+        body,
+        isNot(contains('cw_plus')),
+        reason: 'and must never wire a tap target',
+      );
+    });
+  });
+
 }

@@ -36,7 +36,7 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
-| 1 | **Splash / session restore** | Wordmark breathes ~1.5s while the backend session is restored. Routes to Home (has journey) or sign-in (none). | Cold-start. Kill and reopen while signed in → lands on Home, never on a stuck splash. |
+| 1 | **Splash / session restore** | The launcher tile (the same rounded art the home screen shows) over a breathing Volt glow, wordmark and tagline beneath, the group centred on the screen; ~1.5s while the backend session is restored. Routes to Home (has journey) or sign-in (none). | Cold-start. The tile, "Cirrus" and the tagline sit stacked in the middle of the screen, never in a corner. Kill and reopen while signed in → lands on Home, never on a stuck splash. |
 | 2 | **Launch paywall** | Once per day, free accounts only, pushed over Home after the splash. Never shown while the tier is still unknown. | Free account, cold start → paywall over Home. Restart the same day → it does not return. Premium → never. |
 | 3 | **Sign in with Google** (Android) | Native Google sheet → Firebase account. An existing journey restores to Home; a new account goes to onboarding. | Android only. Dismiss the sheet → nothing happens (a dismissal is not an error). |
 | 4 | **Sign in with Apple** (iOS/macOS) | Same flow, Apple sheet. Hidden on Android. | iOS only; check the Google button is absent. |
@@ -248,6 +248,7 @@
 | 111 | **`−` clamp** | Refuses below zero and writes no event. | Tap `−` at 0. |
 | 112 | **Midnight rollover** | Day number and count roll over with the app closed, and the limit follows the taper curve. | Drive the clock forward with the app closed. |
 | 113 | **Convergence** | The widget and the app never settle on different numbers, offline included. The count is recomputed from the clock at tap time, never read off the pixels — a tap on a stale widget still files today's puff on today. | Airplane mode → 3 taps → open the app → both agree. Cold restart → still agree. |
+| 113b | **No session, no numbers** | Signed out, freshly installed, account deleted, or a launch that restores no session: the widget shows **"Start your plan / Tap to open Cirrus"** and nothing else. No count, no day number, no working `+`/`−`. The mirror carries no numeric keys at all in this state, and a tap is refused natively. | Sign out with the widget on the home screen → it flips to the message. Tap `+` → nothing happens, nothing queues. |
 | 114 | **iOS widget** | **Not shipped.** The Swift is written (`ios/CirrusWidget/`) but the Xcode target does not exist — `docs/08` B22. | Do not test on iOS. |
 
 ---

@@ -2830,3 +2830,102 @@ intent record reconciled on the next launch. Written down at the call site
 rather than churned. Revisit if the field shows it happening.
 
 `flutter analyze` 0 · `flutter test` **1463/1463**.
+
+### Afterwards: the widget must never outlive the session
+
+Founder rule, raised the same day: *"if user is logout or new install or
+anything, then widget should simply show some message rather than still showing
+the counter."*
+
+Checked rather than assumed, and **the behaviour was already correct** — the
+live mirror on the Pixel reads
+
+```json
+{"v":1,"hasJourney":false,"copy":{…,"emptyTitle":"Start your plan","emptyBody":"Tap to open Cirrus"}}
+```
+
+with no `puffs`, `dayNumber`, `streak` or `limits` key at all. The numbers are
+absent, not merely flagged, which is what makes `CirrusPending.append`'s
+`if (!mirror.hasJourney) return null` safe: there is nothing left to draw even
+if something did read it.
+
+What was missing was any test holding it there. Four guards existed across two
+languages and **not one of them was pinned**, so any of them could have been
+deleted silently:
+
+| Guard | Now pinned by |
+|---|---|
+| `buildMirror` emits no numeric keys when the journey is null | `widget_mirror_test.dart` — "signing out replaces the numbers with the empty card" |
+| The launcher is actually told to repaint | same file — "and the launcher is told to repaint" |
+| An absent / stale-schema / unreadable document reads as `absent` | `android_widget_test.dart` |
+| `append` refuses every tap while `!hasJourney` | `android_widget_test.dart` |
+| The empty branch hides `cw_active` and returns before setting a count or a tap target | `android_widget_test.dart` |
+
+The deletion path is covered at container level in `account_deletion_test.dart`
+rather than duplicated as a widget test: `await`ing the erasure inside
+`testWidgets` deadlocks the fake-async zone against its own pending timers, and
+a hanging test is worse than an absent one. It reaches the mirror through the
+identical `journey == null` branch the sign-out test already exercises.
+
+`flutter analyze` 0 · `flutter test` **1468/1468**.
+
+## 26. THE SPLASH THAT WAS NEVER CENTRED (Sep 5) — final launcher art, and a Stack that measured itself
+
+The founder dropped the final icon art into `assets/images` — `icon-square.png`
+(full bleed, opaque), `icon-rounded.png` (the tile as a launcher draws it),
+`icon-play-512.png` and four pre-cut iOS sizes — and asked for two things: the
+launcher icons re-cut from it, and the splash to look like the tile centred
+over the wordmark instead of "showing at the top left".
+
+### The icons
+
+Both platforms regenerated with `dart run flutter_launcher_icons`, from two
+crops of the same art rather than one file:
+
+| Surface | Source | Why |
+|---|---|---|
+| Legacy Android mipmaps (API 21–25) | `icon-rounded.png` | Those launchers draw the bitmap as-is, no mask, so a square would sit sharp-cornered among rounded neighbours. |
+| iOS, every size | `icon-square.png` | Apple masks it itself and rejects an alpha channel; `remove_alpha_ios` strips the (all-opaque) one the PNG carries. |
+| Adaptive foreground | `icon-square.png` on a flat `#161A21` | The art's own edges are `#161A21` to within two levels — its radial gradient only lightens the centre — so the inset seam is invisible under every mask. |
+| Themed (Android 13+) | `cirrus_monochrome.png`, regenerated | The old silhouette was the old swirl. New `tool/monochrome_icon.py` cuts it from the square art: the mark is a flat `#B4DC28` on a near-black gradient, so a linear alpha ramp on the green channel (48→212) reproduces the art's own antialiasing. |
+
+**The inset is measured, not chosen.** The smoke tip sits 97.5% of the
+half-width from the art's centre. Android guarantees only a 66dp circle of the
+108dp canvas is never masked, so the art may be at most 33/0.975 = 33.8dp of
+half-width → 67.7dp of 108 → **19% inset** (it was 21% for the old art). At 19%
+the tip lands at 32.6dp of the 33dp radius; a contact sheet under circle and
+squircle masks with the safe circle drawn confirmed the whole mark, tail
+included, inside it. The cost is written down: because the tail reaches the top
+edge of the art, the O itself is ~43% of the visible circle. Re-centring the
+foreground on the mark's own bounding box (73px above the art's centre) would
+buy ~14% more size; not done, noted for whenever the icon gets another pass.
+
+Only `icon-rounded.png` is bundled (the first `assets:` entry the pubspec has
+ever had) — the Play 512 and the iOS sizes are store and generator inputs, not
+app assets. `cirrus.png` (the old art) is deleted. The generator's two known
+side effects were undone as documented (`project.pbxproj` checked out,
+`Contents.json` re-indented), plus one new one worth a line: **Python's text
+mode writes CRLF on Windows**, so both files it touched had to be normalised
+back to LF before git would show a sane diff.
+
+### The splash
+
+"At the top left" was exact. `SplashScreen` was a `Stack(alignment: center)`
+straight in the Scaffold body. The body hands its child **loose** constraints,
+and a Stack under loose constraints sizes itself to its largest non-positioned
+child — the 340dp glow — so the whole thing was a 340dp square at the origin,
+with the wordmark centred only within *it*. A probe pumping the old structure
+put the text centre at (170, 170) on an 800×600 surface. It had been that way
+since Frame 25 landed; nothing in the suite asserted where the splash draws,
+only what it shows and where it routes.
+
+Now: `Align(0, −0.1)` fills the body and places a Column — the launcher tile
+(128dp, the same rounded PNG the home screen shows), the wordmark, the tagline
+— a touch above centre, where a lone mark reads as centred. The breathing glow
+sits behind the **tile**, not the group: an `OverflowBox` inside the tile's
+128dp box lets the 340dp gradient spill out while the Column still measures
+only the tile. `test/widgets/splash_screen_test.dart` pins the three parts on
+the horizontal centre, stacked tile → name → tagline, with the group's midpoint
+within 15% of the screen's.
+
+`flutter analyze` 0 · `flutter test` **1469/1469**.

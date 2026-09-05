@@ -164,6 +164,54 @@ void main() {
     expect(mirrorIn(store)['puffs'], before + 1);
   });
 
+  group('when the journey goes away', () {
+    // The home screen outlives the app's session. A widget still showing the
+    // last account's day number, count and working +/- buttons is the shared-
+    // phone leak in its most visible form — and unlike the outbox, this one
+    // the next person can SEE.
+    // Deleting the account reaches the mirror through the very same
+    // `journey == null` branch of `_WidgetSync.build`, and is covered at
+    // container level in `account_deletion_test.dart`. Not duplicated here:
+    // `await`ing the erasure inside `testWidgets` deadlocks the fake-async
+    // zone against its own pending timers, and a hanging test is worse than
+    // an absent one.
+    testWidgets('signing out replaces the numbers with the empty card', (
+      tester,
+    ) async {
+      final (container, store) = await open(tester);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await tester.pumpAndSettle();
+      expect(mirrorIn(store)['hasJourney'], isTrue);
+
+      container.read(quitStoreProvider.notifier).signOut();
+      await tester.pumpAndSettle();
+
+      final mirror = mirrorIn(store);
+      expect(mirror['hasJourney'], isFalse);
+      // Not merely flagged — the numbers must be GONE. `append` refuses on
+      // `hasJourney`, but a stale count left in the document is one bad read
+      // away from being drawn again.
+      expect(mirror.containsKey('puffs'), isFalse);
+      expect(mirror.containsKey('dayNumber'), isFalse);
+      expect(mirror.containsKey('streak'), isFalse);
+    });
+
+    testWidgets('and the launcher is told to repaint', (tester) async {
+      // Writing the document is not enough: nothing redraws a home-screen
+      // widget on its own, so without the refresh the old pixels stay up
+      // until something else happens to ask.
+      final (container, store) = await open(tester);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await tester.pumpAndSettle();
+      final before = store.refreshes;
+
+      container.read(quitStoreProvider.notifier).signOut();
+      await tester.pumpAndSettle();
+
+      expect(store.refreshes, greaterThan(before));
+    });
+  });
+
   testWidgets('an unchanged journey does not redraw the widget', (
     tester,
   ) async {

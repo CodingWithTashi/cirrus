@@ -40,7 +40,7 @@
 
 | # | Frame | Implementation | Status |
 |---|---|---|---|
-| 25 | Splash | `features/auth/splash_screen.dart` — 4s breathing Volt glow, wordmark fade-up, 1.5s auto-advance | ✅ |
+| 25 | Splash | `features/auth/splash_screen.dart` — 4s breathing Volt glow, wordmark fade-up, 1.5s auto-advance. **Deviation (founder, Sep 5 2026):** the launcher tile (`assets/images/icon-rounded.png`, 128dp) replaces the frame's Volt dot above the wordmark, and the glow breathes behind the tile. The group is centred by `Align` — the frame's `Stack(alignment: center)` straight in the Scaffold body measured 340dp square and sat in the top-left corner (`test/widgets/splash_screen_test.dart`). | ✅ |
 | 26 | Sign in | Apple primary, email second-class but visible, why-an-account card | ✅ |
 | 27 | Email register | Volt focus ring, live strength meter ("decent password"), no-spam card | ✅ |
 | 28 | Email login | "Your streak missed you.", wrong password → 2px field shake + kind copy | ✅ |
