@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The one thing this extension needs: the container it shares with the
+	     app. `HomeWidget.setAppGroupId` on the Dart side writes there, and
+	     `UserDefaults(suiteName:)` in CirrusShared.swift reads it back.
+
+	     A one-character difference between the two builds, signs, installs and
+	     runs — `UserDefaults(suiteName:)` hands back a usable-looking object
+	     and every read returns nil. The widget would show its empty state for
+	     ever with no diagnostic anywhere.
+
+	     Sign-in-with-Apple and App Attest are deliberately NOT here: the
+	     extension signs in to nothing and attests nothing. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.quitvape.lastPuff</string>
+	</array>
+</dict>
+</plist>

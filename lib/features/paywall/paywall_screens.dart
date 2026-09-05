@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
+import '../../app/theme/lp_palette.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
@@ -623,6 +624,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     feature(Icons.trending_down, l10n.paywallFeatPlan),
                     feature(Icons.schedule, l10n.paywallFeatForecasts),
                     feature(Icons.bar_chart, l10n.paywallFeatReports),
+                    // Last on purpose: it is the lightest of the seven, and
+                    // the six above it are the ones that do the work. It
+                    // earns its place because it is the only thing on this
+                    // list a person sees every second they hold the phone.
+                    feature(Icons.palette_outlined, l10n.paywallFeatThemes),
                     const SizedBox(height: 8),
                     if (trialDays != null && !loading)
                       _TrialTimeline(
@@ -1160,6 +1166,11 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
       (l10n.freeComparePlan, _none, _tick),
       (l10n.freeCompareForecast, _none, _tick),
       (l10n.freeCompareReport, _none, _tick),
+      (
+        l10n.freeCompareThemes,
+        '${LpPaletteCatalog.freeCount}',
+        '${LpPaletteCatalog.entries.length}',
+      ),
     ];
 
     /// One value cell. A tick is volt in the Pro column and muted in the

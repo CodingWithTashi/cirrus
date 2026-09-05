@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The primary action. Volt fill, ground-coloured glyph — the same pairing as
+     the in-app LOG PUFF button. No <selector>: the launcher does not drive
+     state_pressed on RemoteViews children reliably, so press feedback is the
+     launcher's own. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/cw_volt"/>
+    <corners android:radius="999dp"/>
+</shape>

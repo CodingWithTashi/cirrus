@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cirrus home-screen widget, wide (4x2).
+
+  Same id set as cirrus_widget_small.xml — see the note there; the provider
+  sets every id on both and only the visibility differs. What the extra width
+  buys is the progress bar against today's line and a full-length status
+  sentence instead of a clipped one.
+
+  Still day number on top, count below. The wide form puts the count and the
+  buttons side by side rather than stacking them, because at 4x2 a stacked
+  column leaves a band of dead space and a 48dp button stretched to 300dp
+  invites the mis-taps the − exists to undo.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cw_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/cw_card"
+    android:padding="@dimen/cw_pad">
+
+    <LinearLayout
+        android:id="@+id/cw_active"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <!-- left: the numbers -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <TextView
+                    android:id="@+id/cw_day"
+                    style="@style/CirrusWidget.Day"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/cw_day_pill"
+                    android:maxLines="1"
+                    android:text="@string/cw_preview_day"/>
+                <TextView
+                    android:id="@+id/cw_flame"
+                    style="@style/CirrusWidget.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="15sp"
+                    android:text="🔥"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/cw_count"
+                    style="@style/CirrusWidget.Count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:text="@string/cw_preview_count"/>
+                <TextView
+                    android:id="@+id/cw_count_over"
+                    style="@style/CirrusWidget.CountOver"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:visibility="gone"
+                    android:text="@string/cw_preview_count"/>
+                <TextView
+                    android:id="@+id/cw_of"
+                    style="@style/CirrusWidget.OfLimit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:maxLines="1"
+                    android:text="@string/cw_preview_of"/>
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/cw_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="6dp"
+                android:progressDrawable="@drawable/cw_bar"
+                android:max="100"
+                android:progress="53"/>
+            <ProgressBar
+                android:id="@+id/cw_bar_over"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="6dp"
+                android:visibility="gone"
+                android:progressDrawable="@drawable/cw_bar_over"
+                android:max="100"
+                android:progress="100"/>
+
+            <TextView
+                android:id="@+id/cw_left"
+                style="@style/CirrusWidget.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/cw_preview_left"/>
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="0dp"
+                android:importantForAccessibility="no"/>
+        </LinearLayout>
+
+        <!-- right: the controls, stacked so the primary sits under the thumb -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+            <TextView
+                android:id="@+id/cw_plus"
+                style="@style/CirrusWidget.Plus"
+                android:layout_width="86dp"
+                android:layout_height="@dimen/cw_btn_h"
+                android:background="@drawable/cw_btn_plus"
+                android:text="@string/cw_plus_label"/>
+            <TextView
+                android:id="@+id/cw_minus"
+                style="@style/CirrusWidget.Minus"
+                android:layout_width="86dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/cw_btn_minus"
+                android:text="@string/cw_minus_label"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/cw_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/cw_empty_title"
+            style="@style/CirrusWidget.Day"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:text="@string/cw_empty_title"/>
+        <TextView
+            android:id="@+id/cw_empty_body"
+            style="@style/CirrusWidget.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="@string/cw_empty_body"/>
+    </LinearLayout>
+</FrameLayout>

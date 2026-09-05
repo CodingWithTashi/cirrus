@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app/theme/lp_palette.dart';
 import 'settings_store.dart';
 
 /// Disk for [SettingsState].
@@ -19,6 +20,7 @@ import 'settings_store.dart';
 /// launch over.
 abstract final class SettingsPersistence {
   static const _themeMode = 'settings.themeMode';
+  static const _palette = 'settings.palette';
   static const _locale = 'settings.locale';
   static const _notificationsOn = 'settings.notificationsOn';
   static const _dangerStart = 'settings.dangerStartHour';
@@ -28,6 +30,9 @@ abstract final class SettingsPersistence {
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
+  static const _celebrated = 'settings.celebratedMilestones';
+  static const _armedMilestone = 'settings.armedMilestone';
+  static const _milestonesAdopted = 'settings.milestonesAdopted';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -40,6 +45,7 @@ abstract final class SettingsPersistence {
       final tag = prefs.getString(_locale);
       return SettingsState(
         themeMode: _themeFromName(prefs.getString(_themeMode)),
+        palette: _paletteFromName(prefs.getString(_palette)),
         locale: tag == null || tag == _systemLocale ? null : Locale(tag),
         notificationsOn:
             prefs.getBool(_notificationsOn) ?? defaults.notificationsOn,
@@ -55,6 +61,12 @@ abstract final class SettingsPersistence {
         launchPaywallShownCount:
             prefs.getInt(_launchPaywallCount) ??
             defaults.launchPaywallShownCount,
+        celebratedMilestones:
+            prefs.getStringList(_celebrated)?.toSet() ??
+            defaults.celebratedMilestones,
+        armedMilestone: prefs.getString(_armedMilestone),
+        milestonesAdopted:
+            prefs.getBool(_milestonesAdopted) ?? defaults.milestonesAdopted,
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -66,6 +78,7 @@ abstract final class SettingsPersistence {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_themeMode, state.themeMode.name);
+      await prefs.setString(_palette, state.palette.name);
       await prefs.setString(
         _locale,
         state.locale?.languageCode ?? _systemLocale,
@@ -76,7 +89,18 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
+      await prefs.setBool(_milestonesAdopted, state.milestonesAdopted);
       await prefs.setInt(_launchPaywallCount, state.launchPaywallShownCount);
+      await prefs.setStringList(
+        _celebrated,
+        state.celebratedMilestones.toList(),
+      );
+      final armed = state.armedMilestone;
+      if (armed == null) {
+        await prefs.remove(_armedMilestone);
+      } else {
+        await prefs.setString(_armedMilestone, armed);
+      }
       final day = state.launchPaywallShownDay;
       if (day == null) {
         await prefs.remove(_launchPaywallDay);
@@ -94,4 +118,14 @@ abstract final class SettingsPersistence {
     'dark' => ThemeMode.dark,
     _ => ThemeMode.system,
   };
+
+  /// A palette written by a NEWER build (or a corrupt value) falls back to the
+  /// free family rather than throwing — same contract as [_themeFromName].
+  /// Deliberately not `LpPalette.values.byName`, which throws on an unknown.
+  static LpPalette _paletteFromName(String? name) {
+    for (final p in LpPalette.values) {
+      if (p.name == name) return p;
+    }
+    return LpPalette.ember;
+  }
 }

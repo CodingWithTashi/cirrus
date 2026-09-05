@@ -15,6 +15,7 @@ import '../../domain/models/models.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/repositories/repositories.dart';
 import '../seed/seed_data.dart';
+import 'pending_puffs.dart';
 import 'providers.dart';
 
 /// View model of the quit journey. Session lifecycle is awaited API work
@@ -136,14 +137,135 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   DateTime get _todayKey => JourneyState.dateKey(_now);
 
+  /// True while [applyPendingPuffs] is replaying a batch, so the individual
+  /// mutations update state without each issuing its own document write.
+  bool _batching = false;
+
   /// Applies a mutation locally and syncs it to the backend write-behind.
   /// A failed save (offline…) is deliberately swallowed: the app is
   /// local-first and the offline banner already tells the story — a real
   /// sync layer with a retry queue slots in here later.
   void _commit(JourneyState next) {
     state = next;
+    if (_batching) return;
     _journeys.save(next).ignore();
   }
+
+  /// Replays puffs logged on the home-screen widget while the app was closed.
+  ///
+  /// Returns the highest sequence applied, which is what the caller publishes
+  /// as the outbox cursor. Zero means nothing was applied and the cursor must
+  /// not move.
+  ///
+  /// **One write, not one per event.** Each event still goes through
+  /// [logPuff]/[undoPuffs] so that every per-puff transition — the over-limit
+  /// crossing, the derived repair-token wallet, the slip arming, the 2×
+  /// reflow — fires exactly as it would have in-app. But `_commit`'s write is
+  /// held back until the end. Twelve events would otherwise be twelve
+  /// unordered fire-and-forget whole-document `set()`s of strictly superseded
+  /// states, eleven of them pure waste and any one of them the last thing the
+  /// server sees if the app dies mid-drain.
+  ///
+  /// **The save is deliberately not awaited.** Firestore's write future
+  /// completes on *server* ack, so awaiting it would hang for the whole of an
+  /// offline session — and a cursor that waits for that ack never advances,
+  /// which is precisely how the next launch double-counts. What makes
+  /// "called" as good as "landed" is that the SDK's own mutation queue is
+  /// durable and replays across a restart.
+  ///
+  /// Analytics stays one event per tap: `logPuff` counts logging behaviour,
+  /// and twelve widget taps are twelve taps.
+  Future<int> applyPendingPuffs(
+    List<PendingPuff> events, {
+    required DateTime now,
+  }) async {
+    final before = state;
+    if (before == null || events.isEmpty) return 0;
+
+    var highest = 0;
+    _batchedPuffLogs = 0;
+    _batching = true;
+    try {
+      for (final event in events) {
+        // A stamp in the future is a clock that was wrong when the tap
+        // happened — an NTP correction, or a timezone the device has since
+        // left. Clamped, because the alternative is `logPuff(at:)` minting a
+        // day log for a day that has not happened, which then sits in the map
+        // as a confirmed day and can hand out a streak nobody lived.
+        final at = event.at.isAfter(now) ? now : event.at;
+        if (event.delta > 0) {
+          logPuff(at: at);
+        } else {
+          undoPuffs(1, at: at);
+        }
+        if (event.seq > highest) highest = event.seq;
+      }
+    } finally {
+      _batching = false;
+    }
+
+    final next = state;
+    // `undoPuffs` no-ops on a day it cannot find, so a batch of only those
+    // leaves state untouched and has nothing to persist — but the events were
+    // still consumed, so the cursor still moves.
+    if (next == null || identical(next, before)) {
+      _flushBatchedPuffLogs();
+      return highest;
+    }
+
+    // The write is awaited, and the THREE outcomes are deliberately not the
+    // same thing:
+    //
+    // * it completes — the server has it. Advance.
+    // * it times out — almost certainly offline. Firestore's own mutation
+    //   queue is durable from the moment `set()` is called and replays across
+    //   a restart, so the puffs are safe. Advance, because a cursor that waits
+    //   for a server ack never advances offline, and the next launch would
+    //   replay the same events on top of a journey that already has them.
+    // * it THROWS — refused outright, most likely no signed-in account. The
+    //   puffs exist only in this process's memory and a cold start would
+    //   reload a journey that never received them. Do NOT advance: the events
+    //   stay queued and the next drain tries again.
+    final write = _journeys.save(next);
+    // Attaches a swallowing listener so a late failure cannot surface as an
+    // unhandled async error once the timeout below has stopped listening. The
+    // `await` below registers its own listener and still sees the error.
+    write.ignore();
+    try {
+      await write.timeout(widgetFlushTimeout);
+    } on TimeoutException {
+      // Queued durably. Nothing to do.
+    } on Object {
+      // Refused. Put the journey back exactly as it was, so that memory, the
+      // cursor and the backend all agree that nothing happened — otherwise the
+      // events stay queued (correct) on top of a state that has already
+      // applied them (wrong), and the next drain counts every one of them
+      // twice. The batch is all-or-nothing.
+      state = before;
+      // Discarded, not flushed: none of these taps landed.
+      _batchedPuffLogs = 0;
+      return 0;
+    }
+    _flushBatchedPuffLogs();
+    return highest;
+  }
+
+  /// One `puff_logged` per widget tap that actually landed. Still one per tap
+  /// rather than per puff — the metric counts logging behaviour.
+  void _flushBatchedPuffLogs() {
+    final analytics = ref.read(analyticsProvider);
+    for (var i = 0; i < _batchedPuffLogs; i++) {
+      analytics.puffLogged();
+    }
+    _batchedPuffLogs = 0;
+  }
+
+  /// `puff_logged` events owed by the drain in progress. See [logPuff].
+  int _batchedPuffLogs = 0;
+
+  /// How long a drain waits for the backend before assuming the write is
+  /// queued rather than refused. Short: it runs on the launch path.
+  static const Duration widgetFlushTimeout = Duration(seconds: 3);
 
   // ---- session lifecycle (awaited API calls) --------------------------------
 
@@ -236,6 +358,12 @@ class JourneyStore extends Notifier<JourneyState?> {
     // the next person inheriting the last one's Premium.
     ref.read(analyticsProvider).reset();
     ref.read(entitlementProvider.notifier).unbind().ignore();
+    // Same shared-phone rule, third instance: the milestone ledger is
+    // device-scoped SharedPreferences with no uid in the key, and a settled
+    // badge makes the planner answer null — so without this the next person to
+    // sign in inherits this account's settled badges and never gets a single
+    // celebration.
+    ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
     // Release the push registration BEFORE the credential goes, and chain the
     // two rather than firing both: `syncUserContext` is a callable, so it
     // carries the caller's ID token, and a release that raced past
@@ -263,6 +391,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     await _auth.deleteAccount();
     ref.read(analyticsProvider).reset();
     ref.read(entitlementProvider.notifier).unbind().ignore();
+    // As in `signOut`: erasing the account must erase the device's record of
+    // what it already celebrated, or starting over on the same phone is a quit
+    // with no milestones at all.
+    ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
     // The server side of the push registry died with `recursiveDelete`; this
     // is the local half — without it the device keeps a live FCM token bound
     // to an account that no longer exists. After the await on purpose: a
@@ -297,7 +429,16 @@ class JourneyStore extends Notifier<JourneyState?> {
     // computed without. Emitted from the store, not the four views that call
     // logPuff, so a new entry point can't ship unmeasured. Once per tap, not
     // per puff: the metric counts logging behaviour, not inventory.
-    ref.read(analyticsProvider).puffLogged();
+    // Buffered during a drain: the batch is all-or-nothing, and a refused
+    // write rolls the journey back and leaves the events queued for the next
+    // drain. Emitting here would have already counted taps that did not land,
+    // and the replay would count them a second time — inflating the Weekly
+    // Active Quitters funnel this event exists to compute.
+    if (_batching) {
+      _batchedPuffLogs++;
+    } else {
+      ref.read(analyticsProvider).puffLogged();
+    }
     // The first puff ever logged also ticks Day-1 task zero below, whether or
     // not the checklist was the thing that sent them here.
     _reportDay1Task(s, 0);
@@ -349,11 +490,20 @@ class JourneyStore extends Notifier<JourneyState?> {
       );
     }
 
+    // The anchor only ever moves FORWARD. Every in-app caller passes `at:
+    // null`, so `when` is now and this is a no-op for them — but a puff
+    // logged from the home-screen widget is drained hours later, and applying
+    // a 23:50 event at 09:00 the next morning would drag the anchor
+    // backwards. The whole health timeline is measured from it (docs/03 §6),
+    // so that would silently rewind every recovery node the user had earned.
+    final anchor = s.lastPuffAt;
+    final lastPuff = anchor == null || when.isAfter(anchor) ? when : anchor;
+
     _commit(
       _withBadges(
         s.copyWith(
           days: {...s.days, key: updated},
-          lastPuffAt: when,
+          lastPuffAt: lastPuff,
           pendingSlipCleanDays: () => pendingSlip,
           day1TasksDone: {...s.day1TasksDone, 0},
         ),
@@ -363,21 +513,29 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   void undoLastPuff() => undoPuffs(1);
 
-  /// Takes back the last [count] puffs of today — the undo for a quick-log
-  /// burst, so the snack's single Undo reverses everything the burst logged.
-  /// Clamped to what today actually holds; buckets drain newest-hour-first,
-  /// mirroring how logPuff filled them.
-  void undoPuffs(int count) {
+  /// Takes back the last [count] puffs of [at]'s day — today by default, which
+  /// is the undo for a quick-log burst, so the snack's single Undo reverses
+  /// everything the burst logged. Clamped to what that day actually holds;
+  /// buckets drain newest-hour-first, mirroring how logPuff filled them.
+  ///
+  /// [at] exists for the same reason it does on [logPuff]: a `−` tapped on the
+  /// home-screen widget at 23:58 and drained at 00:04 must take a puff off
+  /// *yesterday*. Without it the correction would land on today and corrupt
+  /// two days at once — the day that keeps a puff it did not have, and the day
+  /// that loses one it did. Every in-app caller omits it and is unaffected.
+  void undoPuffs(int count, {DateTime? at}) {
     final s = state;
     if (s == null) return;
-    final log = s.days[_todayKey];
+    final when = at ?? _now;
+    final key = JourneyState.dateKey(when);
+    final log = s.days[key];
     if (log == null || log.puffs == 0) return;
     final buckets = Map<int, int>.from(log.hourBuckets);
     var remaining = count.clamp(0, log.puffs);
     final removed = remaining;
     while (remaining > 0) {
       final lastHour = buckets.keys.isEmpty
-          ? _now.hour
+          ? LpDate.hour(when)
           : buckets.keys.reduce((a, b) => a > b ? a : b);
       if ((buckets[lastHour] ?? 0) > 1) {
         buckets[lastHour] = buckets[lastHour]! - 1;
@@ -390,7 +548,7 @@ class JourneyStore extends Notifier<JourneyState?> {
       s.copyWith(
         days: {
           ...s.days,
-          _todayKey: log.copyWith(
+          key: log.copyWith(
             puffs: log.puffs - removed,
             hourBuckets: buckets,
           ),

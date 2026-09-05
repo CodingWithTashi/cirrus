@@ -40,7 +40,7 @@
 
 | # | Frame | Implementation | Status |
 |---|---|---|---|
-| 25 | Splash | `features/auth/splash_screen.dart` — 4s breathing Volt glow, wordmark fade-up, 1.5s auto-advance | ✅ |
+| 25 | Splash | `features/auth/splash_screen.dart` — 4s breathing Volt glow, wordmark fade-up, 1.5s auto-advance. **Deviation (founder, Sep 5 2026):** the launcher tile (`assets/images/icon-rounded.png`, 128dp) replaces the frame's Volt dot above the wordmark, and the glow breathes behind the tile. The group is centred by `Align` — the frame's `Stack(alignment: center)` straight in the Scaffold body measured 340dp square and sat in the top-left corner (`test/widgets/splash_screen_test.dart`). | ✅ |
 | 26 | Sign in | Apple primary, email second-class but visible, why-an-account card | ✅ |
 | 27 | Email register | Volt focus ring, live strength meter ("decent password"), no-spam card | ✅ |
 | 28 | Email login | "Your streak missed you.", wrong password → 2px field shake + kind copy | ✅ |
@@ -72,8 +72,8 @@
 | 48b | Slip — adjust | bumped curve reflow, +2 days honest stretch, dimmed-flame card, coach path | ✅ |
 | 49 | Profile | Freedom-Day countdown hero, Your Why, lifetime stats, alias/avatar editor | ✅ |
 | 50 | Settings | account, subscription lifecycle routes, notifications + inline danger-hours editor, privacy export/delete, Appearance, Language (added), sign out | ✅ |
-| 51 | Push set | lock-screen mock reference — in-app renderings exist (D4 danger-hour preview, trial-ending push); OS push delivery is FCM phase | 🔌 |
-| 52 | Widgets + states | empty-stats state ✅ · offline pill + error card built as `LpOfflineBanner`/`LpErrorCard` (`core/widgets/lp_misc.dart`) 📐 — surfaced when real IO exists · iOS/Android home-screen widgets = native WidgetKit phase (docs/05 §3) | ✅ / 📐 / 🔌 |
+| 51 | Push set | all three now real. #1 danger-hour = on-device `ReminderKind.danger`; #2 **streak celebration = `ReminderKind.milestone`, added Sep 4 2026** — fires at 08:00 the morning after one of the five flame badges is earned, and only ever for a badge already permanently held; #3 "buddy SOS" = the `sosReply` push from `moderateReply` (the buddy framing went with Quit Buddies). Two pushes exist the frame never drew: `insightReady` and the trial-ending reminder | ✅* |
+| 52 | Widgets + states | empty-stats state ✅ · offline pill + error card ✅ (`OfflineBanner`, `LpErrorState`, mounted app-wide) · **Android home-screen widget ✅ Sep 4 2026** — one resizable provider, day number above the count, `+`/`−` that log while the app is dead · **lock-screen widget: Android has none for phones**, so that frame is iOS-only and waits on the Xcode target | ✅ / ✅ / 🔌 iOS |
 
 ## Run 2 Light — `LastPuff Run 2 Light.dc.html` (Daylight Ember) — priority 4 (last)
 

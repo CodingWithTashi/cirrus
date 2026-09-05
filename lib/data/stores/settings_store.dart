@@ -3,11 +3,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme/lp_palette.dart';
 import 'settings_persistence.dart';
 
 class SettingsState {
   const SettingsState({
     this.themeMode = ThemeMode.system,
+    this.palette = LpPalette.ember,
     this.locale,
     this.notificationsOn = true,
     this.dangerStartHour = 21,
@@ -19,9 +21,24 @@ class SettingsState {
     this.winbackShown = false,
     this.launchPaywallShownDay,
     this.launchPaywallShownCount = 0,
+    this.celebratedMilestones = const {},
+    this.armedMilestone,
+    this.milestonesAdopted = false,
   });
 
   final ThemeMode themeMode;
+
+  /// The chosen palette family — orthogonal to [themeMode], which still picks
+  /// light/dark/system within it.
+  ///
+  /// Device-scoped like [themeMode] rather than part of the journey: a look is
+  /// a phone's, and `journeys/{uid}` is rewritten wholesale on every puff tap.
+  ///
+  /// Stored even when the reader is not entitled to it. `LpPaletteCatalog
+  /// .resolveFor` clamps at render, so a lapsed subscriber sees the free
+  /// family without this being overwritten — and gets their own back the
+  /// moment they resubscribe.
+  final LpPalette palette;
 
   /// null = follow system.
   final Locale? locale;
@@ -52,8 +69,45 @@ class SettingsState {
   /// round again.
   final int launchPaywallShownCount;
 
+  /// Badge ids whose celebration has already been SCHEDULED.
+  ///
+  /// Marked at scheduling time, not at firing time: nothing observes a
+  /// notification going off, so an unmarked badge would re-schedule on every
+  /// resume for ever. Device-scoped rather than part of the journey on
+  /// purpose — the notification is a device's, and `journeys/{uid}` is
+  /// rewritten wholesale on every puff tap, which is where a server-shaped
+  /// field goes to die.
+  final Set<String> celebratedMilestones;
+
+  /// The badge whose celebration is currently on the device clock, if any.
+  ///
+  /// Tracked separately because [celebratedMilestones] means "settled", and
+  /// the two part company exactly once: switching notifications off cancels
+  /// every scheduled id, so the armed one has to become owed again or it is
+  /// lost for good — the badge stays earned, the planner sees it as settled,
+  /// and nothing ever re-arms it.
+  final String? armedMilestone;
+
+  /// Whether [celebratedMilestones] has been initialised for the account now
+  /// signed in.
+  ///
+  /// False means "this device has never watched this account earn anything",
+  /// which is true in three places and needs the same answer in all of them: a
+  /// fresh install, the first launch after the build that introduced the
+  /// ledger, and a new account signing in on a phone whose ledger was just
+  /// reset. In each, whatever is already in `earnedBadges` was earned before
+  /// this device was watching, so it is ADOPTED as celebrated rather than
+  /// treated as owed — otherwise the first sync fires "Two weeks. TWO WEEKS."
+  /// at somebody who did that a month ago.
+  ///
+  /// Needed as a flag rather than inferred from an empty ledger, because an
+  /// empty ledger is also the honest state of a user about to earn their very
+  /// first badge — and suppressing that one is the bug in the other direction.
+  final bool milestonesAdopted;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
+    LpPalette? palette,
     Locale? Function()? locale,
     bool? notificationsOn,
     int? dangerStartHour,
@@ -63,8 +117,12 @@ class SettingsState {
     bool? winbackShown,
     String? launchPaywallShownDay,
     int? launchPaywallShownCount,
+    Set<String>? celebratedMilestones,
+    String? Function()? armedMilestone,
+    bool? milestonesAdopted,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
+    palette: palette ?? this.palette,
     locale: locale != null ? locale() : this.locale,
     notificationsOn: notificationsOn ?? this.notificationsOn,
     dangerStartHour: dangerStartHour ?? this.dangerStartHour,
@@ -77,6 +135,11 @@ class SettingsState {
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
     launchPaywallShownCount:
         launchPaywallShownCount ?? this.launchPaywallShownCount,
+    celebratedMilestones: celebratedMilestones ?? this.celebratedMilestones,
+    armedMilestone: armedMilestone != null
+        ? armedMilestone()
+        : this.armedMilestone,
+    milestonesAdopted: milestonesAdopted ?? this.milestonesAdopted,
   );
 }
 
@@ -117,6 +180,12 @@ class SettingsStore extends Notifier<SettingsState> {
 
   void setThemeMode(ThemeMode mode) => _commit(state.copyWith(themeMode: mode));
 
+  /// Wears [palette]. Callers gate on entitlement themselves — a locked family
+  /// must never reach here, because a stored choice the reader was never
+  /// entitled to would come back the day they subscribe for something else.
+  void setPalette(LpPalette palette) =>
+      _commit(state.copyWith(palette: palette));
+
   void setLocale(Locale? locale) =>
       _commit(state.copyWith(locale: () => locale));
 
@@ -135,6 +204,73 @@ class SettingsStore extends Notifier<SettingsState> {
       _commit(state.copyWith(trialReminderOn: on));
 
   void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
+
+  /// Records that [armed]'s celebration is on the clock and that every badge
+  /// in [covers] is settled.
+  ///
+  /// One write, not one per badge: a restored journey can settle four at once
+  /// and each `_commit` re-triggers the sync that called this.
+  void markMilestonesCelebrated(String armed, Set<String> covers) {
+    final next = {...state.celebratedMilestones, ...covers};
+    if (next.length == state.celebratedMilestones.length &&
+        state.armedMilestone == armed) {
+      return;
+    }
+    _commit(
+      state.copyWith(
+        celebratedMilestones: next,
+        armedMilestone: () => armed,
+      ),
+    );
+  }
+
+  /// Hands the armed celebration back to the planner, because the device no
+  /// longer holds it — notifications were switched off, which cancels every
+  /// scheduled id. Without this the badge stays "settled" for ever and the
+  /// promise is silently dropped when they are switched back on.
+  void releaseArmedMilestone() {
+    final armed = state.armedMilestone;
+    if (armed == null) return;
+    _commit(
+      state.copyWith(
+        celebratedMilestones: {...state.celebratedMilestones}..remove(armed),
+        armedMilestone: () => null,
+      ),
+    );
+  }
+
+  /// Adopts [earned] as already celebrated, without arming anything.
+  ///
+  /// Called once per account, the first time the schedule is synced with a
+  /// journey in hand. See [SettingsState.milestonesAdopted] for why an empty
+  /// ledger is not enough to infer this.
+  void adoptMilestones(Set<String> earned) {
+    if (state.milestonesAdopted) return;
+    _commit(
+      state.copyWith(
+        celebratedMilestones: {...earned},
+        armedMilestone: () => null,
+        milestonesAdopted: true,
+      ),
+    );
+  }
+
+  /// Forgets the milestone ledger, because it belonged to the account that has
+  /// just left.
+  ///
+  /// The ledger is device-scoped SharedPreferences with no uid in the key, so
+  /// without this a shared phone hands the next person the last person's
+  /// settled badges — and since a settled badge makes the planner answer null,
+  /// they would never get a single celebration. Same per-account rule as
+  /// `analytics.reset()`, `EntitlementStore.unbind()` and
+  /// `WidgetCoordinator.discardQueued()` beside it.
+  void resetMilestoneLedger() => _commit(
+    state.copyWith(
+      celebratedMilestones: const {},
+      armedMilestone: () => null,
+      milestonesAdopted: false,
+    ),
+  );
 
   /// Records that today's launch paywall was shown, so it is not shown again
   /// before the next local day.

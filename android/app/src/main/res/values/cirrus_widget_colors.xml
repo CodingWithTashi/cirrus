@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Midnight Ember, mirrored from lib/app/theme/lp_colors.dart.
+
+     NOT in values/colors.xml on purpose: `dart run flutter_launcher_icons`
+     rewrites that file to plant ic_launcher_background, and anything else in
+     it is deleted on the next icon run.
+
+     The widget follows the SYSTEM theme, not the app's own Appearance setting.
+     A deliberate deviation: the launcher inflates this layout in its own
+     process against its own configuration, and a widget is chrome on the home
+     screen — it should match the screen it sits on, not the app it opens.
+     test/android_widget_test.dart pins that both files declare the same names,
+     because a colour defined in one and missing from the other renders wrong
+     in exactly one theme and the compiler says nothing. -->
+<resources>
+    <color name="cw_surface">#161A22</color>
+    <color name="cw_surface_low">#10131A</color>
+    <color name="cw_border">#232A36</color>
+    <color name="cw_text">#FFFFFF</color>
+    <color name="cw_text_dim">#9AA3B2</color>
+    <color name="cw_volt">#C8F542</color>
+    <color name="cw_volt_track">#1FC8F542</color>
+    <color name="cw_volt_line">#33C8F542</color>
+    <color name="cw_on_volt">#0A0C10</color>
+    <color name="cw_danger">#FF5C5C</color>
+    <color name="cw_danger_line">#80FF5C5C</color>
+</resources>

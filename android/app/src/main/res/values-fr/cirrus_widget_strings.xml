@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cw_picker_label">Cirrus</string>
+    <string name="cw_picker_description">Note une bouffée et vois ta journée, sans ouvrir l’app.</string>
+    <string name="cw_preview_day">jour 12</string>
+    <string name="cw_preview_count">52</string>
+    <string name="cw_preview_of">/ 98</string>
+    <string name="cw_preview_left">46 restantes · tu es en avance</string>
+    <string name="cw_plus_label">+</string>
+    <string name="cw_minus_label">−</string>
+    <string name="cw_plus_a11y">Noter une bouffée</string>
+    <string name="cw_minus_a11y">Retirer la dernière bouffée</string>
+    <string name="cw_minus_off_a11y">Rien à retirer</string>
+    <string name="cw_empty_title">Commence ton plan</string>
+    <string name="cw_empty_body">Touche pour ouvrir Cirrus</string>
+</resources>

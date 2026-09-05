@@ -879,7 +879,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Not spam. One nudge before your danger hours, and one before your trial ends.';
+      'Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.';
 
   @override
   String get obNotifPreviewTime => 'Fri 9:54 PM';
@@ -893,7 +893,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'A heads-up before your trial ends — no surprise charges';
+      'A heads-up before your trial ends, and a milestone celebration';
 
   @override
   String get obNotifBullet3 => 'Nothing else — no marketing, ever';
@@ -927,6 +927,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallFeatReports => 'Weekly report in your own numbers';
+
+  @override
+  String get paywallFeatThemes => 'Two more colour themes, in dark and light';
 
   @override
   String get paywallYearly => 'YEARLY';
@@ -1155,6 +1158,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get freeCompareReport => 'Weekly report';
+
+  @override
+  String get freeCompareThemes => 'Colour themes';
 
   @override
   String freeComparePerDay(int n) {
@@ -2990,10 +2996,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAppearanceSystem => 'Match system';
 
   @override
-  String get settingsAppearanceMidnight => 'Midnight';
+  String get settingsAppearanceDark => 'Dark';
 
   @override
-  String get settingsAppearanceDaylight => 'Daylight';
+  String get settingsAppearanceLight => 'Light';
+
+  @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get settingsThemeEmber => 'Ember';
+
+  @override
+  String get settingsThemeEmberSub => 'Void and lime. The original.';
+
+  @override
+  String get settingsThemeHearth => 'Hearth';
+
+  @override
+  String get settingsThemeHearthSub => 'Warm charcoal and amber.';
+
+  @override
+  String get settingsThemeTide => 'Tide';
+
+  @override
+  String get settingsThemeTideSub => 'Deep indigo and teal.';
+
+  @override
+  String get settingsThemeLocked => 'Hearth and Tide come with Premium.';
 
   @override
   String get settingsLanguage => 'Language';
@@ -3156,4 +3186,45 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get slipCurveNoteJustHappened =>
       'Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.';
+
+  @override
+  String get widgetDay => 'day %1\$d';
+
+  @override
+  String get widgetLeftAhead => '%1\$d left · ahead of your curve';
+
+  @override
+  String get widgetLeftTight => '%1\$d left · tight, you\'ve got this';
+
+  @override
+  String get widgetOverLimit => 'over today\'s line · no shame';
+
+  @override
+  String get widgetEmptyTitle => 'Start your plan';
+
+  @override
+  String get widgetEmptyBody => 'Tap to open Cirrus';
+
+  @override
+  String get milestoneNotifTitle => 'Come see your flame';
+
+  @override
+  String get milestoneNotifSpark =>
+      'Three clean days. The hardest part is behind you — your flame is lit.';
+
+  @override
+  String get milestoneNotifWeekFlame =>
+      'A full week. Seven days you weren\'t sure you had.';
+
+  @override
+  String get milestoneNotifTwoWeekFlame =>
+      'Two weeks. TWO WEEKS. Your flame is officially a blaze.';
+
+  @override
+  String get milestoneNotifInferno =>
+      'Thirty days. Nobody handed you this one.';
+
+  @override
+  String get milestoneNotifFreedomDay =>
+      'Freedom Day. The plan is done, and you finished it.';
 }

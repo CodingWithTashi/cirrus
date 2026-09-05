@@ -528,11 +528,11 @@
   "obWhyWordsCta": "That's why",
   "obWhyWordsSkip": "Skip this",
   "obNotifTitle": "Backup, exactly when you cave.",
-  "obNotifSubtitle": "Not spam. One nudge before your danger hours, and one before your trial ends.",
+  "obNotifSubtitle": "Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.",
   "obNotifPreviewTime": "Fri 9:54 PM",
   "obNotifPreviewBody": "heads up — Friday nights are your spike. Plan's ready 💪",
   "obNotifBullet1": "Danger-hour heads-up (you set the hours)",
-  "obNotifBullet2": "A heads-up before your trial ends — no surprise charges",
+  "obNotifBullet2": "A heads-up before your trial ends, and a milestone celebration",
   "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitle": "Your plan is ready.",
@@ -544,6 +544,7 @@
   "paywallFeatForecasts": "Craving forecasts for your danger hours",
   "paywallFeatCommunity": "Community that answers your SOS",
   "paywallFeatReports": "Weekly report in your own numbers",
+  "paywallFeatThemes": "Two more colour themes, in dark and light",
   "paywallYearly": "YEARLY",
   "paywallYearlyBadge": "BEST VALUE",
   "paywallMonthly": "MONTHLY",
@@ -718,6 +719,7 @@
   "freeComparePlan": "Plan adapts nightly",
   "freeCompareForecast": "Craving forecasts",
   "freeCompareReport": "Weekly report",
+  "freeCompareThemes": "Colour themes",
   "freeComparePerDay": "{n}/day",
   "@freeComparePerDay": {
     "placeholders": {
@@ -2107,8 +2109,16 @@
   "settingsDeleteConfirmCta": "Yes, delete it all",
   "settingsAppearance": "Appearance",
   "settingsAppearanceSystem": "Match system",
-  "settingsAppearanceMidnight": "Midnight",
-  "settingsAppearanceDaylight": "Daylight",
+  "settingsAppearanceDark": "Dark",
+  "settingsAppearanceLight": "Light",
+  "settingsTheme": "Theme",
+  "settingsThemeEmber": "Ember",
+  "settingsThemeEmberSub": "Void and lime. The original.",
+  "settingsThemeHearth": "Hearth",
+  "settingsThemeHearthSub": "Warm charcoal and amber.",
+  "settingsThemeTide": "Tide",
+  "settingsThemeTideSub": "Deep indigo and teal.",
+  "settingsThemeLocked": "Hearth and Tide come with Premium.",
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "Match system",
   "settingsSignOut": "Sign out",
@@ -2186,5 +2196,53 @@
   "slipCurveNoteBoredom": "Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.",
   "slipCurveNoteDrinking": "Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.",
   "slipCurveNoteFriends": "Two extra days, same destination. Next time, text your coach before you meet them, not after.",
-  "slipCurveNoteJustHappened": "Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day."
+  "slipCurveNoteJustHappened": "Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.",
+  "widgetDay": "day %1$d",
+  "@widgetDay": {
+    "description": "Home-screen widget: the day label above the count. A NATIVE format template - the %1$d is filled by Kotlin String.format, not by gen-l10n, because the widget recomputes the day number itself across a midnight the app slept through."
+  },
+  "widgetLeftAhead": "%1$d left · ahead of your curve",
+  "@widgetLeftAhead": {
+    "description": "Home-screen widget: puffs left when comfortably under the line (mirrors home_screen's puffsLeft > limit * 0.25 rule). Native %1$d template - the widget changes the count itself on a + tap."
+  },
+  "widgetLeftTight": "%1$d left · tight, you've got this",
+  "@widgetLeftTight": {
+    "description": "Home-screen widget: puffs left when close to the line. Native %1$d template."
+  },
+  "widgetOverLimit": "over today's line · no shame",
+  "@widgetOverLimit": {
+    "description": "Home-screen widget: shown once today is over the line. Carries no count on purpose - over is over."
+  },
+  "widgetEmptyTitle": "Start your plan",
+  "@widgetEmptyTitle": {
+    "description": "Home-screen widget before there is a journey to show."
+  },
+  "widgetEmptyBody": "Tap to open Cirrus",
+  "@widgetEmptyBody": {
+    "description": "Home-screen widget empty state, second line."
+  },
+  "milestoneNotifTitle": "Come see your flame",
+  "@milestoneNotifTitle": {
+    "description": "Title of the one-shot celebration fired the morning after a streak milestone is earned (design frame 51 #2)."
+  },
+  "milestoneNotifSpark": "Three clean days. The hardest part is behind you — your flame is lit.",
+  "@milestoneNotifSpark": {
+    "description": "Celebration body for the 3-day badge."
+  },
+  "milestoneNotifWeekFlame": "A full week. Seven days you weren't sure you had.",
+  "@milestoneNotifWeekFlame": {
+    "description": "Celebration body for the 7-day badge."
+  },
+  "milestoneNotifTwoWeekFlame": "Two weeks. TWO WEEKS. Your flame is officially a blaze.",
+  "@milestoneNotifTwoWeekFlame": {
+    "description": "Celebration body for the 14-day badge. The design frame’s own line."
+  },
+  "milestoneNotifInferno": "Thirty days. Nobody handed you this one.",
+  "@milestoneNotifInferno": {
+    "description": "Celebration body for the 30-day badge."
+  },
+  "milestoneNotifFreedomDay": "Freedom Day. The plan is done, and you finished it.",
+  "@milestoneNotifFreedomDay": {
+    "description": "Celebration body for finishing the plan."
+  }
 }

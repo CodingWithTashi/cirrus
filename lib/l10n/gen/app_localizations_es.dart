@@ -885,7 +885,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Un aviso antes de tus horas de peligro y otro antes de que acabe tu prueba.';
+      'Nada de spam. Un aviso antes de tus horas críticas, otro antes de que acabe la prueba, y unas palabras cuando llegues a un hito.';
 
   @override
   String get obNotifPreviewTime => 'Vie 21:54';
@@ -899,7 +899,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'Un aviso antes de que acabe tu prueba: sin cargos sorpresa';
+      'Un aviso antes de que acabe la prueba, y una celebración de cada hito';
 
   @override
   String get obNotifBullet3 => 'Nada más: cero marketing, nunca';
@@ -934,6 +934,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallFeatReports => 'Informe semanal con tus propios números';
+
+  @override
+  String get paywallFeatThemes => 'Dos temas de color más, en oscuro y claro';
 
   @override
   String get paywallYearly => 'ANUAL';
@@ -1162,6 +1165,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get freeCompareReport => 'Informe semanal';
+
+  @override
+  String get freeCompareThemes => 'Temas de color';
 
   @override
   String freeComparePerDay(int n) {
@@ -3008,10 +3014,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsAppearanceSystem => 'Como el sistema';
 
   @override
-  String get settingsAppearanceMidnight => 'Midnight';
+  String get settingsAppearanceDark => 'Oscuro';
 
   @override
-  String get settingsAppearanceDaylight => 'Daylight';
+  String get settingsAppearanceLight => 'Claro';
+
+  @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsThemeEmber => 'Ember';
+
+  @override
+  String get settingsThemeEmberSub => 'Vacío y lima. El original.';
+
+  @override
+  String get settingsThemeHearth => 'Hearth';
+
+  @override
+  String get settingsThemeHearthSub => 'Carbón cálido y ámbar.';
+
+  @override
+  String get settingsThemeTide => 'Tide';
+
+  @override
+  String get settingsThemeTideSub => 'Índigo profundo y turquesa.';
+
+  @override
+  String get settingsThemeLocked => 'Hearth y Tide vienen con Premium.';
 
   @override
   String get settingsLanguage => 'Idioma';
@@ -3175,4 +3205,45 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get slipCurveNoteJustHappened =>
       'Dos días extra, mismo destino. Pasa. El registro sigue siendo honesto y mañana es un día limpio.';
+
+  @override
+  String get widgetDay => 'día %1\$d';
+
+  @override
+  String get widgetLeftAhead => '%1\$d de margen · vas por delante';
+
+  @override
+  String get widgetLeftTight => '%1\$d de margen · justo, pero puedes';
+
+  @override
+  String get widgetOverLimit => 'pasaste la línea de hoy · sin culpa';
+
+  @override
+  String get widgetEmptyTitle => 'Empieza tu plan';
+
+  @override
+  String get widgetEmptyBody => 'Toca para abrir Cirrus';
+
+  @override
+  String get milestoneNotifTitle => 'Ven a ver tu llama';
+
+  @override
+  String get milestoneNotifSpark =>
+      'Tres días limpios. Lo más difícil ya pasó: tu llama está encendida.';
+
+  @override
+  String get milestoneNotifWeekFlame =>
+      'Una semana entera. Siete días que no sabías si tenías.';
+
+  @override
+  String get milestoneNotifTwoWeekFlame =>
+      'Dos semanas. DOS SEMANAS. Tu llama ya es una hoguera.';
+
+  @override
+  String get milestoneNotifInferno =>
+      'Treinta días. Esto no te lo regaló nadie.';
+
+  @override
+  String get milestoneNotifFreedomDay =>
+      'Día de la Libertad. El plan terminó, y lo terminaste tú.';
 }

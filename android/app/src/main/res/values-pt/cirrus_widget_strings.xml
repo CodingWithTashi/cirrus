@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cw_picker_label">Cirrus</string>
+    <string name="cw_picker_description">Registre uma tragada e veja seu dia, sem abrir o app.</string>
+    <string name="cw_preview_day">dia 12</string>
+    <string name="cw_preview_count">52</string>
+    <string name="cw_preview_of">/ 98</string>
+    <string name="cw_preview_left">46 de folga · está adiantado</string>
+    <string name="cw_plus_label">+</string>
+    <string name="cw_minus_label">−</string>
+    <string name="cw_plus_a11y">Registrar uma tragada</string>
+    <string name="cw_minus_a11y">Remover a última tragada</string>
+    <string name="cw_minus_off_a11y">Nada para remover</string>
+    <string name="cw_empty_title">Comece seu plano</string>
+    <string name="cw_empty_body">Toque para abrir Cirrus</string>
+</resources>

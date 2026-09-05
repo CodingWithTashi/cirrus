@@ -1619,7 +1619,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Not spam. One nudge before your danger hours, and one before your trial ends.'**
+  /// **'Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.'**
   String get obNotifSubtitle;
 
   /// No description provided for @obNotifPreviewTime.
@@ -1643,7 +1643,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet2.
   ///
   /// In en, this message translates to:
-  /// **'A heads-up before your trial ends — no surprise charges'**
+  /// **'A heads-up before your trial ends, and a milestone celebration'**
   String get obNotifBullet2;
 
   /// No description provided for @obNotifBullet3.
@@ -1711,6 +1711,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly report in your own numbers'**
   String get paywallFeatReports;
+
+  /// No description provided for @paywallFeatThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'Two more colour themes, in dark and light'**
+  String get paywallFeatThemes;
 
   /// No description provided for @paywallYearly.
   ///
@@ -2064,6 +2070,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly report'**
   String get freeCompareReport;
+
+  /// No description provided for @freeCompareThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour themes'**
+  String get freeCompareThemes;
 
   /// No description provided for @freeComparePerDay.
   ///
@@ -4951,17 +4963,65 @@ abstract class AppLocalizations {
   /// **'Match system'**
   String get settingsAppearanceSystem;
 
-  /// No description provided for @settingsAppearanceMidnight.
+  /// No description provided for @settingsAppearanceDark.
   ///
   /// In en, this message translates to:
-  /// **'Midnight'**
-  String get settingsAppearanceMidnight;
+  /// **'Dark'**
+  String get settingsAppearanceDark;
 
-  /// No description provided for @settingsAppearanceDaylight.
+  /// No description provided for @settingsAppearanceLight.
   ///
   /// In en, this message translates to:
-  /// **'Daylight'**
-  String get settingsAppearanceDaylight;
+  /// **'Light'**
+  String get settingsAppearanceLight;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsThemeEmber.
+  ///
+  /// In en, this message translates to:
+  /// **'Ember'**
+  String get settingsThemeEmber;
+
+  /// No description provided for @settingsThemeEmberSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Void and lime. The original.'**
+  String get settingsThemeEmberSub;
+
+  /// No description provided for @settingsThemeHearth.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth'**
+  String get settingsThemeHearth;
+
+  /// No description provided for @settingsThemeHearthSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm charcoal and amber.'**
+  String get settingsThemeHearthSub;
+
+  /// No description provided for @settingsThemeTide.
+  ///
+  /// In en, this message translates to:
+  /// **'Tide'**
+  String get settingsThemeTide;
+
+  /// No description provided for @settingsThemeTideSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep indigo and teal.'**
+  String get settingsThemeTideSub;
+
+  /// No description provided for @settingsThemeLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth and Tide come with Premium.'**
+  String get settingsThemeLocked;
 
   /// No description provided for @settingsLanguage.
   ///
@@ -5226,6 +5286,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.'**
   String get slipCurveNoteJustHappened;
+
+  /// Home-screen widget: the day label above the count. A NATIVE format template - the %1$d is filled by Kotlin String.format, not by gen-l10n, because the widget recomputes the day number itself across a midnight the app slept through.
+  ///
+  /// In en, this message translates to:
+  /// **'day %1\$d'**
+  String get widgetDay;
+
+  /// Home-screen widget: puffs left when comfortably under the line (mirrors home_screen's puffsLeft > limit * 0.25 rule). Native %1$d template - the widget changes the count itself on a + tap.
+  ///
+  /// In en, this message translates to:
+  /// **'%1\$d left · ahead of your curve'**
+  String get widgetLeftAhead;
+
+  /// Home-screen widget: puffs left when close to the line. Native %1$d template.
+  ///
+  /// In en, this message translates to:
+  /// **'%1\$d left · tight, you\'ve got this'**
+  String get widgetLeftTight;
+
+  /// Home-screen widget: shown once today is over the line. Carries no count on purpose - over is over.
+  ///
+  /// In en, this message translates to:
+  /// **'over today\'s line · no shame'**
+  String get widgetOverLimit;
+
+  /// Home-screen widget before there is a journey to show.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your plan'**
+  String get widgetEmptyTitle;
+
+  /// Home-screen widget empty state, second line.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to open Cirrus'**
+  String get widgetEmptyBody;
+
+  /// Title of the one-shot celebration fired the morning after a streak milestone is earned (design frame 51 #2).
+  ///
+  /// In en, this message translates to:
+  /// **'Come see your flame'**
+  String get milestoneNotifTitle;
+
+  /// Celebration body for the 3-day badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Three clean days. The hardest part is behind you — your flame is lit.'**
+  String get milestoneNotifSpark;
+
+  /// Celebration body for the 7-day badge.
+  ///
+  /// In en, this message translates to:
+  /// **'A full week. Seven days you weren\'t sure you had.'**
+  String get milestoneNotifWeekFlame;
+
+  /// Celebration body for the 14-day badge. The design frame’s own line.
+  ///
+  /// In en, this message translates to:
+  /// **'Two weeks. TWO WEEKS. Your flame is officially a blaze.'**
+  String get milestoneNotifTwoWeekFlame;
+
+  /// Celebration body for the 30-day badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Thirty days. Nobody handed you this one.'**
+  String get milestoneNotifInferno;
+
+  /// Celebration body for finishing the plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day. The plan is done, and you finished it.'**
+  String get milestoneNotifFreedomDay;
 }
 
 class _AppLocalizationsDelegate
