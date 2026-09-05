@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Weekly report in your own numbers'**
   String get paywallFeatReports;
 
+  /// No description provided for @paywallFeatThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'Two more colour themes, in dark and light'**
+  String get paywallFeatThemes;
+
   /// No description provided for @paywallYearly.
   ///
   /// In en, this message translates to:
@@ -2064,6 +2070,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly report'**
   String get freeCompareReport;
+
+  /// No description provided for @freeCompareThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour themes'**
+  String get freeCompareThemes;
 
   /// No description provided for @freeComparePerDay.
   ///
@@ -4951,17 +4963,65 @@ abstract class AppLocalizations {
   /// **'Match system'**
   String get settingsAppearanceSystem;
 
-  /// No description provided for @settingsAppearanceMidnight.
+  /// No description provided for @settingsAppearanceDark.
   ///
   /// In en, this message translates to:
-  /// **'Midnight'**
-  String get settingsAppearanceMidnight;
+  /// **'Dark'**
+  String get settingsAppearanceDark;
 
-  /// No description provided for @settingsAppearanceDaylight.
+  /// No description provided for @settingsAppearanceLight.
   ///
   /// In en, this message translates to:
-  /// **'Daylight'**
-  String get settingsAppearanceDaylight;
+  /// **'Light'**
+  String get settingsAppearanceLight;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsThemeEmber.
+  ///
+  /// In en, this message translates to:
+  /// **'Ember'**
+  String get settingsThemeEmber;
+
+  /// No description provided for @settingsThemeEmberSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Void and lime. The original.'**
+  String get settingsThemeEmberSub;
+
+  /// No description provided for @settingsThemeHearth.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth'**
+  String get settingsThemeHearth;
+
+  /// No description provided for @settingsThemeHearthSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm charcoal and amber.'**
+  String get settingsThemeHearthSub;
+
+  /// No description provided for @settingsThemeTide.
+  ///
+  /// In en, this message translates to:
+  /// **'Tide'**
+  String get settingsThemeTide;
+
+  /// No description provided for @settingsThemeTideSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep indigo and teal.'**
+  String get settingsThemeTideSub;
+
+  /// No description provided for @settingsThemeLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth and Tide come with Premium.'**
+  String get settingsThemeLocked;
 
   /// No description provided for @settingsLanguage.
   ///

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/onboarding/onboarding_flow.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
@@ -118,6 +119,76 @@ void main() {
       Theme.of(darkContext).scaffoldBackgroundColor,
       const Color(0xFF0A0C10),
       reason: 'Midnight Ember ground must back every screen',
+    );
+  });
+
+  testWidgets('a Premium palette re-themes the whole app', (tester) async {
+    final container = ProviderContainer(overrides: overrides);
+    addTearDown(container.dispose);
+    container.read(quitStoreProvider.notifier).seedDemoJourney();
+    final settings = container.read(settingsStoreProvider.notifier)
+      ..setThemeMode(ThemeMode.dark);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const LastPuffApp(),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    Color ground() =>
+        Theme.of(tester.element(find.text('Today'))).scaffoldBackgroundColor;
+
+    // `fastBackendOverrides()` seeds the paying persona, so both Premium
+    // families are the reader's to wear.
+    settings.setPalette(LpPalette.hearth);
+    await tester.pumpAndSettle();
+    expect(ground(), const Color(0xFF12100D), reason: 'Hearth Night ground');
+
+    settings.setPalette(LpPalette.tide);
+    await tester.pumpAndSettle();
+    expect(ground(), const Color(0xFF080F18), reason: 'Deep Tide ground');
+
+    // The mode axis still works inside a Premium family — losing "Match
+    // system" for subscribers is exactly what the LpPalette split avoided.
+    settings.setThemeMode(ThemeMode.light);
+    await tester.pumpAndSettle();
+    expect(ground(), const Color(0xFFF2F7FB), reason: 'Arctic Tide ground');
+  });
+
+  testWidgets('a free account is clamped back to Ember, without losing its '
+      'choice', (tester) async {
+    final container = ProviderContainer(
+      overrides: fastBackendOverrides(premium: false),
+    );
+    addTearDown(container.dispose);
+    container.read(quitStoreProvider.notifier).seedDemoJourney();
+    container.read(settingsStoreProvider.notifier)
+      ..setThemeMode(ThemeMode.dark)
+      // Straight onto the store, as if a lapsed subscriber had chosen it
+      // while they were still paying. The picker itself refuses this.
+      ..setPalette(LpPalette.hearth);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const LastPuffApp(),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(tester.element(find.text('Today'))).scaffoldBackgroundColor,
+      const Color(0xFF0A0C10),
+      reason: 'a palette they are not entitled to must never render',
+    );
+    expect(
+      container.read(settingsStoreProvider).palette,
+      LpPalette.hearth,
+      reason: 'the clamp is on render only — resubscribing brings it back',
     );
   });
 }

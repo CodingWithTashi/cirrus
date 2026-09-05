@@ -3,11 +3,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme/lp_palette.dart';
 import 'settings_persistence.dart';
 
 class SettingsState {
   const SettingsState({
     this.themeMode = ThemeMode.system,
+    this.palette = LpPalette.ember,
     this.locale,
     this.notificationsOn = true,
     this.dangerStartHour = 21,
@@ -24,6 +26,18 @@ class SettingsState {
   });
 
   final ThemeMode themeMode;
+
+  /// The chosen palette family — orthogonal to [themeMode], which still picks
+  /// light/dark/system within it.
+  ///
+  /// Device-scoped like [themeMode] rather than part of the journey: a look is
+  /// a phone's, and `journeys/{uid}` is rewritten wholesale on every puff tap.
+  ///
+  /// Stored even when the reader is not entitled to it. `LpPaletteCatalog
+  /// .resolveFor` clamps at render, so a lapsed subscriber sees the free
+  /// family without this being overwritten — and gets their own back the
+  /// moment they resubscribe.
+  final LpPalette palette;
 
   /// null = follow system.
   final Locale? locale;
@@ -75,6 +89,7 @@ class SettingsState {
 
   SettingsState copyWith({
     ThemeMode? themeMode,
+    LpPalette? palette,
     Locale? Function()? locale,
     bool? notificationsOn,
     int? dangerStartHour,
@@ -88,6 +103,7 @@ class SettingsState {
     String? Function()? armedMilestone,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
+    palette: palette ?? this.palette,
     locale: locale != null ? locale() : this.locale,
     notificationsOn: notificationsOn ?? this.notificationsOn,
     dangerStartHour: dangerStartHour ?? this.dangerStartHour,
@@ -143,6 +159,12 @@ class SettingsStore extends Notifier<SettingsState> {
   }
 
   void setThemeMode(ThemeMode mode) => _commit(state.copyWith(themeMode: mode));
+
+  /// Wears [palette]. Callers gate on entitlement themselves — a locked family
+  /// must never reach here, because a stored choice the reader was never
+  /// entitled to would come back the day they subscribe for something else.
+  void setPalette(LpPalette palette) =>
+      _commit(state.copyWith(palette: palette));
 
   void setLocale(Locale? locale) =>
       _commit(state.copyWith(locale: () => locale));

@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/data/stores/settings_persistence.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,8 @@ void main() {
     final loaded = await SettingsPersistence.load();
 
     expect(loaded.themeMode, defaults.themeMode);
+    // A fresh install wears the free family, whatever the tier turns out to be.
+    expect(loaded.palette, LpPalette.ember);
     expect(loaded.locale, isNull);
     expect(loaded.notificationsOn, defaults.notificationsOn);
     expect(loaded.dangerStartHour, defaults.dangerStartHour);
@@ -27,6 +30,7 @@ void main() {
   test('every field survives a save and reload', () async {
     const saved = SettingsState(
       themeMode: ThemeMode.dark,
+      palette: LpPalette.tide,
       locale: Locale('fr'),
       notificationsOn: false,
       dangerStartHour: 19,
@@ -44,6 +48,9 @@ void main() {
     expect(loaded.launchPaywallShownDay, '2026-09-02');
 
     expect(loaded.themeMode, ThemeMode.dark);
+    // Stored even for a reader who is not entitled to it: the clamp happens at
+    // render, so a lapse must not destroy the choice they paid for.
+    expect(loaded.palette, LpPalette.tide);
     expect(loaded.locale?.languageCode, 'fr');
     // A promise already made must not be made twice on the next launch.
     expect(loaded.celebratedMilestones, {'spark', 'weekFlame'});
@@ -93,6 +100,7 @@ void main() {
 
     expect(declared.difference(fixed), {
       'themeMode',
+      'palette',
       'locale',
       'notificationsOn',
       'dangerStartHour',
@@ -132,5 +140,13 @@ void main() {
     });
 
     expect((await SettingsPersistence.load()).themeMode, ThemeMode.system);
+  });
+
+  // A palette written by a NEWER build must not take the launch down on a
+  // downgrade, and `LpPalette.values.byName` would throw here.
+  test('a palette this build has never heard of falls back', () async {
+    SharedPreferences.setMockInitialValues({'settings.palette': 'obsidian'});
+
+    expect((await SettingsPersistence.load()).palette, LpPalette.ember);
   });
 }

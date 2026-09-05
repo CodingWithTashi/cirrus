@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app/theme/lp_palette.dart';
 import 'settings_store.dart';
 
 /// Disk for [SettingsState].
@@ -19,6 +20,7 @@ import 'settings_store.dart';
 /// launch over.
 abstract final class SettingsPersistence {
   static const _themeMode = 'settings.themeMode';
+  static const _palette = 'settings.palette';
   static const _locale = 'settings.locale';
   static const _notificationsOn = 'settings.notificationsOn';
   static const _dangerStart = 'settings.dangerStartHour';
@@ -42,6 +44,7 @@ abstract final class SettingsPersistence {
       final tag = prefs.getString(_locale);
       return SettingsState(
         themeMode: _themeFromName(prefs.getString(_themeMode)),
+        palette: _paletteFromName(prefs.getString(_palette)),
         locale: tag == null || tag == _systemLocale ? null : Locale(tag),
         notificationsOn:
             prefs.getBool(_notificationsOn) ?? defaults.notificationsOn,
@@ -72,6 +75,7 @@ abstract final class SettingsPersistence {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_themeMode, state.themeMode.name);
+      await prefs.setString(_palette, state.palette.name);
       await prefs.setString(
         _locale,
         state.locale?.languageCode ?? _systemLocale,
@@ -110,4 +114,14 @@ abstract final class SettingsPersistence {
     'dark' => ThemeMode.dark,
     _ => ThemeMode.system,
   };
+
+  /// A palette written by a NEWER build (or a corrupt value) falls back to the
+  /// free family rather than throwing — same contract as [_themeFromName].
+  /// Deliberately not `LpPalette.values.byName`, which throws on an unknown.
+  static LpPalette _paletteFromName(String? name) {
+    for (final p in LpPalette.values) {
+      if (p.name == name) return p;
+    }
+    return LpPalette.ember;
+  }
 }

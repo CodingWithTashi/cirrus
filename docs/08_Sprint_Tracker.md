@@ -16,6 +16,7 @@
 - **Update cadence:** at the end of each working session, and at every sprint boundary.
 - **Blocker IDs (`B1`…`B17`) are stable** — tasks reference them so you can trace any task back to the audited defect that created it.
 - Docs 1–7 are frozen specs. When this file and a spec disagree, **§7 Spec Conflict Register** is the tiebreaker.
+- **`docs/13_Feature_Map.md` is the feature list** — every shipped user-facing feature, what it does, and the taps that test it. Use it for a manual QA pass; this file says whether a thing is *done*, that one says what it *is*.
 
 ---
 
@@ -94,7 +95,8 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 
 | Area | Evidence |
 |---|---|
-| **UI layer** — 21 feature folders, ~11.3K lines, all **52/52 design frames** in both themes | `lib/features/`, `docs/design/HANDOFF_COMPLETION.md` |
+| **UI layer** — 21 feature folders, ~11.3K lines, all **52/52 design frames** in every theme | `lib/features/`, `docs/design/HANDOFF_COMPLETION.md` |
+| **Theming** — 3 palette families × dark/light (Ember free; **Hearth + Tide Premium**), clamped on render so a lapse re-themes itself | `lib/app/theme/lp_palette.dart`, `test/app/lp_palette_test.dart` (docs/10 §24) |
 | **Domain engines** — Taper, Money, Streak, DangerHours, Dependence, InitialJourney; unit-tested | `lib/domain/logic/`, `test/domain/` |
 | **19-step onboarding** — full A1→D6 flow, exhaustive switch, age gate at 18 | `lib/features/onboarding/` |
 | **Localization** — 5 locales at **646/646 key parity**, zero gaps | `lib/l10n/app_{en,es,fr,de,pt}.arb` |
@@ -288,6 +290,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [x] `S4-2` `flutter_local_notifications` scheduling danger hours on-device — deliberately *not* a server cron (see `functions/src/index.ts` header) *(landed — `ReminderPlanner` + `ReminderCoordinator`, ids 1000–1023; the `periodicallyShow` → `zonedSchedule` fix is docs/10 §7)*
 - [x] `S4-3` Enforce Doc 3 §8 caps: max 3 pushes/day, quiet hours 23:00–08:00 *(landed — `ReminderPlanner.maxPerDay = 3`, `leadMinutes = 10`, the quiet-hours rule with its one documented exception)*
 - [x] `S4-4` `shared_preferences` so theme/locale/notifications/danger hours **survive restart** (B8) *(landed Aug 29 — B8; `SettingsPersistence` over `shared_preferences`)*
+- [x] `S4-13` **Two Premium palette families** — Hearth (warm/amber) and Tide (cool/teal), dark and light each, behind the `theme` paywall door. Premium's value list goes 6 → 7 bullets, and this is the only one visible without opening anything *(landed Sep 5 — docs/10 §24)*
 - [x] `S4-5` 🔨 **Analytics complete** — all 16 docs/02 §7 events fire, including `puff_logged`, which the north star (Weekly Active Quitters) cannot be computed without. Per-step events come from the onboarding VM's central choke point; habit events from the store, not the four views that call it. **Amplitude replaces Mixpanel** (founder decision Aug 30) and runs alongside Firebase Analytics through `FanOutAnalytics`; Amplitude also autocaptures sessions and app lifecycle, without which DAU/WAU, session length and retention are not computable. Screen views come from `LpAnalyticsObserver` on the router (go_router hands it the *path pattern*, so no user text can reach the screen dimension) plus an explicit report from `AppShell`, because `StatefulShellRoute` switches tabs without pushing a route.
 - [x] `S4-6` Crashlytics — `lib/app/app_errors.dart:26` has been holding the slot *(landed Aug 29 — B7; Crashlytics on both error paths)*
 - [~] `S4-7` `onTrialWillEnd` → honest trial-ending push; win-back card 24h after decline ($3.99 founding month) *(`onTrialWillEnd` descoped (§7 #21); the on-device `TrialReminderPlanner` landed Sep 2 (docs/10 §14); the win-back card is built but gated off (`BillingCatalog.foundingOfferEnabled`))*

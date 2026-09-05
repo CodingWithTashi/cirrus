@@ -936,6 +936,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paywallFeatReports => 'Informe semanal con tus propios números';
 
   @override
+  String get paywallFeatThemes => 'Dos temas de color más, en oscuro y claro';
+
+  @override
   String get paywallYearly => 'ANUAL';
 
   @override
@@ -1162,6 +1165,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get freeCompareReport => 'Informe semanal';
+
+  @override
+  String get freeCompareThemes => 'Temas de color';
 
   @override
   String freeComparePerDay(int n) {
@@ -3008,10 +3014,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsAppearanceSystem => 'Como el sistema';
 
   @override
-  String get settingsAppearanceMidnight => 'Midnight';
+  String get settingsAppearanceDark => 'Oscuro';
 
   @override
-  String get settingsAppearanceDaylight => 'Daylight';
+  String get settingsAppearanceLight => 'Claro';
+
+  @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsThemeEmber => 'Ember';
+
+  @override
+  String get settingsThemeEmberSub => 'Vacío y lima. El original.';
+
+  @override
+  String get settingsThemeHearth => 'Hearth';
+
+  @override
+  String get settingsThemeHearthSub => 'Carbón cálido y ámbar.';
+
+  @override
+  String get settingsThemeTide => 'Tide';
+
+  @override
+  String get settingsThemeTideSub => 'Índigo profundo y turquesa.';
+
+  @override
+  String get settingsThemeLocked => 'Hearth y Tide vienen con Premium.';
 
   @override
   String get settingsLanguage => 'Idioma';

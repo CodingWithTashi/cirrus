@@ -16,6 +16,7 @@ import '../domain/models/journey_state.dart';
 import '../domain/models/models.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
+import 'theme/lp_palette.dart';
 import 'theme/lp_theme.dart';
 
 class LastPuffApp extends ConsumerWidget {
@@ -25,12 +26,24 @@ class LastPuffApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsStoreProvider);
     final router = ref.watch(routerProvider);
+    // Clamped on RENDER, not on selection: an expiry re-themes the app back
+    // to the free family on its own, and the stored choice survives untouched
+    // so resubscribing brings their palette straight back.
+    //
+    // Watching `isPremiumProvider` here is fine and is not the thing
+    // `EntitlementStore`'s header forbids — that prohibition is specifically
+    // about `routerProvider`'s refresh listener. This is a `Provider<bool>`,
+    // so `MaterialApp` rebuilds only when the tier actually flips.
+    final palette = LpPaletteCatalog.resolveFor(
+      settings.palette,
+      premium: ref.watch(isPremiumProvider),
+    ).id;
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-      theme: LpTheme.daylight(),
-      darkTheme: LpTheme.midnight(),
+      theme: LpTheme.light(palette),
+      darkTheme: LpTheme.dark(palette),
       themeMode: settings.themeMode,
       locale: settings.locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

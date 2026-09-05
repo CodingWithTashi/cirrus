@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5)
 
 ---
 
@@ -2667,3 +2667,105 @@ showing yesterday still files today's puff on today.
 
 `flutter analyze` 0 · `flutter test` **1111/1111**.
 
+---
+
+## 24. TWO PALETTES FOR SALE (Sep 5) — a Premium feature you can see without opening anything
+
+Premium had six bullets and every one of them was either metered (coach
+messages, posts) or invisible until the moment you needed it (the adaptive
+plan, forecasts, the weekly report). Nothing on the list showed up in a
+screenshot, and nothing on it was visible at rest. A palette is the one thing
+a person sees every second they hold the phone.
+
+**Shipped:** two new palette families, dark and light each, Premium only.
+
+| Family | Tier | Dark | Light |
+|---|---|---|---|
+| **Ember** | free, default | Midnight Ember `#0A0C10` | Daylight Ember `#F6F8F4` |
+| **Hearth** | Premium | Hearth Night `#12100D` — amber `#FFA62B` on warm charcoal | Hearth Day `#FBF6EE` — linen |
+| **Tide** | Premium | Deep Tide `#080F18` — teal `#4FD8E8` on indigo | Arctic Tide `#F2F7FB` |
+
+### The four decisions worth keeping
+
+**1. The family is a second axis, not more values on `ThemeMode`.** `ThemeMode`
+has three values and `MaterialApp` takes two `ThemeData`s, so flattening six
+palettes into one list would have deleted "Match system" — for subscribers
+only, which is the worst possible group to take it from. `LpPalette` picks the
+family, `ThemeMode` still picks the mode inside it. Settings grew a second row
+rather than a longer sheet.
+
+**2. The tokens are hue-named but role-used, so nothing else moved.** `volt`
+means "primary accent", not "lime". Repainting the slot is the whole of what a
+family is: 29 tokens × 4 new instances, and **zero widget changes** across ~58
+files that read `context.lp`. The one thing this cost was a doc-comment fix —
+`volt` claimed to be "identical in both themes", which was true when there was
+one family.
+
+**3. Clamped on render, never on selection.** `LpPaletteCatalog.resolveFor`
+copies `GameCatalog.resolveFor` exactly, including why `entries.first` has to
+be the free one. `LastPuffApp.build` resolves against `isPremiumProvider`, so
+an expiry re-themes the app back to Ember by itself — and the stored choice is
+left alone, so resubscribing brings their palette straight back with no
+migration and no stuck state. The picker never stores a locked family; only a
+lapse can produce that state, and the clamp is what makes it harmless.
+
+**4. Locked cards stay visible, tappable, and truthful.** Same call as the
+panic switcher: hiding them would make the cleanest sheet and sell nothing.
+Each card shows the family's real ground/primary/streak/calm swatches off
+`LpColors`, so a locked card is a genuine preview rather than a mock-up — which
+is the only reason it is allowed to make its own argument. The tap opens the
+lock card and commits nothing.
+
+### What the work found in passing
+
+- **`LpChip` dispatches on colour equality.** `accent == lp.ember ? lp.emberText
+  : accent == lp.oxygen ? … : lp.voltText`. Two accents sharing a value inside
+  one palette would route a chip to the wrong text token — in that palette
+  only, with nothing to see in the diff and no compiler complaint. Pinned per
+  family now. It is why Tide's "calm" slot is periwinkle rather than a second
+  cyan a shade off its primary.
+- **`breathe_ring_test` was measuring mount count, not colour.** Extending its
+  two-theme loop to six made it fail on the last iteration — and reversing the
+  order moved the failure to whatever was last, not to a palette. Six
+  `mountFlow`s in one `testWidgets` overflow by 22px on the sixth. Split into
+  one test per palette and mode.
+- **`Appearance` was naming the wrong thing.** It printed "Midnight"/"Daylight",
+  which are the *Ember family's* two modes, and stop being true the moment the
+  family is Hearth. It now says Dark/Light; the two keys are retired.
+- **The `source` registry was already stale.** There is no enum — the only list
+  of paywall doors is the doc comment on `paywallViewed`, and it was missing
+  `panic_game`, `free_plan` and `direct` before `theme` was added. Fixed, and
+  labelled as the registry so the next door knows where to go.
+
+### Contrast, measured rather than asserted
+
+WCAG 2.1 ratios against each palette's own ground, pinned in
+`test/app/lp_palette_test.dart`. The floors are set by **what already ships**,
+not by an aspiration — Daylight Ember's `voltText` is 4.47 and its `emberText`
+is 3.46, both under AA for body text:
+
+| Palette | textPrimary | textSecondary | voltText | onVolt/volt | worst accent |
+|---|---|---|---|---|---|
+| Midnight Ember | 19.57 | 7.69 | 15.47 | 15.47 | 6.47 |
+| Daylight Ember | 15.77 | 4.57 | **4.47** | 15.47 | **3.46** |
+| Hearth Night | 18.99 | 7.82 | 11.40 | 9.68 | 7.52 |
+| Hearth Day | 15.85 | 4.88 | 4.65 | 9.68 | 4.54 |
+| Deep Tide | 19.23 | 7.66 | 13.10 | 11.13 | 7.62 |
+| Arctic Tide | 16.06 | 4.66 | 5.49 | 11.13 | 3.95 |
+
+Hearth Day clears AA on all eight pairs — the only palette in the app that
+does. `danger` is the same `#FF5C5C` in all six on purpose: an alert must not
+change meaning when the reader changes their theme.
+
+### Deliberately untouched
+
+The Android home-screen widget. `cirrus_widget_colors.xml` mirrors Ember's
+hexes and follows the **system** theme, because the launcher inflates it in its
+own process against its own configuration — a widget is chrome on the home
+screen and should match the screen it sits on, not the app it opens. That was
+already a documented deviation before this work and six families do not change
+it. Same for `LpCrashScreen`, which reads platform brightness because it can
+render in a tree with no `Theme` at all.
+
+`flutter analyze` 0 · `flutter test` **1456/1456** (was 1111; the palette sweep
+in `screen_layout_test` went from 2 themes to 6).

@@ -100,10 +100,17 @@ extension LpEvents on AnalyticsSink {
   /// converts differently, and it used to be invisible: the dimension was the
   /// constant `d5_default`, so every chart cut by it had one bucket.
   ///
-  /// [source] is what put the person on the paywall — `onboarding`, `launch`,
-  /// `settings`, `coach_cap`, `insight`, `forecast`, `health`, `plan`,
-  /// `history`, `compose`, `nudge`, `push` — so a conversion rate can be read
-  /// per door, not just per layout.
+  /// [source] is what put the person on the paywall, so a conversion rate can
+  /// be read per door and not just per layout. There is no enum — the value
+  /// is a bare `String` at every call site — so THIS COMMENT IS THE ONLY
+  /// REGISTRY, and it has already been stale once. The full list:
+  ///
+  /// `onboarding` · `launch` · `settings` · `coach_cap` · `insight` ·
+  /// `forecast` · `health` · `plan` · `history` · `compose` · `nudge` ·
+  /// `panic_game` · `theme` · `push` · `free_plan` · `direct`
+  ///
+  /// (`direct` is the fallback when a `/paywall` route carries no `?source=`;
+  /// `push` is stamped on by `taggedPushRoute()`.) Add a door, add it here.
   ///
   /// [planDay] is where they were in their own quit when the door opened. A
   /// day-3 gate and a day-40 gate are different products of different
