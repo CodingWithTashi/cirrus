@@ -116,7 +116,7 @@ const {
           return;
         }
         if (data.error === 'invalid_email') fail("That email doesn't look right.");
-        else if (data.error === 'rate_limited') fail('Too many tries — give it a minute.');
+        else if (data.error === 'rate_limited') fail('Too many tries. Give it a minute.');
         else fail('Something went wrong on our end. Try again?');
       } catch {
         fail('Looks like you are offline. Try again when you have signal.');
