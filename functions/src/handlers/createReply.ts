@@ -20,7 +20,7 @@ import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {prefilter, replyQuality} from '../ai/prefilter';
 import {db, FieldValue, postsCol} from '../lib/firestore';
-import {requireCaller, requireText} from '../lib/guards';
+import {requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
 
 /** docs/03 §9 — replies are tighter than posts (500). */
 const MAX_REPLY_CHARS = 300;
@@ -65,9 +65,8 @@ export const createReply = onCall(
     // reply could never be anonymized on account deletion.
     const batch = db.batch();
     batch.set(replyRef, {
-      alias: typeof data['alias'] === 'string' ? data['alias'] : 'quitter',
-      avatarEmoji:
-        typeof data['avatarEmoji'] === 'string' ? data['avatarEmoji'] : '\u{1F525}',
+      alias: sanitizeAlias(data['alias']),
+      avatarEmoji: sanitizeEmoji(data['avatarEmoji']),
       text,
       status: 'pending', // invisible until moderateReply clears it
       createdAt: FieldValue.serverTimestamp(),

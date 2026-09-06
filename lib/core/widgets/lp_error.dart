@@ -47,17 +47,24 @@ import 'lp_buttons.dart';
 
 /// Content-area failure state: emoji + kind copy + optional "run it back".
 /// Used wherever a screen's data failed to load (feed, unknown routes…).
+/// The empty or failed state of a content area.
+///
+/// The mark used to be an emoji at 44px, which renders as the platform's own
+/// full-colour artwork — clip art dropped into an otherwise drawn interface,
+/// and different art on every OS version. It is a tinted glyph in a soft
+/// circle now: one weight, one colour from the palette, and it reads the same
+/// everywhere.
 class LpErrorState extends StatelessWidget {
   const LpErrorState({
     super.key,
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.body,
     this.retryLabel,
     this.onRetry,
   });
 
-  final String emoji;
+  final IconData icon;
   final String title;
   final String body;
   final String? retryLabel;
@@ -72,7 +79,16 @@ class LpErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 44)),
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: lp.surfaceInset,
+                border: Border.all(color: lp.border),
+              ),
+              child: Icon(icon, size: 34, color: lp.textSecondary),
+            ),
             const SizedBox(height: 14),
             Text(
               title,

@@ -264,7 +264,13 @@ describe('moderateReply', () => {
     );
 
     expect((await ref.get()).get('status')).toBe('live');
-    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith('author1', 'sosReply', '/community');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'sosReply',
+      expect.stringContaining('/community/post/'),
+      expect.any(Object),
+      expect.any(Number),
+    );
   });
 });
 
@@ -325,5 +331,146 @@ describe('onReaction', () => {
     await expect(
       onReaction.run(written(undefined, {emoji: '💪'}, 'gone') as never),
     ).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Replies on ORDINARY posts, which never notified anybody until now, and the
+ * collapse rule that keeps a busy thread to a handful of buzzes.
+ */
+describe('notifyReply', () => {
+  /**
+   * A live post by `author1` with one pending reply by `replier1`.
+   *
+   * Writes `replyAuthors` as well as `postAuthors` — `createReply` writes
+   * both in one batch, and the self-notify check needs the second.
+   */
+  async function thread(
+    opts: {
+      tag?: string;
+      replyText?: string;
+      replier?: string;
+      replyId?: string;
+      postAlias?: string;
+      replyAlias?: string;
+    } = {},
+  ): Promise<FirebaseFirestore.DocumentReference> {
+    const replyId = opts.replyId ?? 'r9';
+    await postsCol().doc('p1').set({
+      alias: opts.postAlias ?? '@quietfox42',
+      text: 'day three and white-knuckling',
+      status: 'live',
+      tag: opts.tag ?? 'win',
+    });
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    const ref = postsCol().doc('p1').collection('replies').doc(replyId);
+    await ref.set({
+      alias: opts.replyAlias ?? '@brightmoth17',
+      text: opts.replyText ?? 'this helped me too',
+      status: 'pending',
+    });
+    await db.collection('replyAuthors').doc(replyId).set({
+      uid: opts.replier ?? 'replier1',
+      postId: 'p1',
+    });
+    return ref;
+  }
+
+  /** Publishes the reply at [ref] through the real trigger. */
+  async function publish(ref: FirebaseFirestore.DocumentReference): Promise<void> {
+    verdict('allow');
+    await moderateReply.run(
+      await created(ref, {postId: 'p1', replyId: ref.id}),
+    );
+  }
+
+  it('now notifies the author of an ORDINARY post', async () => {
+    // The whole feature: before this, the tag gate meant only SOS authors
+    // ever heard that somebody had answered them.
+    await publish(await thread({tag: 'win'}));
+
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'communityReply',
+      '/community/post/p1',
+      expect.objectContaining({tag: 'thread:p1', count: 1}),
+      expect.any(Number),
+    );
+  });
+
+  it('does not notify you about your own reply', async () => {
+    await publish(await thread({replier: 'author1'}));
+    expect(vi.mocked(sendLocalized)).not.toHaveBeenCalled();
+  });
+
+  it('announces the same reply only once, however often it is published', async () => {
+    // Three reports hide a live reply back to pending; the founder later
+    // approves it, and the approval path would announce it a second time.
+    const ref = await thread();
+    await publish(ref);
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(1);
+
+    await ref.update({status: 'pending'});
+    await publish(ref);
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(1);
+  });
+
+  it('collapses a burst instead of buzzing once per reply', async () => {
+    await thread({replyId: 'r0'});
+    for (let i = 0; i < 12; i++) {
+      const id = `burst${i}`;
+      const ref = postsCol().doc('p1').collection('replies').doc(id);
+      await ref.set({alias: `@someone${i}`, text: 'you got this', status: 'pending'});
+      await db.collection('replyAuthors').doc(id).set({uid: `u${i}`, postId: 'p1'});
+      await publish(ref);
+    }
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.length).toBeLessThan(12);
+    // Every reply is still counted, so the last buzz tells the truth.
+    const state = await db.doc('users/author1/notifThreads/p1').get();
+    expect(state.get('count')).toBe(12);
+  });
+
+  it('never collapses an SOS — the news IS how many people came', async () => {
+    await thread({tag: 'sos', replyId: 'r0'});
+    for (let i = 0; i < 3; i++) {
+      const id = `sos${i}`;
+      const ref = postsCol().doc('p1').collection('replies').doc(id);
+      await ref.set({alias: `@someone${i}`, text: 'I am here', status: 'pending'});
+      await db.collection('replyAuthors').doc(id).set({uid: `u${i}`, postId: 'p1'});
+      await publish(ref);
+    }
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(3);
+  });
+
+  it('notifies the person a reply tags, and not twice over', async () => {
+    // The mention is the more specific fact, so it replaces the author's
+    // ordinary reply push rather than arriving alongside it.
+    await publish(
+      await thread({postAlias: '@quietfox42', replyText: '@quietfox42 you ok?'}),
+    );
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toBe('author1');
+    expect(calls[0]?.[1]).toBe('communityMention');
+  });
+
+  it('ignores a tag aimed at nobody in the thread', async () => {
+    await publish(await thread({replyText: '@ghostwolf88 hello'}));
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls[0]?.[1]).toBe('communityReply');
+  });
+
+  it('does not notify a held reply, and does once it is approved', async () => {
+    verdict('hold', 'unclear');
+    const ref = await thread();
+    await moderateReply.run(await created(ref, {postId: 'p1', replyId: 'r9'}));
+    expect(vi.mocked(sendLocalized)).not.toHaveBeenCalled();
+
+    await publish(ref);
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(1);
   });
 });

@@ -283,7 +283,13 @@ describe('resolveModeration', () => {
       .collection('posts').doc('p1')
       .collection('replies').doc('r9').get();
     expect(reply.get('status')).toBe('live');
-    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith('author1', 'sosReply', '/community');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'sosReply',
+      '/community/post/p1',
+      expect.objectContaining({tag: 'thread:p1'}),
+      expect.any(Number),
+    );
   });
 
   it('allowing an already-visible reply does not push a second time', async () => {

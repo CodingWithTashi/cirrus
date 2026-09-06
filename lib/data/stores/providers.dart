@@ -29,6 +29,10 @@ import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
 import '../repositories/fake_billing_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
+import '../api/firebase/push_messages.dart';
+import '../repositories/fake_notifications_repository.dart';
+import '../repositories/firebase_notifications_repository.dart';
+import 'notifications_store.dart';
 import '../api/firebase/reminder_scheduler.dart';
 import 'reminder_coordinator.dart';
 import '../repositories/firebase_coach_repository.dart';
@@ -148,7 +152,7 @@ final journeyRepositoryProvider = Provider<JourneyRepository>(
 /// journey — the fake backend has nothing to sync to.
 final userContextRepositoryProvider = Provider<UserContextRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
-    BackendMode.fake => const NoopUserContextRepository(),
+    BackendMode.fake => NoopUserContextRepository(ref.watch(fakeServerProvider)),
     BackendMode.firebase => FirebaseUserContextRepository(),
   },
 );
@@ -379,6 +383,39 @@ final communityStoreProvider = NotifierProvider<CommunityStore, CommunityState>(
 final coachStoreProvider = NotifierProvider<CoachStore, CoachState>(
   CoachStore.new,
 );
+
+/// The in-app notification inbox. Read-only; see [NotificationsRepository].
+final notificationsRepositoryProvider = Provider<NotificationsRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => FakeNotificationsRepository(
+      ref.watch(fakeServerProvider),
+    ),
+    BackendMode.firebase => FirebaseNotificationsRepository(),
+  },
+);
+
+final notificationsStoreProvider =
+    NotifierProvider<NotificationsStore, NotificationsState>(
+      NotificationsStore.new,
+    );
+
+/// Where push messages arrive from. Null on the fake backend, where there is
+/// no FCM to listen to; tests override it to drive taps through the real
+/// router without a platform channel.
+final pushMessagesProvider = Provider<PushMessages?>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => null,
+    BackendMode.firebase => const FirebasePushMessages(),
+  },
+);
+
+/// Whether a tapped notification is waiting for the splash to get out of the
+/// way.
+///
+/// Read by the splash, which must not spend one of the launch paywall's
+/// lifetime-capped slots on an impression the user never sees — the push
+/// lands on top of it a moment later.
+final pushPendingProvider = StateProvider<bool>((ref) => false);
 
 /// Keeps the device notification schedule in step with the journey. Only the
 /// real backend schedules anything — the fake one has no device to talk to

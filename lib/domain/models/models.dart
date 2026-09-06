@@ -218,6 +218,7 @@ class Reply {
     this.seedTextId,
     this.isOp = false,
     this.isMine = false,
+    this.createdAt,
   }) : assert(text != null || seedTextId != null);
 
   /// The reply's own document id.
@@ -239,6 +240,17 @@ class Reply {
   /// Reply written by the original poster (highlighted in SOS rallies).
   final bool isOp;
   final bool isMine;
+
+  /// When it was written, for ordering a thread.
+  ///
+  /// Replies used to arrive in whatever order the collection-group query
+  /// returned them, which was fine while a thread was only ever read from the
+  /// top. It stopped being fine the moment a notification said "3 new
+  /// replies" and sent somebody looking for them: they have to be at the
+  /// bottom. Null for seeded fixtures and for anything written before this
+  /// field existed, which sort last — an unknown time is most usefully read
+  /// as "recent" here.
+  final DateTime? createdAt;
 }
 
 class Post {
@@ -676,4 +688,57 @@ class Testimonial {
 
   final String id;
   final String text;
+}
+
+/// One entry in the in-app notification inbox.
+///
+/// A push is a courtesy that may never arrive — permission declined, no device
+/// registered, the daily budget spent, or simply swiped away on a lock screen
+/// somebody never read. This is the durable record of the same event, and the
+/// only surface that can answer "what did I miss".
+///
+/// Server-written, client-read. The app never invents one: everything here was
+/// something that actually happened to this account.
+class AppNotification {
+  const AppNotification({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.body,
+    required this.createdAt,
+    this.route,
+    this.readAt,
+  });
+
+  /// The server's document id. Equal to the notification tag where there was
+  /// one, so a busy thread is ONE row that updates rather than twenty — the
+  /// same thing the tag does to the shade.
+  final String id;
+
+  /// The server's `PushKind`, as a raw string. Deliberately not an enum: a
+  /// newer backend may send a kind this build has never heard of, and an
+  /// unknown row should still render its own title rather than vanish.
+  final String kind;
+
+  final String title;
+  final String body;
+  final DateTime createdAt;
+
+  /// Where tapping it goes. Allow-listed before use, exactly like a push
+  /// payload's — this text came off the wire too.
+  final String? route;
+
+  final DateTime? readAt;
+
+  bool get isUnread => readAt == null;
+
+  AppNotification copyWith({DateTime? readAt}) => AppNotification(
+    id: id,
+    kind: kind,
+    title: title,
+    body: body,
+    createdAt: createdAt,
+    route: route,
+    readAt: readAt ?? this.readAt,
+  );
 }

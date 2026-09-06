@@ -40,6 +40,10 @@ void main() {
       quietStartHour: 22,
       quietEndHour: 7,
       trialReminderOn: false,
+      pushRepliesOn: false,
+      pushMentionsOn: false,
+      pushWeeklyOn: false,
+      pushPromptShown: true,
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
       launchPaywallShownCount: 3,
@@ -120,6 +124,13 @@ void main() {
       'quietStartHour',
       'quietEndHour',
       'trialReminderOn',
+      // Server-decided notifications. Stored locally for an instant UI, and
+      // mirrored to `users/{uid}.pushPrefs` because the server is what
+      // actually sends them.
+      'pushRepliesOn',
+      'pushMentionsOn',
+      'pushWeeklyOn',
+      'pushPromptShown',
       'winbackShown',
       'launchPaywallShownDay',
       'launchPaywallShownCount',

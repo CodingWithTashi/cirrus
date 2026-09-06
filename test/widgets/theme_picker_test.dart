@@ -202,6 +202,16 @@ void main() {
     container.read(routerProvider).go(Routes.settings);
     await tester.pumpAndSettle();
 
+    // Settings grew a notification-categories row above Appearance, so the
+    // row under test now starts below an 800px test viewport. Scroll to it
+    // rather than asserting on what happens to be on screen.
+    await tester.scrollUntilVisible(
+      find.textContaining(l10n.settingsAppearanceDark),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     // "Midnight" named the Ember family's dark mode, which stops being true
     // the moment the family is Tide.
     expect(find.textContaining(l10n.settingsAppearanceDark), findsWidgets);

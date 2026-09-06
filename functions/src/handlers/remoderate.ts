@@ -34,7 +34,7 @@ import {classify} from '../ai/moderation';
 import {FieldValue, db, mirrorPostStatus, postsCol} from '../lib/firestore';
 import {log} from '../lib/logger';
 import {MIRROR_STATUS, VERDICT_STATUS} from './moderatePost';
-import {notifyPostAuthor} from './moderateReply';
+import {notifyReply} from '../lib/notifyReply';
 
 /** Rows re-asked per run. Bounds the model spend of one cron tick. */
 export const REMODERATE_BATCH = 50;
@@ -194,8 +194,12 @@ export async function remoderateOnce(limit: number): Promise<RemoderateResult> {
 
     // A reply that just became visible on an SOS post owes its author the
     // "someone answered" push the trigger rightly skipped while it was held.
-    if (isReply && (verdict.action === 'allow' || verdict.action === 'flag')) {
-      await notifyPostAuthor(postId);
+    if (
+      isReply &&
+      replyId !== null &&
+      (verdict.action === 'allow' || verdict.action === 'flag')
+    ) {
+      await notifyReply(postId, replyId);
     }
 
     log.info('remoderate.verdict', {

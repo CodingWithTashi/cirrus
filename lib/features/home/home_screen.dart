@@ -17,6 +17,7 @@ import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../notifications/notifications_screen.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
 import '../../domain/logic/billing_catalog.dart';
@@ -269,6 +270,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                             ),
+                            const NotificationBell(),
+                            const SizedBox(width: 4),
                             PressScale(
                               onTap: () => context.push(Routes.profile),
                               child: EmojiAvatar(

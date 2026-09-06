@@ -2795,7 +2795,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileBadgesEarned => 'badges gagnés';
 
   @override
-  String get profileSettings => '⚙️ Réglages';
+  String get profileSettings => 'Réglages';
 
   @override
   String get profileEditAlias => 'Choisis ton alias';
@@ -3333,4 +3333,75 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get milestoneNotifFreedomDay =>
       'Jour de la Liberté. Le plan est fini, et tu l’as fini.';
+
+  @override
+  String get communityThreadGoneTitle => 'Ce fil a disparu';
+
+  @override
+  String get communityThreadGoneBody =>
+      'Il a pu être supprimé ou retiré depuis qu\'on t\'a prévenu.';
+
+  @override
+  String get communityThreadGoneCta => 'Retour au fil';
+
+  @override
+  String get pushOpen => 'Ouvrir';
+
+  @override
+  String get settingsPushTitle => 'Ce qu’on t’envoie';
+
+  @override
+  String get settingsPushSubtitle =>
+      'Uniquement pour tes propres fils. Jamais pour ceux des autres.';
+
+  @override
+  String get settingsPushBlocked =>
+      'Les notifications de Cirrus sont désactivées dans les réglages de ton téléphone. Réactive-les là-bas et tout ceci se remettra à fonctionner.';
+
+  @override
+  String get settingsPushReplies => 'Réponses à mes messages';
+
+  @override
+  String get settingsPushRepliesNote =>
+      'Groupées : un fil animé ne fait qu’une notification.';
+
+  @override
+  String get settingsPushMentions => 'Mentions';
+
+  @override
+  String get settingsPushMentionsNote => 'Quand on te nomme dans une réponse.';
+
+  @override
+  String get settingsPushWeekly => 'Bilan de la semaine';
+
+  @override
+  String get settingsPushWeeklyNote => 'Quand ta semaine est prête à lire.';
+
+  @override
+  String get settingsPushCategories => 'Catégories';
+
+  @override
+  String get pushAskTitle => 'Envie de savoir quand on te répond ?';
+
+  @override
+  String get pushAskBody =>
+      'On ne te préviendra que pour tes propres messages. Jamais pour ceux des autres.';
+
+  @override
+  String get pushAskCta => 'Activer les notifications';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmptyTitle => 'Rien pour le moment';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Quand on répondra à un de tes messages, ça arrivera ici.';
+
+  @override
+  String notificationsBadgeLabel(int count) {
+    return '$count notifications non lues';
+  }
 }

@@ -14,6 +14,10 @@ class FakeCommunityApi implements CommunityApi {
       _server.respond(_server.postsForSession);
 
   @override
+  Future<Map<String, dynamic>?> fetchPost(String postId) =>
+      _server.respond(() => _server.postById(postId));
+
+  @override
   Future<String> addPost(Map<String, dynamic> post) =>
       _server.respond(() => _server.insertPost(post));
 
@@ -49,6 +53,19 @@ class FakeCommunityApi implements CommunityApi {
     if (PostQuality.checkReply(reply['text'] as String? ?? '') != null) {
       throw const ContentRefusedException(ContentRefusal.rules);
     }
+    // The same thing `notifyReply` does on the real backend: the author of
+    // the post hears that somebody answered, collapsed onto one row per
+    // thread. Without it the inbox would be empty on every fake-backend run,
+    // which is every widget test and the whole demo.
+    _server.notifyPostAuthor(postId, {
+      'id': 'thread:$postId',
+      'kind': 'communityReply',
+      'title': 'Someone replied',
+      'body': 'Go see what they said.',
+      'route': '/community/post/$postId',
+      'createdAtMs': _server.now().millisecondsSinceEpoch,
+      'readAtMs': null,
+    });
     _server.updatePost(
       postId,
       (p) => p['replies'] = [...(p['replies'] as List? ?? []), reply],

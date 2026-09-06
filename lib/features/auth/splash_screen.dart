@@ -65,7 +65,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     final now = ref.read(nowProvider)();
     final today = LpDate.dayKey(now);
-    final show = LaunchPaywallPolicy.shouldShow(
+    // A tapped notification is waiting for this navigation to happen so it
+    // can land on top. Showing the paywall would spend one of its
+    // lifetime-capped slots on an impression the push immediately covers.
+    final pushPending = ref.read(pushPendingProvider);
+    final show = !pushPending && LaunchPaywallPolicy.shouldShow(
       hasJourney: true,
       planDay: journey.plan.dayNumber(now),
       settled: entitlements.isSettled,

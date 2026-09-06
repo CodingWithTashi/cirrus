@@ -2796,7 +2796,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileBadgesEarned => 'Abzeichen verdient';
 
   @override
-  String get profileSettings => '⚙️ Einstellungen';
+  String get profileSettings => 'Einstellungen';
 
   @override
   String get profileEditAlias => 'Wähl deinen Alias';
@@ -3331,4 +3331,77 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get milestoneNotifFreedomDay =>
       'Tag der Freiheit. Der Plan ist durch — und du hast ihn durchgezogen.';
+
+  @override
+  String get communityThreadGoneTitle => 'Dieser Thread ist weg';
+
+  @override
+  String get communityThreadGoneBody =>
+      'Vielleicht wurde er gelöscht oder entfernt, seit wir dich benachrichtigt haben.';
+
+  @override
+  String get communityThreadGoneCta => 'Zurück zum Feed';
+
+  @override
+  String get pushOpen => 'Öffnen';
+
+  @override
+  String get settingsPushTitle => 'Was wir dir schicken';
+
+  @override
+  String get settingsPushSubtitle =>
+      'Nur zu deinen eigenen Threads. Nie zu denen anderer.';
+
+  @override
+  String get settingsPushBlocked =>
+      'Benachrichtigungen für Cirrus sind in den Einstellungen deines Telefons aus. Schalte sie dort wieder ein, dann funktioniert das hier.';
+
+  @override
+  String get settingsPushReplies => 'Antworten auf meine Beiträge';
+
+  @override
+  String get settingsPushRepliesNote =>
+      'Gruppiert — ein lebhafter Thread ist eine Meldung.';
+
+  @override
+  String get settingsPushMentions => 'Erwähnungen';
+
+  @override
+  String get settingsPushMentionsNote =>
+      'Wenn dich jemand in einer Antwort nennt.';
+
+  @override
+  String get settingsPushWeekly => 'Wochenrückblick';
+
+  @override
+  String get settingsPushWeeklyNote =>
+      'Wenn deine Woche zum Nachlesen bereit ist.';
+
+  @override
+  String get settingsPushCategories => 'Kategorien';
+
+  @override
+  String get pushAskTitle => 'Wissen, wenn jemand antwortet?';
+
+  @override
+  String get pushAskBody =>
+      'Wir melden uns nur zu deinen eigenen Beiträgen. Nie zu denen anderer.';
+
+  @override
+  String get pushAskCta => 'Benachrichtigungen an';
+
+  @override
+  String get notificationsTitle => 'Benachrichtigungen';
+
+  @override
+  String get notificationsEmptyTitle => 'Noch nichts';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Wenn jemand auf einen deiner Beiträge antwortet, landet es hier.';
+
+  @override
+  String notificationsBadgeLabel(int count) {
+    return '$count ungelesene Benachrichtigungen';
+  }
 }

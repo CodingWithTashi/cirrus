@@ -58,6 +58,7 @@ abstract final class PostCodec {
     'seedTextId': r.seedTextId,
     'isOp': r.isOp,
     'isMine': r.isMine,
+    'createdAt': encodeTimestampOrNull(r.createdAt),
   };
 
   static Reply decodeReply(Map<String, dynamic> json) => Reply(
@@ -68,5 +69,6 @@ abstract final class PostCodec {
     seedTextId: json['seedTextId'] as String?,
     isOp: json['isOp'] as bool? ?? false,
     isMine: json['isMine'] as bool? ?? false,
+    createdAt: decodeTimestampOrNull(json['createdAt'] as String?),
   );
 }

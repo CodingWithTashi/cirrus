@@ -18,7 +18,7 @@ import {REGION} from '../config';
 import {db, FieldValue, mirrorPostStatus, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
-import {notifyPostAuthor} from './moderateReply';
+import {notifyReply} from '../lib/notifyReply';
 
 /** How many flags one page returns. The queue is a daily chore, not a feed. */
 const PAGE_SIZE = 50;
@@ -184,8 +184,8 @@ export const resolveModeration = onCall(
       // "someone answered" push the trigger rightly skipped while the reply
       // was invisible. Only on a pending→live transition — a `flag` reply
       // was already live and already pushed.
-      if (action === 'allow' && kind === 'reply' && wasPending) {
-        await notifyPostAuthor(postId);
+      if (action === 'allow' && kind === 'reply' && wasPending && replyId !== null) {
+        await notifyReply(postId, replyId);
       }
     }
 

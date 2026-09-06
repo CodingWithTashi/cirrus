@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#161A21</color>
+
+    <!-- Tint Android applies to the status-bar notification icon and to the
+         app name on the notification itself. Ember's volt, the brand accent,
+         so a Cirrus notification is recognisable at a glance in a crowded
+         shade. Deliberately NOT theme-varying: the shade is drawn by the
+         system in its own configuration, the same reason the home-screen
+         widget mirrors Ember's hexes rather than following the app's
+         palette. -->
+    <color name="notification_accent">#C8F542</color>
 </resources>

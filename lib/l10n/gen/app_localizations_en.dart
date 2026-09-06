@@ -2771,7 +2771,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBadgesEarned => 'badges earned';
 
   @override
-  String get profileSettings => '⚙️ Settings';
+  String get profileSettings => 'Settings';
 
   @override
   String get profileEditAlias => 'Pick your alias';
@@ -3306,4 +3306,76 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get milestoneNotifFreedomDay =>
       'Freedom Day. The plan is done, and you finished it.';
+
+  @override
+  String get communityThreadGoneTitle => 'That thread is gone';
+
+  @override
+  String get communityThreadGoneBody =>
+      'It may have been deleted, or taken down since you were notified.';
+
+  @override
+  String get communityThreadGoneCta => 'Back to the feed';
+
+  @override
+  String get pushOpen => 'Open';
+
+  @override
+  String get settingsPushTitle => 'What we send you';
+
+  @override
+  String get settingsPushSubtitle =>
+      'Only for your own threads. Never for other people’s.';
+
+  @override
+  String get settingsPushBlocked =>
+      'Notifications are off for Cirrus in your phone’s settings. Turn them back on there and these will start working.';
+
+  @override
+  String get settingsPushReplies => 'Replies to my posts';
+
+  @override
+  String get settingsPushRepliesNote =>
+      'Grouped, so a busy thread is one notification.';
+
+  @override
+  String get settingsPushMentions => 'Mentions';
+
+  @override
+  String get settingsPushMentionsNote =>
+      'When someone tags your name in a reply.';
+
+  @override
+  String get settingsPushWeekly => 'Weekly report';
+
+  @override
+  String get settingsPushWeeklyNote => 'When your week is ready to read back.';
+
+  @override
+  String get settingsPushCategories => 'Categories';
+
+  @override
+  String get pushAskTitle => 'Want to know when someone replies?';
+
+  @override
+  String get pushAskBody =>
+      'We’ll only ping you about your own posts. Never anyone else’s.';
+
+  @override
+  String get pushAskCta => 'Turn on notifications';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmptyTitle => 'Nothing yet';
+
+  @override
+  String get notificationsEmptyBody =>
+      'When someone replies to a post of yours, it lands here.';
+
+  @override
+  String notificationsBadgeLabel(int count) {
+    return '$count unread notifications';
+  }
 }

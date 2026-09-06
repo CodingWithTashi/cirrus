@@ -29,8 +29,8 @@ import {
 } from '../../src/lib/push';
 // Exported for this suite: the `onSchedule` wrapper around it is untestable,
 // the same reason `taperRecalc` exports `recalcOne`.
-import {pruneStaleDevices} from '../../src/handlers/pruneDevices';
-import {Timestamp, devicesCol, userDoc} from '../../src/lib/firestore';
+import {pruneStaleDevices, pruneStaleThreads} from '../../src/handlers/pruneDevices';
+import {Timestamp, db, devicesCol, userDoc} from '../../src/lib/firestore';
 
 const PROJECT = process.env['GCLOUD_PROJECT'] ?? 'demo-cirrus';
 const HOST = process.env['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
@@ -178,22 +178,24 @@ describe('listDeviceTokens', () => {
   });
 });
 
+const KIND = {kind: 'communityReply'} as const;
+
 describe('sendToUser', () => {
   it('fans out over the subcollection', async () => {
     await registerDevice('alice', {token: 'device-1'});
     await registerDevice('alice', {token: 'device-2'});
     sendEachForMulticast.mockResolvedValue(allOk(2));
 
-    await sendToUser('alice', {title: 'hi', body: 'there', route: '/coach'});
+    await sendToUser('alice', {title: 'hi', body: 'there', route: '/coach'}, KIND);
 
     expect(sendEachForMulticast).toHaveBeenCalledTimes(1);
     const arg = sendEachForMulticast.mock.calls[0]![0] as {tokens: string[]; data: unknown};
     expect(arg.tokens.toSorted()).toEqual(['device-1', 'device-2']);
-    expect(arg.data).toEqual({route: '/coach'});
+    expect(arg.data).toEqual({kind: 'communityReply', route: '/coach'});
   });
 
   it('sends nothing at all when the user has no devices', async () => {
-    await sendToUser('alice', {title: 'hi', body: 'there'});
+    await sendToUser('alice', {title: 'hi', body: 'there'}, KIND);
     expect(sendEachForMulticast).not.toHaveBeenCalled();
   });
 
@@ -212,7 +214,7 @@ describe('sendToUser', () => {
       }),
     );
 
-    await sendToUser('alice', {title: 'hi', body: 'there'});
+    await sendToUser('alice', {title: 'hi', body: 'there'}, KIND);
 
     expect(await listDeviceTokens('alice')).toEqual(['live']);
   });
@@ -231,7 +233,7 @@ describe('sendToUser', () => {
       }),
     );
 
-    await sendToUser('alice', {title: 'hi', body: 'there'});
+    await sendToUser('alice', {title: 'hi', body: 'there'}, KIND);
 
     expect((await userDoc('alice').get()).get('fcmTokens')).toEqual(['live']);
   });
@@ -240,8 +242,127 @@ describe('sendToUser', () => {
     await registerDevice('alice', {token: 'device-1'});
     sendEachForMulticast.mockRejectedValue(new Error('FCM is having a day'));
     await expect(
-      sendToUser('alice', {title: 'hi', body: 'there'}),
-    ).resolves.toBeUndefined();
+      sendToUser('alice', {title: 'hi', body: 'there'}, KIND),
+    ).resolves.toBe(false);
+  });
+});
+
+describe('the send gate', () => {
+  /** Registers one device and makes every send report success. */
+  async function reachable(uid = 'alice'): Promise<void> {
+    await registerDevice(uid, {token: 'device-1'});
+    sendEachForMulticast.mockResolvedValue(allOk(1));
+  }
+
+  /** The message the SDK was handed on the most recent send. */
+  function lastMessage(): {
+    android: {collapseKey?: string; notification: {channelId: string; tag?: string; priority: string}};
+    apns: {headers?: Record<string, string>; payload: {aps: Record<string, unknown>}};
+    notification: {title: string; body: string};
+    data: Record<string, string>;
+  } {
+    const calls = sendEachForMulticast.mock.calls as unknown[][];
+    return calls[calls.length - 1]![0] as ReturnType<typeof lastMessage>;
+  }
+
+  it('sends nothing when the master switch is off', async () => {
+    await reachable();
+    await userDoc('alice').set({pushPrefs: {all: false}}, {merge: true});
+
+    expect(await sendToUser('alice', {title: 'hi', body: 'x'}, KIND)).toBe(false);
+    expect(sendEachForMulticast).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing when the kind is switched off', async () => {
+    await reachable();
+    await userDoc('alice').set({pushPrefs: {communityReply: false}}, {merge: true});
+
+    expect(await sendToUser('alice', {title: 'hi', body: 'x'}, KIND)).toBe(false);
+  });
+
+  it('sends when a preference is merely absent, so nothing needs migrating', async () => {
+    await reachable();
+    expect(await sendToUser('alice', {title: 'hi', body: 'x'}, KIND)).toBe(true);
+  });
+
+  it('stops once the daily budget is spent', async () => {
+    await reachable();
+    let sent = 0;
+    for (let i = 0; i < 14; i++) {
+      if (await sendToUser('alice', {title: 'hi', body: 'x'}, KIND)) sent++;
+    }
+    expect(sent).toBeLessThan(14);
+    expect(sent).toBeGreaterThan(0);
+    const usage = (await userDoc('alice').get()).get('pushUsage') as {count: number};
+    expect(usage.count).toBeGreaterThan(0);
+  });
+
+  it('does not spend the budget on an SOS reply', async () => {
+    await reachable();
+    for (let i = 0; i < 14; i++) {
+      await sendToUser('alice', {title: 'hi', body: 'x'}, {kind: 'sosReply'});
+    }
+    // A cry for help is never refused because ordinary replies used the quota.
+    expect(sendEachForMulticast).toHaveBeenCalledTimes(14);
+  });
+
+  it('tags the notification so a repeat send replaces the shade line', async () => {
+    await reachable();
+    await sendToUser(
+      'alice',
+      {title: 'hi', body: 'x', route: '/community/post/p1'},
+      {kind: 'communityReply', tag: 'thread:p1', threadId: 'thread:p1'},
+    );
+
+    const msg = lastMessage();
+    expect(msg.android.notification.tag).toBe('thread:p1');
+    expect(msg.android.collapseKey).toBe('thread:p1');
+    expect(msg.apns.headers?.['apns-collapse-id']).toBe('thread:p1');
+    expect(msg.apns.payload.aps['threadId']).toBe('thread:p1');
+    expect(msg.data['route']).toBe('/community/post/p1');
+  });
+
+  it('delivers on the loud channel outside quiet hours', async () => {
+    await reachable();
+    // 12:00 UTC, squarely awake.
+    const noon = Date.UTC(2024, 0, 1, 12, 0, 0);
+    await userDoc('alice').set({tz: 'UTC'}, {merge: true});
+    await sendToUser('alice', {title: 'hi', body: 'x'}, KIND, noon);
+
+    const msg = lastMessage();
+    expect(msg.android.notification.channelId).toBe('community_replies');
+    expect(msg.apns.payload.aps['interruption-level']).toBeUndefined();
+  });
+
+  it('swaps to the quiet channel at 3am where the recipient actually is', async () => {
+    await reachable();
+    // 18:00 UTC is 03:00 next day in Tokyo. A per-message priority flag would
+    // be ignored on Android 8+, so the channel is what carries this.
+    const ms = Date.UTC(2024, 0, 1, 18, 0, 0);
+    await userDoc('alice').set({tz: 'Asia/Tokyo'}, {merge: true});
+    await sendToUser('alice', {title: 'hi', body: 'x'}, KIND, ms);
+
+    const msg = lastMessage();
+    expect(msg.android.notification.channelId).toBe('community_replies_quiet');
+    expect(msg.apns.payload.aps['interruption-level']).toBe('passive');
+  });
+
+  it('keeps an SOS loud at 3am, which is when it matters most', async () => {
+    await reachable();
+    const ms = Date.UTC(2024, 0, 1, 18, 0, 0);
+    await userDoc('alice').set({tz: 'Asia/Tokyo'}, {merge: true});
+    await sendToUser('alice', {title: 'hi', body: 'x'}, {kind: 'sosReply'}, ms);
+
+    expect(lastMessage().apns.payload.aps['interruption-level']).toBeUndefined();
+  });
+
+  it('does not go quiet on a timezone we never learned', async () => {
+    await reachable();
+    // Guessing UTC would silence somebody in Sydney through their afternoon.
+    const ms = Date.UTC(2024, 0, 1, 2, 0, 0);
+    await sendToUser('alice', {title: 'hi', body: 'x'}, KIND, ms);
+
+    expect(lastMessage().android.notification.channelId).toBe('community_replies');
   });
 });
 
@@ -283,5 +404,38 @@ describe('pruneStaleDevices', () => {
     await userDoc('alice').set({fcmTokens: ['ancient']});
     await pruneStaleDevices(new Date('2026-07-01T00:00:00Z'));
     expect((await userDoc('alice').get()).get('fcmTokens')).toEqual(['ancient']);
+  });
+});
+
+describe('pruneStaleThreads', () => {
+  /** A thread-notification row whose last reply is [ageDays] old. */
+  async function aged(uid: string, postId: string, ageDays: number): Promise<void> {
+    await db.doc(`users/${uid}/notifThreads/${postId}`).set({
+      count: 3,
+      lastReplyAtMs: Date.now() - ageDays * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  const cutoff = (days: number): Date =>
+    new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  it('drops rows whose thread went quiet long ago', async () => {
+    await aged('alice', 'old', 45);
+    await aged('alice', 'recent', 2);
+
+    expect(await pruneStaleThreads(cutoff(30))).toBe(1);
+    const left = await db.collection('users/alice/notifThreads').get();
+    expect(left.docs.map((d) => d.id)).toEqual(['recent']);
+  });
+
+  it('reaches across users, which is why it is a collection group', async () => {
+    await aged('alice', 'p1', 60);
+    await aged('bob', 'p2', 60);
+    expect(await pruneStaleThreads(cutoff(30))).toBe(2);
+  });
+
+  it('does nothing when everything is fresh', async () => {
+    await aged('alice', 'p1', 1);
+    expect(await pruneStaleThreads(cutoff(30))).toBe(0);
   });
 });

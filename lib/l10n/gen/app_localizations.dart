@@ -4582,7 +4582,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileSettings.
   ///
   /// In en, this message translates to:
-  /// **'⚙️ Settings'**
+  /// **'Settings'**
   String get profileSettings;
 
   /// No description provided for @profileEditAlias.
@@ -5472,6 +5472,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Freedom Day. The plan is done, and you finished it.'**
   String get milestoneNotifFreedomDay;
+
+  /// Shown when a deep-linked post no longer exists.
+  ///
+  /// In en, this message translates to:
+  /// **'That thread is gone'**
+  String get communityThreadGoneTitle;
+
+  /// Shown when a deep-linked post no longer exists.
+  ///
+  /// In en, this message translates to:
+  /// **'It may have been deleted, or taken down since you were notified.'**
+  String get communityThreadGoneBody;
+
+  /// Shown when a deep-linked post no longer exists.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the feed'**
+  String get communityThreadGoneCta;
+
+  /// Action on the in-app banner a foreground push draws.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get pushOpen;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'What we send you'**
+  String get settingsPushTitle;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Only for your own threads. Never for other people’s.'**
+  String get settingsPushSubtitle;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off for Cirrus in your phone’s settings. Turn them back on there and these will start working.'**
+  String get settingsPushBlocked;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies to my posts'**
+  String get settingsPushReplies;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Grouped, so a busy thread is one notification.'**
+  String get settingsPushRepliesNote;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentions'**
+  String get settingsPushMentions;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone tags your name in a reply.'**
+  String get settingsPushMentionsNote;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report'**
+  String get settingsPushWeekly;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'When your week is ready to read back.'**
+  String get settingsPushWeeklyNote;
+
+  /// Notification categories sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get settingsPushCategories;
+
+  /// Contextual notification permission ask, after a first post or reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Want to know when someone replies?'**
+  String get pushAskTitle;
+
+  /// Contextual notification permission ask, after a first post or reply.
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll only ping you about your own posts. Never anyone else’s.'**
+  String get pushAskBody;
+
+  /// Contextual notification permission ask, after a first post or reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications'**
+  String get pushAskCta;
+
+  /// In-app notification inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// In-app notification inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet'**
+  String get notificationsEmptyTitle;
+
+  /// In-app notification inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone replies to a post of yours, it lands here.'**
+  String get notificationsEmptyBody;
+
+  /// Screen-reader label for the Home notification bell.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread notifications'**
+  String notificationsBadgeLabel(int count);
 }
 
 class _AppLocalizationsDelegate

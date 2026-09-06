@@ -91,6 +91,24 @@ extension LpEvents on AnalyticsSink {
   void notifPrompt({required bool granted}) =>
       track(AnalyticsEvent('notif_prompt', {'granted': granted.toString()}));
 
+  /// A push was tapped, and where it went.
+  ///
+  /// The pair `push_opened` and the server's own `push.sent` log line is what
+  /// makes this feature evaluable at all — whether the collapse throttle is
+  /// too aggressive, and whether a route we sent is a route the app accepted.
+  /// It matters more here than for most events because, as `lib/push.ts`'s
+  /// header puts it, the failure of a push is silence, and silence looks
+  /// exactly like having nothing to say.
+  ///
+  /// [kind] is the server's `PushKind` and carries no user text; [opened] is
+  /// false when a route was refused by the allow-list.
+  void pushOpened({required String kind, required bool opened}) => track(
+    AnalyticsEvent('push_opened', {
+      'kind': kind,
+      'opened': opened.toString(),
+    }),
+  );
+
   // --- paywall -------------------------------------------------------------
 
   /// [variant] is what was actually rendered — the A/B slot docs/06 §3 reads,

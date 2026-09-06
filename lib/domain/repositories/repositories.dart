@@ -78,6 +78,15 @@ abstract interface class CommunityRepository {
   /// client remembered from an earlier session (QA H3).
   Future<List<Post>> fetchPosts();
 
+  /// One post and its replies, or null when it is gone or was never visible.
+  ///
+  /// [fetchPosts] returns a bounded page, so a post can be perfectly real and
+  /// simply not in it — which is the COMMON case for a deep link, since a
+  /// notification about a reply can arrive days after the post scrolled out
+  /// of the window. Before this existed, opening such a link rendered a blank
+  /// screen with no app bar, no spinner and no way back.
+  Future<Post?> fetchPost(String postId);
+
   /// Answers the backend's id for the post (null when the backend did not
   /// say), so the optimistic copy can be rebound to the real document.
   Future<String?> addPost(Post post);
@@ -392,7 +401,28 @@ final class ContentRefusedException implements Exception {
 abstract interface class UserContextRepository {
   /// Fire-and-forget by design: a failed sync costs a cron cycle, never a
   /// session. Callers ignore the future.
-  Future<void> sync({String? fcmToken});
+  ///
+  /// [pushPrefs] carries the notification settings to the SERVER, which is
+  /// what actually decides to send. A preference held only on the device can
+  /// stop the locally scheduled reminders and nothing else — which is exactly
+  /// what the master switch used to do, leaving every server push arriving
+  /// after the user had turned notifications off.
+  ///
+  /// [readThreads] marks community threads as opened, so the next reply
+  /// starts a fresh notification group rather than adding to a count the
+  /// reader has already seen. It rides this call rather than a callable of
+  /// its own because `users/{uid}` is server-write-only and this is already
+  /// the one door through it.
+  /// [readNotifications] marks inbox rows read. Same door and same reasoning
+  /// as [readThreads]: `users/{uid}` is server-write-only, so the client
+  /// cannot set the field itself without a hole in the one rule that keeps
+  /// entitlement safe.
+  Future<void> sync({
+    String? fcmToken,
+    Map<String, Object?>? pushPrefs,
+    List<String>? readThreads,
+    List<String>? readNotifications,
+  });
 
   /// Releases this device from the push registry, on sign-out.
   ///
@@ -406,6 +436,21 @@ abstract interface class UserContextRepository {
   /// Never throws, and is bounded in time: someone who tapped "sign out" is
   /// not left signed in because a backend was slow.
   Future<void> unregister();
+}
+
+/// The in-app notification inbox (`users/{uid}/notifications`).
+///
+/// Read-only from the client by design: these rows are the server's record of
+/// what it told this account, and a client that could write them could invent
+/// an event that never happened. Marking one read goes back through
+/// `UserContextRepository.sync`, which is already the one server-owned door.
+abstract interface class NotificationsRepository {
+  /// The newest notifications, as they change.
+  ///
+  /// A stream rather than a fetch because the badge has to be right without
+  /// the user pulling to refresh — a push arriving while the app is open must
+  /// light it up.
+  Stream<List<AppNotification>> watch();
 }
 
 /// The two quotes shown on the D3 rating ask, chosen for what this person just

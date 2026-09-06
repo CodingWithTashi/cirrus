@@ -149,11 +149,15 @@ async function generateFor(
   // and the device had no way to know.
   // The report is generated in the user's own language, so its own headline
   // is better push copy than anything a lookup table could hold.
-  await sendToUser(uid, {
-    title: insight.headline,
-    body: insight.win,
-    route: '/insight',
-  });
+  await sendToUser(
+    uid,
+    {title: insight.headline, body: insight.win, route: '/insight'},
+    // Naming the kind is what subjects this to the same preference check,
+    // quiet hours and channel as everything else. It used to call straight
+    // through with no kind at all, which is precisely why the gate lives in
+    // `sendToUser` rather than in the localized wrapper this never used.
+    {kind: 'insightReady', tag: `insight:${weekId}`},
+  );
   return true;
 }
 
