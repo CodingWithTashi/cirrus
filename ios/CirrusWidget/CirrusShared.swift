@@ -49,12 +49,17 @@ struct CirrusMirror {
     var dayKey = ""
     var planStartDayKey = ""
     var dayNumber = 0
+    /// Plan length; 0 when the mirror predates the field.
+    var totalDays = 0
     var puffs = 0
     var limit = 0
     var streak = 0
     var flame = "🔥"
     var limits: [String: Int] = [:]
     var copyDay = ""
+    var copyDayFreedom = ""
+    var copyDayPastOne = ""
+    var copyDayPastOther = ""
     var copyLeftAhead = ""
     var copyLeftTight = ""
     var copyOverLimit = ""
@@ -81,12 +86,16 @@ struct CirrusMirror {
         mirror.dayKey = json["dayKey"] as? String ?? ""
         mirror.planStartDayKey = json["planStartDayKey"] as? String ?? ""
         mirror.dayNumber = json["dayNumber"] as? Int ?? 0
+        mirror.totalDays = json["totalDays"] as? Int ?? 0
         mirror.puffs = json["puffs"] as? Int ?? 0
         mirror.limit = json["limit"] as? Int ?? 0
         mirror.streak = json["streak"] as? Int ?? 0
         mirror.flame = json["flame"] as? String ?? "🔥"
         mirror.limits = json["limits"] as? [String: Int] ?? [:]
         mirror.copyDay = copy["day"] as? String ?? ""
+        mirror.copyDayFreedom = copy["dayFreedom"] as? String ?? ""
+        mirror.copyDayPastOne = copy["dayPastOne"] as? String ?? ""
+        mirror.copyDayPastOther = copy["dayPastOther"] as? String ?? ""
         mirror.copyLeftAhead = copy["leftAhead"] as? String ?? ""
         mirror.copyLeftTight = copy["leftTight"] as? String ?? ""
         mirror.copyOverLimit = copy["overLimit"] as? String ?? ""
@@ -97,6 +106,10 @@ struct CirrusMirror {
 /// Today as the widget should draw it: the mirror plus anything not drained.
 struct CirrusToday {
     let dayNumber: Int
+    /// The last plan day — Home's "Freedom Day 🏆".
+    let isFreedomDay: Bool
+    /// Days past the plan's end; 0 during the plan. Home's maintenance line.
+    let daysPast: Int
     let count: Int
     let limit: Int
     let left: Int
@@ -116,8 +129,27 @@ struct CirrusToday {
         return template.isEmpty ? "" : String(format: template, left)
     }
 
+    /// The day line, with Home's upper clamp: the last plan day is Freedom
+    /// Day and every day after it is maintenance, said so. The same
+    /// `dayLine` the Android provider draws; a mirror from an older app (no
+    /// `totalDays`) or a blank template falls back to the plain count so the
+    /// line is never empty.
     func dayLabel(_ mirror: CirrusMirror) -> String {
-        mirror.copyDay.isEmpty ? "" : String(format: mirror.copyDay, dayNumber)
+        let plain = mirror.copyDay.isEmpty ? "" : String(format: mirror.copyDay, dayNumber)
+        func filled(_ template: String, _ value: Int) -> String {
+            let line = String(format: template, value)
+            return line.trimmingCharacters(in: .whitespaces).isEmpty ? plain : line
+        }
+        if daysPast == 1, !mirror.copyDayPastOne.isEmpty {
+            return filled(mirror.copyDayPastOne, daysPast)
+        }
+        if daysPast > 1, !mirror.copyDayPastOther.isEmpty {
+            return filled(mirror.copyDayPastOther, daysPast)
+        }
+        if isFreedomDay, !mirror.copyDayFreedom.isEmpty {
+            return mirror.copyDayFreedom
+        }
+        return plain
     }
 }
 
@@ -181,8 +213,17 @@ func cirrusToday(_ mirror: CirrusMirror, pending: Int) -> CirrusToday {
         dayNumber = max(1, today - start + 1)
     }
 
+    // The same upper clamp Home applies. Without it the launcher read "day 31"
+    // of a 30-day plan while Home said "1 day past Freedom Day" — the Android
+    // bug of Sep 5 2026, fixed on both sides the same day.
+    let knowsPlanLength = mirror.totalDays > 0
+    let isFreedomDay = knowsPlanLength && dayNumber == mirror.totalDays
+    let daysPast = knowsPlanLength ? max(0, dayNumber - mirror.totalDays) : 0
+
     return CirrusToday(
         dayNumber: dayNumber,
+        isFreedomDay: isFreedomDay,
+        daysPast: daysPast,
         count: count,
         limit: limit,
         left: knowsLimit ? max(0, limit - count) : 0,

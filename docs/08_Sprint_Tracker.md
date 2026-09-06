@@ -131,7 +131,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | ~~**B19**~~ | [RESOLVED Sep 2] **Play console: "your manifest includes the `AD_ID` permission — answer 'yes' or remove it."** Nothing in this app reads an advertising ID; `firebase_analytics` merged it in transitively (`play-services-measurement-api:23.2.0`, blame report line 1255), which is why it looked like a false alarm. It was not — the permission WAS in the shipped bundle, and Amplitude's `TrackingOptions.adid` defaults to **true**, so the SDK attached an advertising ID to every Android event using the `play-services-ads-identifier` library Firebase drags in. Founder decision Sep 2 2026: **remove, not declare** — docs/05 defers an MMP to month 3+ and the launch engine is organic, so the ID buys nothing and would put an advertising identifier on the Data Safety form of a quit-nicotine app. Removed in the manifest (`tools:node="remove"` on `AD_ID` + `ACCESS_ADSERVICES_AD_ID`) AND in the SDK (`TrackingOptions(adid: false)`) — one decision, two files. `ACCESS_ADSERVICES_ATTRIBUTION` stays: Privacy Sandbox measurement, not an identifier, unrestricted. **Open (founder):** answer **No** to the console question, and keep Data Safety free of an advertising ID (pairs with `S4-9`). | `test/android_manifest_test.dart` (6); rebuilt `app-release.aab` permission dump has neither AD_ID | S0 · open: console answer |
 | **B20** | **Play payments profile: BillDesk KYC due Sep 15 2026.** Play Console banner on every page: *"Sales to users outside of India will be paused if your payments profile primary contact does not complete KYC verification with BillDesk by September 15, 2026."* The application is logged as *in progress*. If it lapses, Cirrus stays installable everywhere but **cannot sell a subscription outside India** — which is the entire $44K model, three weeks before an Oct 15 launch. Play warns the review "may include document reviews, live video calls, and location verification", so it is not a same-day task. Primary contact **tengurmey36@gmail.com**; documents go to **onboarding@billdesk.com**. **Open (founder), and the hardest deadline on this board.** | Play Console → any page banner; Kharag Edition, account `5910382695653514663` | S0 · founder |
 | ~~**B21**~~ | [HALF RESOLVED Sep 4 2026] **The widget exists on Android**, so the listing's two claims are now true for every Android install — see `B14`. **Still open until iOS ships:** the description does not say "Android", so an iPhone reader is still promised something that is not there. Two ways to close it: land the iOS extension (the Swift sources and the App Group plumbing are written and committed; what remains is Xcode target creation on the Mac), or qualify the sentence in the listing until it does. **Sep 5 2026: the iOS extension landed and is simulator-verified (`B22`)**, so once it ships in a TestFlight build the description is true on both platforms; until that build is live the iPhone reader is still promised something the App Store binary does not carry. **Founder call** on whether to qualify the sentence in the meantime. | live listing `com.quitvape.last_puff`; `ios/CirrusWidget/` | S5 · founder |
-| ~~**B22**~~ | [RESOLVED Sep 5 2026 — simulator] **The iOS widget is built, embedded and verified.** `tool/ios_widget_target.rb` generates the `CirrusWidget` app-extension target (iOS 16.0, three configs on `Generated.xcconfig`, embedded into `PlugIns/`), `Runner.entitlements` carries the App Group, and the Swift compiled clean first time. Driven end to end on an iPhone 16 Pro simulator (iOS 18.3) by `ios/RunnerUITests`: mirror in the group before and after sign-in, widget added from the gallery, `+ + −` with the app **terminated** queued `seq` 1–3, the app drained exactly one puff (`lp.cursor` 3, Home ticked "Log your first puff"), a second launch changed nothing, `−` clamps at zero, the medium family draws. docs/10 §27. **Portal step done the same day:** App Group `group.com.quitvape.lastPuff` and App ID `com.quitvape.lastPuff.CirrusWidget` were registered by automatic signing during the builds (Flutter passes `-allowProvisioningUpdates` on every signed build) and both App IDs carry the group — verified in the portal. **Still founder-side:** a hand pass of the lock-screen families on a phone. | `ios/CirrusWidget/`, `ios/RunnerUITests/`, `tool/ios_widget_target.rb`, `test/ios_widget_test.dart`, `test/ios_widget_contract_test.dart` | iOS fast-follow · lock-screen hand pass founder |
+| ~~**B22**~~ | [RESOLVED Sep 5 2026 — simulator] **The iOS widget is built, embedded and verified.** `tool/ios_widget_target.rb` generates the `CirrusWidget` app-extension target (iOS 16.0, three configs on `Generated.xcconfig`, embedded into `PlugIns/`), `Runner.entitlements` carries the App Group, and the Swift compiled clean first time. Driven end to end on an iPhone 16 Pro simulator (iOS 18.3) by `ios/RunnerUITests`: mirror in the group before and after sign-in, widget added from the gallery, `+ + −` with the app **terminated** queued `seq` 1–3, the app drained exactly one puff (`lp.cursor` 3, Home ticked "Log your first puff"), a second launch changed nothing, `−` clamps at zero, the medium family draws. docs/10 §28. **Portal step done the same day:** App Group `group.com.quitvape.lastPuff` and App ID `com.quitvape.lastPuff.CirrusWidget` were registered by automatic signing during the builds (Flutter passes `-allowProvisioningUpdates` on every signed build) and both App IDs carry the group — verified in the portal. **Still founder-side:** a hand pass of the lock-screen families on a phone. | `ios/CirrusWidget/`, `ios/RunnerUITests/`, `tool/ios_widget_target.rb`, `test/ios_widget_test.dart`, `test/ios_widget_contract_test.dart` | iOS fast-follow · lock-screen hand pass founder |
 
 ### 🔒 Security & correctness backlog (found in audit, none blocking S0)
 
@@ -180,7 +180,7 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 - [~] `S0-3` Google Play Console ($25) + merchant account *(Play Console exists — products created Sep 2 (S1-4); merchant/banking stays S0-2)*
 - [x] `S0-4` ✅ **Cirrus** (decided Aug 29; rename shipped). Original note: **Name decision (B15):** "LastPuff" vs "Cirrus". Blast radius — ASO title/subtitle/keywords (Doc 6 §4), store listings, domain, TikTok/IG/YT handles, the wordmark concept in Doc 7 §4 (built on the literal "LastPuff" ligature), 3 ARB keys, `AndroidManifest.xml`, `Info.plist`, Firebase display name. **Founder decision.**
 - [ ] `S0-5` Doc 7 §1 due-diligence: domain, handles, USPTO/CIPO trademark check — all currently unchecked
-- [x] `S0-6` ✅ **IN, and shipped on Android** (founder decision Sep 4 2026). The board recommended slipping it to S8; `B21` overtook that — the live listing advertises the widget twice, so the cheapest way to stop misrepresenting the product was to build it rather than cut the copy. Android is done and device-verified (docs/10 §23); iOS landed Sep 5 2026 and is simulator-verified (docs/10 §27)
+- [x] `S0-6` ✅ **IN, and shipped on Android** (founder decision Sep 4 2026). The board recommended slipping it to S8; `B21` overtook that — the live listing advertises the widget twice, so the cheapest way to stop misrepresenting the product was to build it rather than cut the copy. Android is done and device-verified (docs/10 §23); iOS landed Sep 5 2026 and is simulator-verified (docs/10 §28)
 
 **Security**
 - [x] `S0-7` **Commit the `.gitignore` line** protecting the service-account key — done (`09305ad`); also anchored `functions/.gitignore`'s `lib/` pattern, which was hiding `src/lib/`
@@ -396,6 +396,49 @@ Pixel 8** (Android 17) — 51 against the fake backend plus the whole 17-case
 `f_firebase_backend` suite against **production**. `eval:moderation` not required (no
 moderation prompt changed); `eval:coach` not re-gated (`EMBER_SYSTEM_PROMPT` and
 `buildCoachInstruction` byte-identical).
+
+#### S5c — the day-number pass (Sep 5)
+
+Three screenshots at one instant: Home "Day 2 of 30 · $3", the widget "day 2", the coach
+header "day 2", and Ember saying "day one … 2.74 dollars". `docs/10 §27` is the record.
+
+- [x] `S5-29` **The day was right everywhere; the coach card was not.** One formula on all
+  four surfaces and the zone threaded end to end — the model paraphrased "1 day so far" /
+  "week 1" / "streak: 1d" into "day one", and "2.74" was Home's "$3" with two decimals and no
+  symbol. The card now leads with a labelled `plan day: 2 of 30`, says `1 completed day; today
+  is plan day 2`, renders money exactly as `LpFormat.money` does, and the anchor names the
+  number (`dayAnchorInstruction`; a panic-rider clause was tried and withdrawn — `docs/10
+  §27.6`). One mechanical eval scenario (#20 what-day). `memoryCard.test.ts` pins
+  the plan day under three timezones and the Sep 5 fixture; its twin is
+  `test/domain/today_snapshot_test.dart`
+- [x] `S5-30` **Seven live numeric bugs found on the way, all fixed and pinned:** Stats'
+  fabricated "longest gap" (`PuffGaps`), "best day 0" on every second day, the coach week
+  card's unconditional "trending down" (`WeekTrend`), the Health timeline's frozen clock and
+  "0m ago", **money crediting unconfirmed days ("$4 saved" before the first puff — founder
+  decision: confirmed days only, client and card)**, future-dated logs counted, the widget's
+  "day 31 of 30", the Insight charts on a different week from the prose, and a sweep of raw
+  `DateTime.now()` including the fake backend itself
+- [x] `S5-31` **The numeric test campaign:** `home_day_matrix_test` (eleven plan days, header
+  → line → ring → coach header → widget mirror from one snapshot), the rendered midnight
+  rollover, `stats_numbers_test`, `coach_week_card_test`, `health_timeline_test`, six new
+  domain suites and `journeyOnDay()` in `test/helpers.dart`
+
+- [x] `S5-32` **Review pass over the day's diff** (`docs/10 §27.7`): four fixes in the new code
+  (the Insight charts follow the report's own week, the gap engine ignores the hours before the
+  first puff ever logged, the week's best day is never today, future-dated logs never mint a money
+  badge or reach the card) and four older ones (a widget drain rolling back over a concurrent
+  commit, the reminder coordinator acting on settings defaults before disk answered, a refused
+  notification marking a badge celebrated for ever, a delivered celebration handed back and
+  delivered again). `milestone_ledger_test` is new; `SettingsState.hydrated` and
+  `armedMilestoneAt` are the two fields behind it
+
+**Gates (Sep 5):** `flutter analyze` clean · `flutter test` **1570** · `npm run verify`
+**227** · `npm run test:integration` **286** · **on-device 70/70 on a Pixel 8** (53 against
+the fake backend, the 17-case `f_firebase_backend` suite against **production** after the
+redeploy) · `eval:coach` **red after five rolls** — lite
+20/20 twice, premium 19/20 · 18/20 · 18/20 on judge verdicts for #02/#13 only; the day
+scenario passed every roll on both (`docs/10 §27.6`). **Deployed to `alastpuff` Sep 5
+2026** on the founder's instruction, all 24 functions behind a clean `verify`.
 
 **Deployed to `alastpuff` Sep 3 2026**, founder-approved: all 24 functions updated behind a
 clean `verify` gate, with `DAILY_SOS_POSTS=5→3` and `COACH_FOLLOWUPS=true`.

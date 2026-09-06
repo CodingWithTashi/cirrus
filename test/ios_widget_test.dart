@@ -79,6 +79,19 @@ void main() {
       }
     });
 
+    test('the day line is clamped the way Home clamps it', () {
+      // The Android fix of Sep 5 2026 ("day 31" of a 30-day plan on the
+      // launcher), applied to the Swift the same day so the two launchers
+      // never disagree with Home or each other.
+      final src = code(shared);
+      expect(src, contains('json["totalDays"] as? Int'));
+      expect(src, contains('dayNumber == mirror.totalDays'));
+      expect(src, contains('dayNumber - mirror.totalDays'));
+      for (final key in ['dayFreedom', 'dayPastOne', 'dayPastOther']) {
+        expect(src, contains('copy["$key"]'));
+      }
+    });
+
     test('the outbox event Swift writes is the one Dart decodes', () {
       // Single letters, deliberately: the queue is read on every launch.
       for (final field in ['i', 's', 't', 'd']) {

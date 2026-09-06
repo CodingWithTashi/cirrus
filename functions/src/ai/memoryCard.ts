@@ -55,10 +55,19 @@ export function buildMemoryCard(
     plan.baselinePuffsPerDay === 0
       ? 0
       : plan.weeklySpend / (7 * plan.baselinePuffsPerDay);
-  const saved = Object.values(journey.days).reduce(
-    (acc, d) => acc + Math.max(0, plan.baselinePuffsPerDay - d.puffs) * costPerPuff,
-    0,
-  );
+  // Confirmed days only — `MoneyEngine.lifetimeSaved` applies the same rule
+  // as the streak: a day nobody logged or confirmed is unknown, never a
+  // saving. The day-1 journey is minted with an unconfirmed 0-puff log, so
+  // without this every new account read "$4 saved" before its first puff.
+  // And never a day after today (`TodaySnapshot` drops those too): a log
+  // stamped by a device clock that was wrong is not money already kept.
+  const saved = Object.entries(journey.days)
+    .filter(([key, d]) => key <= todayKey && (d.puffs > 0 || d.vapeFreeConfirmed))
+    .reduce(
+      (acc, [, d]) =>
+        acc + Math.max(0, plan.baselinePuffsPerDay - d.puffs) * costPerPuff,
+      0,
+    );
 
   const hours = dangerHours(window14);
   const localTime = new Intl.DateTimeFormat('en-GB', {
@@ -76,7 +85,7 @@ export function buildMemoryCard(
   const age =
     profile.birthYear === null ? null : now.getFullYear() - profile.birthYear;
 
-  const weeks = weekLines(weekStats(journey.days, plan.startDate, todayKey));
+  const weeks = weekLines(weekStats(journey.days, plan.startDate, todayKey), day);
 
   const lines = [
     'USER CARD',
@@ -85,7 +94,12 @@ export function buildMemoryCard(
     // day. Date and clock in their zone, stated outright, so the day number
     // never has to be inferred from conversation shape.
     `today's date: ${todayKey} (${weekday}) · their local time: ${localTime}`,
-    `alias: ${profile.alias} · day ${day} of ${totalDays(plan)} (${plan.method})`,
+    // The plan day leads and is LABELLED. On day 2 the card also says "week 1
+    // of 5", "streak: 1d" and "1 completed day", and the model once fused one
+    // of those into "day one" — a bare "day 2" mid-line lost to three other
+    // ones (Sep 5 2026). Past the plan it never reads "day 37 of 30": Home
+    // says "7 days past Freedom Day" and so does this.
+    `${planDayLine(plan, day)} · alias: ${profile.alias}`,
     // "How long have I been at this?" — answerable without arithmetic. The
     // start date is absolute so the model never has to derive a calendar.
     tenureLine(plan, day),
@@ -103,7 +117,12 @@ export function buildMemoryCard(
     `vaping: ${strengthPhrase(plan.strength)}`,
     `saving toward: ${goalsLine(journey, saved)}`,
     `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${repairTokens(journey.days, todayKey)}`,
-    `money saved: ${saved.toFixed(2)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
+    // Whole dollars with the symbol, exactly as Home renders it
+    // (`LpFormat.money`, 0 decimals). It was `toFixed(2)` with no symbol, so
+    // Ember said "2.74 dollars" beside a Home screen saying "$3" — one number,
+    // two renderings, and this file's own rule is that the card may never
+    // quote a figure the app disagrees with.
+    `money saved: ${wholeDollars(saved)} · cravings survived: ${journey.cravingsSurvivedTotal}`,
     `danger hours: ${hours.length > 0 ? hours.map((h) => `${h}:00`).join(', ') : 'not enough data yet'}`,
     `last 7 days: ${last7.length > 0 ? last7.map((d) => d.puffs).join(',') : 'no logs yet'}`,
     // The whole journey, one line per week, from the same `holds` the flame
@@ -117,6 +136,35 @@ export function buildMemoryCard(
   ];
 
   return {text: lines.join('\n'), journey, todayKey, day, streak};
+}
+
+/**
+ * The app's money format, on the server: whole dollars, `$` in front,
+ * thousands separated — `LpFormat.money(v, locale)` with its default
+ * `decimalDigits: 0`. Both round half away from zero for positive amounts
+ * (Dart's `num.round()` inside intl, ECMA-402's `halfExpand`), pinned by the
+ * 2.5 case in `memoryCard.test.ts` and `test/domain/today_snapshot_test.dart`.
+ */
+export function wholeDollars(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/** `plan day: 2 of 30 (taper)`, or past the plan the phrasing Home uses. */
+function planDayLine(plan: Journey['plan'], day: number): string {
+  const total = totalDays(plan);
+  if (day > total) {
+    const past = day - total;
+    return (
+      `plan day: ${day} · ${past} day${past === 1 ? '' : 's'} past Freedom Day ` +
+      `(${total}-day plan finished, maintenance)`
+    );
+  }
+  return `plan day: ${day} of ${total} (${plan.method})`;
 }
 
 function list(values: readonly string[]): string {
@@ -279,11 +327,11 @@ function tenureLine(plan: Journey['plan'], day: number): string {
  * baseline anchor every "how far have I come" comparison needs), marks the
  * omission, and carries the latest 10 in full.
  */
-function weekLines(stats: readonly WeekStat[]): string[] {
+function weekLines(stats: readonly WeekStat[], day: number): string[] {
   // A current week with nothing elapsed yet has nothing to say — the card's
   // `today:` line already covers the live day.
   const visible = stats.filter((s) => !(s.current && s.elapsed === 0));
-  const lines = visible.map(weekLine);
+  const lines = visible.map((s) => weekLine(s, day));
   if (lines.length > 12) {
     const omittedFrom = visible[1]!.week;
     const omittedTo = visible[visible.length - 11]!.week;
@@ -296,9 +344,13 @@ function weekLines(stats: readonly WeekStat[]): string[] {
   return lines;
 }
 
-function weekLine(s: WeekStat): string {
+function weekLine(s: WeekStat, day: number): string {
+  // "1 day so far" beside "day 2 of 30" is how the model came to say "day
+  // one": the count is of COMPLETED days and says so, and the current line
+  // restates the plan day so the two can never be read as one number.
   const label = s.current
-    ? `w${s.week} (current, ${s.elapsed} day${s.elapsed === 1 ? '' : 's'} so far)`
+    ? `w${s.week} (current, ${s.elapsed} completed day${s.elapsed === 1 ? '' : 's'}; ` +
+      `today is plan day ${day})`
     : `w${s.week}`;
   if (s.logged === 0) return `${label}: no days logged`;
   const parts = [

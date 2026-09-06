@@ -140,7 +140,7 @@
 | 53 | **Trigger-hour heatmap** | Your puffs by hour; tapping it opens the danger-hours editor. | Tap the heatmap. |
 | 54 | **Forecast heatmap** (Pro) | The predicted-risk layer. | Free → blurred, with the door. |
 | 55 | **Nicotine trend** | ≈ mg/day, engine-computed. | — |
-| 56 | **Personal records** | Longest gap (h), best day, cravings beaten. Personal bests only, never a leaderboard. | — |
+| 56 | **Personal records** | Longest gap (h) = the longest stretch of whole hours without a logged puff, from the hour buckets plus the time since the last puff (`PuffGaps`; a day counts only when its buckets account for every puff or it was confirmed vape-free). Best day = fewest puffs on a confirmed, completed day. Cravings beaten. Each shows `—` until it is actually known — never a zero, never an estimate. Personal bests only, never a leaderboard. | Fresh account, day 2, nothing confirmed → `—` / `—` / 0. Log a day with puffs at 9 AM and 9 PM, confirm the next morning → gap ≥ 11h. |
 | 57 | **Empty state** | An honest "nothing logged yet" rather than invented bars. | Fresh account → Stats. |
 
 ---
@@ -249,7 +249,7 @@
 | 112 | **Midnight rollover** | Day number and count roll over with the app closed, and the limit follows the taper curve. | Drive the clock forward with the app closed. |
 | 113 | **Convergence** | The widget and the app never settle on different numbers, offline included. The count is recomputed from the clock at tap time, never read off the pixels — a tap on a stale widget still files today's puff on today. | Airplane mode → 3 taps → open the app → both agree. Cold restart → still agree. |
 | 113b | **No session, no numbers** | Signed out, freshly installed, account deleted, or a launch that restores no session: the widget shows **"Start your plan / Tap to open Cirrus"** and nothing else. No count, no day number, no working `+`/`−`. The mirror carries no numeric keys at all in this state, and a tap is refused natively. | Sign out with the widget on the home screen → it flips to the message. Tap `+` → nothing happens, nothing queues. |
-| 114 | **iOS widget** | The WidgetKit twin of 109: `systemSmall` and `systemMedium` (day pill, count / limit, status line, `−`/`+` that log in place on iOS 17+; the medium adds the bar), plus `accessoryCircular`/`accessoryRectangular` for the lock screen. Same mirror, same outbox, same guards as Android; wears Midnight Ember always. Simulator-verified Sep 5 2026 (docs/10 §27); accessory families compiled but not yet driven by hand on a phone. | Long-press the home screen → Edit → Add Widget → search "Cirrus". Then the loop in 113: kill the app, `+ + −`, reopen, both agree. Automated on a simulator by `ios/RunnerUITests` — see `ios/CirrusWidget/README.md`. |
+| 114 | **iOS widget** | The WidgetKit twin of 109: `systemSmall` and `systemMedium` (day pill, count / limit, status line, `−`/`+` that log in place on iOS 17+; the medium adds the bar), plus `accessoryCircular`/`accessoryRectangular` for the lock screen. Same mirror, same outbox, same guards as Android; wears Midnight Ember always. Simulator-verified Sep 5 2026 (docs/10 §28); accessory families compiled but not yet driven by hand on a phone. | Long-press the home screen → Edit → Add Widget → search "Cirrus". Then the loop in 113: kill the app, `+ + −`, reopen, both agree. Automated on a simulator by `ios/RunnerUITests` — see `ios/CirrusWidget/README.md`. |
 
 ---
 

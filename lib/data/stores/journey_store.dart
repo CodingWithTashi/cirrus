@@ -241,7 +241,16 @@ class JourneyStore extends Notifier<JourneyState?> {
       // events stay queued (correct) on top of a state that has already
       // applied them (wrong), and the next drain counts every one of them
       // twice. The batch is all-or-nothing.
-      state = before;
+      //
+      // Only while the batch is still the newest thing in memory. `_batching`
+      // was cleared before the await, so an in-app tap, a mood check-in or
+      // the plan-advice pull can have committed on top of it meanwhile; a
+      // blind restore would erase THAT mutation too. In that case the state
+      // stays (the later commit's own whole-document write carried these
+      // puffs along) and the cursor still does not move: `restoreSession`
+      // replaces the journey from the backend whenever an account is
+      // established, and the events drain onto it exactly once.
+      if (identical(state, next)) state = before;
       // Discarded, not flushed: none of these taps landed.
       _batchedPuffLogs = 0;
       return 0;
@@ -882,7 +891,14 @@ class JourneyStore extends Notifier<JourneyState?> {
     // tokens (QA H2).
     final tokens = StreakEngine.repairTokens(s.days, _now);
 
-    final saved = MoneyEngine.lifetimeSaved(s.plan, s.days.values);
+    // Through today only, the window `TodaySnapshot` renders money over: a
+    // log a wrong device clock filed for tomorrow must not mint the $100
+    // badge (and its celebration) for a saving no screen shows.
+    final today = _todayKey;
+    final saved = MoneyEngine.lifetimeSaved(
+      s.plan,
+      s.days.values.where((l) => !l.date.isAfter(today)),
+    );
     final anyPuffs = s.days.values.any((l) => l.puffs > 0);
     final day = s.plan.dayNumber(_now);
 

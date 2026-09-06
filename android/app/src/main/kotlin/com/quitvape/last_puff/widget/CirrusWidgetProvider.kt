@@ -175,7 +175,7 @@ class CirrusWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.cw_active, View.VISIBLE)
         views.setViewVisibility(R.id.cw_empty, View.GONE)
 
-        views.setTextViewText(R.id.cw_day, format(mirror.copyDay, today.dayNumber))
+        views.setTextViewText(R.id.cw_day, dayLine(mirror, today))
         views.setTextViewText(R.id.cw_flame, mirror.flame)
 
         views.setTextViewText(R.id.cw_count, today.count.toString())
@@ -243,6 +243,25 @@ class CirrusWidgetProvider : AppWidgetProvider() {
         // this never fires from them.
         views.setOnClickPendingIntent(R.id.cw_root, openIntent(context, id))
         return views
+    }
+
+    /**
+     * The day label, following Home's header rule (`home_screen.dart`): the
+     * plan day during the plan, "Freedom Day" on its last day, and "N days
+     * past Freedom Day" after it. Each branch falls back to the plain count
+     * when its template is missing (a mirror written by an older app), so
+     * the line is never blank.
+     */
+    private fun dayLine(mirror: CirrusMirror, today: CirrusToday): String {
+        val plain = format(mirror.copyDay, today.dayNumber)
+        return when {
+            today.daysPast == 1 && mirror.copyDayPastOne.isNotBlank() ->
+                format(mirror.copyDayPastOne, today.daysPast).ifBlank { plain }
+            today.daysPast > 1 && mirror.copyDayPastOther.isNotBlank() ->
+                format(mirror.copyDayPastOther, today.daysPast).ifBlank { plain }
+            today.isFreedomDay && mirror.copyDayFreedom.isNotBlank() -> mirror.copyDayFreedom
+            else -> plain
+        }
     }
 
     /**

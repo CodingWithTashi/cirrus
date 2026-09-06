@@ -1919,6 +1919,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String coachWeekCardCaptionFlat(String day) {
+    return '$day was the hard one';
+  }
+
+  @override
   String coachGreeting(String name, int puffs, String method, String date) {
     return 'Hey. I\'m $name — I quit two years ago and I remember exactly how it felt. I\'ve read your plan: $puffs a day, $method, Freedom Day $date. No lectures from me, ever. What\'s going on right now?';
   }
@@ -2380,6 +2385,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String healthAnchor(String ago) {
     return 'Based on your last logged puff · $ago ago';
   }
+
+  @override
+  String get healthAnchorNone => 'No puff logged yet';
 
   @override
   String healthYouAreHere(String milestone) {
@@ -3189,6 +3197,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get widgetDay => 'day %1\$d';
+
+  @override
+  String get widgetDayFreedom => 'Freedom Day 🏆';
+
+  @override
+  String get widgetDayPastOne => '%1\$d day past Freedom Day';
+
+  @override
+  String get widgetDayPastOther => '%1\$d days past Freedom Day';
 
   @override
   String get widgetLeftAhead => '%1\$d left · ahead of your curve';

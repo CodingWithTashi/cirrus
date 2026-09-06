@@ -83,6 +83,8 @@ final fakeServerProvider = Provider<FakeServer>(
     // Synchronous read on purpose (sync-apply invariant): when the device is
     // offline the fake backend is unreachable, exactly like a real one.
     isOnline: () => ref.read(connectivityProvider),
+    // The same clock the app reads, so a pinned `now` pins the backend too.
+    now: ref.watch(nowProvider),
   ),
 );
 

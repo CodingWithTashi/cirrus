@@ -77,9 +77,11 @@ void showEditDaySheet(BuildContext context, WidgetRef ref, DayLog log) {
                   l10n.commonSave,
                   onTap: () {
                     final store = ref.read(quitStoreProvider.notifier);
+                    // The clock seam: a sheet opened before midnight and
+                    // saved after it still edits the day it was opened for.
                     final isToday =
                         JourneyState.dateKey(log.date) ==
-                        JourneyState.dateKey(DateTime.now());
+                        JourneyState.dateKey(ref.read(nowProvider)());
                     if (isToday) {
                       store.adjustToday(value);
                     } else {

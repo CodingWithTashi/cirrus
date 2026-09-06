@@ -2930,7 +2930,236 @@ within 15% of the screen's.
 
 `flutter analyze` 0 · `flutter test` **1469/1469**.
 
-## 27. THE WIDGET REACHES THE IPHONE (Sep 5) — a target from a script, and a home screen driven by XCTest
+---
+
+## 27. THE DAY THAT WAS RIGHT EVERYWHERE (Sep 5) — and the seven numbers around it that were not
+
+The founder filed three screenshots taken at the same moment (Sat Sep 5,
+14:12, US Eastern): Home said **Day 2 of 30 · $3 saved · 🔥 1 day**, the
+home-screen widget said **day 2**, the coach header said **day 2**, and
+Ember's reply said *"you've already made it this far into **day one**. You've
+saved **2.74 dollars**"*. "This is a big issue. Test rigorously for all the
+day and puff count display and trends data." Then, mid-session: releasing
+after this, so find every functional bug there is.
+
+### 27.1 What the screenshots actually were
+
+1. **The day number did not diverge.** It is ONE formula on all four
+   surfaces — `QuitPlan.dayNumber` (`LpDate.daysBetween(start, date) + 1`),
+   `taperEngine.ts dayNumber(plan, dayKey)`, and the widget's
+   `LocalDate.now().toEpochDay() − start + 1` — and the IANA zone is threaded
+   from `LpFunctions` through `requireCaller` to `buildMemoryCard`. In New
+   York at 14:12 the card said `day 2 of 30`. A UTC fallback could only have
+   pushed the day *forward* after 20:00 local, never back to 1.
+2. **Ember paraphrased.** On day 2 the card carried four other literal ones
+   beside its single day line: `week 1 of 5`, `streak: 1d`, and `w1 (current,
+   1 day so far)`. `DAY_ANCHOR_INSTRUCTION` interpolated no number and only
+   spoke to "when their day comes up"; the model volunteered "day one"
+   unprompted, so the instruction never even applied. Second time this class
+   of bug has shipped (§12.1 was the reverse direction); the first fix
+   anchored the *date*, this one anchors the *number*.
+3. **"$3" and "2.74" were the same number.** `MoneyEngine.lifetimeSaved` and
+   the card's inline sum agree to the cent; Home renders through
+   `LpFormat.money` (0 decimals, `$`), the card wrote `toFixed(2)` with no
+   symbol. Every non-round saving would have made them disagree on sight —
+   against `memoryCard.ts`'s own first rule.
+4. **"🔥 1 day" beside "Day 2 of 30" is the streak**, by design: day 1 held
+   its line, today is unconfirmed, the walk anchors on yesterday. Founder
+   decision: keep it as it is.
+
+### 27.2 The server, so the coach can never contradict Home again
+
+`memoryCard.ts`: the day line leads and is labelled — `plan day: 2 of 30
+(taper) · alias: …`, and past the plan `plan day: 37 · 7 days past Freedom
+Day (30-day plan finished, maintenance)` so "day 37 of 30" never reaches the
+model. The current week line reads `w1 (current, 1 completed day; today is
+plan day 2)`. Money is `wholeDollars(saved)` — `Intl.NumberFormat` currency
+with zero fraction digits, half-away-from-zero like Dart's `num.round()`
+inside intl (pinned at exactly 2.5 on both sides) — and sums **confirmed days
+only** (27.3 A5). `prompts.ts`: `dayAnchorInstruction(day, todayKey)` names
+the number ("If you mention their day at all — even in passing, in a greeting
+or a compliment — it is day 2"). Panic mode stays anchor-free: a ten-word
+closing clause on the rider was tried and withdrawn (27.6).
+
+Pinned by: `memoryCard.test.ts` (the Sep 5 fixture — `plan day: 2 of 30`,
+`today: 0/90`, `streak: 1d`, `money saved: $3`, no `2.74`, no `1 day so far`;
+`card.day` under Tokyo / Los Angeles / UTC for the same instant; the 2.5
+rounding case; an unconfirmed zero day saves nothing; day 167 of a 30-day
+plan never prints `of 30`), `prompts.test.ts` (the anchor is a function of the
+day; panic mode carries only the clause, last), an emulator case in
+`aiCoachChat.test.ts` (22:30 in New York, already tomorrow in UTC → the
+instruction says `plan day: 2`, the envelope says `day: 2`), and a mechanical
+eval scenario, `20-what-day` (must answer the card's day, must not name a
+neighbour or "one"). The parity twin of the fixture is
+`test/domain/today_snapshot_test.dart`.
+
+### 27.3 Seven client bugs the pass found, none of them the reported one
+
+| | Where | What it was |
+|---|---|---|
+| A1 | Stats records | **"longest gap" was fabricated**: `8 + longestStreak ~/ 2` capped at 16 — always 8–16h, "8h" with no data, rendered as the user's own record. Now `PuffGaps.longestGapHours`: whole hours walked off the hour buckets, a day counting only when its buckets account for every puff (or it is confirmed vape-free), unknown days breaking the run, the live stretch since the last puff included, `—` when nothing is known. |
+| A2 | Stats records | "best day" read the raw clock and ignored `isConfirmed`, so **every account read "best day 0" on day 2** off the factory's unconfirmed log. Confirmed completed days only; `—` otherwise. |
+| A3 | Coach week card | Captioned **every** week "trending down — {day} was the hard one" with no trend computed, and painted today as the win whatever its count. `WeekTrend` (shared with Stats): hard day = most puffs, win = fewest among confirmed, "down" only when the later half of the completed week averaged fewer than the earlier half; `coachWeekCardCaptionFlat` ×5 otherwise. |
+| A4 | Health timeline | `DateTime.now()` in build (frozen under the keep-alive shell), and **"0m ago" with no puff on record**. Minute clock; `healthAnchorNone` ×5. |
+| A5 | Money engine | `savedOn`/`puffsNotTaken` never checked `isConfirmed`, and `InitialJourney` mints day 1 as an unconfirmed 0-puff log — so **a brand-new account read "$4 saved so far · 100 puffs not taken" before its first puff**, and every mood check-in on a quiet day minted another full day saved. Same rule as the streak now, on both sides of the seam. Founder decision: an unknown day is unknown. |
+| C5 | `TodaySnapshot` | A future-dated log (a wrong device clock) counted as money already saved. Excluded. |
+| C6 | Android widget | Recomputed its day number natively with **no upper clamp** and ignored the `totalDays` the mirror already shipped: **"day 31" on the launcher while Home said "1 day past Freedom Day"**. Kotlin reads `totalDays` and Home's copy (`widgetDayFreedom`, `widgetDayPastOne/Other` ×5) and draws `dayLine`; falls back to the plain count for an older mirror. |
+| C7 | Insight | Charted the last seven **logged** days; the report (`trailingDays`) covers the seven calendar days before today. `DayWindow.logged` is that window on this side; the header range is now through yesterday. |
+| B | Sweep | Raw `DateTime.now()` where the clock seam exists: the day-1 tour gate in the router, the Plan screen's advice check, the day editor's today/past decision, the Insight header, the community store and composer, the arena's plan day — and **the fake backend itself**, which seeded the demo journey and minted day 1 against the real clock under an injected one (`FakeServer.now`, wired to `nowProvider`; the launch-paywall test had been leaning on exactly that inconsistency to reach day 14). |
+
+### 27.4 The test campaign
+
+Domain: `today_snapshot_test` (the Sep 5 fixture; day 1 with the factory
+log; days 30, 31; future day excluded; run rate window; vs-day-1), `day_number_test`
+(1-based, both DST boundaries, the reflow), `journey_factory_test`, `danger_hours_test`
+(first engine test it ever had), `puff_gaps_test` (12), `week_trend_test` (9), and the
+MoneyEngine group grown to nine cases. Widget: `home_day_matrix_test` — for day ∈ {1, 2,
+3, 7, 8, 14, 15, 29, 30, 31, 45} the header, the `of N` line, the ahead/tight/over line
+through real taps, the streak pill, the ring, then the coach header and the widget mirror
+reading the same number; `home_midnight_rollover_test` (rendered rollover, and a day
+editor opened before midnight still editing that day); `stats_numbers_test` (bar heights
+per calendar day, −20% vs last, the caption, the danger window, the nicotine figure, the
+records row, `—` with nothing confirmed, Day and Month views); `coach_week_card_test`;
+`health_timeline_test`; and the mirror, Android, Insight and money suites extended.
+`test/helpers.dart` gained `journeyOnDay(day, now:)`, the fixture every one of them uses.
+
+**One trap for the next test writer:** under the test's fake clock the fake
+backend's zero-length "thinking" timer fires only when the tester pumps, so
+`await store.sendChip(...)` inside `testWidgets` is a deadlock — `unawaited`
+it and pump. Cost an hour.
+
+### 27.5 Gates
+
+`flutter analyze` 0 · `flutter test` **1570** (after the review pass, 27.7) ·
+`npm run verify` **227** · `npm run test:integration` **286** · `eval:coach` —
+not green on both models in one roll after five rolls (27.6). **Deployed to
+`alastpuff` Sep 5 2026 on the founder's instruction**, all 24 functions
+behind a clean `verify`, twice: the card change, then the review pass's
+future-day cut.
+
+### 27.6 The eval, and the panic clause that came out
+
+The first cut also put a ten-word clause at the end of the panic rider ("If
+their day comes up, it is day N.") with a scenario to exercise it — the user
+says "day 1 and I already can't do this" mid-craving, the reply must not echo
+it. Roll 1: 21/21 on `gemini-3.6-flash`, 17/21 on lite (#01 and #13 judge
+flips on replies that met the bar on reading; #15 and #21 over the rider's
+30-word cap at 36 and 45 words). Roll 2: #15 green, but #21 over the cap on
+BOTH models (42 and 31 words) and the lite reply still opened "I know that
+first day feels impossible". A clause that costs the rider its word cap and
+does not stop the echo is not worth its ten words. Withdrawn, with the
+scenario; the panic rider is byte-identical to the one the suite has been
+green on, and the normal-mode anchor — the mode the founder's screenshot was
+in — carries the fix.
+
+Rolls 3–5 gated the shipped prompt (20 scenarios). The lite model was
+**20/20 twice** (rolls 3 and 5) and 19/20 once (#15, a 33-word panic reply on
+the unchanged rider). The premium model never gave a clean roll: 19/20, 18/20,
+18/20 — every miss a JUDGE verdict on #02 (the slip reply "doesn't erase all
+that progress for your daughter" read as moralizing, while #01's judge
+*requires* anchoring to the daughter) or #13 (weight gain: once for naming a
+snack, once for not naming a doctor), plus one 82-word #01 against an 80 cap.
+`20-what-day` passed on both models in every roll, as did #10, #16 and #17,
+the other scenarios that read the card's numbers. Five rolls was the budget.
+The founder read the two judge verdicts as the suite's noise and had the
+functions deployed; the transcripts are in `functions/evals/`. The
+production `f_firebase_backend` suite on the Pixel is the check that the
+deployed coach answers (27.8).
+
+### 27.7 The review pass — four in the new code, six older
+
+A `/code-review high` over the whole change set, verified finding by finding.
+
+**In the day's own code, all fixed:**
+
+| | What it was |
+|---|---|
+| Insight window | The bars followed `now`; the report follows its own `weekId` (the user's Sunday). A Sunday report opened on Thursday drew four days the model never saw under prose about four it did, and by Saturday the two had nothing in common. The charts and the header are anchored on the report's week now, and the test opens a Sep 13 report on Sep 17. |
+| `PuffGaps` | Walked the first logged day from hour 0, so somebody who signed up at 9 PM after vaping all day opened Stats to a 21-hour "record". Nothing counts before the first puff walked (a confirmed vape-free day anchors itself). |
+| `WeekTrend.bestIndex` | Included an in-progress today — one puff at 08:10 painted a day that ends at fifty as the week's best. Completed days only, like `isDown`. |
+| Future-dated logs | The cut lived only in `TodaySnapshot`; `_withBadges` still minted the $100 badge (and its celebration) off an unfiltered sum, and the card summed every key. Both cut at today now. |
+
+**Older, all real, all fixed:**
+
+| | What it was |
+|---|---|
+| Drain rollback | `applyPendingPuffs` restored `state = before` on a refused write even when an in-app tap or the plan-advice pull had committed on top of the batch meanwhile — erasing that mutation from memory. It rolls back only while the batch is still the newest state. |
+| Settings hydration | `ReminderCoordinator.sync` ran the instant a journey landed. On a cold start where Firestore answered before SharedPreferences it adopted the ledger on the DEFAULT settings and committed them — fourteen defaults written over the user's theme, language and danger hours — and cleared the device against a ledger that did not know a celebration was armed. `SettingsState.hydrated` (never persisted) says whether disk has answered; the coordinator waits for it, and hydration itself triggers the sync that matters. |
+| Refused schedules | `scheduleOnce` swallowed every failure and the coordinator marked the badge celebrated regardless — silencing that celebration for ever on a phone whose plugin was not ready or whose permission was revoked. The sink answers whether the notification armed; a refusal leaves the badge owed and the fingerprint clear, so the next sync tries again (the trial reminder too). |
+| Delivered vs armed | `armedMilestone` never became "delivered", so notifications off a month after the 08:00 celebration un-settled it and notifications on delivered "Two weeks. TWO WEEKS." again. `armedMilestoneAt` is persisted with it; handing back a celebration already past its due time keeps it settled. |
+
+**Seen and left**, with the reasoning in place: `day1_task_done` still fires
+during a drain that later rolls back (analytics only, one funnel row); the
+iOS widget has the same Freedom-Day drift as the Android one had (B22, the
+target is unbuilt). Tests: `milestone_ledger_test` (new), and cases in
+`reminder_coordinator_test`, `settings_persistence_test`, `puff_gaps_test`,
+`week_trend_test`, `weekly_insight_test`, `memoryCard.test.ts`.
+
+### 27.8 On the Pixel
+
+The whole `integration_test` directory on the Pixel 8 (Android 17), the
+evening of Sep 5: **53/53 against the fake backend** (the first attempt was
+killed by the machine running out of memory beside a full `flutter test`, an
+eval roll and the review agent; the 7 pm retry ran alone) and **17/17 in
+`f_firebase_backend` against production** on the redeployed functions — the
+deployed `aiCoachChat` answering through App Check, chip-sized follow-ups,
+none mid-craving, and `deleteUserData` erasing the throwaway account at the
+end. `flutter analyze` 0 · `flutter test` **1570**.
+
+Still manual, and still the founder's: the `cmd alarm set-time` day-rollover
+matrix from §23 on a real day 1 → 2 → 3 account (Home, the widget and the
+coach header agreeing), and asking Ember "what day am I on?" on day 2 and
+mid-craving against the deployed card.
+
+### 27.9 Four confirmations the founder asked for, and the one gap they found
+
+Asked, with a thousand users incoming: are dates and times local; does the
+widget stay in step through sign-out, reinstall and midnight; is the coach as
+dynamic as it can be; will a working connection ever show a network error.
+
+1. **Dates and times.** Every day key is local midnight (`LpDate.dayStart`),
+   every day count is calendar days (`daysBetween`, DST-pinned), the day
+   clock rolls at local midnight, the server computes the day in the caller's
+   IANA zone and the widget in the device's. Nothing in `lib/features` or
+   `lib/core` touches UTC. The subscription expiry — the one instant that
+   arrives in UTC — is converted to local by both decoders
+   (`entitlement_codec.dart`, `revenuecat_billing_repository.dart`) before
+   Settings or the paywall format it. Known and documented: `taperRecalc`
+   runs on the zone `syncUserContext` last stored, so a traveller's nightly
+   recalc keeps their old midnight until the app next syncs.
+2. **The widget.** In-app changes reach it after the frame (fingerprinted);
+   its own taps queue in an outbox and drain on the next app open, one
+   Firestore write; seven midnight repaints are armed and re-armed on boot,
+   with the day number recomputed natively and the limit read from a
+   seven-day window (past that: the count alone). Sign-out and deletion push
+   the empty card and discard the queue (§25). **The gap: Auto Backup.** The
+   manifest set no backup policy, so Android's default backed up the widget
+   preferences, the milestone ledger and the paywall counters, and would have
+   restored them onto a reinstall or a new phone — the sign-out that forgets
+   them never runs on that path, and a re-added widget would have shown the
+   last person's numbers before the app had opened. `android:allowBackup=
+   "false"` now, pinned by `android_manifest_test`; the journey lives in
+   Firestore and a theme is cheap to choose again.
+3. **The coach.** Free on `gemini-3.5-flash-lite` at 5 messages a day,
+   Premium on `gemini-3.6-flash` at 100; the card recomputed every turn,
+   long-term memories by vector search, a rolling summary, follow-up chips in
+   the user's voice (`COACH_FOLLOWUPS=true`), streaming with a plain-call
+   retry; the day anchor from §27.2. `AI_COST_PANIC=false`, the switch that
+   routes everyone to the lite model if spend runs away.
+4. **Network.** The probe is one DNS lookup every five seconds; it drives the
+   offline pill, the entitlement re-check and the paywall's offering refetch,
+   and it gates only the FAKE backend. No Firebase call is ever refused on
+   its say-so, so a network that blocks that one hostname shows a pill and
+   nothing else. Real failures reach the designated surfaces with the
+   designated copy. **The one thing a working connection cannot save is App
+   Check:** a Play-installed build attests with Play Integrity, and S1-2 on
+   the board still records the Play app-signing SHA-256 as unverified in the
+   Firebase console. If it is not registered, every callable is refused for
+   every Play user and the coach says "signal dropped" — the §17 failure at
+   population scale. Verify it on the internal-testing build before the first
+   user does: open Coach, send one message.
+
+## 28. THE WIDGET REACHES THE IPHONE (Sep 5) — a target from a script, and a home screen driven by XCTest
 
 `B22` closed. The Swift in `ios/CirrusWidget/` — written on Windows, never
 compiled, carried across two sessions as "expect build errors" — went through

@@ -23,7 +23,9 @@ class SettingsState {
     this.launchPaywallShownCount = 0,
     this.celebratedMilestones = const {},
     this.armedMilestone,
+    this.armedMilestoneAt,
     this.milestonesAdopted = false,
+    this.hydrated = true,
   });
 
   final ThemeMode themeMode;
@@ -88,6 +90,13 @@ class SettingsState {
   /// and nothing ever re-arms it.
   final String? armedMilestone;
 
+  /// When [armedMilestone]'s notification is due. Nothing observes it firing,
+  /// so this is how "handed back" is told apart from "already delivered":
+  /// switching notifications off after the moment has passed must not
+  /// un-settle a celebration the user has already received, or it arrives a
+  /// second time the moment they are switched back on.
+  final DateTime? armedMilestoneAt;
+
   /// Whether [celebratedMilestones] has been initialised for the account now
   /// signed in.
   ///
@@ -105,6 +114,18 @@ class SettingsState {
   /// first badge — and suppressing that one is the bug in the other direction.
   final bool milestonesAdopted;
 
+  /// Whether this state is the one on disk (or a change made on top of it),
+  /// as opposed to the defaults the store shows while disk is still answering.
+  ///
+  /// NOT persisted — it describes the store, not a choice. It exists so that
+  /// nothing automatic acts on the defaults: `ReminderCoordinator.sync` used
+  /// to run the instant a journey landed, and on a cold start where Firestore
+  /// answered before SharedPreferences it adopted the milestone ledger on the
+  /// default state and committed it — persisting fourteen default values over
+  /// the user's stored ones, and cancelling an armed celebration against a
+  /// ledger that did not know it was armed.
+  final bool hydrated;
+
   SettingsState copyWith({
     ThemeMode? themeMode,
     LpPalette? palette,
@@ -119,7 +140,9 @@ class SettingsState {
     int? launchPaywallShownCount,
     Set<String>? celebratedMilestones,
     String? Function()? armedMilestone,
+    DateTime? Function()? armedMilestoneAt,
     bool? milestonesAdopted,
+    bool? hydrated,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
     palette: palette ?? this.palette,
@@ -139,7 +162,11 @@ class SettingsState {
     armedMilestone: armedMilestone != null
         ? armedMilestone()
         : this.armedMilestone,
+    armedMilestoneAt: armedMilestoneAt != null
+        ? armedMilestoneAt()
+        : this.armedMilestoneAt,
     milestonesAdopted: milestonesAdopted ?? this.milestonesAdopted,
+    hydrated: hydrated ?? this.hydrated,
   );
 }
 
@@ -156,15 +183,24 @@ class SettingsStore extends Notifier<SettingsState> {
 
   @override
   SettingsState build() {
-    if (_restore) _hydrate();
+    if (_restore) {
+      _hydrate();
+      // The defaults, and SAID to be the defaults: automatic writers
+      // (`ReminderCoordinator`) wait for `hydrated` rather than act on them.
+      return const SettingsState(hydrated: false);
+    }
     return const SettingsState();
   }
 
   Future<void> _hydrate() async {
     final stored = await SettingsPersistence.load();
     // The user may have changed something while disk was answering; their
-    // action wins over the older stored value.
-    if (_dirty) return;
+    // action wins over the older stored value — but disk HAS answered now,
+    // and the automatic writers waiting on that must be let through.
+    if (_dirty) {
+      state = state.copyWith(hydrated: true);
+      return;
+    }
     state = stored;
   }
 
@@ -205,21 +241,23 @@ class SettingsStore extends Notifier<SettingsState> {
 
   void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
 
-  /// Records that [armed]'s celebration is on the clock and that every badge
-  /// in [covers] is settled.
+  /// Records that [armed]'s celebration is on the clock for [at] and that
+  /// every badge in [covers] is settled.
   ///
   /// One write, not one per badge: a restored journey can settle four at once
   /// and each `_commit` re-triggers the sync that called this.
-  void markMilestonesCelebrated(String armed, Set<String> covers) {
+  void markMilestonesCelebrated(String armed, Set<String> covers, DateTime at) {
     final next = {...state.celebratedMilestones, ...covers};
     if (next.length == state.celebratedMilestones.length &&
-        state.armedMilestone == armed) {
+        state.armedMilestone == armed &&
+        state.armedMilestoneAt == at) {
       return;
     }
     _commit(
       state.copyWith(
         celebratedMilestones: next,
         armedMilestone: () => armed,
+        armedMilestoneAt: () => at,
       ),
     );
   }
@@ -228,13 +266,23 @@ class SettingsStore extends Notifier<SettingsState> {
   /// longer holds it — notifications were switched off, which cancels every
   /// scheduled id. Without this the badge stays "settled" for ever and the
   /// promise is silently dropped when they are switched back on.
-  void releaseArmedMilestone() {
+  ///
+  /// Unless it has already fired: a celebration due before [now] was
+  /// delivered, and handing it back would deliver it again the moment
+  /// notifications are switched on. Nothing observes the notification going
+  /// off, so the due time is the only evidence there is.
+  void releaseArmedMilestone(DateTime now) {
     final armed = state.armedMilestone;
     if (armed == null) return;
+    final due = state.armedMilestoneAt;
+    final delivered = due != null && !due.isAfter(now);
     _commit(
       state.copyWith(
-        celebratedMilestones: {...state.celebratedMilestones}..remove(armed),
+        celebratedMilestones: delivered
+            ? state.celebratedMilestones
+            : ({...state.celebratedMilestones}..remove(armed)),
         armedMilestone: () => null,
+        armedMilestoneAt: () => null,
       ),
     );
   }
@@ -250,6 +298,7 @@ class SettingsStore extends Notifier<SettingsState> {
       state.copyWith(
         celebratedMilestones: {...earned},
         armedMilestone: () => null,
+        armedMilestoneAt: () => null,
         milestonesAdopted: true,
       ),
     );
@@ -268,6 +317,7 @@ class SettingsStore extends Notifier<SettingsState> {
     state.copyWith(
       celebratedMilestones: const {},
       armedMilestone: () => null,
+      armedMilestoneAt: () => null,
       milestonesAdopted: false,
     ),
   );

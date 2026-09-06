@@ -2,7 +2,7 @@
 
 The WidgetKit extension behind the Cirrus home-screen widget: day number on
 top, today's count below, `+`/`−` that log a puff while the app is dead. It is
-**built, embedded and simulator-verified** (Sep 5 2026, docs/10 §27) — the
+**built, embedded and simulator-verified** (Sep 5 2026, docs/10 §28) — the
 same loop Android passed on a Pixel 8 in docs/10 §23, driven on an iPhone 16
 Pro simulator (iOS 18.3) by `ios/RunnerUITests`.
 

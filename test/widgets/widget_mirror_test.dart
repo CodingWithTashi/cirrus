@@ -137,19 +137,68 @@ void main() {
     for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
       final (_, store) = await open(tester, locale: Locale(locale));
       final copy = mirrorIn(store)['copy'] as Map<String, dynamic>;
-      for (final key in ['day', 'leftAhead', 'leftTight']) {
+      for (final key in ['day', 'dayPastOne', 'dayPastOther', 'leftAhead', 'leftTight']) {
         expect(
           RegExp(r'%1\$d').allMatches(copy[key] as String).length,
           1,
           reason: '$locale/$key must interpolate the count exactly once',
         );
       }
-      expect(
-        (copy['overLimit'] as String).contains(r'%1$d'),
-        isFalse,
-        reason: 'over is over — that line carries no count',
-      );
+      for (final key in ['overLimit', 'dayFreedom']) {
+        expect(
+          (copy[key] as String).contains(r'%1$d'),
+          isFalse,
+          reason: '$key carries no count',
+        );
+      }
     }
+  });
+
+  group('past Freedom Day', () {
+    // The widget recomputes the day number itself and used to keep counting:
+    // "day 31" of a 30-day plan on the launcher while Home said "1 day past
+    // Freedom Day". The mirror ships the plan length and Home's own copy for
+    // the last day and every day after it; Kotlin picks the line.
+    Future<Map<String, dynamic>> mirrorOnDay(WidgetTester tester, int day) async {
+      final now = DateTime(2026, 10, 4, 9);
+      final store = MemoryWidgetStore();
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(now: now),
+          widgetCoordinatorProvider.overrideWithValue(WidgetCoordinator(store)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const LastPuffApp(),
+        ),
+      );
+      container
+          .read(quitStoreProvider.notifier)
+          .replaceForTest(journeyOnDay(day, now: now));
+      await tester.pumpAndSettle();
+      return mirrorIn(store);
+    }
+
+    testWidgets('ships the plan length beside the day number', (tester) async {
+      for (final day in [1, 30, 31]) {
+        final mirror = await mirrorOnDay(tester, day);
+        expect(mirror['dayNumber'], day);
+        expect(mirror['totalDays'], 30);
+        expect(mirror['limit'], day < 30 ? greaterThan(0) : 0);
+      }
+    });
+
+    testWidgets('and the copy Home uses for the last day and after', (
+      tester,
+    ) async {
+      final copy = (await mirrorOnDay(tester, 31))['copy'] as Map<String, dynamic>;
+      expect(copy['dayFreedom'], 'Freedom Day 🏆');
+      expect(copy['dayPastOne'], r'%1$d day past Freedom Day');
+      expect(copy['dayPastOther'], r'%1$d days past Freedom Day');
+    });
   });
 
   testWidgets('a puff logged in the app reaches the widget', (tester) async {

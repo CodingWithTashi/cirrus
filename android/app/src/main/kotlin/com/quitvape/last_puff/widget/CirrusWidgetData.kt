@@ -67,12 +67,17 @@ internal data class CirrusMirror(
     val dayKey: String,
     val planStartDayKey: String,
     val dayNumber: Int,
+    /** Plan length; 0 when the mirror predates the field. */
+    val totalDays: Int,
     val puffs: Int,
     val limit: Int,
     val streak: Int,
     val flame: String,
     val limits: Map<String, Int>,
     val copyDay: String,
+    val copyDayFreedom: String,
+    val copyDayPastOne: String,
+    val copyDayPastOther: String,
     val copyLeftAhead: String,
     val copyLeftTight: String,
     val copyOverLimit: String,
@@ -85,12 +90,16 @@ internal data class CirrusMirror(
             dayKey = "",
             planStartDayKey = "",
             dayNumber = 0,
+            totalDays = 0,
             puffs = 0,
             limit = 0,
             streak = 0,
             flame = "🔥",
             limits = emptyMap(),
             copyDay = "",
+            copyDayFreedom = "",
+            copyDayPastOne = "",
+            copyDayPastOther = "",
             copyLeftAhead = "",
             copyLeftTight = "",
             copyOverLimit = "",
@@ -122,12 +131,16 @@ internal data class CirrusMirror(
                     dayKey = json.optString("dayKey"),
                     planStartDayKey = json.optString("planStartDayKey"),
                     dayNumber = json.optInt("dayNumber", 0),
+                    totalDays = json.optInt("totalDays", 0),
                     puffs = json.optInt("puffs", 0),
                     limit = json.optInt("limit", 0),
                     streak = json.optInt("streak", 0),
                     flame = json.optString("flame", "🔥"),
                     limits = limits,
                     copyDay = copy.optString("day"),
+                    copyDayFreedom = copy.optString("dayFreedom"),
+                    copyDayPastOne = copy.optString("dayPastOne"),
+                    copyDayPastOther = copy.optString("dayPastOther"),
                     copyLeftAhead = copy.optString("leftAhead"),
                     copyLeftTight = copy.optString("leftTight"),
                     copyOverLimit = copy.optString("overLimit"),
@@ -148,6 +161,10 @@ internal data class CirrusMirror(
  */
 internal data class CirrusToday(
     val dayNumber: Int,
+    /** The last plan day — Home's "Freedom Day 🏆". */
+    val isFreedomDay: Boolean,
+    /** Days past the plan's end; 0 during the plan. Home's maintenance line. */
+    val daysPast: Int,
     val count: Int,
     val limit: Int,
     val left: Int,
@@ -315,9 +332,18 @@ internal fun todayOf(mirror: CirrusMirror, pending: Int): CirrusToday {
     } else {
         mirror.dayNumber
     }
+    // The same upper clamp Home applies: the last plan day is Freedom Day and
+    // every day after it is maintenance, said so. Without it the launcher read
+    // "day 31" of a 30-day plan while Home said "1 day past Freedom Day". A
+    // mirror that predates `totalDays` (0) keeps the plain count.
+    val knowsPlanLength = mirror.totalDays > 0
+    val isFreedomDay = knowsPlanLength && dayNumber == mirror.totalDays
+    val daysPast = if (knowsPlanLength) max(0, dayNumber - mirror.totalDays) else 0
 
     return CirrusToday(
         dayNumber = dayNumber,
+        isFreedomDay = isFreedomDay,
+        daysPast = daysPast,
         count = count,
         limit = limit,
         left = if (knowsLimit) max(0, limit - count) else 0,

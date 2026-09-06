@@ -176,6 +176,8 @@ export const aiCoachChat = onCall(
       coachName,
       panicIntensity,
       cardText: card.text,
+      day: card.day,
+      todayKey: card.todayKey,
       summary: summary.text,
       memories,
     });

@@ -32,6 +32,7 @@ abstract final class SettingsPersistence {
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
   static const _celebrated = 'settings.celebratedMilestones';
   static const _armedMilestone = 'settings.armedMilestone';
+  static const _armedMilestoneAt = 'settings.armedMilestoneAt';
   static const _milestonesAdopted = 'settings.milestonesAdopted';
 
   /// Sentinel for "follow the system language". An absent key means the same
@@ -65,6 +66,9 @@ abstract final class SettingsPersistence {
             prefs.getStringList(_celebrated)?.toSet() ??
             defaults.celebratedMilestones,
         armedMilestone: prefs.getString(_armedMilestone),
+        armedMilestoneAt: DateTime.tryParse(
+          prefs.getString(_armedMilestoneAt) ?? '',
+        ),
         milestonesAdopted:
             prefs.getBool(_milestonesAdopted) ?? defaults.milestonesAdopted,
       );
@@ -100,6 +104,12 @@ abstract final class SettingsPersistence {
         await prefs.remove(_armedMilestone);
       } else {
         await prefs.setString(_armedMilestone, armed);
+      }
+      final armedAt = state.armedMilestoneAt;
+      if (armedAt == null) {
+        await prefs.remove(_armedMilestoneAt);
+      } else {
+        await prefs.setString(_armedMilestoneAt, armedAt.toIso8601String());
       }
       final day = state.launchPaywallShownDay;
       if (day == null) {

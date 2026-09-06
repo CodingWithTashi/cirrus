@@ -121,6 +121,9 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
 
     const copy = WidgetCopy(
       day: r'day %1$d',
+      dayFreedom: 'Freedom Day 🏆',
+      dayPastOne: r'%1$d day past Freedom Day',
+      dayPastOther: r'%1$d days past Freedom Day',
       leftAhead: r'%1$d left · ahead of your curve',
       leftTight: r"%1$d left · tight, you've got this",
       overLimit: 'over today',
@@ -216,6 +219,41 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
       final report = run({'v': 99, 'hasJourney': true, 'puffs': 40});
       expect(report['hasJourney'], isFalse);
       expect(report['appended'], [null, null, null, null]);
+    });
+
+    test('the day line carries Home\'s upper clamp', () {
+      // "day 31" of a 30-day plan is what the launcher said before the fix;
+      // Home says Freedom Day on the last day and "N days past" after it.
+      final now = DateTime.now();
+      final journey = SeedData.journey(now);
+      final today = LpDate.dayStart(now);
+      Map<String, dynamic> planStarted(int daysAgo) {
+        final mirror = buildMirror(
+          journey: journey,
+          snapshot: TodaySnapshot.of(journey, now),
+          copy: copy,
+          now: now,
+        );
+        mirror['planStartDayKey'] = LpDate.dayKey(
+          LpDate.addDays(today, -daysAgo),
+        );
+        mirror['totalDays'] = 30;
+        return mirror;
+      }
+
+      expect((run(planStarted(29))['after'] as Map)['day'], 'Freedom Day 🏆');
+      expect(
+        (run(planStarted(30))['after'] as Map)['day'],
+        '1 day past Freedom Day',
+      );
+      expect(
+        (run(planStarted(33))['after'] as Map)['day'],
+        '4 days past Freedom Day',
+      );
+      expect((run(planStarted(11))['after'] as Map)['day'], 'day 12');
+      // An older app's mirror carries no plan length: the plain count stays.
+      final legacy = planStarted(33)..['totalDays'] = 0;
+      expect((run(legacy)['after'] as Map)['day'], 'day 34');
     });
 
     test('a stale mirror counts only the pending taps, not yesterday', () {

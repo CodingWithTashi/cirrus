@@ -71,7 +71,11 @@ void main() {
       await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
 
       settings.adoptMilestones({'spark'});
-      settings.markMilestonesCelebrated('weekFlame', {'spark', 'weekFlame'});
+      settings.markMilestonesCelebrated(
+        'weekFlame',
+        {'spark', 'weekFlame'},
+        DateTime(2026, 9, 6, 8),
+      );
       expect(c.read(settingsStoreProvider).celebratedMilestones, isNotEmpty);
 
       store.signOut();

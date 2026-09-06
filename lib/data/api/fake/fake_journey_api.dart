@@ -18,7 +18,8 @@ class FakeJourneyApi implements JourneyApi {
     final journey = InitialJourney.build(
       profile: JourneyCodec.decodeProfile(profile),
       plan: JourneyCodec.decodePlan(plan),
-      now: DateTime.now(),
+      // The server's clock, so day 1 lands on the injected date under test.
+      now: _server.now(),
     );
     final json = JourneyCodec.encode(journey);
     _server.putJourney(json);

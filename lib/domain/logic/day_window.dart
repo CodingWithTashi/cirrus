@@ -42,6 +42,21 @@ abstract final class DayWindow {
     return trailing(s, dayBefore, length);
   }
 
+  /// The logs that exist within the [length] calendar days BEFORE [today],
+  /// oldest first — today excluded, missing days absent rather than empty.
+  ///
+  /// The window the server's `trailingDays` (`streakEngine.ts`) gives the
+  /// weekly report, so the Insight charts describe exactly the days the
+  /// model's prose does. Not [trailing]: the report is about finished days,
+  /// and a chart that drew a missing day as an empty bar would invent a
+  /// clean day the user never had.
+  static List<DayLog> logged(JourneyState s, DateTime today, int length) {
+    final end = LpDate.dayStart(today);
+    return [
+      for (var i = length; i >= 1; i--) ?s.days[LpDate.addDays(end, -i)],
+    ];
+  }
+
   static DayLog _empty(JourneyState s, DateTime day) =>
       DayLog(date: day, puffs: 0, limit: s.limitOn(day));
 }

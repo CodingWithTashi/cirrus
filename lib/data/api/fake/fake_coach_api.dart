@@ -130,7 +130,7 @@ class FakeCoachApi implements CoachApi {
   Map<String, Object> _args() {
     final json = _server.journeyJsonForCurrentSession();
     if (json == null) return const {};
-    final snap = TodaySnapshot.of(JourneyCodec.decode(json), DateTime.now());
+    final snap = TodaySnapshot.of(JourneyCodec.decode(json), _server.now());
     return {
       'day': snap.dayNumber,
       'today': snap.puffs,
