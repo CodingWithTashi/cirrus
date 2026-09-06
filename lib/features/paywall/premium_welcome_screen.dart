@@ -89,6 +89,12 @@ class _PremiumWelcomeScreenState extends ConsumerState<PremiumWelcomeScreen>
     super.dispose();
   }
 
+  /// One curve per row, built once: a rebuild (the entitlement or a setting
+  /// changing under the screen) must not attach seven fresh listeners.
+  late final List<Animation<double>> _rows = [
+    for (var i = 0; i < _Unlock.values.length; i++) _row(i),
+  ];
+
   Animation<double> _row(int index) {
     final total = _reveal.duration!.inMilliseconds;
     final from = _lead.inMilliseconds + index * _stagger.inMilliseconds;
@@ -192,7 +198,7 @@ class _PremiumWelcomeScreenState extends ConsumerState<PremiumWelcomeScreen>
                                   _UnlockRow(
                                     unlock: unlock,
                                     label: unlock.label(l10n),
-                                    animation: _row(i),
+                                    animation: _rows[i],
                                     door: widget.onboarding
                                         ? null
                                         : () => unlock.open(context),

@@ -175,10 +175,13 @@ class _QuietHoursBandState extends State<QuietHoursBand> {
   void _tap(TapUpDetails d) {
     final p = _positionAt(d.localPosition.dx);
     final t = widget.track;
-    if (p > t.start && p < t.end) return;
-    _grip = _nearer(p);
-    _apply(p);
-    _grip = null;
+    if (!(p > t.start && p < t.end)) {
+      _grip = _nearer(p);
+      _apply(p);
+    }
+    // The touch-down lit a knob; a tap must put it out with a rebuild, or
+    // the halo lingers until something else repaints.
+    _end();
   }
 
   void _apply(double p) {

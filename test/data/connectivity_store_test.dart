@@ -206,6 +206,26 @@ void main() {
     await finish(tester, c);
   });
 
+  testWidgets('a poll that fails inside the handover grace does not jump '
+      'the gun', (tester) async {
+    // The OS says "none" for a moment between two networks; the grace timer
+    // owns that verdict. A poll landing in the window fails (no interface)
+    // and used to flip the state on its own — one handover in eight flashed.
+    final c = mount();
+    await tester.pump();
+    transport.add(false);
+    await tester.pump();
+    answers = [false];
+    await c.read(connectivityProvider.notifier).refresh();
+    expect(online(c), isTrue, reason: 'the grace has not run out');
+    transport.add(true);
+    await tester.pump(ConnectivityStore.transportLossGrace);
+    expect(online(c), isTrue, reason: 'the handover completed inside it');
+    await tester.pump(ConnectivityStore.transportSettle);
+    expect(online(c), isTrue);
+    await finish(tester, c);
+  });
+
   testWidgets('polls on the interval while in the foreground', (tester) async {
     final c = mount();
     await tester.pump();

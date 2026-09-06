@@ -203,8 +203,9 @@ class ConnectivityStore extends Notifier<bool> {
       return;
     }
     if (!_hasTransport) {
-      // Nothing to confirm: the OS already said why.
-      _set(false);
+      // The OS already said why, and its verdict is on the handover grace
+      // timer. A poll that happens to fail inside that window must not jump
+      // the gun, or one handover in eight would still flash the pill.
       return;
     }
     _failures++;
