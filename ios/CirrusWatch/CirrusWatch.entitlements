@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The container the watch app shares with its own complication.
+	     Note what this is NOT: it is not the iPhone's container. An App Group
+	     is per-device, so this name resolves to a *different* store on the
+	     watch, and the phone's numbers reach it over WatchConnectivity
+	     (WatchWire) rather than through this group. The name is the same only
+	     so `CirrusMirror.read` and `CirrusOutbox` compile unchanged on both
+	     sides — same keys, same schema, two devices.
+
+	     Sign-in-with-Apple and App Attest are deliberately absent: the watch
+	     signs in to nothing, attests nothing, and never touches Firebase. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.quitvape.lastPuff</string>
+	</array>
+</dict>
+</plist>

@@ -3725,6 +3725,17 @@ feature's history was green while the device build was not.** The same blind
 spot the widget's `--release` App Check trap lived in (§28): the loop that
 proves the feature and the loop that proves it *ships* are not the same loop.
 
+**A fifth bug, found only by tapping the thing.** The controls were a `+` above
+a `−`, both full width — which measures ~219pt against ~214pt of usable height
+on a 46mm watch, and a 41mm is 14pt shorter again. So the `−` sat below the fold
+on **every watch Apple makes**: half-drawn, and a tap on the visible sliver did
+nothing. Every number was right, every test was green, and the second control
+was unreachable. They are a row now — `−` as a fixed 62pt column, `+` taking
+what is left — which is the same arrangement the iOS widget's small card uses
+and for the same reason, and brings the stack to ~172pt. Pinned by
+`ios_watch_test.dart`, because a layout that only fails on a device is exactly
+the kind that comes back.
+
 **One bug in the tests themselves, which is worth more than it looks.** The
 watch harness and the widget harness both drove
 `UserDefaults(suiteName: CirrusKeys.appGroup)` — a real file under

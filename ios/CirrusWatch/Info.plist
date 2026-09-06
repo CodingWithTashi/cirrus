@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Cirrus</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<!-- Same trap as the widget's, and it applies to a watch app too: these
+	     resolve only because all three build configurations base on
+	     Flutter/Generated.xcconfig, the one file defining FLUTTER_BUILD_NAME
+	     and FLUTTER_BUILD_NUMBER. Unlinked, the archive builds, the upload
+	     finishes, and App Store Connect answers ITMS-90473 minutes later.
+	     A watch app's version must also equal the host iOS app's exactly. -->
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- The modern single-target watch app (watchOS 7+): one bundle, no
+	     WatchKit extension beside it. WKApplication is what declares that;
+	     the old WKWatchKitApp shape needs a second target and is deprecated. -->
+	<key>WKApplication</key>
+	<true/>
+	<!-- Must be the HOST app's id exactly. Wrong, and the watch app installs
+	     but is never offered alongside the iPhone app, with nothing said
+	     anywhere. Pinned against Runner's own bundle id by
+	     test/ios_watch_test.dart. -->
+	<key>WKCompanionAppBundleIdentifier</key>
+	<string>com.quitvape.lastPuff</string>
+	<!-- No WKRunsIndependentlyOfCompanionApp. Every number on this screen comes
+	     from the phone's mirror, so an install without the iPhone app could
+	     only ever show the empty card. Offering it as a standalone app would be
+	     advertising a surface that cannot work. -->
+</dict>
+</plist>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The container it shares with the watch app, on the watch. Identical in
+	     name to the iPhone's group and a completely different store — see the
+	     watch app's entitlements. A one-character difference here builds, signs,
+	     installs and runs, and every read on the face returns nil for ever. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.quitvape.lastPuff</string>
+	</array>
+</dict>
+</plist>
