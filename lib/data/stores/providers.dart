@@ -444,6 +444,34 @@ final widgetCoordinatorProvider = Provider<WidgetCoordinator?>(
   },
 );
 
+/// Which account the mirror belongs to, for the Apple Watch alone.
+///
+/// The home-screen widget never asks: it shares a container with the app, so
+/// `WidgetCoordinator.discardQueued()` forgets its queue the instant someone
+/// signs out. A watch is a second device that may be out of range at that
+/// moment, so it has to be able to tell one person's numbers from the next
+/// person's — both to stop showing them and to stop a tap made on the old
+/// account landing on the new one. `WatchWire.applyContext` and
+/// `WatchWire.relay` are the two ends of that.
+///
+/// The value is the same opaque account id analytics and billing bind to
+/// (`AuthRepository.currentUserId`), and it never leaves the phone↔watch pair.
+/// Bound from [JourneyStore]'s one session-established hook and cleared on
+/// sign-out and deletion, alongside the four other things that must be
+/// forgotten there.
+class WidgetSession extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void bind(String? id) => state = id;
+
+  void unbind() => state = null;
+}
+
+final widgetSessionProvider = NotifierProvider<WidgetSession, String?>(
+  WidgetSession.new,
+);
+
 /// The most recent weekly AI report, or null when the cron has not produced
 /// one (free tier, a short week, a skipped model outage, or the fake backend).
 ///

@@ -2278,8 +2278,12 @@
     "description": "Home-screen widget before there is a journey to show."
   },
   "widgetEmptyBody": "Tap to open Cirrus",
+  "widgetWatchOpenPhone": "Open Cirrus on your iPhone",
   "@widgetEmptyBody": {
     "description": "Home-screen widget empty state, second line."
+  },
+  "@widgetWatchOpenPhone": {
+    "description": "Apple Watch app empty state, second line. Not \"tap to open\" — watchOS cannot launch its companion iPhone app."
   },
   "milestoneNotifTitle": "Come see your flame",
   "@milestoneNotifTitle": {

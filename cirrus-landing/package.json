@@ -13,6 +13,7 @@
     "deploy": "astro build && wrangler pages deploy",
     "astro": "astro",
     "og": "node scripts/og.mjs",
+    "icons": "python3 scripts/icons.py",
     "types": "wrangler types"
   },
   "dependencies": {

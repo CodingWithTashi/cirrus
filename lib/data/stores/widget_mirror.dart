@@ -22,6 +22,7 @@ class WidgetCopy {
     required this.overLimit,
     required this.emptyTitle,
     required this.emptyBody,
+    required this.watchOpenPhone,
   });
 
   /// `day %1$d`
@@ -50,6 +51,15 @@ class WidgetCopy {
   final String emptyTitle;
   final String emptyBody;
 
+  /// The body of the watch app's empty card.
+  ///
+  /// Separate from [emptyBody] because that one says "Tap to open Cirrus",
+  /// which is true on a home screen and false on a wrist: watchOS cannot launch
+  /// its companion iPhone app. A control that tells you to do something
+  /// impossible is the same failure as one that claims to have done something
+  /// it did not.
+  final String watchOpenPhone;
+
   Map<String, dynamic> toJson() => {
     'day': day,
     'dayFreedom': dayFreedom,
@@ -60,6 +70,7 @@ class WidgetCopy {
     'overLimit': overLimit,
     'emptyTitle': emptyTitle,
     'emptyBody': emptyBody,
+    'watchOpenPhone': watchOpenPhone,
   };
 }
 
@@ -95,6 +106,7 @@ Map<String, dynamic> buildMirror({
   required TodaySnapshot? snapshot,
   required WidgetCopy copy,
   required DateTime now,
+  required String? sid,
 }) {
   if (journey == null || snapshot == null) {
     return {
@@ -108,6 +120,16 @@ Map<String, dynamic> buildMirror({
   return {
     'v': WidgetMirror.schemaVersion,
     'hasJourney': true,
+    // Which account these numbers belong to. Read by the WATCH only, and only
+    // to answer "are these still the same person's?" — see
+    // `WatchWire.applyContext`. The home-screen widget lives in the same
+    // container as the app, so sign-out forgets its queue synchronously and it
+    // has never needed to ask.
+    //
+    // Absent, not empty, when the id has not resolved yet: an empty sid would
+    // be indistinguishable from a different one, and the watch would throw away
+    // a good mirror and a queue of real taps on every cold launch.
+    if (sid != null && sid.isNotEmpty) 'sid': sid,
     'dayKey': LpDate.dayKey(today),
     // Plan day 1, so the widget can recompute the day number across a midnight
     // it slept through. Mirrors `QuitPlan.dayNumber`: whole calendar days,

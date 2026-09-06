@@ -1,0 +1,253 @@
+---
+// Account deletion instructions.
+//
+// Google Play's User Data policy requires a publicly reachable URL, no login,
+// that says how to delete an account and what deletion removes. It is submitted
+// in the Data safety form, so DELETE_ACCOUNT_URL is frozen once the listing
+// declares it — change the page, never the path.
+//
+// ONE SCREEN, deliberately. This is a utility page for someone who has already
+// decided, not a landing page: it uses `.wrap .page` like /privacy and /terms,
+// the steps come first, and the alternatives sit in a sidebar where they can be
+// ignored. A retention wall in front of a legally-required deletion route is
+// both a dark pattern and a policy violation.
+//
+// Every bold label below is the live English ARB string — "Delete everything",
+// "Yes, delete it all", "What Ember remembers", "Sign out". If a label changes
+// in lib/l10n/app_en.arb it changes here; instructions naming a button the app
+// does not have are worse than none.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_TITLE, LEGAL_CONTACT_EMAIL, PRIVACY_URL } from '../consts';
+
+const support = `mailto:${LEGAL_CONTACT_EMAIL}`;
+---
+
+<BaseLayout
+  title="Delete your account"
+  description="How to delete your Cirrus account and everything in it — five taps inside the app, no form to send and nothing to wait for. What's removed, what stays, and what to do first if you're subscribed."
+  breadcrumbs={[{ label: 'Delete account' }]}
+>
+  <div class="wrap page da">
+    <header class="da__head">
+      <h1>Delete your {SITE_TITLE} account</h1>
+      <p class="lede">
+        It's your data, so there are no hoops here. Five taps in the app, nothing to send us and
+        nothing to wait for.
+      </p>
+    </header>
+
+    <div class="da__cols">
+      <div class="da__main">
+        {/* The emoji is part of the app's own button label, so it stays — but it
+            sits in its own element. Space Grotesk's word space is narrow enough
+            that "⚙️ Settings" as one string reads as "⚙️Settings" on screen. */}
+        <ol class="path">
+          <li><b>Home</b><span>The tab the app opens on.</span></li>
+          <li><b>Your avatar</b><span>The emoji circle at the top, next to your streak flame.</span></li>
+          <li><b><i class="path__e">⚙️</i>Settings</b><span>The wide button at the bottom of your profile.</span></li>
+          <li><b>Delete everything</b><span>In the <i class="path__e">🔒</i>Privacy card, part way down Settings.</span></li>
+          <li><b>Yes, delete it all</b><span>The one confirmation. There's no undo after it.</span></li>
+        </ol>
+
+        {/* True of the live backend — functions/src/handlers/deleteUserData.ts
+            anonymises posts and explicitly leaves the store subscription alone.
+            The subscription line is the only thing on this page that costs a
+            person money if we stay quiet about it, so it leads. */}
+        <p class="da__note">
+          <b>Cancel your subscription first.</b> Google Play and Apple do the billing, not us, so
+          deleting the account doesn't stop it — and the in-app shortcut goes with the account.{' '}
+          <b>Settings → Manage subscription</b> opens the right page while you still have it.
+        </p>
+
+        <h2>What goes</h2>
+        <p>
+          Your plan and curve, every puff, craving and mood you logged, your streak, badges and
+          goals, your whole conversation with Ember and everything it remembered, and the login
+          itself. No queue, no review, no way back — signing up again starts a real day one.
+        </p>
+
+        <h2>What stays</h2>
+        <p>
+          Posts and replies you left in the community, so threads other people are in don't
+          develop holes. The words stay, your name doesn't: they're relabelled{' '}
+          <b>[departed quitter]</b> and the private link between you and them is destroyed.
+          Detail in the <a href={PRIVACY_URL}>privacy policy</a>.
+        </p>
+
+        <h2>Can't get in?</h2>
+        <p>
+          Your account is on our servers, not the phone, so uninstalling didn't delete it —
+          reinstall, sign in, and the steps work as written. Can't sign in at all? Write from the
+          email address on the account. A guest account has no email to match, so that one can
+          only be deleted from a phone still signed in.
+        </p>
+      </div>
+
+      <aside class="da__aside" aria-labelledby="smaller">
+        <h2 id="smaller">Smaller than deleting</h2>
+        <ul>
+          <li><b>Settings → Notifications</b> turns every push off. Or move the one that matters with <b>Danger hours</b>.</li>
+          <li>Cancel the subscription and keep the account. The free tier isn't a trial — it doesn't run out.</li>
+          <li><b>Settings → What Ember remembers</b> lists everything the coach kept, and deletes any of it.</li>
+          <li><b>Settings → Sign out</b> leaves it all on your account. The streak keeps burning.</li>
+        </ul>
+        <p class="da__ask">
+          Whichever way you go, tell us what pushed you here — one line is plenty, and it's read
+          by the person who built the app.<br />
+          <a href={support}>{LEGAL_CONTACT_EMAIL}</a>
+        </p>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  /* Tighter than `.page`'s default: this is a one-scroll utility page and the
+     breadcrumb already sits above it. */
+  .da { padding-block: clamp(4px, 1vw, 12px) clamp(44px, 6vw, 64px); }
+  .da__head { max-width: 42rem; }
+  .da h1 { font-size: clamp(1.9rem, 4.2vw, 2.6rem); }
+  .da .lede { margin: 0.9rem 0 0; max-width: 46ch; font-size: 1.0625rem; }
+
+  .da__cols {
+    display: grid;
+    gap: clamp(32px, 4vw, 48px);
+    margin-top: clamp(28px, 4vw, 40px);
+    align-items: start;
+  }
+
+  .da__main { min-width: 0; }
+  .da__main h2 {
+    font-size: 1rem;
+    margin: 1.75rem 0 0.4rem;
+  }
+  .da__main p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+    /* The path card fills the column; the prose under it keeps a measure. */
+    max-width: 60ch;
+  }
+  /* Bold is an in-app label everywhere on this page — the reader learns once
+     that anything bold is something they will literally see on their phone. */
+  .da b { color: var(--text); font-weight: 600; }
+  .da a { text-underline-offset: 0.2em; }
+
+  /* ---------- the path ---------- */
+
+  /* A counter, not list markers: the numeral sits in a 26px disc that has to
+     share a baseline with the label beside it, which list-style cannot do. */
+  .path {
+    counter-reset: step;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--lift);
+    overflow: hidden;
+  }
+
+  .path li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    /* Row gap 0: the label and its hint are one block, and a shared row gap
+       here pushed every step to 100px tall. */
+    gap: 0 13px;
+    padding: 11px clamp(15px, 2.5vw, 20px);
+  }
+  .path li + li { border-top: 1px solid var(--border); }
+
+  .path li::before {
+    content: counter(step);
+    grid-row: span 2;
+    align-self: start;
+    margin-top: 1px;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--slate);
+    border: 1px solid var(--border);
+    color: var(--volt);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1;
+  }
+
+  /* The last step is the irreversible one, and it wears the app's own
+     destructive colour. The only tinted marker on the page. */
+  .path li:last-child::before {
+    background: rgb(255 92 92 / 0.14);
+    border-color: rgb(255 92 92 / 0.5);
+    color: var(--relapse);
+  }
+
+  .path b {
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    letter-spacing: -0.015em;
+    line-height: 1.45;
+  }
+  .path span {
+    grid-column: 2;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .path__e { font-style: normal; margin-right: 0.4em; }
+
+  /* ---------- the money warning ---------- */
+
+  .da__note {
+    margin: 18px 0 0 !important;
+    max-width: none !important;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--ember);
+    border-radius: var(--r-sm);
+    background: var(--lift);
+    font-size: 0.9375rem;
+  }
+
+  /* ---------- sidebar ---------- */
+
+  .da__aside h2 {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .da__aside ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--border);
+  }
+  .da__aside li {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+  .da__ask {
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  @media (min-width: 58rem) {
+    .da__cols { grid-template-columns: minmax(0, 1fr) 16.5rem; }
+    /* Sticky so the alternatives stay offerable while the reader is in the
+       detail below, without costing them a second screen of their own. */
+    .da__aside { position: sticky; top: 24px; }
+  }
+</style>

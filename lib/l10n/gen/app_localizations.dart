@@ -5437,6 +5437,12 @@ abstract class AppLocalizations {
   /// **'Tap to open Cirrus'**
   String get widgetEmptyBody;
 
+  /// Apple Watch app empty state, second line. Not "tap to open" — watchOS cannot launch its companion iPhone app.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Cirrus on your iPhone'**
+  String get widgetWatchOpenPhone;
+
   /// Title of the one-shot celebration fired the morning after a streak milestone is earned (design frame 51 #2).
   ///
   /// In en, this message translates to:

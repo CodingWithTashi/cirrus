@@ -311,8 +311,14 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
         overLimit: l10n.widgetOverLimit,
         emptyTitle: l10n.widgetEmptyTitle,
         emptyBody: l10n.widgetEmptyBody,
+        watchOpenPhone: l10n.widgetWatchOpenPhone,
       ),
       now: ref.read(nowProvider)(),
+      // Watched, not read: it resolves asynchronously after a session is
+      // established, so the first push of a cold launch can legitimately carry
+      // no id at all and the watch is built to treat that as "not yet" rather
+      // than "somebody else".
+      sid: ref.watch(widgetSessionProvider),
     );
 
     // After the frame, so logging a puff never blocks its own rebuild on a

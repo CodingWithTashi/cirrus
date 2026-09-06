@@ -129,6 +129,7 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
       overLimit: 'over today',
       emptyTitle: 'Start your plan',
       emptyBody: 'Tap to open Cirrus',
+      watchOpenPhone: 'Open Cirrus on your iPhone',
     );
 
     test('Swift reads the Dart mirror and Dart decodes the Swift outbox', () {
@@ -142,6 +143,7 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
         snapshot: snapshot,
         copy: copy,
         now: now,
+        sid: 'uid-widget',
       );
 
       final report = run(mirror);
@@ -206,6 +208,7 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
           snapshot: null,
           copy: copy,
           now: DateTime.now(),
+          sid: 'uid-widget',
         ),
       );
       expect(report['hasJourney'], isFalse);
@@ -233,6 +236,7 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
           snapshot: TodaySnapshot.of(journey, now),
           copy: copy,
           now: now,
+          sid: 'uid-widget',
         );
         mirror['planStartDayKey'] = LpDate.dayKey(
           LpDate.addDays(today, -daysAgo),
@@ -268,6 +272,7 @@ suite.removePersistentDomain(forName: CirrusKeys.appGroup)
         snapshot: TodaySnapshot.of(journey, yesterday),
         copy: copy,
         now: yesterday,
+        sid: 'uid-widget',
       );
       final report = run(mirror);
       final before = report['before'] as Map<String, dynamic>;

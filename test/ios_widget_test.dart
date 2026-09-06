@@ -101,10 +101,12 @@ void main() {
       // Int, never Double. A fractional `t` used to be dropped by the Dart
       // decoder — and a dropped event never advances the cursor, so it stayed
       // pending for ever and inflated the count on every render.
-      expect(
-        code(outbox),
-        contains('"t": Int(Date().timeIntervalSince1970 * 1000)'),
-      );
+      expect(code(outbox), contains('"t": Int(at.timeIntervalSince1970 * 1000)'));
+      // `at` is the moment the human tapped, defaulting to now. It is a
+      // parameter because a tap relayed from the Apple Watch was made before
+      // the phone heard about it, and a puff taken at 23:58 belongs to that day
+      // even when it arrives at 00:04.
+      expect(code(outbox), contains('at: Date = Date()'));
       expect(code(outbox), contains('"v": CirrusKeys.schema'));
     });
 

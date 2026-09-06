@@ -261,7 +261,7 @@ you. The two halves obey different rules and are configured in different places.
 
 ---
 
-## 14. HOME-SCREEN WIDGET (Android and iOS)
+## 14. WIDGETS AND THE WRIST (Android, iOS, Apple Watch)
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
@@ -272,6 +272,9 @@ you. The two halves obey different rules and are configured in different places.
 | 113 | **Convergence** | The widget and the app never settle on different numbers, offline included. The count is recomputed from the clock at tap time, never read off the pixels — a tap on a stale widget still files today's puff on today. | Airplane mode → 3 taps → open the app → both agree. Cold restart → still agree. |
 | 113b | **No session, no numbers** | Signed out, freshly installed, account deleted, or a launch that restores no session: the widget shows **"Start your plan / Tap to open Cirrus"** and nothing else. No count, no day number, no working `+`/`−`. The mirror carries no numeric keys at all in this state, and a tap is refused natively. | Sign out with the widget on the home screen → it flips to the message. Tap `+` → nothing happens, nothing queues. |
 | 114 | **iOS widget** | The WidgetKit twin of 109: `systemSmall` and `systemMedium` (day pill, count / limit, status line, `−`/`+` that log in place on iOS 17+; the medium adds the bar), plus `accessoryCircular`/`accessoryRectangular` for the lock screen. Same mirror, same outbox, same guards as Android; wears Midnight Ember always. Simulator-verified Sep 5 2026 (docs/10 §28); accessory families compiled but not yet driven by hand on a phone. | Long-press the home screen → Edit → Add Widget → search "Cirrus". Then the loop in 113: kill the app, `+ + −`, reopen, both agree. Automated on a simulator by `ios/RunnerUITests` — see `ios/CirrusWidget/README.md`. |
+| 114b | **Apple Watch app** 🔥 | The wrist twin of 109: day pill (Freedom-Day clamped), count / limit, volt bar, status line, streak flame, and a full-width `+` over a `−` that log while the phone app is dead. Same mirror, same outbox, same guards — but a watch is a second *device*, so the mirror arrives over WatchConnectivity instead of an App Group, and a tap is staged on the wrist and handed to the phone, which re-mints it into `lp.outbox`. Wears Midnight Ember always. Haptic click on an accepted tap, failure buzz on a refused one; a small volt dot while anything is still un-handed-over. Simulator-verified Sep 6 2026 against production Firebase (docs/10 §29): the mirror reaches the wrist, a tap becomes a puff in the journey, and the count does not move across the hand-off. | On a paired watch (or watch simulator — `ios/CirrusWatch/README.md`): open Cirrus on the wrist → today's numbers. Kill the phone app, tap `+ + −`, reopen the phone → Home, the iOS widget and the wrist all agree, once. Watch for the small volt dot: it means the phone has the tap but has not folded it into the journey yet, and it must clear on the next phone launch **without the number changing**. |
+| 114c | **Watch-face complication** 🔥 | `accessoryCircular` (a gauge of count against the line), `accessoryCorner`, `accessoryInline` and `accessoryRectangular`; the rectangular one also fills a Smart Stack slot on watchOS 10. Reads the wrist's own copy of the mirror, so a tap in the watch app shows on the face immediately. Deliberately untinted — a face tints its own complications. Compiled and embedded, but **not yet driven on a face** — the watchOS face editor was not automated (the same debt the iOS lock-screen families carried). | Long-press the watch face → Edit → pick a complication → Cirrus. Log a puff in the watch app → the face follows. |
+| 114d | **No session, no numbers — on the wrist too** 🔥 | Signed out, deleted, or a watch that has never heard from the phone: **"Start your plan / Open Cirrus on your iPhone"**, or just "Cirrus" if no mirror has ever arrived. No count, no day number, no working `+`. Any queued taps are dropped, and so is the account id — a tap made on the previous account can never land on the next one. | Sign out on the phone with the watch app open → it flips to the message within a second or two. Tap `+` → a failure buzz, nothing queues. |
 
 ---
 
@@ -297,6 +300,11 @@ you. The two halves obey different rules and are configured in different places.
 | **Frame Map** | Deleted Sep 3 2026 — debug-gated in Settings, but its routes shipped in every release binary. |
 | **Founding-offer / winback card** | Gated off until the tagged $3.99 store offer exists. |
 | **Star-rating gate** | Neither store permits asking for an opinion before the system prompt. The five-star row on D3 belongs to the testimonial, not to the user. |
+| **A standalone Apple Watch app** | Every number on the wrist comes from the phone's mirror, so an install without the iPhone app could only ever show the empty card. `WKRunsIndependentlyOfCompanionApp` is deliberately absent — offering it would advertise a surface that cannot work. |
+| **Stats, coach, community or panic on the wrist** | `docs/01 §7` defines the watch as a fourth **one-tap logging** surface, nothing more. A craving flow on the wrist is a real idea and a much bigger build; it is not this. |
+| **Watch complication, hand-verified** | The four families build and render from the same mirror, but only the watch app itself was driven on a simulator (Sep 6 2026). A face pass is owed before the listing names the complication — the same debt, and the same reason, as the iOS lock-screen families. |
+| **Watch support in the store listing** | Not until a hardware pass — the checklist is in `ios/CirrusWatch/README.md`. `B21` is the standing lesson: advertising an unproven surface is the bait-and-switch clause in Apple 3.1.2(a). |
+| **A Wear OS app** | The Android widget covers the launcher. No wearable work is scheduled on that side. |
 | **Rating confirmation** | Neither OS reports whether its sheet appeared, so nothing may claim a rating was submitted. |
 | **iOS lock-screen widget, hand-verified** | The accessory families build and render from the same views, but only the home-screen families were driven on the simulator (Sep 5 2026). A phone pass is owed before the listing names the lock screen. |
 
@@ -312,7 +320,7 @@ you. The two halves obey different rules and are configured in different places.
 6. Coach: send 6 messages → cap CTA. Say something personal → check `/coach/memories`.
 7. Community: post `a` (refused), post something real, post a second (allowance), post an SOS, react, reply, report.
 8. Panic: SOS → breathe → intensity 9 → one full Orbs round → chain → *it passed* → share.
-9. Widget: add it, kill the process, `+ + + −`, reopen, verify the count. On iOS the same loop, plus the medium family; the lock-screen family by hand.
+9. Widget: add it, kill the process, `+ + + −`, reopen, verify the count. On iOS the same loop, plus the medium family; the lock-screen family by hand. On a paired watch the same loop again, then sign out with the wrist awake and watch it flip to the message.
 10. Settings: danger hour 10 minutes out → background → wait for the push. Then language `pt`, appearance light, theme Tide. Sign out.
 
 ---
@@ -322,3 +330,4 @@ you. The two halves obey different rules and are configured in different places.
 | Date | Change |
 |---|---|
 | Sep 4, 2026 | Created — 120 features mapped from `lib/features/`, the router and the domain layer at commit `9ddb382`. |
+| Sep 6, 2026 | §14 renamed and gained 114b / 114c / 114d — the Apple Watch app, its watch-face complication and the wrist's own no-session guard (docs/10 §29). §16 gained four rows for what the watch deliberately does not do. |
