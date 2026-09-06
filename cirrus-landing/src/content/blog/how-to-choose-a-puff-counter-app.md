@@ -108,14 +108,21 @@ The most practical filter, and the one most comparison articles skip.
 
 **Checked 30 August 2026:**
 
-| | Puff Count | Cirrus |
-|---|---|---|
-| iOS | Available | Not yet, planned as a fast-follow |
-| Android | Listed as "coming soon to Google Play", waitlist only | First platform, launching soon |
-| Price | Free | Free tier, paid plan for the adaptive plan and unlimited coaching |
-| Counts puffs | Yes | Yes |
-| Trigger patterns | Yes | Yes |
-| Cites its statistics | Not on the site | Every figure, on the site and in the app |
+<div class="table-wrap" tabindex="0">
+<table>
+<thead>
+<tr><th></th><th>Puff Count</th><th>Cirrus</th></tr>
+</thead>
+<tbody>
+<tr><td>iOS</td><td>Available</td><td>Not yet, planned as a fast-follow</td></tr>
+<tr><td>Android</td><td>Listed as "coming soon to Google Play", waitlist only</td><td>First platform, launching soon</td></tr>
+<tr><td>Price</td><td>Free</td><td>Free tier, paid plan for the adaptive plan and unlimited coaching</td></tr>
+<tr><td>Counts puffs</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Trigger patterns</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Cites its statistics</td><td>Not on the site</td><td>Every figure, on the site and in the app</td></tr>
+</tbody>
+</table>
+</div>
 
 We should be straight with you about two things there. Puff Count is the established option
 with a real user base and it's genuinely free. And Cirrus isn't downloadable yet on any

@@ -60,13 +60,20 @@ when the hard part lands makes it much easier to sit through, so here's the shap
 
 ## The timeline
 
-| When | What's usually happening |
-|---|---|
-| 4 to 24 hours | First symptoms. Irritability, a short fuse, hunting for the device without deciding to |
-| Day 2 to 3 | The peak. Worst concentration, worst mood, strongest cravings |
-| Day 4 to 10 | Steady improvement. Most physical symptoms settle in this window |
-| Week 2 to 4 | Mostly through it. Sleep and appetite normalise |
-| Beyond | Occasional cravings, usually cue-driven, weaker and further apart each time |
+<div class="table-wrap" tabindex="0">
+<table>
+<thead>
+<tr><th>When</th><th>What's usually happening</th></tr>
+</thead>
+<tbody>
+<tr><td>4 to 24 hours</td><td>First symptoms. Irritability, a short fuse, hunting for the device without deciding to</td></tr>
+<tr><td>Day 2 to 3</td><td>The peak. Worst concentration, worst mood, strongest cravings</td></tr>
+<tr><td>Day 4 to 10</td><td>Steady improvement. Most physical symptoms settle in this window</td></tr>
+<tr><td>Week 2 to 4</td><td>Mostly through it. Sleep and appetite normalise</td></tr>
+<tr><td>Beyond</td><td>Occasional cravings, usually cue-driven, weaker and further apart each time</td></tr>
+</tbody>
+</table>
+</div>
 
 The peak arriving on day two or three is the part worth internalising. People who expect
 the worst on day five read a bad Tuesday as evidence that quitting isn't working for them,
@@ -121,7 +128,7 @@ good evidence behind it, and **quitSTART** from the National Cancer Institute co
 Around week two, when the physical part has eased, a lot of people get careless. The hard
 bit appears to be over, one puff seems survivable, and the count creeps back.
 
-That's not withdrawal. That's habit, and it outlasts the chemistry by a wide margin. The
+That isn't withdrawal any more, it's habit, and it outlasts the chemistry by a wide margin. The
 plan you follow in week three matters more than the one you followed in week one. If you
 don't have one yet, [here's the easiest way to quit vaping, in ten simple steps](/blog/easiest-way-to-quit-vaping),
 and it covers the habit half too.

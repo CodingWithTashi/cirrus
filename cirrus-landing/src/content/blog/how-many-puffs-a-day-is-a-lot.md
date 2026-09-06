@@ -73,12 +73,19 @@ precise conversion is overstating what's known.
 But it's useful, because it turns an abstract count into something you already have
 intuition about:
 
-| Puffs a day | Roughly equivalent to |
-|---|---|
-| 70 | 5 cigarettes |
-| 140 | 10 cigarettes, half a pack |
-| 280 | 20 cigarettes, a pack |
-| 420 | 30 cigarettes |
+<div class="table-wrap" tabindex="0">
+<table>
+<thead>
+<tr><th>Puffs a day</th><th>Roughly equivalent to</th></tr>
+</thead>
+<tbody>
+<tr><td>70</td><td>5 cigarettes</td></tr>
+<tr><td>140</td><td>10 cigarettes, half a pack</td></tr>
+<tr><td>280</td><td>20 cigarettes, a pack</td></tr>
+<tr><td>420</td><td>30 cigarettes</td></tr>
+</tbody>
+</table>
+</div>
 
 If 400 puffs sounded unremarkable and "a pack and a half a day" doesn't, that gap is the
 whole point of doing the conversion.

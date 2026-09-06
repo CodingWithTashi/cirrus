@@ -1,13 +1,13 @@
 ---
 title: Welcome to the Cirrus blog
-description: A sample post that proves the blog pipeline works end to end — delete it and write your own once you are ready to publish.
+description: A sample post that proves the blog pipeline works end to end. Delete it and write your own once you are ready to publish.
 publishedAt: 2026-08-30
 tags: ['meta', '#cirrusquit', '#lastpuff']
 draft: true
 ---
 
 This is a sample post. It exists so the blog route, the sitemap, the RSS feed and
-the structured data all have something real to render — delete the file once you
+the structured data all have something real to render. Delete the file once you
 publish your first real piece.
 
 ## How to add a post
@@ -28,7 +28,7 @@ draft: false
 ```
 
 The schema is enforced at build time. If a description is too long or a date is
-missing, `npm run build` fails with the offending file named — a post can't ship
+missing, `npm run build` fails with the offending file named, so a post can't ship
 with a broken `<title>` or an empty meta description.
 
 ## Drafts

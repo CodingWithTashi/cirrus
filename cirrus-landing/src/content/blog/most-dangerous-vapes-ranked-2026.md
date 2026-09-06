@@ -84,7 +84,7 @@ sources:
   - text: 'Volatile aldehyde emissions from sub-ohm vaping devices. Environmental Research, 2021.'
     id: 'PMID 33894240'
     url: 'https://pubmed.ncbi.nlm.nih.gov/33894240/'
-  - text: 'CDC. Outbreak of lung injury associated with e-cigarette use — final update, February 2020.'
+  - text: 'CDC. Outbreak of lung injury associated with e-cigarette use, final update, February 2020.'
   - text: 'Cochrane. Interventions for quitting vaping, CD016058. Evidence current to July 2025.'
     id: 'PMC12645533'
     url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12645533/'

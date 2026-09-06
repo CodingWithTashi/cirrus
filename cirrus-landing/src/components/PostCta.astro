@@ -46,8 +46,8 @@ const line =
         {/* iOS is months out and roughly half of this site's readers are on
             it. Sending them to an Android-only button with no alternative
             wastes the exact audience the writing just earned. */}
-        <p class="micro post-cta__alt">
-          On iPhone? <a href={DOWNLOAD_URL}>Join the list</a> — one email when it lands.
+        <p class="post-cta__alt">
+          On iPhone? <a href={DOWNLOAD_URL}>Join the list</a> and we'll email you once, when it lands.
         </p>
       </>
     ) : (
@@ -63,7 +63,7 @@ const line =
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 1.1rem 1.15rem 1.25rem;
-    background: var(--surface, transparent);
+    background: var(--lift);
   }
 
   .post-cta__eyebrow {
@@ -79,14 +79,27 @@ const line =
     line-height: 1.45;
   }
 
+  /* flex, NOT block: .btn centres its label with align-items/justify-content,
+     and `display: block` silently turns both off. The label then sat at the top
+     of the 54px min-height with 31px of dead green under it. Vertical padding
+     as well, so the label can wrap to two lines in a narrow column without
+     touching the edges. */
   .post-cta__btn {
-    display: block;
+    display: flex;
+    width: 100%;
+    padding: 0.85rem 1.1rem;
     text-align: center;
+    line-height: 1.25;
   }
 
+  /* Was `.micro`, the uppercase eyebrow device — 11px, 800 weight, 0.14em
+     tracking. Right for a two-word label, unreadable for a wrapping sentence,
+     and this was the only body copy on the site set that way. */
   .post-cta__alt {
-    margin: 0.7rem 0 0;
+    margin: 0.85rem 0 0;
     color: var(--muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
   }
 
   /* Single-column: the card sits between the article and "Keep reading", so it

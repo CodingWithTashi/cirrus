@@ -110,7 +110,13 @@ Two things that are easy to get wrong:
 - **Wide tables need `<div class="table-wrap" tabindex="0">` around them**, which
   means writing that table as HTML rather than a pipe table. Astro 7's default
   Markdown processor takes no rehype plugins, so the wrapper cannot be added
-  automatically, and an unwrapped table clips on a phone.
+  automatically, and an unwrapped table clips on a phone. Three posts shipped as
+  pipe tables anyway and did exactly that: the table kept its 30rem min-width,
+  ran past a 375px viewport, and `body { overflow-x: hidden }` cut the last
+  column off with no scrollbar and no clue anything was missing. All three are
+  converted, and `.prose > table` in global.css is now a safety net that lets an
+  unwrapped table reflow instead of clip — write the wrapper anyway, because it
+  is the version that scrolls and takes a tabindex for keyboard users.
 
 The table of contents and the reading time are both **derived**, never typed: the
 TOC comes from `render()`'s `headings` (so it cannot drift from the real H2s) and
@@ -260,6 +266,21 @@ measure, and a **sticky sidebar** of related posts beside it. Below 58rem it
 collapses to one column and the sidebar stacks under the article — the same
 element either way, because rendering it twice would put every link on the page
 twice.
+
+**Two different things are called `.post-cta`:** the sidebar card
+(`PostCta.astro`, scoped styles) and the end-of-post band (`[...slug].astro`).
+The band's rules in global.css are scoped to **`.post-cta--end`** for that
+reason. They were not, and every property the band declared that the card did
+not leaked into the sidebar — a 42rem max-width on a 14rem column, and
+`margin: 0.7rem 0 0` on `.post-cta__line` overriding the card's own
+`margin-bottom` so the Play button sat flush against the text above it. Keep new
+band rules on `--end`.
+
+Two more things that were wrong in the same card and are worth not repeating:
+`.btn` centres its label with `align-items`/`justify-content`, so overriding it
+to `display: block` silently turns both off and the label sits at the top of the
+54px min-height; and `.micro` is an 11px/800-weight/uppercase **label** device,
+not body copy — a wrapping sentence set in it is unreadable.
 
 `.prose` owns the 42rem measure so any page can use it standalone (the legal
 pages do). Inside a post that is a no-op, since `.post-main` is the same width.

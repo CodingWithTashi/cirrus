@@ -69,6 +69,7 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
   publishedAt={post.data.publishedAt}
   updatedAt={post.data.updatedAt}
   image={post.data.image}
+  imageAlt={post.data.imageAlt}
   noindex={post.data.draft}
   breadcrumbs={[{ label: 'Blog', href: '/blog' }, { label: post.data.title }]}
   faq={faq.length ? faq : undefined}
