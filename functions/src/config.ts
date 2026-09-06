@@ -82,6 +82,7 @@ export const ALLOWANCE_DEFAULTS = {
   freePosts: 1,
   premiumPosts: 3,
   sosPosts: 3,
+  dailyPushes: 10,
 } as const;
 
 /**
@@ -139,6 +140,24 @@ export const DAILY_SOS_POSTS = defineInt('DAILY_SOS_POSTS', {
 });
 
 /**
+ * Interpersonal pushes one person may receive in a day.
+ *
+ * A SEPARATE budget from docs/03 §8's "max 3 pushes/day total", and the
+ * divergence is deliberate. That 3 governs nudges we invent — danger hours,
+ * limit-near, the unconfirmed-day reminder — and it is enforced on the device
+ * by `ReminderPlanner.maxPerDay`, which the server cannot see and which
+ * cannot see this. A reply is not an invented nudge: somebody answered you,
+ * and an app that rations answers at three a day is not a community.
+ *
+ * Collapse already means a busy thread costs two to four sends rather than
+ * twenty, so this is a ceiling on how many DIFFERENT conversations can reach
+ * someone in a day, not on how much they can be talked to.
+ */
+export const DAILY_PUSHES = defineInt('DAILY_PUSHES', {
+  default: ALLOWANCE_DEFAULTS.dailyPushes,
+});
+
+/**
  * Every allowance read, each bound to its OWN default.
  *
  * `allowance(param, fallback)` takes the two separately, so nothing stops a
@@ -163,6 +182,8 @@ export const readAllowance = {
     allowance(PREMIUM_DAILY_POSTS, ALLOWANCE_DEFAULTS.premiumPosts),
   sosPosts: (): number =>
     allowance(DAILY_SOS_POSTS, ALLOWANCE_DEFAULTS.sosPosts),
+  dailyPushes: (): number =>
+    allowance(DAILY_PUSHES, ALLOWANCE_DEFAULTS.dailyPushes),
 } as const;
 
 /**
@@ -254,6 +275,20 @@ export const MAX_OUTPUT_TOKENS = 2000;
 export const COACH_FOLLOWUPS = defineString('COACH_FOLLOWUPS', {
   default: 'true',
   description: "Set 'false' to stop suggesting follow-ups on coach turns.",
+});
+
+
+/**
+ * Kill switch for community reply and mention push.
+ *
+ * Read as `!== 'false'` like `COACH_FOLLOWUPS`, and for exactly the reason
+ * documented there: an unset param is the empty string, so `=== 'true'` would
+ * turn this off on every project whose `.env` never named it while looking
+ * like a decision somebody made.
+ */
+export const COMMUNITY_PUSH = defineString('COMMUNITY_PUSH', {
+  default: 'true',
+  description: "Set 'false' to stop community reply and mention notifications.",
 });
 
 /** Conversation turns kept in context (docs/04 §3). Never the full history. */

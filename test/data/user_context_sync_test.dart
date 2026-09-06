@@ -40,7 +40,12 @@ class _RecordingUserContext implements UserContextRepository {
   Object? syncThrows;
 
   @override
-  Future<void> sync({String? fcmToken}) async {
+  Future<void> sync({
+    String? fcmToken,
+    Map<String, Object?>? pushPrefs,
+    List<String>? readThreads,
+    List<String>? readNotifications,
+  }) async {
     _calls.add('sync');
     final failure = syncThrows;
     if (failure != null) throw failure;

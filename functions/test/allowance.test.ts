@@ -67,6 +67,12 @@ describe('allowance', () => {
       freePosts: 1,
       premiumPosts: 3,
       sosPosts: 3,
+      // Deliberately NOT docs/03 §8's "max 3 pushes/day total". That 3 caps
+      // the nudges we invent, and is enforced on the device by
+      // `ReminderPlanner.maxPerDay`. This caps how many separate
+      // conversations can reach someone — replies are answers, not nudges,
+      // and collapse already keeps one busy thread to a handful of sends.
+      dailyPushes: 10,
     });
   });
 

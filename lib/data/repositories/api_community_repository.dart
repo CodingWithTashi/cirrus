@@ -16,6 +16,12 @@ class ApiCommunityRepository implements CommunityRepository {
   ];
 
   @override
+  Future<Post?> fetchPost(String postId) async {
+    final json = await _api.fetchPost(postId);
+    return json == null ? null : PostCodec.decode(json);
+  }
+
+  @override
   Future<String?> addPost(Post post) => _api.addPost(PostCodec.encode(post));
 
   /// The fake backend moderates synchronously on insert, so one read is the

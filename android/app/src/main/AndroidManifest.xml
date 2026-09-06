@@ -164,6 +164,22 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="messages" />
 
+        <!-- The status-bar icon for every server push.
+             Without this, Firebase falls back to the LAUNCHER icon, and
+             Android renders a notification icon from its ALPHA CHANNEL only
+             - so a full-colour, fully-opaque launcher icon becomes a solid
+             white square or blob in the status bar. It looks broken and it
+             is the first thing anyone sees of a notification.
+             `ic_stat_cirrus` is the brand ring as a white-on-transparent
+             silhouette, simplified to drop the vapour wisp, which at 24dp
+             rendered as a two-pixel scratch. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_cirrus" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+
         <!-- flutter_local_notifications delivers every scheduled notification
              to ScheduledNotificationReceiver via AlarmManager, and since the
              plugin's v16 it declares NOTHING but POST_NOTIFICATIONS and

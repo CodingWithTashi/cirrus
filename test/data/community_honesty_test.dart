@@ -26,6 +26,10 @@ class _RecordingCommunity implements CommunityRepository {
   final blocked = <String>[];
 
   @override
+  Future<Post?> fetchPost(String postId) async =>
+      (await fetchPosts()).where((p) => p.id == postId).firstOrNull;
+
+  @override
   Future<List<Post>> fetchPosts() async => _posts;
 
   @override

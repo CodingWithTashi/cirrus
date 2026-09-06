@@ -1939,7 +1939,7 @@
   "profileLifetimeSaved": "lifetime saved",
   "profilePuffsNotTaken": "puffs not taken",
   "profileBadgesEarned": "badges earned",
-  "profileSettings": "⚙️ Settings",
+  "profileSettings": "Settings",
   "profileEditAlias": "Pick your alias",
   "profileEditAvatar": "Pick your avatar",
   "profileAliasHint": "anonymous — this is all anyone sees",
@@ -2308,5 +2308,94 @@
   "milestoneNotifFreedomDay": "Freedom Day. The plan is done, and you finished it.",
   "@milestoneNotifFreedomDay": {
     "description": "Celebration body for finishing the plan."
+  },
+  "communityThreadGoneTitle": "That thread is gone",
+  "@communityThreadGoneTitle": {
+    "description": "Shown when a deep-linked post no longer exists."
+  },
+  "communityThreadGoneBody": "It may have been deleted, or taken down since you were notified.",
+  "@communityThreadGoneBody": {
+    "description": "Shown when a deep-linked post no longer exists."
+  },
+  "communityThreadGoneCta": "Back to the feed",
+  "@communityThreadGoneCta": {
+    "description": "Shown when a deep-linked post no longer exists."
+  },
+  "pushOpen": "Open",
+  "@pushOpen": {
+    "description": "Action on the in-app banner a foreground push draws."
+  },
+  "settingsPushTitle": "What we send you",
+  "@settingsPushTitle": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushSubtitle": "Only for your own threads. Never for other people’s.",
+  "@settingsPushSubtitle": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushBlocked": "Notifications are off for Cirrus in your phone’s settings. Turn them back on there and these will start working.",
+  "@settingsPushBlocked": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushReplies": "Replies to my posts",
+  "@settingsPushReplies": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushRepliesNote": "Grouped, so a busy thread is one notification.",
+  "@settingsPushRepliesNote": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushMentions": "Mentions",
+  "@settingsPushMentions": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushMentionsNote": "When someone tags your name in a reply.",
+  "@settingsPushMentionsNote": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushWeekly": "Weekly report",
+  "@settingsPushWeekly": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushWeeklyNote": "When your week is ready to read back.",
+  "@settingsPushWeeklyNote": {
+    "description": "Notification categories sheet."
+  },
+  "settingsPushCategories": "Categories",
+  "@settingsPushCategories": {
+    "description": "Notification categories sheet."
+  },
+  "pushAskTitle": "Want to know when someone replies?",
+  "@pushAskTitle": {
+    "description": "Contextual notification permission ask, after a first post or reply."
+  },
+  "pushAskBody": "We’ll only ping you about your own posts. Never anyone else’s.",
+  "@pushAskBody": {
+    "description": "Contextual notification permission ask, after a first post or reply."
+  },
+  "pushAskCta": "Turn on notifications",
+  "@pushAskCta": {
+    "description": "Contextual notification permission ask, after a first post or reply."
+  },
+  "notificationsTitle": "Notifications",
+  "@notificationsTitle": {
+    "description": "In-app notification inbox."
+  },
+  "notificationsEmptyTitle": "Nothing yet",
+  "@notificationsEmptyTitle": {
+    "description": "In-app notification inbox."
+  },
+  "notificationsEmptyBody": "When someone replies to a post of yours, it lands here.",
+  "@notificationsEmptyBody": {
+    "description": "In-app notification inbox."
+  },
+  "notificationsBadgeLabel": "{count} unread notifications",
+  "@notificationsBadgeLabel": {
+    "description": "Screen-reader label for the Home notification bell.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

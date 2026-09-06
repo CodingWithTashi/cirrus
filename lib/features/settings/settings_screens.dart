@@ -24,6 +24,7 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 import 'danger_hours_sheet.dart';
+import 'push_categories_sheet.dart';
 import '../../domain/logic/coach_name.dart';
 
 /// Frame 50 — settings: account, subscription, notifications with the
@@ -63,8 +64,12 @@ class SettingsScreen extends ConsumerWidget {
         ? l10n.settingsLanguageSystem
         : _languageName(settings.locale!.languageCode);
 
+    // A drawn icon, not an emoji. Emoji render as the platform's own
+    // full-colour artwork, so a settings list built from them is a column of
+    // clip art at a dozen different weights — and a different column on every
+    // OS version. One glyph family, one colour token, one weight.
     Widget row({
-      required String emoji,
+      required IconData icon,
       required String label,
       String? value,
       Widget? trailing,
@@ -82,7 +87,7 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Text(emoji, style: const TextStyle(fontSize: 16)),
+                    Icon(icon, size: 19, color: lp.textSecondary),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -121,13 +126,13 @@ class SettingsScreen extends ConsumerWidget {
             // Renaming lives here rather than in the chat header: that header
             // is one mis-tap from a rename in the middle of a craving.
             row(
-              emoji: '🔥',
+              icon: Icons.local_fire_department_rounded,
               label: l10n.settingsCoachName,
               value: ref.watch(coachNameProvider) ?? l10n.coachName,
               onTap: () => _showRenameCoachSheet(context, ref),
             ),
             row(
-              emoji: '🧠',
+              icon: Icons.psychology_alt_rounded,
               label: l10n.settingsMemories(
                 ref.watch(coachNameProvider) ?? l10n.coachName,
               ),
@@ -135,12 +140,12 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => context.push(Routes.memories),
             ),
             row(
-              emoji: '👤',
+              icon: Icons.person_outline_rounded,
               label: l10n.settingsAccount,
               value: journey?.profile.email ?? journey?.profile.alias ?? '',
             ),
             row(
-              emoji: '💳',
+              icon: Icons.card_membership_outlined,
               label: l10n.settingsSubscription,
               value: _subscriptionValue(l10n, entitlement, locale),
               // Free → the paywall (the founding offer, once, when it is
@@ -151,7 +156,8 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () {
                 if (!entitlement.isActive) {
                   context.push(
-                    BillingCatalog.foundingOfferEnabled && !settings.winbackShown
+                    BillingCatalog.foundingOfferEnabled &&
+                            !settings.winbackShown
                         ? Routes.winback
                         : Routes.paywallFrom('settings'),
                   );
@@ -167,13 +173,13 @@ class SettingsScreen extends ConsumerWidget {
             // subscription the store account already owns.
             if (!entitlement.isActive)
               row(
-                emoji: '↩️',
+                icon: Icons.restore_rounded,
                 label: l10n.paywallRestore,
                 value: '',
                 onTap: () => _restorePurchases(context, ref),
               ),
             row(
-              emoji: '🔔',
+              icon: Icons.notifications_none_rounded,
               label: l10n.settingsNotifications,
               trailing: Switch(
                 value: settings.notificationsOn,
@@ -181,40 +187,78 @@ class SettingsScreen extends ConsumerWidget {
                     .read(settingsStoreProvider.notifier)
                     .setNotifications(v),
               ),
-              below: PressScale(
-                onTap: () => showDangerHoursSheet(context, ref),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: lp.surfaceInset,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: lp.border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.settingsDangerHours,
-                        style: LpType.caption(lp.textSecondary),
+              below: Column(
+                children: [
+                  PressScale(
+                    onTap: () => showPushCategoriesSheet(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                      Text(
-                        // The hour they chose. The end hour used to show
-                        // here too, but nothing reads it — the nudge is one
-                        // push before the start (docs/09 issue 5).
-                        l10n.settingsDangerHoursEdit(
-                          LpFormat.hour(settings.dangerStartHour % 24, locale),
-                        ),
-                        style: LpType.caption(
-                          lp.emberText,
-                          weight: FontWeight.w600,
-                        ),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: lp.surfaceInset,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: lp.border),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.settingsPushCategories,
+                            style: LpType.caption(lp.textSecondary),
+                          ),
+                          Text(
+                            l10n.settingsPushTitle,
+                            style: LpType.caption(
+                              lp.emberText,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  PressScale(
+                    onTap: () => showDangerHoursSheet(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: lp.surfaceInset,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: lp.border),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.settingsDangerHours,
+                            style: LpType.caption(lp.textSecondary),
+                          ),
+                          Text(
+                            // The hour they chose. The end hour used to show
+                            // here too, but nothing reads it — the nudge is one
+                            // push before the start (docs/09 issue 5).
+                            l10n.settingsDangerHoursEdit(
+                              LpFormat.hour(
+                                settings.dangerStartHour % 24,
+                                locale,
+                              ),
+                            ),
+                            style: LpType.caption(
+                              lp.emberText,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -227,7 +271,11 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Text('🔒', style: TextStyle(fontSize: 16)),
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 19,
+                          color: lp.textSecondary,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           l10n.settingsPrivacy,
@@ -281,19 +329,19 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             row(
-              emoji: '🎨',
+              icon: Icons.dark_mode_outlined,
               label: l10n.settingsAppearance,
               value: appearanceValue(),
               onTap: () => _showAppearanceSheet(context, ref),
             ),
             row(
-              emoji: '🌈',
+              icon: Icons.palette_outlined,
               label: l10n.settingsTheme,
               value: themeValue(),
               onTap: () => _showThemeSheet(context, ref),
             ),
             row(
-              emoji: '🌐',
+              icon: Icons.language_rounded,
               label: l10n.settingsLanguage,
               value: languageValue(),
               onTap: () => _showLanguageSheet(context, ref),
@@ -303,7 +351,7 @@ class SettingsScreen extends ConsumerWidget {
             // that forced the route would still be refused by the callables.
             if (ref.watch(isModeratorProvider).valueOrNull ?? false)
               row(
-                emoji: '🛡️',
+                icon: Icons.shield_outlined,
                 label: l10n.moderationTitle,
                 value: '',
                 onTap: () => context.push(Routes.moderation),
@@ -315,25 +363,25 @@ class SettingsScreen extends ConsumerWidget {
             // device with no mail client still leaves the reader somewhere to
             // write. A row that can only fail silently is worse than no row.
             row(
-              emoji: '🌐',
+              icon: Icons.open_in_new_rounded,
               label: l10n.settingsWebsite,
               value: '',
               onTap: () => LpLinks.open(LpLinks.website).ignore(),
             ),
             row(
-              emoji: '🔒',
+              icon: Icons.lock_outline_rounded,
               label: l10n.settingsPrivacyPolicy,
               value: '',
               onTap: () => LpLinks.open(LpLinks.privacy).ignore(),
             ),
             row(
-              emoji: '📄',
+              icon: Icons.description_outlined,
               label: l10n.settingsTermsOfUse,
               value: '',
               onTap: () => LpLinks.open(LpLinks.terms).ignore(),
             ),
             row(
-              emoji: '✉️',
+              icon: Icons.mail_outline_rounded,
               label: l10n.settingsSupport,
               value: '',
               onTap: () => LpLinks.open(LpLinks.support).ignore(),
@@ -383,7 +431,10 @@ class SettingsScreen extends ConsumerWidget {
       builder: (sheetContext) {
         final l10n = sheetContext.l10n;
         final current = ref.read(settingsStoreProvider).themeMode;
-        Widget option(ThemeMode mode, String label, String emoji) => Padding(
+        // The label alone. These three read "Match system", "Dark" and
+        // "Light" — an emoji in front adds a picture of the concept beside a
+        // word that already is the concept, in artwork the app did not draw.
+        Widget option(ThemeMode mode, String label) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: OptionCard(
             selected: current == mode,
@@ -391,7 +442,7 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(settingsStoreProvider.notifier).setThemeMode(mode);
               Navigator.of(sheetContext).pop();
             },
-            title: '$emoji  $label',
+            title: label,
           ),
         );
         return SafeArea(
@@ -406,9 +457,9 @@ class SettingsScreen extends ConsumerWidget {
                   style: LpType.titleSm(sheetContext.lp.textPrimary),
                 ),
                 const SizedBox(height: 16),
-                option(ThemeMode.system, l10n.settingsAppearanceSystem, '⚙️'),
-                option(ThemeMode.dark, l10n.settingsAppearanceDark, '🌑'),
-                option(ThemeMode.light, l10n.settingsAppearanceLight, '☀️'),
+                option(ThemeMode.system, l10n.settingsAppearanceSystem),
+                option(ThemeMode.dark, l10n.settingsAppearanceDark),
+                option(ThemeMode.light, l10n.settingsAppearanceLight),
               ],
             ),
           ),

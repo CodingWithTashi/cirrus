@@ -188,7 +188,8 @@
 | 79 | **Post allowance** | 1/day free, 3/day Pro. The blocker appears **under your text with the words still there to edit**, and only carries a paywall door when a subscription would genuinely have let this post through. | Free → post twice. |
 | 80 | **SOS post** | Own counter (3/day), refused for no tier. A second SOS while yours is still pinned says *yours is still up there* — never "come back tomorrow" — and spends no slot. | Post an SOS, then try another inside the hour. |
 | 81 | **Post status** 🔥 | Four honest states for your own post: `pending` (spinner, seconds), `held` (a human is looking), `blocked`, `failed` (retry on the row). Retry is safe — posting is idempotent on the client id. | Airplane mode → post → *failed* → retry online. |
-| 82 | **Post detail + replies** | Open a post, reply, and see the backup count — real replies plus reactions; zero renders nothing. | Reply with `thanks`; replies have a much looser floor (6 chars, no word minimum). |
+| 82 | **Post detail + replies** | Open a post, reply, and see the backup count — real replies plus reactions; zero renders nothing. Replies are ordered oldest-first, so "3 new replies" sends you somewhere the new ones actually are. | Reply with `thanks`; replies have a much looser floor (6 chars, no word minimum). |
+| 82a | **Opening one post directly** 🔥 | A notification names a post the feed may never have loaded — the feed is one page of 50, and a reply can arrive days later. The screen fetches it, and shows loading, a retry, or "that thread is gone" instead of the blank screen it used to render. | Deep-link a post id that is not in the feed. |
 | 83 | **Reactions** | Emoji pills, one per person, your own outlined. | Tap twice → toggles off. |
 | 84 | **Report / mute / block** | Per-post menu; three reports auto-hide a post. Your own posts show no menu. | Report one post, then check a *different* post is unaffected. |
 | 85 | **Moderation queue** (`/moderation`, Admin) 🔥 | The founder's review queue. No decision looks applied until the server confirms it. | Only visible with the `admin` claim; the Settings row is absent otherwise. |
@@ -230,7 +231,7 @@
 
 ---
 
-## 13. NOTIFICATIONS — on-device, inexact by design
+## 13. NOTIFICATIONS — two halves, and they behave differently
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
@@ -238,6 +239,25 @@
 | 106 | **Trial-ending reminder** | The day before the first charge. Scheduled on-device because no store sends this event. | Start a sandbox trial. |
 | 107 | **Milestone celebration** | Five moments across a 30-day plan (badges at 3, 7, 14 and 30 days, plus Freedom Day), at 08:00. Only ever celebrates a badge **already earned** — it cannot congratulate a streak that might still break tonight. | Drive the device clock. |
 | 108 | **Tap routing** | Every reminder carries its kind: trial → trial-ending (or Settings once it is over), danger-hour → Home. Works from cold start, after the splash has chosen the first screen. | Kill the app, tap a notification. |
+
+The rows above are **scheduled on the device**: they work offline, cost nothing,
+and are inexact by design. Everything below is **sent from the server**, because
+the trigger is something the phone could not have known — somebody else answered
+you. The two halves obey different rules and are configured in different places.
+
+| # | Feature | What it does | Manual test |
+|---|---|---|---|
+| 109 | **Reply notification** | Somebody replies to your post and you hear about it. Was SOS-only until Sep 6 2026. | Post, reply from a second account, watch the phone. |
+| 110 | **Grouped, not repeated** 🔥 | Twenty replies is not twenty notifications. The server throttles to at most four buzzes per burst, and every one carries the same tag so it **replaces** the shade line rather than stacking — the last one reads "20 new replies." | `node tool/push_probe.mjs burst` → **one** row in the shade, counting up. |
+| 111 | **Mentions** | Typing `@quietfox42` in a reply notifies that person, on its own line rather than folded into a thread count. Resolved against the people already in the thread, first claimant wins — so replying under somebody's alias cannot steal or kill their mentions. | Reply naming another participant's alias. |
+| 112 | **Never yourself, never twice** | Replying to your own post notifies nobody. A reply that was reported, hidden, then approved does not announce itself a second time. | Reply to your own post; nothing arrives. |
+| 113 | **Quiet hours** | Between your quiet hours a reply arrives **silently** rather than not at all — a second, low-importance Android channel, `interruption-level: passive` on iOS. An SOS reply always rings; that is the hour it exists for. | `node tool/push_probe.mjs quiet` → lands on `community_replies_quiet`. |
+| 114 | **Deep link** | The tap opens the thread itself, not the feed. Works from cold start: the destination waits for the splash instead of racing it. | Kill the app, tap → lands on the post, back chevron returns to the feed. |
+| 115 | **Categories** (Settings → 🔔 → Categories) | Replies, mentions and the weekly report, each on its own switch, plus the master. Stored on the **server**, because the server is what sends — a preference held only on the phone silences nothing. | Turn replies off, have someone reply. |
+| 116 | **Permission ask** | Asked once, right after your first post or reply publishes. Only when the OS has never been asked — Android auto-denies a second attempt, so a refused user is told where the real switch is instead. | Fresh install, skip the onboarding ask, then post. |
+| 117 | **Notification bell + badge** (Home) 🔥 | A bell beside your avatar carrying the unread count. Zero renders no number at all — a badge is a claim that something is waiting. | Have someone reply; the badge appears without reopening the app. |
+| 118 | **Inbox** (`/notifications`) | Everything the app has told this account, kept. It is the answer to "what did I miss" for anyone who declined the permission, has no device registered, spent the day's buzz budget, or swiped the shade clear unread. A busy thread is ONE row that updates, keyed by the same tag the shade uses. | Tap the bell. Tap a row → it opens that thread. |
+| 119 | **Read state** | Opening the inbox reads everything in it: the badge drops at once locally and the server is told through `syncUserContext`. Nothing here is invented — an empty list is the honest state of an account nobody has replied to. | Open the inbox, go back, badge is gone; relaunch, still gone. |
 
 ---
 

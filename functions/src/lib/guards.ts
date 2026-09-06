@@ -68,6 +68,67 @@ export function requireText(
   return trimmed;
 }
 
+/** The longest alias we will store. Client aliases are ~14 chars. */
+export const MAX_ALIAS_CHARS = 32;
+
+/** Anything outside this is dropped before an alias is stored or displayed. */
+const ALIAS_ALLOWED = /[^A-Za-z0-9_@[\]. -]/g;
+
+/**
+ * A well-formed client alias: `@quietfox42`, as `_randomAlias()` mints them.
+ *
+ * Only aliases of this exact shape can be the target of an @mention. That is
+ * narrower than what [sanitizeAlias] will STORE, and deliberately so: storage
+ * has to stay permissive enough for the seed fixtures and for
+ * `[departed quitter]`, while mention matching is a lookup key and wants the
+ * tightest shape it can get.
+ */
+const MENTIONABLE_ALIAS = /^@[a-z]{3,24}\d{1,3}$/i;
+
+/**
+ * An alias safe to store and to render.
+ *
+ * `alias` arrives as completely untrusted free text — it is whatever the
+ * client claimed, and the server has never verified that a caller owns the
+ * alias it posts under. Until this existed it was written verbatim onto the
+ * post, with no type check, no length cap and no charset: a 10KB alias, a
+ * newline-stuffed one that breaks the feed's layout, or one shaped to be
+ * mistaken for somebody else were all accepted.
+ *
+ * This does not make an alias *trustworthy* — it cannot, while aliases are
+ * minted client-side from 5,760 combinations with no uniqueness check — it
+ * only makes it safe to handle. See `resolveMentions` for how the
+ * impersonation half is contained.
+ */
+export function sanitizeAlias(value: unknown): string {
+  if (typeof value !== 'string') return DEFAULT_ALIAS;
+  const cleaned = value.replace(ALIAS_ALLOWED, '').trim().slice(0, MAX_ALIAS_CHARS);
+  return cleaned.length > 0 ? cleaned : DEFAULT_ALIAS;
+}
+
+/** Whether [alias] can be the target of an @mention. See [MENTIONABLE_ALIAS]. */
+export function isMentionableAlias(alias: string): boolean {
+  return MENTIONABLE_ALIAS.test(alias);
+}
+
+/**
+ * An avatar safe to store: at most a couple of glyphs.
+ *
+ * Same untrusted-free-text bug as [sanitizeAlias] and fixed in the same pass
+ * because it is the adjacent field on the same two writes. `Array.from`
+ * rather than `slice` so a surrogate pair is one glyph and is never cut in
+ * half — a lone surrogate is what turns a feed row into a replacement box.
+ */
+export function sanitizeEmoji(value: unknown): string {
+  if (typeof value !== 'string') return DEFAULT_EMOJI;
+  const glyphs = Array.from(value.trim()).slice(0, MAX_EMOJI_GLYPHS).join('');
+  return glyphs.length > 0 ? glyphs : DEFAULT_EMOJI;
+}
+
+const DEFAULT_ALIAS = 'quitter';
+const DEFAULT_EMOJI = '\u{1F525}';
+const MAX_EMOJI_GLYPHS = 2;
+
 /**
  * Narrows an untrusted value to one of `allowed`, or null. Null rather than a
  * throw because several callers treat absence as a legitimate branch (a coach

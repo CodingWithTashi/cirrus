@@ -95,7 +95,7 @@ class FirebaseCommunityRepository implements CommunityRepository {
           _toPost(
             doc.id,
             doc.data(),
-            repliesByPost[doc.id] ?? const [],
+            _ordered(repliesByPost[doc.id] ?? const []),
             isMine: mine.containsKey(doc.id),
           ),
     ];
@@ -141,6 +141,61 @@ class FirebaseCommunityRepository implements CommunityRepository {
         .limit(_feedLimit)
         .get();
     return {for (final doc in snap.docs) doc.id: doc.data()};
+  }
+
+  /// One post and its replies.
+  ///
+  /// Deliberately NOT shaped like [fetchPosts]'s reply load. That one runs an
+  /// unbounded `collectionGroup('replies')` with no post filter, which is the
+  /// right trade for a 50-post feed and the wrong one here — for a single
+  /// thread it would fetch every live reply in the app to keep a handful.
+  /// This asks the post's own subcollection.
+  ///
+  /// Returns null for a post that is missing or not live. The author's own
+  /// pending or held post is still answered, from their mirror row, so a
+  /// notification tap never dead-ends on something they can see in the feed.
+  @override
+  Future<Post?> fetchPost(String postId) async {
+    final uid = _auth.currentUser?.uid;
+    final mine = uid == null ? null : await _myPosts(uid).doc(postId).get();
+    final isMine = mine?.exists ?? false;
+
+    // A post that is missing, blocked, or not yet classified answers
+    // PERMISSION_DENIED here rather than an empty snapshot, because the rule
+    // is `resource.data.status == 'live'` and `resource` is null for a
+    // document that is not there. That refusal IS the answer — this reader
+    // may not see it — so it becomes "gone", not a failure. Reading it as a
+    // failure put a "check your signal" retry in front of a thread that no
+    // longer exists, on a device with a perfectly good connection.
+    DocumentSnapshot<Map<String, dynamic>>? doc;
+    try {
+      doc = await _posts.doc(postId).get();
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied') rethrow;
+    }
+
+    final data = doc?.data();
+    if (data == null || data['status'] != 'live') {
+      // Not visible to readers. If it is the caller's own, show it wearing
+      // its state rather than pretending it never existed.
+      final own = mine?.data();
+      if (!isMine || own == null) return null;
+      return _toPost(postId, own, const [], isMine: true);
+    }
+
+    final replies = await _posts
+        .doc(postId)
+        .collection('replies')
+        .where('status', isEqualTo: 'live')
+        .get();
+
+    await _loadMyReactions();
+    return _toPost(
+      postId,
+      data,
+      _ordered([for (final r in replies.docs) _toReply(r.id, r.data())]),
+      isMine: isMine,
+    );
   }
 
   @override
@@ -305,5 +360,20 @@ class FirebaseCommunityRepository implements CommunityRepository {
     alias: data['alias'] as String? ?? 'quitter',
     avatarEmoji: data['avatarEmoji'] as String? ?? '🔥',
     text: data['text'] as String? ?? '',
+    createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
   );
+
+  /// Oldest first, so "3 new replies" sends the reader to the bottom and
+  /// finds them there. A reply with no time sorts last: unknown is most
+  /// usefully read as recent, and every reply written from here has one.
+  static List<Reply> _ordered(List<Reply> replies) {
+    final sorted = [...replies];
+    sorted.sort((a, b) {
+      final at = a.createdAt;
+      final bt = b.createdAt;
+      if (at == null || bt == null) return at == null ? (bt == null ? 0 : 1) : -1;
+      return at.compareTo(bt);
+    });
+    return sorted;
+  }
 }

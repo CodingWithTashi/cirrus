@@ -15,6 +15,7 @@ import '../../domain/models/models.dart';
 import '../../features/coach/coach_screen.dart';
 import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/day1/day1_screen.dart';
 import '../../features/health/health_screen.dart';
 import '../../features/home/home_screen.dart';
@@ -65,6 +66,17 @@ abstract final class Routes {
   static const community = '/community';
   static const coach = '/coach';
   static const compose = '/community/compose';
+
+  /// One post and its replies.
+  ///
+  /// A function rather than a bare path because the server emits this same
+  /// route in a push payload, in another language, where nothing can
+  /// typecheck it against this table. `test/push_route_parity_test.dart`
+  /// reads the TypeScript side and pins the two together.
+  static String communityPost(String id) => '$communityPostBase/$id';
+
+  /// The prefix `communityPost` builds on, and what the route registers.
+  static const communityPostBase = '/community/post';
   static const panic = '/panic';
   static const game = '/panic/game';
 
@@ -76,6 +88,9 @@ abstract final class Routes {
   static const money = '/money';
   static const health = '/health';
   static const milestones = '/milestones';
+
+  /// The in-app notification inbox, reached from the bell on Home.
+  static const notifications = '/notifications';
   static const insight = '/insight';
   static const profile = '/profile';
   static const settings = '/settings';
@@ -104,7 +119,7 @@ class RouteNotFoundScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: LpErrorState(
-          emoji: '🧭',
+          icon: Icons.explore_off_rounded,
           title: l10n.errorRouteTitle,
           body: l10n.errorRouteBody,
           retryLabel: l10n.errorRouteCta,
@@ -275,7 +290,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/community/post/:id',
+        path: Routes.notifications,
+        builder: (_, _) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '${Routes.communityPostBase}/:id',
         builder: (_, state) =>
             PostDetailScreen(postId: state.pathParameters['id']!),
       ),

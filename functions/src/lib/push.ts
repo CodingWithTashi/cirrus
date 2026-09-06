@@ -27,9 +27,14 @@
  */
 import {createHash} from 'node:crypto';
 import {getMessaging} from 'firebase-admin/messaging';
-import {FieldValue, db, devicesCol, userDoc} from './firestore';
+import type {MulticastMessage} from 'firebase-admin/messaging';
+import {ALLOWANCE_DEFAULTS, DAILY_PUSHES, allowance} from '../config';
+import {dayKeyIn} from '../domain/dateKey';
+import {DEFAULT_QUIET_END, DEFAULT_QUIET_START, inQuietHours} from '../domain/quietHours';
+import {FieldValue, db, devicesCol, notificationsCol, userDoc} from './firestore';
 import {log} from './logger';
 import {pushCopy, type PushKey} from './pushCopy';
+import {allowedByPrefs, specFor, type PushKind} from './pushKinds';
 
 /** What the app runs on, as far as we are willing to believe it. */
 export type DevicePlatform = 'android' | 'ios' | 'other';
@@ -47,6 +52,41 @@ export interface PushPayload {
   readonly body: string;
   /** In-app destination. The client allow-lists this before navigating. */
   readonly route?: string;
+}
+
+/**
+ * How to deliver, and under which rules.
+ *
+ * [kind] is required and has no default on purpose. It is what selects the
+ * preference to honour, the channel to land in and whether quiet hours apply
+ * — so a call site that could omit it would be a call site that silently
+ * bypasses all three. `weeklyInsight` used to be exactly that: it called
+ * `sendToUser` directly, never `sendLocalized`, and so would have sailed past
+ * any gate placed in the wrapper above.
+ */
+export interface SendOptions {
+  readonly kind: PushKind;
+  /**
+   * Groups notifications that supersede one another. Becomes Android's
+   * notification `tag` — which makes a later send REPLACE the shade line
+   * rather than add to it, and is the half of collapse the server cannot do
+   * on its own — plus the APNs collapse id.
+   */
+  readonly tag?: string;
+  /** iOS conversation grouping, so several threads stack under one header. */
+  readonly threadId?: string;
+  /** Items being announced, for copy that counts. */
+  readonly count?: number;
+}
+
+/** What the recipient's own row says about whether we may send at all. */
+interface Gate {
+  /** Whether the recipient wants this kind at all. Governs the inbox too. */
+  readonly allowed: boolean;
+  /** Whether a buzz is left in today's budget. The inbox ignores this. */
+  readonly budgeted: boolean;
+  readonly quiet: boolean;
+  readonly locale: string | undefined;
 }
 
 /**
@@ -197,26 +237,203 @@ const DEAD_TOKEN_CODES: readonly string[] = [
 ];
 
 /**
- * Sends [payload] to every device [uid] has registered.
+ * Whether [uid] may be sent a [kind] right now, and how loudly.
+ *
+ * One read of the user row answers all three questions, and it is the only
+ * place any of them is asked. A preference check that lived in a wrapper
+ * would be a preference check some call site did not use.
+ *
+ * The budget spend is transactional because two replies on two different
+ * threads land in two concurrent function instances; a read-then-write would
+ * let both see the same count and both spend the last slot. Refusing on a
+ * read failure is the wrong direction — a push is a courtesy and a Firestore
+ * hiccup is not a reason to stay silent — so an error here allows the send.
+ */
+async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gate> {
+  const spec = specFor(kind);
+  try {
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(userDoc(uid));
+      const prefs = snap.get('pushPrefs') as Record<string, unknown> | undefined;
+      const locale = snap.get('locale') as string | undefined;
+      const timeZone = snap.get('tz') as string | undefined;
+
+      if (!allowedByPrefs(kind, prefs)) {
+        return {allowed: false, budgeted: false, quiet: false, locale};
+      }
+
+      const quiet =
+        spec.respectsQuietHours &&
+        inQuietHours(
+          nowMs,
+          timeZone,
+          readHour(prefs?.['quietStart'], DEFAULT_QUIET_START),
+          readHour(prefs?.['quietEnd'], DEFAULT_QUIET_END),
+        );
+
+      if (!spec.countsAgainstBudget) {
+        return {allowed: true, budgeted: true, quiet, locale};
+      }
+
+      // The day is the RECIPIENT's, not UTC's — a cap that resets at 3am
+      // local is a cap that does not mean what it says.
+      const day = dayKeyIn(new Date(nowMs), timeZone ?? 'UTC');
+      const usage = snap.get('pushUsage') as
+        | {day?: string; count?: number}
+        | undefined;
+      const spent = usage?.day === day ? (usage.count ?? 0) : 0;
+      if (spent >= allowance(DAILY_PUSHES, ALLOWANCE_DEFAULTS.dailyPushes)) {
+        // Out of buzzes for today, but NOT out of the inbox: the budget caps
+        // how often we interrupt someone, not what they are allowed to know.
+        return {allowed: true, budgeted: false, quiet, locale};
+      }
+      tx.set(userDoc(uid), {pushUsage: {day, count: spent + 1}}, {merge: true});
+      return {allowed: true, budgeted: true, quiet, locale};
+    });
+  } catch (error) {
+    log.warn('push.gate_failed', {uid, kind, error: String(error)});
+    return {allowed: true, budgeted: true, quiet: false, locale: undefined};
+  }
+}
+
+/**
+ * Files this notification in the recipient's in-app inbox.
+ *
+ * Written even when nothing can be delivered — no device registered, the
+ * daily budget spent, the app uninstalled from one of two phones. A push is
+ * a courtesy that may not arrive; the inbox is the record that it happened,
+ * and it is the only surface that can answer "what did I miss" for somebody
+ * who declined notifications outright.
+ *
+ * Keyed by [SendOptions.tag] where there is one, so a thread occupies ONE row
+ * that updates in place — exactly what the notification tag does to the shade.
+ * Without that, a busy thread would collapse to a single line on the phone and
+ * still stack twenty rows in here.
+ *
+ * `readAt` is only cleared on a genuinely new row: an update to a thread the
+ * reader has already opened should mark it unread again, which is why it is
+ * written on every call rather than only on create.
+ */
+async function recordNotification(
+  uid: string,
+  payload: PushPayload,
+  opts: SendOptions,
+  nowMs: number,
+): Promise<void> {
+  try {
+    const id = opts.tag !== undefined && opts.tag.length > 0
+      ? opts.tag.replace(/\//g, '_')
+      : notificationsCol(uid).doc().id;
+    await notificationsCol(uid).doc(id).set(
+      {
+        kind: opts.kind,
+        title: payload.title,
+        body: payload.body,
+        ...(payload.route ? {route: payload.route} : {}),
+        createdAtMs: nowMs,
+        readAtMs: null,
+      },
+      {merge: true},
+    );
+  } catch (error) {
+    // Never at the caller's expense. A missing inbox row is a worse day than
+    // a missing push and still not a reason to fail a moderation pass.
+    log.warn('push.record_failed', {uid, kind: opts.kind, error: String(error)});
+  }
+}
+
+function readHour(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 24
+    ? value
+    : fallback;
+}
+
+/**
+ * Builds the wire message.
+ *
+ * Split out so `devices.test.ts` can assert on the shape without a live FCM,
+ * and because the field names here are the ones most easily got wrong: the
+ * admin SDK camelCases `notification_priority` to `priority`, and setting
+ * both `threadId` and a raw `thread-id` on `aps` throws `INVALID_PAYLOAD`.
+ *
+ * Quiet delivery is a CHANNEL swap on Android, not a priority flag. From
+ * Android 8 the channel decides sound, vibration and heads-up, and the
+ * per-message priority FCM accepts is ignored — so `priority` here is only
+ * doing work on devices old enough to still read it.
+ */
+export function buildMessage(
+  tokens: readonly string[],
+  payload: PushPayload,
+  opts: SendOptions,
+  quiet: boolean,
+): MulticastMessage {
+  const spec = specFor(opts.kind);
+  const channelId = quiet ? spec.quietChannelId : spec.channelId;
+  return {
+    tokens: [...tokens],
+    notification: {title: payload.title, body: payload.body},
+    // `data` is what survives into the tapped-notification handler; the
+    // notification block alone cannot carry a destination.
+    data: {
+      kind: opts.kind,
+      ...(payload.route ? {route: payload.route} : {}),
+    },
+    android: {
+      ...(opts.tag ? {collapseKey: opts.tag} : {}),
+      notification: {
+        channelId,
+        priority: quiet ? 'low' : 'default',
+        ...(opts.tag ? {tag: opts.tag} : {}),
+      },
+    },
+    apns: {
+      ...(opts.tag ? {headers: {'apns-collapse-id': opts.tag.slice(0, 64)}} : {}),
+      payload: {
+        aps: {
+          ...(opts.threadId ? {threadId: opts.threadId} : {}),
+          ...(quiet ? {'interruption-level': 'passive'} : {}),
+        },
+      },
+    },
+  };
+}
+
+/**
+ * Sends [payload] to every device [uid] has registered, if the gate allows.
  *
  * Never throws: a push is a courtesy, and a failed one must not fail the
- * moderation pass or the cron that triggered it.
+ * moderation pass or the cron that triggered it. Returns whether anything
+ * actually went out, which the caller needs in order not to record a
+ * notification it never sent.
  */
 export async function sendToUser(
   uid: string,
   payload: PushPayload,
-): Promise<void> {
+  opts: SendOptions,
+  nowMs: number = Date.now(),
+): Promise<boolean> {
   try {
-    const {tokens, legacy} = await collectTokens(uid);
-    if (tokens.length === 0) return;
+    const gate = await openGate(uid, opts.kind, nowMs);
+    if (!gate.allowed) {
+      log.info('push.suppressed', {uid, kind: opts.kind});
+      return false;
+    }
 
-    const response = await getMessaging().sendEachForMulticast({
-      tokens: [...tokens],
-      notification: {title: payload.title, body: payload.body},
-      // `data` is what survives into the tapped-notification handler; the
-      // notification block alone cannot carry a destination.
-      data: payload.route ? {route: payload.route} : {},
-    });
+    // Before the token check on purpose: somebody with no device registered
+    // still gets the in-app record of what happened.
+    await recordNotification(uid, payload, opts, nowMs);
+
+    if (!gate.budgeted) {
+      log.info('push.over_budget', {uid, kind: opts.kind});
+      return false;
+    }
+
+    const {tokens, legacy} = await collectTokens(uid);
+    if (tokens.length === 0) return false;
+
+    const response = await getMessaging().sendEachForMulticast(
+      buildMessage(tokens, payload, opts, gate.quiet),
+    );
 
     const dead: string[] = [];
     response.responses.forEach((result, i) => {
@@ -229,12 +446,16 @@ export async function sendToUser(
 
     log.info('push.sent', {
       uid,
+      kind: opts.kind,
+      quiet: gate.quiet,
       ok: response.successCount,
       failed: response.failureCount,
       pruned: dead.length,
     });
+    return response.successCount > 0;
   } catch (error) {
-    log.warn('push.failed', {uid, error: String(error)});
+    log.warn('push.failed', {uid, kind: opts.kind, error: String(error)});
+    return false;
   }
 }
 
@@ -250,7 +471,9 @@ export async function sendLocalized(
   uid: string,
   key: PushKey,
   route: string,
-): Promise<void> {
+  opts: Omit<SendOptions, 'kind'> = {},
+  nowMs: number = Date.now(),
+): Promise<boolean> {
   let locale: string | undefined;
   try {
     const snap = await userDoc(uid).get();
@@ -259,5 +482,11 @@ export async function sendLocalized(
   } catch {
     // Fall through to English; a missing locale is not worth losing the push.
   }
-  await sendToUser(uid, {...pushCopy(key, locale), route});
+  const count = opts.count ?? 1;
+  return sendToUser(
+    uid,
+    {...pushCopy(key, locale, count), route},
+    {...opts, kind: key},
+    nowMs,
+  );
 }

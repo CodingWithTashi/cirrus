@@ -2,6 +2,9 @@
 abstract interface class CommunityApi {
   Future<List<Map<String, dynamic>>> fetchPosts();
 
+  /// One post by id, or null when the backend has no visible post there.
+  Future<Map<String, dynamic>?> fetchPost(String postId);
+
   /// Post JSON carries a client-generated id (Firestore-style). Answers the
   /// id the backend stored it under, which may differ.
   Future<String> addPost(Map<String, dynamic> post);

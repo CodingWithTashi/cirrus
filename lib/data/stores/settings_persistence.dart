@@ -29,6 +29,10 @@ abstract final class SettingsPersistence {
   static const _quietStart = 'settings.quietStartHour';
   static const _quietEnd = 'settings.quietEndHour';
   static const _trialReminderOn = 'settings.trialReminderOn';
+  static const _pushReplies = 'settings.pushRepliesOn';
+  static const _pushMentions = 'settings.pushMentionsOn';
+  static const _pushWeekly = 'settings.pushWeeklyOn';
+  static const _pushPrompt = 'settings.pushPromptShown';
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
@@ -59,6 +63,11 @@ abstract final class SettingsPersistence {
             prefs.getBool(_dangerCustom) ?? defaults.dangerHoursCustom,
         quietStartHour: prefs.getInt(_quietStart) ?? defaults.quietStartHour,
         quietEndHour: prefs.getInt(_quietEnd) ?? defaults.quietEndHour,
+        pushRepliesOn: prefs.getBool(_pushReplies) ?? defaults.pushRepliesOn,
+        pushMentionsOn: prefs.getBool(_pushMentions) ?? defaults.pushMentionsOn,
+        pushWeeklyOn: prefs.getBool(_pushWeekly) ?? defaults.pushWeeklyOn,
+        pushPromptShown:
+            prefs.getBool(_pushPrompt) ?? defaults.pushPromptShown,
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
@@ -97,6 +106,10 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
       await prefs.setInt(_quietStart, state.quietStartHour);
       await prefs.setInt(_quietEnd, state.quietEndHour);
+      await prefs.setBool(_pushReplies, state.pushRepliesOn);
+      await prefs.setBool(_pushMentions, state.pushMentionsOn);
+      await prefs.setBool(_pushWeekly, state.pushWeeklyOn);
+      await prefs.setBool(_pushPrompt, state.pushPromptShown);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
       await prefs.setBool(_milestonesAdopted, state.milestonesAdopted);

@@ -105,6 +105,36 @@
           "queryScope": "COLLECTION_GROUP"
         }
       ]
+    },
+    {
+      "_comment": "Thread-notification rows are swept by the pruneDevices cron with a collection-group query on lastReplyAtMs. Without the COLLECTION_GROUP scope declared here that query throws FAILED_PRECONDITION at runtime and the sweep silently prunes nothing - the same trap devices.lastSeenAt above exists to document.",
+      "collectionGroup": "notifThreads",
+      "fieldPath": "lastReplyAtMs",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "_comment": "The in-app notification inbox is swept by the same cron with a collection-group query on createdAtMs. Same trap as the two overrides above: without COLLECTION_GROUP scope the query throws FAILED_PRECONDITION at runtime and prunes nothing, silently.",
+      "collectionGroup": "notifications",
+      "fieldPath": "createdAtMs",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
     }
   ]
 }

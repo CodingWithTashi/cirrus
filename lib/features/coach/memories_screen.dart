@@ -53,7 +53,7 @@ class CoachMemoriesScreen extends ConsumerWidget {
           // A failed load must not read as "Ember remembers nothing" — that is
           // a reassuring answer to an unanswered question.
           error: (_, _) => LpErrorState(
-            emoji: '🧠',
+            icon: Icons.psychology_alt_rounded,
             title: l10n.memoriesFailed,
             body: l10n.errorGenericBody,
             retryLabel: l10n.moderationRetry,

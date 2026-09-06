@@ -73,6 +73,43 @@ export const cravingsCol = (uid: string): CollectionReference =>
 export const devicesCol = (uid: string): CollectionReference =>
   userDoc(uid).collection('devices');
 
+/**
+ * Per-thread notification state, one document per post this user has been
+ * notified about (`lib/notifyReply.ts`).
+ *
+ * Holds how many replies have arrived since the last buzz, so twenty people
+ * answering one post is not twenty notifications. Server-owned like the rest
+ * of `users/{uid}`: the owner may read it, only the Admin SDK writes it, and
+ * `deleteUserData`'s `recursiveDelete` sweeps it with everything else.
+ *
+ * Old rows are pruned by the `pruneDevices` cron rather than by a Firestore
+ * TTL policy. TTL fires up to 24 hours late and — decisively — is not
+ * implemented by the Firestore emulator, so no integration test could ever
+ * cover it. The cron already has the shape: a collection-group query with a
+ * cutoff, batched deletes, and a declared `COLLECTION_GROUP` field override
+ * without which the query throws at runtime.
+ */
+export const notifThreadsCol = (uid: string): CollectionReference =>
+  userDoc(uid).collection('notifThreads');
+
+/**
+ * The in-app notification inbox — what the shade showed, kept.
+ *
+ * A push is a courtesy that may never arrive: permission declined, no device
+ * registered, the daily budget spent, or simply swiped away before it was
+ * read. This is the durable record, and the only surface that can answer
+ * "what did I miss".
+ *
+ * Server-owned like the rest of `users/{uid}`: the owner reads it directly
+ * through the existing wildcard rule, marking one read goes through
+ * `syncUserContext`, and `deleteUserData`'s `recursiveDelete` sweeps it.
+ * Keyed by the notification tag where there is one, so a busy thread is one
+ * row that updates rather than twenty — the same thing the tag does to the
+ * shade.
+ */
+export const notificationsCol = (uid: string): CollectionReference =>
+  userDoc(uid).collection('notifications');
+
 /** Weekly AI report, keyed by the user's local Sunday. */
 export const insightDoc = (uid: string, weekId: string): DocumentReference =>
   userDoc(uid).collection('insights').doc(weekId);
