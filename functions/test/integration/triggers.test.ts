@@ -464,6 +464,44 @@ describe('notifyReply', () => {
     expect(calls[0]?.[1]).toBe('communityReply');
   });
 
+it('still notifies the author when mention lookup blows up', async () => {
+    // A missing composite index threw out of mention resolution, the
+    // handler's own catch swallowed it, and a reply that happened to name
+    // somebody announced NOTHING to anybody. Mentions are a bonus on top of
+    // the author's notification; they must never cost it.
+    const ref = await thread({replyText: '@ghostwolf88 hello there'});
+    // A reply with no `alias` field at all is the shape that breaks a scan.
+    await postsCol().doc('p1').collection('replies').doc('broken').set({
+      text: 'no alias here',
+      status: 'live',
+    });
+    await publish(ref);
+
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'communityReply',
+      '/community/post/p1',
+      expect.any(Object),
+      expect.any(Number),
+    );
+  });
+
+  it('resolves a mention without needing a composite index', async () => {
+    // The scan filters on `status` and orders by `createdAt`. Doing both in
+    // one query is composite, needs an index that does not exist, and the
+    // emulator does not enforce it — so this passed locally and answered
+    // FAILED_PRECONDITION in production. The ordering happens in memory now.
+    const ref = await thread({
+      postAlias: '@quietfox42',
+      replyText: '@quietfox42 you ok?',
+    });
+    await publish(ref);
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[1]).toBe('communityMention');
+  });
+
   it('does not notify a held reply, and does once it is approved', async () => {
     verdict('hold', 'unclear');
     const ref = await thread();

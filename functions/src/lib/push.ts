@@ -64,6 +64,18 @@ export interface PushPayload {
  * `sendToUser` directly, never `sendLocalized`, and so would have sailed past
  * any gate placed in the wrapper above.
  */
+/**
+ * A payload, or a function that builds one once the recipient's language is
+ * known.
+ *
+ * The factory form exists so localized copy does not cost its own read of
+ * `users/{uid}`: the gate has already read that document, and it hands the
+ * locale to the factory.
+ */
+export type PayloadSource =
+  | PushPayload
+  | ((locale: string | undefined) => PushPayload);
+
 export interface SendOptions {
   readonly kind: PushKind;
   /**
@@ -87,6 +99,28 @@ interface Gate {
   readonly budgeted: boolean;
   readonly quiet: boolean;
   readonly locale: string | undefined;
+  /**
+   * The legacy `fcmTokens` array, carried out of the gate's own read.
+   *
+   * `users/{uid}` used to be read THREE times per push — once for the gate,
+   * once for the locale, once alongside the device subcollection — for one
+   * document whose contents do not change in between. Threading the parts
+   * through makes it one read, and the send path is the hottest thing here.
+   */
+  readonly legacy: ReadonlySet<string>;
+}
+
+const NO_LEGACY: ReadonlySet<string> = new Set<string>();
+
+function legacyTokensOf(snap: FirebaseFirestore.DocumentSnapshot): Set<string> {
+  const out = new Set<string>();
+  const stored: unknown = snap.get('fcmTokens');
+  if (Array.isArray(stored)) {
+    for (const token of stored) {
+      if (typeof token === 'string' && token.length > 0) out.add(token);
+    }
+  }
+  return out;
 }
 
 /**
@@ -174,35 +208,33 @@ interface TokenSources {
   readonly legacy: ReadonlySet<string>;
 }
 
-async function collectTokens(uid: string): Promise<TokenSources> {
-  const [devices, user] = await Promise.all([
-    devicesCol(uid).get(),
-    userDoc(uid).get(),
-  ]);
+/**
+ * Every token [uid] can be reached on.
+ *
+ * [legacy] is supplied by the caller when it has already read the user
+ * document, which the send path always has — see [Gate.legacy]. Only
+ * `listDeviceTokens`, which has no such read, pays for one.
+ */
+async function collectTokens(
+  uid: string,
+  legacy: ReadonlySet<string>,
+): Promise<TokenSources> {
+  const devices = await devicesCol(uid).get();
 
   const tokens = new Set<string>();
   for (const doc of devices.docs) {
     const token: unknown = doc.get('token');
     if (typeof token === 'string' && token.length > 0) tokens.add(token);
   }
-
-  const legacy = new Set<string>();
-  const stored: unknown = user.get('fcmTokens');
-  if (Array.isArray(stored)) {
-    for (const token of stored) {
-      if (typeof token === 'string' && token.length > 0) {
-        legacy.add(token);
-        tokens.add(token);
-      }
-    }
-  }
+  for (const token of legacy) tokens.add(token);
 
   return {tokens: [...tokens], legacy};
 }
 
 /** Every token [uid] can currently be reached on, from both stores. */
 export async function listDeviceTokens(uid: string): Promise<string[]> {
-  return [...(await collectTokens(uid)).tokens];
+  const snap = await userDoc(uid).get();
+  return [...(await collectTokens(uid, legacyTokensOf(snap))).tokens];
 }
 
 /**
@@ -258,8 +290,9 @@ async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gat
       const locale = snap.get('locale') as string | undefined;
       const timeZone = snap.get('tz') as string | undefined;
 
+      const legacy = legacyTokensOf(snap);
       if (!allowedByPrefs(kind, prefs)) {
-        return {allowed: false, budgeted: false, quiet: false, locale};
+        return {allowed: false, budgeted: false, quiet: false, locale, legacy};
       }
 
       const quiet =
@@ -272,7 +305,7 @@ async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gat
         );
 
       if (!spec.countsAgainstBudget) {
-        return {allowed: true, budgeted: true, quiet, locale};
+        return {allowed: true, budgeted: true, quiet, locale, legacy};
       }
 
       // The day is the RECIPIENT's, not UTC's — a cap that resets at 3am
@@ -285,14 +318,20 @@ async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gat
       if (spent >= allowance(DAILY_PUSHES, ALLOWANCE_DEFAULTS.dailyPushes)) {
         // Out of buzzes for today, but NOT out of the inbox: the budget caps
         // how often we interrupt someone, not what they are allowed to know.
-        return {allowed: true, budgeted: false, quiet, locale};
+        return {allowed: true, budgeted: false, quiet, locale, legacy};
       }
       tx.set(userDoc(uid), {pushUsage: {day, count: spent + 1}}, {merge: true});
-      return {allowed: true, budgeted: true, quiet, locale};
+      return {allowed: true, budgeted: true, quiet, locale, legacy};
     });
   } catch (error) {
     log.warn('push.gate_failed', {uid, kind, error: String(error)});
-    return {allowed: true, budgeted: true, quiet: false, locale: undefined};
+    return {
+      allowed: true,
+      budgeted: true,
+      quiet: false,
+      locale: undefined,
+      legacy: NO_LEGACY,
+    };
   }
 }
 
@@ -408,7 +447,7 @@ export function buildMessage(
  */
 export async function sendToUser(
   uid: string,
-  payload: PushPayload,
+  source: PayloadSource,
   opts: SendOptions,
   nowMs: number = Date.now(),
 ): Promise<boolean> {
@@ -419,6 +458,11 @@ export async function sendToUser(
       return false;
     }
 
+    // The gate's own read carried the locale out, so localized copy costs no
+    // second lookup — it used to read the same document again just for this.
+    const payload =
+      typeof source === 'function' ? source(gate.locale) : source;
+
     // Before the token check on purpose: somebody with no device registered
     // still gets the in-app record of what happened.
     await recordNotification(uid, payload, opts, nowMs);
@@ -428,7 +472,7 @@ export async function sendToUser(
       return false;
     }
 
-    const {tokens, legacy} = await collectTokens(uid);
+    const {tokens, legacy} = await collectTokens(uid, gate.legacy);
     if (tokens.length === 0) return false;
 
     const response = await getMessaging().sendEachForMulticast(
@@ -474,19 +518,14 @@ export async function sendLocalized(
   opts: Omit<SendOptions, 'kind'> = {},
   nowMs: number = Date.now(),
 ): Promise<boolean> {
-  let locale: string | undefined;
-  try {
-    const snap = await userDoc(uid).get();
-    const stored: unknown = snap.get('locale');
-    if (typeof stored === 'string') locale = stored;
-  } catch {
-    // Fall through to English; a missing locale is not worth losing the push.
-  }
   const count = opts.count ?? 1;
+  // No read here at all any more. The copy is chosen inside `sendToUser`,
+  // from the locale its own gate read already returned.
   return sendToUser(
     uid,
-    {...pushCopy(key, locale, count), route},
+    (locale) => ({...pushCopy(key, locale, count), route}),
     {...opts, kind: key},
     nowMs,
   );
 }
+

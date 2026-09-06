@@ -305,7 +305,6 @@ describe('the send gate', () => {
     // A cry for help is never refused because ordinary replies used the quota.
     expect(sendEachForMulticast).toHaveBeenCalledTimes(14);
   });
-
   it('tags the notification so a repeat send replaces the shade line', async () => {
     await reachable();
     await sendToUser(

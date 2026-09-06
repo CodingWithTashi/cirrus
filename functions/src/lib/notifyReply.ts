@@ -85,10 +85,19 @@ export async function notifyReply(
     const text = reply.get('text') as unknown;
     const isSos = post.get('tag') === 'sos';
 
-    const mentioned =
-      typeof text === 'string' && replierUid !== null
-        ? await resolveThreadMentions(postRef, post, text, replierUid)
-        : [];
+    // Mentions are a bonus on top of the author's notification, so a failure
+    // resolving them must not cost the author theirs. It did once: a missing
+    // composite index threw out of here, the whole handler's catch swallowed
+    // it, and a reply that happened to name somebody announced NOTHING to
+    // anybody.
+    let mentioned: string[] = [];
+    if (typeof text === 'string' && replierUid !== null) {
+      try {
+        mentioned = await resolveThreadMentions(postRef, post, text, replierUid);
+      } catch (error) {
+        log.warn('push.mentions_failed', {postId, replyId, error: String(error)});
+      }
+    }
 
     for (const uid of mentioned) {
       await sendLocalized(
@@ -207,17 +216,25 @@ async function resolveThreadMentions(
     if (uid !== null) participants.push({alias: postAlias, uid});
   }
 
+  // No `orderBy` here, deliberately. Pairing it with the `status` filter is a
+  // COMPOSITE query, and the composite index for it does not exist — which
+  // the Firestore emulator does not enforce, so every test passed and
+  // production answered FAILED_PRECONDITION. The scan is capped either way,
+  // so the ordering the first-claimant rule needs is done in memory below.
   const replies = await postRef
     .collection('replies')
     .where('status', '==', 'live')
-    .orderBy('createdAt', 'asc')
     .limit(MENTION_SCAN_LIMIT)
     .get();
 
-  const matches = replies.docs.filter((doc) => {
-    const alias = doc.get('alias') as unknown;
-    return typeof alias === 'string' && wanted.has(alias.toLowerCase());
-  });
+  const matches = replies.docs
+    .filter((doc) => {
+      const alias = doc.get('alias') as unknown;
+      return typeof alias === 'string' && wanted.has(alias.toLowerCase());
+    })
+    // Oldest first: `resolveMentions` gives a duplicated alias to whoever used
+    // it FIRST, which is what stops a latecomer stealing somebody's mentions.
+    .sort((a, b) => millisOf(a) - millisOf(b));
 
   const authors = await Promise.all(
     matches.map((doc) => db.collection('replyAuthors').doc(doc.id).get()),
@@ -228,6 +245,12 @@ async function resolveThreadMentions(
   });
 
   return resolveMentions(text, participants, replierUid);
+}
+
+/** A reply's creation time in millis, or 0 when it has none yet. */
+function millisOf(doc: FirebaseFirestore.QueryDocumentSnapshot): number {
+  const at = doc.get('createdAt') as {toMillis?: () => number} | undefined;
+  return typeof at?.toMillis === 'function' ? at.toMillis() : 0;
 }
 
 function asUid(value: unknown): string | null {
