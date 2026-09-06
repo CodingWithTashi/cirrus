@@ -18,5 +18,17 @@
 	     App Check (Team ID PZFFFQ5T9X). -->
 	<key>com.apple.developer.devicecheck.appattest-environment</key>
 	<string>production</string>
+	<!-- The container the home-screen widget reads. Must equal
+	     HomeWidgetStore.appGroupId (lib/data/api/widget_store.dart),
+	     CirrusKeys.appGroup and ios/CirrusWidget/CirrusWidget.entitlements —
+	     test/ios_widget_test.dart pins all four. A group the provisioning
+	     profile does not grant fails to code-sign the HOST app, not just the
+	     extension: register it in the developer portal (App Groups, then both
+	     App IDs) before a device build. Simulator builds need no
+	     registration. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.quitvape.lastPuff</string>
+	</array>
 </dict>
 </plist>
