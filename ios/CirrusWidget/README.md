@@ -1,13 +1,14 @@
 # CirrusWidget — the iOS half
 
-Everything in this folder is **written but never compiled**. It was authored on
-Windows, where no part of it can be built, run or verified. Treat it as a first
-draft that has had a careful review, not as working code.
+The WidgetKit extension behind the Cirrus home-screen widget: day number on
+top, today's count below, `+`/`−` that log a puff while the app is dead. It is
+**built, embedded and simulator-verified** (Sep 5 2026, docs/10 §27) — the
+same loop Android passed on a Pixel 8 in docs/10 §23, driven on an iPhone 16
+Pro simulator (iOS 18.3) by `ios/RunnerUITests`.
 
-The Dart side is already done and platform-agnostic: `WidgetMirror` writes the
-same JSON document the Android provider reads, `PendingPuffs` drains the same
-outbox, and `HomeWidgetStore` declares the App Group before its first write. The
-moment the target below exists, both work.
+The Dart side is platform-agnostic: `WidgetMirror` writes the same JSON the
+Android provider reads, `PendingPuffs` drains the same outbox, and
+`HomeWidgetStore` declares the App Group before its first write.
 
 ## What is in here
 
@@ -17,151 +18,152 @@ moment the target below exists, both work.
 | `CirrusOutbox.swift` | The queue a tap appends to, and the pending-count the widget adds on top. Foundation only, no dependencies. |
 | `LogPuffIntent.swift` | The iOS-17 `AppIntent` behind the `+`/`−`. `openAppWhenRun = false` is the whole point. |
 | `CirrusWidget.swift` | The WidgetKit bundle, timeline provider and SwiftUI views: `systemSmall`, `systemMedium`, and the two lock-screen families Android cannot host at all. |
-| `Info.plist` | Extension bundle metadata. Both version keys resolve only via `Generated.xcconfig` — see step 7. |
+| `Info.plist` | Extension bundle metadata. Both version keys resolve only via `Generated.xcconfig` — see "The Xcode target". |
 | `CirrusWidget.entitlements` | The App Group, and nothing else. |
 
-## Expect it not to compile first time
+## The Xcode target is generated, not hand-made
 
-It has never been through a Swift compiler. Assume a first pass of ordinary
-build errors — a wrong API spelling, a `some View` inference complaint, an
-availability annotation in the wrong place. That is expected and cheap to fix;
-what has been reasoned about carefully is the *logic*, not the syntax.
+`ios/Runner.xcodeproj` gains the `CirrusWidget` app-extension target from a
+script, using the same `xcodeproj` gem CocoaPods edits the project with:
 
-Two things worth knowing while you triage:
-
-- **`CirrusShared.swift` and `CirrusOutbox.swift` are the ones that matter.** If
-  the views need reshaping to satisfy the compiler that is cosmetic, but those
-  two files are the wire contract, and any change to a key name or a field type
-  there has to match `lib/data/stores/pending_puffs.dart`,
-  `lib/data/stores/widget_mirror.dart` and the Kotlin. There is no test on the
-  Swift side to catch drift — `test/android_widget_test.dart` pins Dart against
-  Kotlin only.
-- **`@main` lives on `CirrusWidgetBundle`** at the bottom of `CirrusWidget.swift`.
-  Xcode's own template also generates an `@main`; delete the template's, or the
-  build fails with two entry points.
-
-## Three bugs a code review already caught here
-
-Fixed in the files as they stand, and listed because each would have been
-invisible until a user hit it:
-
-1. **`"t"` was written as a `Double`.** `timeIntervalSince1970 * 1000` produces
-   a fractional JSON number and the Dart decoder reads epoch millis, so every
-   iOS-queued puff would have been silently dropped — and worse than dropped: a
-   rejected event never advances the cursor, so it stays "pending" for ever,
-   keeps inflating the count the widget draws, and eventually fills the queue
-   until every further tap is refused. Now `Int(...)`, and the Dart side accepts
-   any `num` as a second line of defence.
-2. **The day number was derived from an epoch instant.** Local midnight east of
-   Greenwich falls on the previous UTC date, so the arithmetic was a day out for
-   roughly half the world. The mirror now ships `planStartDayKey` as
-   `yyyy-MM-dd` and `epochDay(fromDayKey:)` parses it with `Calendar`.
-3. **Over-limit could never show once the limit reached 0.** `JourneyState.limitOn`
-   returns 0 on the last plan day and every maintenance day after it, so a
-   `limit > 0` guard meant a calm card and a full progress bar on exactly the
-   days one puff puts someone over. The guard is gone; `over` is a bare
-   `count > limit`, matching the app.
-
-## What Xcode has to do that a file edit cannot
-
-`project.pbxproj` is deliberately **not** edited. Two reasons, and the second is
-specific to this repo:
-
-1. A malformed one gives *"The project 'Runner' is damaged and cannot be
-   opened"*, which names no line and blocks every iOS build until it is
-   reverted.
-2. `pubspec.yaml` already documents that `dart run flutter_launcher_icons`
-   rewrites this exact file, and the prescribed recovery is
-   `git checkout ios/Runner.xcodeproj/project.pbxproj`. That command would
-   silently delete a hand-added target. A target Xcode created is re-added by
-   the wizard in thirty seconds; a hand-edit means re-deriving thirty UUIDs.
-
-## The order matters
-
-**Steps 1–2 must happen before step 5 lands on any machine that builds.** An
-entitlements file claiming an App Group the provisioning profile does not grant
-fails to code-sign — and it fails the **host app**, not just the extension. The
-next iOS build breaks for a reason unrelated to whatever you were doing.
-
-1. **Developer portal → Identifiers → App Groups.** Create
-   `group.com.quitvape.lastPuff`.
-2. **Developer portal → Identifiers → App IDs.**
-   - `com.quitvape.lastPuff` — enable App Groups, tick the group.
-   - Create `com.quitvape.lastPuff.CirrusWidget` — enable App Groups, tick the
-     same group. (An extension's bundle id must be prefixed by the host app's.)
-3. **Open `Runner.xcworkspace`** — never `Runner.xcodeproj`. File → New →
-   Target → iOS → **Widget Extension**. Product Name `CirrusWidget`. Uncheck
-   *Include Configuration App Intent* and *Include Live Activity*. Embed in
-   Application: **Runner**. Decline "Activate scheme?".
-4. **Delete Xcode's generated stubs**, then drag in the four `.swift` files,
-   `Info.plist` and `CirrusWidget.entitlements` from this folder. *Create
-   groups*, not folder references. Target membership: **CirrusWidgetExtension
-   only**, never Runner.
-5. **Add the App Group to the host app.** In `ios/Runner/Runner.entitlements`,
-   alongside the existing `applesignin` and `appattest-environment` keys:
-
-   ```xml
-   <key>com.apple.security.application-groups</key>
-   <array>
-       <string>group.com.quitvape.lastPuff</string>
-   </array>
-   ```
-
-   Then Signing & Capabilities → **+ Capability → App Groups** on *both*
-   targets, and confirm Xcode regenerates both provisioning profiles.
-6. **Duplicate `Release` → `Profile`** for the new target (Project → Info →
-   Configurations). Xcode creates only Debug and Release; Flutter needs all
-   three, and without it `flutter run --profile` fails with *"The Xcode project
-   does not define custom schemes"*.
-7. **Set the extension's base configuration to `Flutter/Generated.xcconfig`**
-   on all three configurations. `FLUTTER_BUILD_NAME` and `FLUTTER_BUILD_NUMBER`
-   are defined nowhere else, and `Info.plist` here references both. Left
-   unresolved, the archive succeeds, the upload finishes, and App Store Connect
-   rejects it with `ITMS-90473: CFBundleVersion Mismatch`.
-8. Set `SKIP_INSTALL = YES` on the extension (Xcode usually does). Without it
-   archive validation fails with *"Found an unexpected .appex at the top
-   level."*
-9. `flutter pub get && cd ios && pod install`.
-10. `flutter build ipa` — it runs `pod install` and drives the workspace itself.
-    If you archive from Xcode instead, check the title bar says
-    **Runner.xcworkspace**; the failure signature for the other one is
-    `GeneratedPluginRegistrant.m:12:9 Module 'amplitude_flutter' not found`,
-    which names the wrong thing entirely.
-
-## Verifying it actually works
-
-```bash
-# the App Group container really is shared
-xcrun simctl get_app_container booted com.quitvape.lastPuff groups
-plutil -p "<container>/Library/Preferences/group.com.quitvape.lastPuff.plist"
-# lp.mirror must be there. If the plist is missing entirely, the group id
-# does not match between Runner.entitlements, the extension's, and Dart.
-
-# the extension is embedded and signed with the group
-ls build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app/PlugIns/
-codesign -d --entitlements :- \
-  build/ios/archive/.../Runner.app/PlugIns/CirrusWidget.appex \
-  | grep -A2 application-groups
+```
+/usr/bin/ruby tool/ios_widget_target.rb      # idempotent; no-op once the target exists
 ```
 
-An empty `PlugIns/` is the missing-embed-phase failure — the app builds and
-runs perfectly and the widget never appears in the gallery, with no error
-anywhere. Catch it here rather than in App Store Connect.
+It creates the target (iOS 16.0, Swift 5.0, bundle id
+`com.quitvape.lastPuff.CirrusWidget`, automatic signing on team `PZFFFQ5T9X`),
+gives it Debug/Profile/Release all based on **`Flutter/Generated.xcconfig`**
+(the only place `FLUTTER_BUILD_NAME`/`FLUTTER_BUILD_NUMBER` exist — unlinked,
+the archive uploads and App Store Connect rejects it with `ITMS-90473`),
+`SKIP_INSTALL = YES`, links WidgetKit and SwiftUI SDKROOT-relative, adds the
+four Swift files to Sources, and gives Runner a target dependency plus an
+*Embed Foundation Extensions* copy phase into `PlugIns/`. It deliberately does
+**not** touch the Runner scheme: Flutter parses `xcodebuild -showBuildSettings`
+last-wins and must only ever see Runner's block.
 
-Then, on a device: add the widget, force the app closed, tap `+`, reopen, and
-confirm Home moved by exactly one. That is the same loop verified on Android in
-`docs/10 §23`.
+Why a script: the wizard is thirty seconds of GUI nobody can review, and a
+hand-edited pbxproj is thirty UUIDs nobody can verify. `pubspec.yaml` still
+prescribes `git checkout ios/Runner.xcodeproj/project.pbxproj` after
+`dart run flutter_launcher_icons`; with the target committed that is safe, and
+if it ever is not, re-running the script puts it back.
+
+`test/ios_widget_test.dart` pins all of it — the target, its three configs and
+their xcconfig link, the embed phase, the entitlements on **both** sides, every
+key and field name against the Dart contract, and the Ember hexes against
+`lp_colors.dart`. `test/ios_widget_contract_test.dart` goes further on a Mac:
+it compiles `CirrusShared.swift` + `CirrusOutbox.swift` with `swiftc` and
+round-trips a Dart-built mirror through the real Swift and a Swift-written
+outbox through the real Dart decoder (skipped where there is no Xcode).
+
+## Building and running
+
+```
+flutter build ios --simulator --debug --dart-define=LP_BACKEND=firebase --dart-define-from-file=.dart_defines.json
+ls build/ios/iphonesimulator/Runner.app/PlugIns/          # CirrusWidget.appex
+flutter run -d <ios-device> --dart-define=LP_BACKEND=firebase --dart-define-from-file=.dart_defines.json
+flutter build ipa                                          # archives from the workspace
+```
+
+**The widget only does anything on the Firebase backend.** `widgetCoordinatorProvider`
+is `null` on the fake backend by design (a stale outbox draining into the
+in-memory demo journey would advance the cursor and lose a real account's
+puffs), so `LP_BACKEND=fake` shows an app with a dead widget. That is the same
+on Android.
+
+Verifying the container on a simulator:
+
+```
+xcrun simctl get_app_container booted com.quitvape.lastPuff groups
+xcrun simctl spawn booted defaults read "<container>/Library/Preferences/group.com.quitvape.lastPuff.plist"
+```
+
+Read it through `simctl spawn … defaults read`, not `plutil -p` on the file:
+the extension writes through the simulator's cfprefsd, and the file on disk
+can lag it by seconds — `lp.seq 2` on disk while `lp.seq 3` is the truth.
+
+## The simulator loop, automated
+
+Adding a widget, tapping it and killing the app in between all happen in
+Springboard, outside the app's process, where no Flutter test can go. So the
+iOS loop is three pieces the Mac side interleaves:
+
+1. **A signed-in journey**, left on the device by an integration entrypoint
+   run with `flutter run` (a test run would tear it down):
+   ```
+   flutter run -d <udid> -t integration_test/j_widget_session_test.dart \
+     --dart-define=LP_BACKEND=firebase --dart-define-from-file=.dart_defines.json \
+     --dart-define=E2E_EMAIL=e2e-widget-$(date +%s)@cirrus-test.app --no-resident
+   ```
+   Then reinstall the normal build; `restoreSession` lands on Home. The same
+   command with `--dart-define=E2E_STEP=teardown` deletes the account through
+   `deleteUserData` when you are done. **Writes to production `alastpuff`.**
+2. **`ios/RunnerUITests/CirrusWidgetUITests.swift`**, an XCUITest that drives
+   Springboard. Its target and scheme come from `tool/ios_uitests_target.rb`
+   (same gem, same idempotence; the Runner scheme is untouched). Build once,
+   then run steps one at a time:
+   ```
+   xcodebuild build-for-testing -workspace ios/Runner.xcworkspace -scheme RunnerUITests \
+     -sdk iphonesimulator -destination "id=<udid>" BUILD_DIR="$PWD/build/ios" \
+     ONLY_ACTIVE_ARCH=YES ARCHS=arm64
+   xcodebuild test-without-building -xctestrun ~/Library/Developer/Xcode/DerivedData/Runner-*/Build/Products/RunnerUITests_*.xctestrun \
+     -destination "id=<udid>" -only-testing:RunnerUITests/CirrusWidgetUITests/testAddWidget
+   ```
+   Steps: `testAddWidget`, `testAddMediumWidget`, `testTapPlus`, `testTapMinus`,
+   `testTerminateApp`, `testLaunchApp`, `testDumpWidget`. Springboard puts a
+   new widget on whichever page has room, so every step pages until it finds
+   the `+` (found by its accessibility label, "Log a puff").
+3. **The plist and screenshots** between steps (`xcrun simctl io booted screenshot`).
+
+What Sep 5 2026 proved on iOS 18.3, in this order: the mirror lands in the
+group before sign-in (empty card) and after (day 1, 0/190, seven `limits`);
+the widget appears in the gallery drawing live numbers; with the app
+**terminated**, `+` `+` `−` queue `seq` 1–3 with integral `t` and the widget
+reads 1; launching the app drains exactly one puff (Home's Day-1 checklist
+ticks "Log your first puff"), `lp.cursor` becomes 3 and the widget still
+reads 1; a second launch changes nothing; `−` at 1 queues `seq` 4 and dims
+itself at 0; `−` at 0 is disabled, so the tap falls through to opening the
+app, and nothing is queued; the medium family draws its bar.
+
+## What only the founder can do
+
+- **Developer portal: done (Sep 5 2026).** App Group
+  `group.com.quitvape.lastPuff` exists, and both App IDs —
+  `com.quitvape.lastPuff` and `com.quitvape.lastPuff.CirrusWidget` — carry it
+  under App Groups (verified in the portal). Xcode's automatic signing
+  registered all three by itself: Flutter passes `-allowProvisioningUpdates`
+  on every signed build, simulator builds included. If a device build ever
+  refuses to sign the host app, check those three rows first — an entitlement
+  the profile does not grant fails the app, not just the extension.
+- No runtime permission exists on iOS for a widget, and nothing in Firebase
+  changes: the extension never touches Firebase or App Check.
+- Lock-screen (accessory) families are compiled and rendered by the same
+  views, but were not driven on the simulator — Springboard's lock-screen
+  editor is not automated here. Add one by hand on a phone before the
+  listing claims it.
 
 ## Things that will bite
 
-- **`kind` must match in three places** — `CirrusKeys.kind` here,
-  `HomeWidgetStore.iOSName` in Dart, and the `reloadTimelines(ofKind:)` call.
-  `test/android_widget_test.dart` pins the first two; the third is in
-  `LogPuffIntent.swift`. A mismatch is completely silent.
+- **`kind` must match in three places** — `CirrusKeys.kind`,
+  `HomeWidgetStore.iOSName`, and `reloadTimelines(ofKind:)`. Pinned by the
+  Dart tests; a mismatch is completely silent.
 - **The extension does not inherit the app's fonts.** These views use the
   system font on purpose. If you ever add Space Grotesk, the TTF must be a
   member of the *extension's* resources and listed in *its* `UIAppFonts` — and
   the failure mode is no crash, just SF Pro everywhere.
 - **iOS 16 has no interactive widget.** `Controls` draws nothing there by
-  design; the card is a link into the app instead. Do not "fix" that by drawing
+  design; the card is a tap into the app instead. Do not "fix" that by drawing
   buttons that cannot act.
+- **The widget wears Midnight Ember always.** A WidgetKit view draws itself,
+  so it does not follow the system theme the way the Android widget must
+  (the launcher inflates that one). Both deviations are documented in
+  CLAUDE.md's theming section.
+- **`static var` on an `AppIntent` is a Swift 6 error.** `title` is a computed
+  property and `openAppWhenRun` a `let` for that reason; keep `SWIFT_VERSION`
+  at 5.0 on the target so Xcode's new-target defaults never apply either.
+- **Changing the arch set or the `BUILD_DIR` string recompiles every pod.**
+  `flutter build ios --simulator` builds both simulator archs, `flutter run
+  -d <sim>` builds arm64 only, and a UI-test build passes its own `BUILD_DIR`;
+  alternating between them cost three ~18-minute gRPC rebuilds in one session.
+  Pick one shape per session — `flutter run -d <udid> --no-resident` for the
+  install, `ONLY_ACTIVE_ARCH=YES ARCHS=arm64 BUILD_DIR=$PWD/build/ios` (absolute,
+  from the repo root) for the UI tests — and stay with it.

@@ -94,25 +94,54 @@ private struct DayPill: View {
 }
 
 private struct PlusLabel: View {
+    /// Fixed on the wide card (Android's 86dp column), fills the row on the small one.
+    var width: CGFloat? = nil
+
     var body: some View {
         Text("+")
-            .font(.system(size: 18, weight: .bold))
+            .font(.system(size: 20, weight: .bold))
             .foregroundStyle(Color.cwOnVolt)
-            .frame(maxWidth: .infinity, minHeight: 40)
+            .frame(width: width, height: 44)
+            .frame(maxWidth: width == nil ? .infinity : nil)
             .background(Color.cwVolt, in: Capsule())
     }
 }
 
 private struct MinusLabel: View {
     let enabled: Bool
+    var width: CGFloat = 48
 
     var body: some View {
+        // Mirrors cw_btn_minus / cw_btn_minus_off: the same dark capsule, with
+        // the ring fading into the card when there is nothing to remove.
         Text("\u{2212}")
-            .font(.system(size: 18))
+            .font(.system(size: 18, weight: .semibold))
             .foregroundStyle(Color.cwTextDim.opacity(enabled ? 1 : 0.35))
-            .frame(width: 48, height: 40)
+            .frame(width: width, height: 40)
             .background(Color.cwSurfaceLow, in: Capsule())
-            .overlay(Capsule().stroke(Color.cwBorder, lineWidth: 1))
+            .overlay(
+                Capsule().stroke(enabled ? Color.cwBorder : Color.cwSurface, lineWidth: 1)
+            )
+    }
+}
+
+/// Today against the line, as a 6pt capsule: the same `cw_bar` Android draws,
+/// with the track in volt at 12% so it reads on the dark card at zero too
+/// (a system `ProgressView` track vanishes there).
+private struct LineBar: View {
+    let fraction: Double
+    let over: Bool
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill((over ? Color.cwDanger : Color.cwVolt).opacity(0.12))
+                Capsule()
+                    .fill(over ? Color.cwDanger : Color.cwVolt)
+                    .frame(width: max(0, min(1, fraction)) * geo.size.width)
+            }
+        }
+        .frame(height: 6)
     }
 }
 
@@ -122,17 +151,38 @@ private struct MinusLabel: View {
 /// the buttons are not drawn — the whole card is a deep link into the app
 /// instead. A control that looks interactive and silently does nothing is the
 /// failure this codebase has already named once.
+///
+/// `stacked` is the wide card: `+` above `−` in a column beside the numbers,
+/// exactly where Android's 4x2 puts them. The small card lays them in a row
+/// under the numbers.
 private struct Controls: View {
     let canRemove: Bool
+    var stacked = false
 
     var body: some View {
         if #available(iOS 17.0, *) {
-            HStack(spacing: 8) {
-                Button(intent: LogPuffIntent(delta: -1)) { MinusLabel(enabled: canRemove) }
-                    .buttonStyle(.plain)
-                    .disabled(!canRemove)
-                Button(intent: LogPuffIntent(delta: 1)) { PlusLabel() }
-                    .buttonStyle(.plain)
+            // Labelled in words: a glyph alone reads as "plus" to VoiceOver,
+            // and the labels are also what `RunnerUITests` taps by.
+            if stacked {
+                VStack(spacing: 8) {
+                    Button(intent: LogPuffIntent(delta: 1)) { PlusLabel(width: 86) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Log a puff")
+                    Button(intent: LogPuffIntent(delta: -1)) { MinusLabel(enabled: canRemove, width: 86) }
+                        .buttonStyle(.plain)
+                        .disabled(!canRemove)
+                        .accessibilityLabel("Remove a puff")
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Button(intent: LogPuffIntent(delta: -1)) { MinusLabel(enabled: canRemove) }
+                        .buttonStyle(.plain)
+                        .disabled(!canRemove)
+                        .accessibilityLabel("Remove a puff")
+                    Button(intent: LogPuffIntent(delta: 1)) { PlusLabel() }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Log a puff")
+                }
             }
         }
     }
@@ -151,39 +201,61 @@ struct CirrusHomeView: View {
 
     @ViewBuilder
     private var content: some View {
-        if entry.mirror.hasJourney {
+        if !entry.mirror.hasJourney {
+            EmptyCard(mirror: entry.mirror)
+        } else if wide {
+            // Android's 4x2: the numbers own the left, the buttons the right,
+            // vertically centred. Nothing floats in the middle.
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        DayPill(text: entry.today.dayLabel(entry.mirror))
+                        Text(entry.mirror.flame).font(.system(size: 15))
+                    }
+                    countRow(size: 40)
+                    if entry.today.knowsLimit, entry.today.limit > 0 {
+                        LineBar(
+                            fraction: Double(entry.today.count) / Double(entry.today.limit),
+                            over: entry.today.over
+                        )
+                    }
+                    statusText.lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Controls(canRemove: entry.today.count > 0, stacked: true)
+            }
+        } else {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     DayPill(text: entry.today.dayLabel(entry.mirror))
                     Spacer()
                     Text(entry.mirror.flame).font(.system(size: 15))
                 }
-                HStack(alignment: .lastTextBaseline, spacing: 5) {
-                    Text("\(entry.today.count)")
-                        .font(.system(size: wide ? 44 : 34, weight: .bold))
-                        .foregroundStyle(entry.today.over ? Color.cwDanger : Color.white)
-                    if entry.today.knowsLimit {
-                        Text("/ \(entry.today.limit)")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.cwTextDim)
-                    }
-                }
-                if wide, entry.today.knowsLimit, entry.today.limit > 0 {
-                    ProgressView(
-                        value: min(Double(entry.today.count) / Double(entry.today.limit), 1)
-                    )
-                    .tint(entry.today.over ? Color.cwDanger : Color.cwVolt)
-                }
-                Text(entry.today.statusLine(entry.mirror))
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.cwTextDim)
-                    .lineLimit(2)
+                countRow(size: 34)
+                statusText.lineLimit(2)
                 Spacer(minLength: 4)
                 Controls(canRemove: entry.today.count > 0)
             }
-        } else {
-            EmptyCard(mirror: entry.mirror)
         }
+    }
+
+    private func countRow(size: CGFloat) -> some View {
+        HStack(alignment: .lastTextBaseline, spacing: 5) {
+            Text("\(entry.today.count)")
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(entry.today.over ? Color.cwDanger : Color.white)
+            if entry.today.knowsLimit {
+                Text("/ \(entry.today.limit)")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.cwTextDim)
+            }
+        }
+    }
+
+    private var statusText: some View {
+        Text(entry.today.statusLine(entry.mirror))
+            .font(.system(size: 11))
+            .foregroundStyle(Color.cwTextDim)
     }
 }
 
@@ -198,7 +270,7 @@ struct CirrusAccessoryView: View {
     let rectangular: Bool
 
     var body: some View {
-        content.containerBackgroundCompat()
+        content.containerBackgroundCompat(accessory: true)
     }
 
     @ViewBuilder
@@ -234,8 +306,15 @@ private extension View {
     /// `.containerBackground` is required from iOS 17 — without it the widget
     /// draws on a system default background and StandBy misbehaves. It does
     /// not exist on 16, hence the shim.
+    ///
+    /// `accessory` is the lock-screen families. iOS 17 still wants the
+    /// modifier there (it ignores the content and paints its own vibrant
+    /// ground), but the iOS 16 fallback must NOT paint Ember under them — an
+    /// accessory widget is monochrome by system design, and a solid dark
+    /// rectangle on the lock screen is exactly the blob that rule exists to
+    /// prevent.
     @ViewBuilder
-    func containerBackgroundCompat() -> some View {
+    func containerBackgroundCompat(accessory: Bool = false) -> some View {
         if #available(iOS 17.0, *) {
             self.containerBackground(for: .widget) {
                 LinearGradient(
@@ -244,6 +323,8 @@ private extension View {
                     endPoint: .bottom
                 )
             }
+        } else if accessory {
+            self
         } else {
             self.padding(12).background(Color.cwSurface)
         }

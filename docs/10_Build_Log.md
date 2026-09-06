@@ -2929,3 +2929,130 @@ the horizontal centre, stacked tile → name → tagline, with the group's midpo
 within 15% of the screen's.
 
 `flutter analyze` 0 · `flutter test` **1469/1469**.
+
+## 27. THE WIDGET REACHES THE IPHONE (Sep 5) — a target from a script, and a home screen driven by XCTest
+
+`B22` closed. The Swift in `ios/CirrusWidget/` — written on Windows, never
+compiled, carried across two sessions as "expect build errors" — went through
+Xcode 26's compiler with **zero diagnostics** on the first pass. The work was
+never the Swift. It was the project file, the entitlement, and proving the
+thing on a real iOS runtime without a hand on the simulator.
+
+**The target is generated.** `tool/ios_widget_target.rb` adds the
+`CirrusWidget` app-extension target with the `xcodeproj` gem — the library
+CocoaPods already edits `project.pbxproj` with on every `pod install` — and
+is a no-op once the target exists. iOS 16.0 (accessory families and `Gauge`;
+the `+`/`−` are `#available`-guarded to 17), Swift 5.0 pinned so Xcode 26's
+new-target defaults (Swift 6 mode, main-actor isolation) never apply, three
+configurations because Flutter needs Profile, all three based on
+`Flutter/Generated.xcconfig` — the only file that defines
+`FLUTTER_BUILD_NAME`/`NUMBER`, which the extension's Info.plist reads; left
+unlinked, the upload finishes and App Store Connect answers `ITMS-90473`. Not
+`Debug.xcconfig`: that `#include?`s the Pods-Runner xcconfig, whose
+`OTHER_LDFLAGS` would drag every Firebase pod into the extension's link line.
+Three gem traps the review caught before the script ran: `new_target` links
+Foundation via a hard-coded `iPhoneOS18.0.sdk` developer-dir path that does
+not exist under Xcode 26 (cleared, frameworks re-added SDKROOT-relative);
+`add_file_references` routes *every* non-header file into Sources, so the
+plist and entitlements are plain references; and the target must never enter
+the Runner scheme, because Flutter parses `xcodebuild -showBuildSettings`
+last-wins. The built appex carried `1.0.12 (13)`, `MinimumOSVersion 16.0` and
+the App Group in its `__TEXT,__entitlements` section — the simulator embeds
+entitlements there, not in the ad-hoc signature, which is why
+`codesign -d --entitlements` shows an empty dict and `strings` shows the group.
+
+**Runner's entitlement is the half that bites.** The extension's
+`CirrusWidget.entitlements` was written a day earlier; `Runner.entitlements`
+now carries the same `com.apple.security.application-groups`. Without it the
+app writes `UserDefaults.standard`, the widget reads an empty suite, and the
+empty card shows for ever with nothing in any log. The pin test checks the
+group in **four** places — both entitlements, `CirrusKeys.appGroup`,
+`HomeWidgetStore.appGroupId`.
+
+**Two Dart tests, one of which runs Swift.** `test/ios_widget_test.dart` (21)
+is the iOS twin of `android_widget_test.dart`: every `lp.*` key in
+`CirrusShared.swift` equals the Dart set, every mirror field Swift reads is one
+`buildMirror` writes, the outbox letters, the `Int(` on `t`, the `kind` in all
+three places, the no-journey guards, the pbxproj (product type, bundle id
+prefixed by the host's, `SKIP_INSTALL`, three configs on
+`9740EEB31CF90195004384FC`, the embed phase with `dstSubfolderSpec 13` and
+`RemoveHeadersOnCopy`, every `.swift` in Sources, nothing else in a phase, the
+Runner scheme clean), the Info.plist's Flutter version keys, and every
+`// #RRGGBB` in `CirrusWidget.swift` against the Midnight Ember tokens — with
+the RGB components checked against the comment so neither can drift alone.
+`test/ios_widget_contract_test.dart` (4) compiles `CirrusShared.swift` +
+`CirrusOutbox.swift` with `xcrun swiftc` on the Mac and round-trips: a
+Dart-built seed-journey mirror read by the real Swift (all seven `limits`
+survive the `[String: Int]` cast), `+ + + −` appended by the real
+`CirrusOutbox`, the bytes decoded by the real `PendingPuffs`. Tagged `swift`,
+self-skipping without Xcode — CI is Linux and the other dev machine is
+Windows. It wipes the suite it writes to before and after, because
+`CirrusKeys.appGroup` is a static and on a Mac `UserDefaults(suiteName:)` is a
+real file under `~/Library/Preferences`.
+
+**The simulator loop, with no hand on it.** The founder asked for the sign-in
+to be done for them, and macOS had not granted the terminal Accessibility, so
+neither `cliclick` nor `osascript` could touch the simulator. Two pieces
+replaced the hand:
+
+1. `integration_test/j_widget_session_test.dart`, run with **`flutter run
+   --no-resident`** rather than `flutter test` — a test run tears the app down
+   and the whole point is what it leaves behind. It registers a throwaway
+   (`e2e-widget-<ms>@cirrus-test.app`, the `f_firebase_backend_test`
+   convention), signs in through the store and calls `startJourney` straight
+   past the twenty onboarding screens; Firebase Auth persists the session in
+   the device keychain, so reinstalling the normal build lands on Day 1. The
+   same file with `E2E_STEP=teardown` deletes the account through
+   `deleteUserData`.
+2. `ios/RunnerUITests/CirrusWidgetUITests.swift`, an XCUITest against
+   **Springboard** (`XCUIApplication(bundleIdentifier: "com.apple.springboard")`),
+   with its own generated target and scheme (`tool/ios_uitests_target.rb`).
+   Long-press an empty patch → jiggle mode → "Add Widget" → the gallery's
+   search field (matched by placeholder — Springboard has an App Library
+   search field sitting off-screen at x = 1238 that `searchFields.firstMatch`
+   picks first) → the "Cirrus" row (matched with `elementType != icon`,
+   because the home-screen icon behind the sheet has the same label and a
+   zero frame) → " Add Widget" (a leading space: the SF symbol) → Done. Then
+   `+`/`−` by their accessibility labels — "Log a puff" and "Remove a puff",
+   added for the test and long overdue for VoiceOver, which read the glyphs
+   as "plus". Springboard puts a new widget on whichever page has room (page
+   two, beside the app's icon), so every step pages until it finds the `+`.
+
+What it proved, on an iPhone 16 Pro simulator running iOS 18.3.1, against
+production Firebase with the pinned App Check token:
+
+| Step | Observed |
+|---|---|
+| Launch, signed out | `lp.mirror` in the group with `hasJourney false` and the six localized copy strings, nothing numeric |
+| Session created, normal build relaunched | Day 1 Home; mirror `dayNumber 1`, `puffs 0`, `limit 190`, seven `limits`, `planStartDayKey 2026-09-05` |
+| Gallery | the widget draws live from the mirror inside the size picker |
+| App **terminated**; `+`, `+`, `−` | outbox `seq` 1, 2, 3 with integral `t`; `lp.seq 3`; no cursor; widget reads **1**, "189 left" |
+| Launch | `lp.cursor 3`, mirror `puffs 1`; Home's Day-1 checklist ticks *Log your first puff*; widget still **1** |
+| Launch again | nothing changes |
+| Terminated; `−` | `seq 4` (the three drained events pruned); widget **0**, `−` dimmed |
+| `−` at 0 | disabled, so the tap falls through to the card and opens the app; nothing queued; next drain moves the cursor to 4 |
+| Medium family | the bar and the full status line — after a second pass: the first cut stacked everything at the top with a void beneath and an invisible `ProgressView` track, so the medium card now mirrors Android's 4x2 (numbers and a 6pt volt-track bar on the left, `+` over `−` on the right, vertically centred) |
+
+One reading trap for the next person: **read the group through
+`xcrun simctl spawn booted defaults read <plist>`, not `plutil -p` on the
+file.** The extension writes through the simulator's cfprefsd and the file
+lags by seconds — the plist on disk said `lp.seq 2` while the widget, correctly,
+already showed the `−` that made it 3. And the pods recompile whenever the arch set
+or the `BUILD_DIR` string changes: `flutter build ios --simulator` is both
+archs, `flutter run -d <sim>` is arm64 only, the UI-test build has its own
+`BUILD_DIR` — alternating between them cost three eighteen-minute gRPC rebuilds
+in one afternoon. The README says which shape to pick and stay with.
+
+**What the simulator cannot say.** App Attest on a release build; a signed
+phone build (the portal rows it needs already exist — automatic signing
+registered the group and both App IDs during the day's builds, checked in the
+portal that evening); the lock-screen
+accessory families, which compile and render from the same views but whose
+Springboard editor was not automated — a hand pass on a phone is owed before
+the listing names the lock screen. And an in-app LOG PUFF repainting the
+widget was not driven either: XCUITest saw only the offline pill in the Flutter
+semantics tree on that launch, so the app-driven `reloadTimelines` is proved
+by the sign-out flip (deletion pushes `hasJourney false` and both widgets
+repaint to the empty card with no tap on them) rather than by a count rising.
+
+`flutter analyze` 0 · `flutter test` **1494/1494** (1469 + the 21 iOS pins + the 4 Swift round-trips) · the simulator loop above run twice end to end, the second time on a fresh throwaway account after the medium-layout fix.

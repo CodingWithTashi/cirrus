@@ -239,7 +239,7 @@
 
 ---
 
-## 14. ANDROID HOME-SCREEN WIDGET
+## 14. HOME-SCREEN WIDGET (Android and iOS)
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
@@ -249,7 +249,7 @@
 | 112 | **Midnight rollover** | Day number and count roll over with the app closed, and the limit follows the taper curve. | Drive the clock forward with the app closed. |
 | 113 | **Convergence** | The widget and the app never settle on different numbers, offline included. The count is recomputed from the clock at tap time, never read off the pixels — a tap on a stale widget still files today's puff on today. | Airplane mode → 3 taps → open the app → both agree. Cold restart → still agree. |
 | 113b | **No session, no numbers** | Signed out, freshly installed, account deleted, or a launch that restores no session: the widget shows **"Start your plan / Tap to open Cirrus"** and nothing else. No count, no day number, no working `+`/`−`. The mirror carries no numeric keys at all in this state, and a tap is refused natively. | Sign out with the widget on the home screen → it flips to the message. Tap `+` → nothing happens, nothing queues. |
-| 114 | **iOS widget** | **Not shipped.** The Swift is written (`ios/CirrusWidget/`) but the Xcode target does not exist — `docs/08` B22. | Do not test on iOS. |
+| 114 | **iOS widget** | The WidgetKit twin of 109: `systemSmall` and `systemMedium` (day pill, count / limit, status line, `−`/`+` that log in place on iOS 17+; the medium adds the bar), plus `accessoryCircular`/`accessoryRectangular` for the lock screen. Same mirror, same outbox, same guards as Android; wears Midnight Ember always. Simulator-verified Sep 5 2026 (docs/10 §27); accessory families compiled but not yet driven by hand on a phone. | Long-press the home screen → Edit → Add Widget → search "Cirrus". Then the loop in 113: kill the app, `+ + −`, reopen, both agree. Automated on a simulator by `ios/RunnerUITests` — see `ios/CirrusWidget/README.md`. |
 
 ---
 
@@ -276,7 +276,7 @@
 | **Founding-offer / winback card** | Gated off until the tagged $3.99 store offer exists. |
 | **Star-rating gate** | Neither store permits asking for an opinion before the system prompt. The five-star row on D3 belongs to the testimonial, not to the user. |
 | **Rating confirmation** | Neither OS reports whether its sheet appeared, so nothing may claim a rating was submitted. |
-| **iOS widget** | Authored, unbuilt (B22). |
+| **iOS lock-screen widget, hand-verified** | The accessory families build and render from the same views, but only the home-screen families were driven on the simulator (Sep 5 2026). A phone pass is owed before the listing names the lock screen. |
 
 ---
 
@@ -290,7 +290,7 @@
 6. Coach: send 6 messages → cap CTA. Say something personal → check `/coach/memories`.
 7. Community: post `a` (refused), post something real, post a second (allowance), post an SOS, react, reply, report.
 8. Panic: SOS → breathe → intensity 9 → one full Orbs round → chain → *it passed* → share.
-9. Widget: add it, kill the process, `+ + + −`, reopen, verify the count.
+9. Widget: add it, kill the process, `+ + + −`, reopen, verify the count. On iOS the same loop, plus the medium family; the lock-screen family by hand.
 10. Settings: danger hour 10 minutes out → background → wait for the push. Then language `pt`, appearance light, theme Tide. Sign out.
 
 ---
