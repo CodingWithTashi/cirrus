@@ -118,7 +118,11 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
     // After the frame, never during the build that pushed us: a journey
     // commit while a route settles is the "navigate before you mutate" bug.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _store.setLastGame(_entry.id);
+      if (!mounted) return;
+      // From the flow this is a no-op; from a `?g=` link with no flow
+      // beneath, it is what starts the craving's clock and tells the server.
+      _session.ensureStarted();
+      _store.setLastGame(_entry.id);
     });
   }
 

@@ -7,12 +7,14 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/logic/reminder_planner.dart';
 import '../day1/day1_spotlight.dart';
+import 'quiet_hours_band.dart';
 
 /// Danger-hours editor sheet — reachable from Settings AND by tapping the
 /// Stats trigger-hours heatmap (frame 38 note: "Heatmap taps into
@@ -37,6 +39,16 @@ import '../day1/day1_spotlight.dart';
 /// which is the form of plan people actually follow through on, and stating
 /// "one, at this time" is what stops a reminder reading as spam before it has
 /// fired once.
+///
+/// Quiet hours live here too, since Sep 6 2026 (docs/10 §28): the rail under
+/// the chips is the window nothing lands in, dragged by its ends or slid by
+/// its middle. The chips are re-derived from the window under the finger —
+/// an hour whose nudge would fall inside it leaves the grid, and a selection
+/// that stops qualifying steps to the nearest hour that still fires — and the
+/// promise card re-prints both times on every move, so the two settings can
+/// never be saved in disagreement. Save writes both; a swipe-away saves
+/// neither. The trial reminder and the milestone celebration read the same
+/// window from the same setting, so they move with it.
 void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
   // Locked shut while the Day-1 walkthrough is on this step: the sheet IS
   // the lesson, and swiping it away unsaved would leave the step unfinished
@@ -55,27 +67,40 @@ void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
     isScrollControlled: true,
     builder: (sheetContext) {
       final settings = ref.read(settingsStoreProvider);
-      final hours = ReminderPlanner.eligibleStartHours(
-        quietStartHour: settings.quietStartHour,
-        quietEndHour: settings.quietEndHour,
+      var quiet = QuietTrack.fromHours(
+        settings.quietStartHour,
+        settings.quietEndHour,
       );
       // A start saved by the old slider can sit inside quiet hours (midnight
       // to 2am). Land on the nearest hour that works rather than opening with
       // nothing selected.
-      var start = _nearestOf(hours, settings.dangerStartHour % 24);
+      var start = _nearestOf(_eligible(quiet), settings.dangerStartHour % 24);
+      // The chip the selection last stepped onto by itself, so it pops once
+      // and the eye follows it; a fresh key per step re-runs the pop.
+      int? steppedTo;
+      var steps = 0;
       return StatefulBuilder(
         builder: (context, setState) {
           final lp = context.lp;
           final l10n = context.l10n;
           final locale = context.localeTag;
+          final hours = _eligible(quiet);
+          // The window moved under the selection: step to the nearest hour
+          // that still fires, visibly, rather than promising a nudge the
+          // planner would refuse.
+          if (!hours.contains(start)) {
+            start = _nearestOf(hours, start);
+            steppedTo = start;
+            steps++;
+          }
           final fire = ReminderPlanner.fireTimeFor(start);
           final nudgeAt = LpFormat.clockTime(
             DateTime(2026, 1, 1, fire.$1, fire.$2),
             locale,
           );
           final quietRange =
-              '${LpFormat.hour(settings.quietStartHour, locale)} – '
-              '${LpFormat.hour(settings.quietEndHour, locale)}';
+              '${LpFormat.hour(quiet.startHour, locale)} – '
+              '${LpFormat.hour(quiet.endHour, locale)}';
           return SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -94,30 +119,77 @@ void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
                       style: LpType.caption(lp.textSecondary),
                     ),
                     const SizedBox(height: 18),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final hour in hours)
-                          LpChip(
-                            label: LpFormat.hour(hour, locale),
-                            selected: hour == start,
-                            selectedColor: lp.ember,
-                            fontSize: 13,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 13,
-                              vertical: 9,
+                    // The grid re-derives itself from the window below; the
+                    // size animates so a row appearing or leaving never jumps.
+                    AnimatedSize(
+                      duration: LpMotion.fast,
+                      curve: LpMotion.ease,
+                      alignment: Alignment.topCenter,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final hour in hours)
+                            _Pop(
+                              key: ValueKey(
+                                hour == steppedTo ? 'step$steps' : 'hour$hour',
+                              ),
+                              animate: hour == steppedTo,
+                              child: LpChip(
+                                label: LpFormat.hour(hour, locale),
+                                selected: hour == start,
+                                selectedColor: lp.ember,
+                                fontSize: 13,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 13,
+                                  vertical: 9,
+                                ),
+                                onTap: () {
+                                  LpHaptics.tick();
+                                  setState(() {
+                                    start = hour;
+                                    steppedTo = null;
+                                  });
+                                },
+                              ),
                             ),
-                            onTap: () {
-                              LpHaptics.tick();
-                              setState(() => start = hour);
-                            },
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        SectionLabel(
+                          l10n.settingsQuietHoursLabel,
+                          padding: EdgeInsets.zero,
+                        ),
+                        Text(
+                          '$quietRange · '
+                          '${l10n.settingsQuietHoursLength(quiet.length)}',
+                          style: LpType.body13(
+                            lp.textPrimary,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Room for the hour pill that rides above the knob.
+                    const SizedBox(height: 26),
+                    QuietHoursBand(
+                      track: quiet,
+                      onChanged: (next) => setState(() => quiet = next),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.settingsQuietHoursHint,
+                      style: LpType.caption11(lp.textFaint),
+                    ),
+                    const SizedBox(height: 16),
                     // The promise, live: exactly what will happen for the
-                    // hour selected above, and the one time it never will.
+                    // hour selected above, and the one window it never will.
                     Container(
                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                       decoration: BoxDecoration(
@@ -160,6 +232,12 @@ void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
                     const SizedBox(height: 16),
                     PressScale(
                       onTap: () {
+                        // Both choices, one Save. The quiet window first: the
+                        // start below was chosen against it, and the
+                        // coordinator re-plans on each commit.
+                        ref
+                            .read(settingsStoreProvider.notifier)
+                            .setQuietHours(quiet.startHour, quiet.endHour);
                         // The end hour is kept for the model's sake only —
                         // nothing schedules or shows it — so it follows the
                         // start by the span the default always had.
@@ -206,6 +284,12 @@ void showDangerHoursSheet(BuildContext context, WidgetRef ref) {
 /// start hour is chosen or used; see the Save handler.
 const int _spanHours = 3;
 
+/// The start hours whose nudge clears [quiet] — the scheduler's own rule.
+List<int> _eligible(QuietTrack quiet) => ReminderPlanner.eligibleStartHours(
+  quietStartHour: quiet.startHour,
+  quietEndHour: quiet.endHour,
+);
+
 /// [hour] itself when it is offered, else the offered hour closest to it on
 /// the clock face (so 1am lands on 11pm, not 9am).
 int _nearestOf(List<int> hours, int hour) {
@@ -214,9 +298,32 @@ int _nearestOf(List<int> hours, int hour) {
     final d = (a - b).abs();
     return d < 24 - d ? d : 24 - d;
   }
+
   var best = hours.first;
   for (final candidate in hours) {
     if (distance(candidate, hour) < distance(best, hour)) best = candidate;
   }
   return best;
+}
+
+/// A one-time scale pop for the chip the selection stepped onto by itself.
+/// Explicit `begin`, or the first build never animates (the RollingNumber
+/// lesson); no-op when [animate] is false so every other chip is plain.
+class _Pop extends StatelessWidget {
+  const _Pop({super.key, required this.animate, required this.child});
+
+  final bool animate;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!animate) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.86, end: 1),
+      duration: const Duration(milliseconds: 280),
+      curve: LpMotion.spring,
+      builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+      child: child,
+    );
+  }
 }

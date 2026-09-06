@@ -32,6 +32,8 @@ flutter test integration_test/f_firebase_backend_test.dart \
 | `f_firebase_backend` | The real backend: auth, journey persistence, callables, erasure |
 | `g_day1_tour` | The Day-1 walkthrough gate — showcase barrier, `IgnorePointer`, disabled tabs and `PopScope` exercised together on a real tree |
 | `h_panic_games` | The panic arcade — a real round, drags, flicks, pill swaps and a mid-round exit; disposal and the router are what only a device sees |
+| `i_monetisation` | The free/premium surfaces: every door opens a real paywall and closes back, the panic flow never reaches one, and a purchase lands on "You're in." then pops to where the paywall came from |
+| `j_craving_and_quiet_hours` | A craving closed with back starts the next one clean (clock, step, intensity), and the quiet-hours rail drags inside the real sheet — a horizontal drag through the modal's own dismiss-drag and scroll view |
 
 ## App Check
 

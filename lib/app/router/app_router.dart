@@ -27,6 +27,7 @@ import '../../features/panic/game_arena_screen.dart';
 import '../../features/panic/games/game_outcome.dart';
 import '../../features/panic/panic_screens.dart';
 import '../../features/paywall/paywall_screens.dart';
+import '../../features/paywall/premium_welcome_screen.dart';
 import '../../features/plan/plan_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screens.dart';
@@ -50,6 +51,14 @@ abstract final class Routes {
   static const paywallFree = '/paywall/free';
   static const winback = '/paywall/winback';
   static const trialEnding = '/paywall/trial-ending';
+
+  /// The beat after a completed purchase (`PremiumWelcomeScreen`), shown
+  /// with `pushReplacement` over whichever screen sold it.
+  static const premiumWelcome = '/premium/welcome';
+
+  /// The same screen on the way out of onboarding: its CTA carries on to the
+  /// Day-1 checklist instead of popping, and its rows are not doors.
+  static const premiumWelcomeDay1 = '$premiumWelcome?next=day1';
   static const day1 = '/day1';
   static const home = '/home';
   static const stats = '/stats';
@@ -196,6 +205,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.trialEnding,
         builder: (_, _) => const TrialEndingScreen(),
+      ),
+      // The moment after a purchase. A fade, like the Survived screen: it
+      // replaces the paywall rather than sliding in over it.
+      GoRoute(
+        path: Routes.premiumWelcome,
+        pageBuilder: (_, state) => CustomTransitionPage(
+          child: PremiumWelcomeScreen(
+            onboarding: state.uri.queryParameters['next'] == 'day1',
+          ),
+          transitionDuration: const Duration(milliseconds: 300),
+          transitionsBuilder: (_, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
       ),
       GoRoute(path: Routes.day1, builder: (_, _) => const Day1Screen()),
       StatefulShellRoute.indexedStack(

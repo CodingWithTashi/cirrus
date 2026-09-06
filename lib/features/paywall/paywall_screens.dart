@@ -167,15 +167,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     if (!mounted || _busy || _restoring) return;
     if (ModalRoute.of(context)?.isCurrent != true) return;
     final router = GoRouter.of(context);
-    // A restore, a renewal, a pending payment that settled: nothing left to
-    // sell, so this close is not an abandonment either.
+    // A renewal, a pending payment that settled, a purchase made on another
+    // device: nothing left to sell, so this close is not an abandonment
+    // either — and Premium just became theirs, so the welcome says so, not
+    // a snack. The Restore button keeps its own "welcome back" snack: that
+    // path sets `_restoring` and never reaches here.
     _resolved = true;
-    showLpSnack(context, context.l10n.paywallRestored);
     if (_fromOnboarding) {
       setState(() => _busy = true);
-      unawaited(_finishOnboarding());
+      unawaited(_finishOnboarding(celebrate: true));
     } else {
-      leavePaywall(router);
+      router.pushReplacement(Routes.premiumWelcome);
     }
   }
 
@@ -235,10 +237,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         // Bought. Leaving now is the screen finishing, not a dismissal.
         _resolved = true;
         if (fromOnboarding) {
-          await _finishOnboarding();
+          await _finishOnboarding(celebrate: true);
         } else {
-          // Leave FIRST. See `leavePaywall`.
-          leavePaywall(router);
+          // The welcome replaces this screen — leave FIRST, see
+          // `leavePaywall` — and its CTA pops to whatever was under here.
+          unawaited(router.pushReplacement(Routes.premiumWelcome));
         }
     }
   }
@@ -247,7 +250,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   /// that failed to create must never re-open the sheet — the entitlement is
   /// already held, and `EntitlementStore.purchase` answers it without a sheet
   /// on the next tap anyway.
-  Future<void> _finishOnboarding() async {
+  ///
+  /// [celebrate] is a purchase just made: the welcome screen comes before
+  /// the checklist. A restore is not one, and goes straight on.
+  Future<void> _finishOnboarding({bool celebrate = false}) async {
     // Busy for the whole of it, including a retry from the dialog: a live
     // CTA here would answer the held entitlement without a sheet and run a
     // second `complete()` alongside this one.
@@ -261,12 +267,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       await showLpErrorDialog(
         context,
         error: error,
-        onRetry: _finishOnboarding,
+        onRetry: () => _finishOnboarding(celebrate: celebrate),
       );
       return;
     }
     if (!mounted) return;
-    context.go(Routes.day1);
+    context.go(celebrate ? Routes.premiumWelcomeDay1 : Routes.day1);
   }
 
   Future<void> _restore() async {
@@ -1368,8 +1374,8 @@ class _WinbackScreenState extends ConsumerState<WinbackScreen> {
       if (!mounted) return;
       if (outcome is PurchaseCompleted) {
         ref.read(analyticsProvider).winbackConverted();
-        unawaited(LpHaptics.celebrate());
-        router.go(Routes.home);
+        // The welcome replaces this card; its CTA pops to Home underneath.
+        unawaited(router.pushReplacement(Routes.premiumWelcome));
         return;
       }
       setState(() => _busy = false);

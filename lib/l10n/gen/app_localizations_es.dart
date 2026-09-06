@@ -1093,6 +1093,44 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los precios en vivo no cargan ahora mismo — la tienda te muestra el precio exacto antes de confirmar.';
 
   @override
+  String get premiumWelcomeEyebrow => 'Premium desbloqueado';
+
+  @override
+  String get premiumWelcomeTitle => 'Ya estás dentro.';
+
+  @override
+  String premiumWelcomeTrialBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days días',
+      one: 'Un día',
+    );
+    return '$_temp0 con todo, por nuestra cuenta.';
+  }
+
+  @override
+  String get premiumWelcomeBody =>
+      'Todo lo de abajo es tuyo desde este segundo.';
+
+  @override
+  String get premiumWelcomeUnlocks => 'Lo que acaba de desbloquearse';
+
+  @override
+  String premiumWelcomeCharge(String date) {
+    return 'Primer cobro el $date.';
+  }
+
+  @override
+  String get premiumWelcomeReminder => 'Te avisaremos el día antes.';
+
+  @override
+  String get premiumWelcomeCta => 'Vamos';
+
+  @override
+  String get premiumWelcomeCtaDay1 => 'Preparar mi día 1';
+
+  @override
   String get premiumLockTitle => 'Premium';
 
   @override
@@ -3088,6 +3126,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String settingsQuietHours(String range) {
     return 'Nunca entre $range: horas de silencio.';
   }
+
+  @override
+  String get settingsQuietHoursLabel => 'Horas de silencio';
+
+  @override
+  String get settingsQuietHoursHint =>
+      'Arrastra los extremos. Nada de lo que enviamos cae dentro.';
+
+  @override
+  String settingsQuietHoursLength(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count horas',
+      one: '1 hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsQuietHoursStartHandle => 'Inicio de las horas de silencio';
+
+  @override
+  String get settingsQuietHoursEndHandle => 'Fin de las horas de silencio';
 
   @override
   String get trialEndingPushTime => 'ahora';

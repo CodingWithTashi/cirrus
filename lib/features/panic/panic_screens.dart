@@ -60,33 +60,81 @@ class PanicSession {
   );
 }
 
+/// The craving session's view model. App-lifetime, not route-scoped: the
+/// arena reads it as well as the flow, and it can be reached by a deep link
+/// with no flow beneath it — so a craving is opened by [start], explicitly,
+/// when the takeover appears, and never by the provider happening to build.
+///
+/// It used to reset itself only in `survive()`, through `invalidateSelf()`,
+/// and never on `abandon()`. A craving closed with the back gesture therefore
+/// leaked its whole state into the next one: the timer read **607:31** the
+/// morning after an 11 PM test (the clock of the session closed the night
+/// before), the flow reopened on the step it had been left at instead of
+/// the breathing ring, and the server was never told a new craving had
+/// started. The invalidation had a cost of its own: Riverpod re-ran `build`
+/// while the flow was still mounted under the survived screen, which opened
+/// a phantom second server session per survived craving and reset
+/// `_resolved`, so the flow's dispose then reported the same craving
+/// abandoned as well.
 class PanicViewModel extends Notifier<PanicSession> {
   @override
   PanicSession build() {
-    // Riverpod re-runs `build` on the SAME instance after `invalidateSelf`,
+    // Riverpod re-runs `build` on the SAME instance after an invalidation,
     // so every per-session field starts over here.
-    _resolved = false;
+    _reset();
     _disposed = false;
-    _lastGame = null;
-    _rounds = 0;
     ref.onDispose(() => _disposed = true);
-    _openSession();
-    return PanicSession(startedAt: DateTime.now());
+    // Idle until `start()`. No clock, no server call.
+    return const PanicSession();
   }
 
   /// True once the session reached a recorded outcome, so an abandoned flow
   /// can be told apart from a survived one.
   bool _resolved = false;
 
-  /// The flow can close (or `survive()` can invalidate this notifier) while
-  /// the availability call is still in flight; writing `state` after that
-  /// throws.
+  /// A craving is open: between [start] and its [survive] or [abandon].
+  bool _active = false;
+
+  /// The flow can close while the availability call is still in flight;
+  /// writing `state` after the container is gone throws.
   bool _disposed = false;
 
   /// The game on screen when the session ends and its rounds run to the end.
   /// Plain fields: nothing rebuilds, and `abandon()` can read them late.
   GameId? _lastGame;
   int _rounds = 0;
+
+  void _reset() {
+    _resolved = false;
+    _active = false;
+    _lastGame = null;
+    _rounds = 0;
+  }
+
+  /// Opens a craving: a fresh clock, the breathing step, the default
+  /// intensity, and the server told. The flow calls this on entry, so what
+  /// the previous craving left behind — however it ended — is gone before
+  /// the first frame.
+  ///
+  /// Setting state here is safe against Flutter's "markNeedsBuild during
+  /// build" assertion only because nothing else in the tree watches this
+  /// provider when the takeover mounts: the flow's own `ref.watch` runs in
+  /// its first build, after this, and the arena only reads. Keep it that way.
+  void start() {
+    _reset();
+    _active = true;
+    state = PanicSession(startedAt: _now());
+    _openSession();
+  }
+
+  /// The arena can be the first screen of a craving (a `?g=` link, or a
+  /// restored route) with no flow beneath it; it needs a session too, and
+  /// must not open a second one when it arrived from the flow.
+  void ensureStarted() {
+    if (!_active) start();
+  }
+
+  DateTime _now() => ref.read(nowProvider)();
 
   void noteGame(GameId id, {required int rounds}) {
     _lastGame = id;
@@ -128,18 +176,26 @@ class PanicViewModel extends Notifier<PanicSession> {
 
   void skipToWhy() => state = state.copyWith(step: 1);
 
-  /// Frame-map preview: open the takeover at a specific step.
-  void previewStep(int step) =>
-      state = PanicSession(startedAt: DateTime.now(), step: step);
+  /// Tests and previews: jump the open craving to [step] — opening one first
+  /// if none is, so a caller that never mounted the flow still gets a clock.
+  void previewStep(int step) {
+    ensureStarted();
+    state = state.copyWith(step: step);
+  }
 
   void setIntensity(int value) => state = state.copyWith(intensity: value);
 
-  Duration get elapsed => DateTime.now().difference(state.startedAt!);
+  /// How long this craving has been open. Zero while none is.
+  Duration get elapsed {
+    final startedAt = state.startedAt;
+    return startedAt == null ? Duration.zero : _now().difference(startedAt);
+  }
 
   /// Craving survived → celebrate, then reset for the next session.
   /// [intensityAfter] is the optional re-rating on the arena's round panel.
   void survive({int? intensityAfter}) {
     _resolved = true;
+    _active = false;
     ref
         .read(analyticsProvider)
         .cravingSurvived(
@@ -158,7 +214,9 @@ class PanicViewModel extends Notifier<PanicSession> {
         )
         .ignore();
     ref.read(quitStoreProvider.notifier).recordCravingSurvived();
-    ref.invalidateSelf();
+    // No `invalidateSelf()`: the next craving resets itself in `start()`.
+    // The rebuild it forced here ran while the flow was still mounted under
+    // the survived screen — see the class comment for what that cost.
   }
 
   /// The takeover closed without "it passed" being tapped.
@@ -170,13 +228,18 @@ class PanicViewModel extends Notifier<PanicSession> {
   void abandon() {
     if (_resolved) return;
     _resolved = true;
+    _active = false;
+    // A notifier whose container is already gone (a test tearing the whole
+    // app down with the takeover still up) has no `ref` to report through,
+    // and nothing left to report to.
+    if (_disposed) return;
     ref
         .read(analyticsProvider)
         .cravingSurvived(
           survived: false,
           game: _lastGame,
           rounds: _rounds,
-          intensity: _disposed ? null : state.intensity,
+          intensity: state.intensity,
         );
   }
 }
@@ -198,34 +261,47 @@ class _PanicFlowState extends ConsumerState<PanicFlow> {
   ///
   /// Riverpod throws "Cannot use ref after the widget was disposed" for a
   /// `ref.read` inside `dispose`, so the reference has to be taken while the
-  /// element is still alive. Holding the instance is also what makes the
-  /// resolved check correct: `survive()` invalidates the provider, so a later
-  /// read would hand back a FRESH notifier with `_resolved == false` and every
-  /// survived craving would be reported abandoned as well.
+  /// element is still alive.
   late final PanicViewModel _session = ref.read(panicProvider.notifier);
+
+  /// True once this mount has opened its craving. Until then the takeover
+  /// paints its ground and nothing else — one frame, under the route's own
+  /// fade-in from zero — so the previous craving's step can never flash.
+  bool _started = false;
 
   @override
   void initState() {
     super.initState();
     _session; // resolve now, while ref is still usable
-    // The takeover owns the whole screen — a lingering "Logged 1 puff"
-    // undo snack must never cover the step controls.
+    // A craving begins when the takeover appears: fresh clock, first step,
+    // server told (see `PanicViewModel`). After the frame, never during the
+    // build that pushed us: Riverpod refuses a provider write from a widget
+    // lifecycle ("Tried to modify a provider while the widget tree was
+    // building"), and it is right to — the Navigator is mid-build here.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+      if (!mounted) return;
+      _session.start();
+      setState(() => _started = true);
+      // The takeover owns the whole screen — a lingering "Logged 1 puff"
+      // undo snack must never cover the step controls.
+      ScaffoldMessenger.of(context).clearSnackBars();
     });
   }
 
   @override
   void dispose() {
     // `survive()` marks the session resolved before this runs, so a survived
-    // craving is never double-counted as an abandoned one.
-    _session.abandon();
+    // craving is never double-counted as an abandoned one. A takeover torn
+    // down before its first frame never opened one, so there is nothing to
+    // report either.
+    if (_started) _session.abandon();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
+    if (!_started) return Scaffold(backgroundColor: lp.panicBackground);
     final session = ref.watch(panicProvider);
     return Scaffold(
       backgroundColor: lp.panicBackground,
@@ -562,8 +638,11 @@ class _WhyStep extends ConsumerWidget {
           LpTextButton(
             l10n.panicItPassed,
             onTap: () {
-              vm.survive();
+              // Leave first, then mutate: `survive()` commits a journey
+              // change, and a router refresh delivered after an imperative
+              // navigation undoes it (the arena does the same).
               context.pushReplacement(Routes.survived);
+              vm.survive();
             },
           ),
         ],
@@ -739,8 +818,10 @@ class _BreakLoopStep extends ConsumerWidget {
           LpTextButton(
             l10n.panicItPassed,
             onTap: () {
-              ref.read(panicProvider.notifier).survive();
+              // Leave first, then mutate — same rule as step 2.
+              final vm = ref.read(panicProvider.notifier);
               context.pushReplacement(Routes.survived);
+              vm.survive();
             },
           ),
         ],
