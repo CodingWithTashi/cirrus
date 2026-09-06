@@ -1,0 +1,6 @@
+# Tags a test file may declare. `flutter test --exclude-tags swift` skips the
+# one suite that shells out to the Swift compiler (it skips itself anywhere
+# without Xcode, so CI never needs the flag).
+tags:
+  swift:
+    description: Compiles ios/CirrusWidget with swiftc on the host — macOS only.

@@ -7,15 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03FA19EE2E35FFDF3EFF3EE6 /* CirrusWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		5133C32DF28FF5BC95A7FF20 /* CirrusOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF7694710BB70725951E49 /* CirrusOutbox.swift */; };
+		5E3543BB5186A744D89E65F5 /* LogPuffIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA50A7BE77B9D1EF43CC799 /* LogPuffIntent.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		775D0583E41152A3E3CCF641 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED1630135D8E4221C184188C /* SwiftUI.framework */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		9BB7CF162B0136BDD00342D7 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */; };
+		A219E6830EF973C484BC2021 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94731EF951A345257D5EE5D2 /* WidgetKit.framework */; };
+		BCAE8BD68CAA798A9022CDAF /* CirrusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */; };
+		CEE6D3A9C23CA89DF68C2C98 /* CirrusWidgetUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */; };
+		CFDDEEBE8C53C07A8D277805 /* CirrusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308A2141A4D48424E014C372 /* CirrusWidget.swift */; };
 		D5B181AC513813C27F9E00D7 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FBB8B25D5FED25E84BA6B051 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -27,9 +35,34 @@
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
 		};
+		358F8FD1410F4D6EE90AECCA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3D7414FABEEA81378029AF6C;
+			remoteInfo = CirrusWidget;
+		};
+		F2CDA87C94A2F9F275ED5345 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
+			remoteInfo = Runner;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		47B5F01F0FF929B4289B5D4E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				03FA19EE2E35FFDF3EFF3EE6 /* CirrusWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -46,16 +79,22 @@
 		05A7AA55C02D9B48E28DB9DA /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1C95462A9ED8D662256465F2 /* CirrusWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CirrusWidget.entitlements; sourceTree = "<group>"; };
+		308A2141A4D48424E014C372 /* CirrusWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWidget.swift; sourceTree = "<group>"; };
 		31EA869D24C84728F42BBD96 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3EDE4D9CCDA1BC7057E4DECF /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		43E68C49A61942CBBF457106 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		4EA50A7BE77B9D1EF43CC799 /* LogPuffIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LogPuffIntent.swift; sourceTree = "<group>"; };
+		5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusShared.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		873C86E462932012DA685F12 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		94731EF951A345257D5EE5D2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,12 +104,24 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B78751EB7CDD5D54E2EACD73 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		BAC9507649EADEAFCAC22F59 /* RunnerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDBF7694710BB70725951E49 /* CirrusOutbox.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusOutbox.swift; sourceTree = "<group>"; };
+		C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CirrusWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D90A481799175FCEBAEB5CEF /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWidgetUITests.swift; sourceTree = "<group>"; };
+		ED1630135D8E4221C184188C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F537566E4F69AED9AC36CCFD /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		FBB8B25D5FED25E84BA6B051 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7C9F2B09B40181BB20427FB0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		81794A67BB58B82552F332A6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -84,6 +135,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				D5B181AC513813C27F9E00D7 /* Pods_Runner.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E13A043338706FB3350AAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A219E6830EF973C484BC2021 /* WidgetKit.framework in Frameworks */,
+				775D0583E41152A3E3CCF641 /* SwiftUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,6 +163,8 @@
 			children = (
 				FBB8B25D5FED25E84BA6B051 /* Pods_Runner.framework */,
 				A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */,
+				94731EF951A345257D5EE5D2 /* WidgetKit.framework */,
+				ED1630135D8E4221C184188C /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -127,6 +189,8 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				F0337E57C3EBA537046C7582 /* Pods */,
 				66AF59D5B64686041D37D4D4 /* Frameworks */,
+				DD5FF1BFBE5DB4CDD8BBB240 /* CirrusWidget */,
+				E128D4A13C1028C3BBD19B2A /* RunnerUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -135,6 +199,8 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */,
+				BAC9507649EADEAFCAC22F59 /* RunnerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -154,6 +220,29 @@
 				43E68C49A61942CBBF457106 /* Runner.entitlements */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		DD5FF1BFBE5DB4CDD8BBB240 /* CirrusWidget */ = {
+			isa = PBXGroup;
+			children = (
+				BDBF7694710BB70725951E49 /* CirrusOutbox.swift */,
+				5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */,
+				308A2141A4D48424E014C372 /* CirrusWidget.swift */,
+				4EA50A7BE77B9D1EF43CC799 /* LogPuffIntent.swift */,
+				873C86E462932012DA685F12 /* Info.plist */,
+				1C95462A9ED8D662256465F2 /* CirrusWidget.entitlements */,
+			);
+			name = CirrusWidget;
+			path = CirrusWidget;
+			sourceTree = "<group>";
+		};
+		E128D4A13C1028C3BBD19B2A /* RunnerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */,
+			);
+			name = RunnerUITests;
+			path = RunnerUITests;
 			sourceTree = "<group>";
 		};
 		F0337E57C3EBA537046C7582 /* Pods */ = {
@@ -191,6 +280,41 @@
 			productReference = 331C8081294A63A400263BE5 /* RunnerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		3D7414FABEEA81378029AF6C /* CirrusWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0CCA3A931CAF4CCF91A6DB6 /* Build configuration list for PBXNativeTarget "CirrusWidget" */;
+			buildPhases = (
+				3CE1353179FC208CDD82ED75 /* Sources */,
+				F1E13A043338706FB3350AAC /* Frameworks */,
+				5EC44E0311C7F25B5C1174CE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CirrusWidget;
+			productName = CirrusWidget;
+			productReference = C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		8946ACB1DD1694A3E79B6708 /* RunnerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 598B1928A85D51ED4771435C /* Build configuration list for PBXNativeTarget "RunnerUITests" */;
+			buildPhases = (
+				43D2CA84BCFBFE06C8CC762E /* Sources */,
+				7C9F2B09B40181BB20427FB0 /* Frameworks */,
+				49DEDC1E6CCAE8F24A75CCA3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A5265898E4C9EAD175D06D77 /* PBXTargetDependency */,
+			);
+			name = RunnerUITests;
+			productName = RunnerUITests;
+			productReference = BAC9507649EADEAFCAC22F59 /* RunnerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
@@ -201,6 +325,7 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				47B5F01F0FF929B4289B5D4E /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				35604D8D0899DAF0EEBFB992 /* [CP] Embed Pods Frameworks */,
 				E492C1B81D193D176055DA8E /* [CP] Copy Pods Resources */,
@@ -208,6 +333,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D453F85F27065EBBCFDFA553 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
@@ -226,6 +352,13 @@
 				TargetAttributes = {
 					331C8080294A63A400263BE5 = {
 						CreatedOnToolsVersion = 14.0;
+						TestTargetID = 97C146ED1CF9000F007C117D;
+					};
+					3D7414FABEEA81378029AF6C = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					8946ACB1DD1694A3E79B6708 = {
+						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 97C146ED1CF9000F007C117D;
 					};
 					97C146ED1CF9000F007C117D = {
@@ -249,12 +382,28 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				3D7414FABEEA81378029AF6C /* CirrusWidget */,
+				8946ACB1DD1694A3E79B6708 /* RunnerUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		331C807F294A63A400263BE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		49DEDC1E6CCAE8F24A75CCA3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EC44E0311C7F25B5C1174CE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -395,6 +544,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3CE1353179FC208CDD82ED75 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5133C32DF28FF5BC95A7FF20 /* CirrusOutbox.swift in Sources */,
+				BCAE8BD68CAA798A9022CDAF /* CirrusShared.swift in Sources */,
+				CFDDEEBE8C53C07A8D277805 /* CirrusWidget.swift in Sources */,
+				5E3543BB5186A744D89E65F5 /* LogPuffIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		43D2CA84BCFBFE06C8CC762E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CEE6D3A9C23CA89DF68C2C98 /* CirrusWidgetUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -412,6 +580,18 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		A5265898E4C9EAD175D06D77 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Runner;
+			target = 97C146ED1CF9000F007C117D /* Runner */;
+			targetProxy = F2CDA87C94A2F9F275ED5345 /* PBXContainerItemProxy */;
+		};
+		D453F85F27065EBBCFDFA553 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CirrusWidget;
+			target = 3D7414FABEEA81378029AF6C /* CirrusWidget */;
+			targetProxy = 358F8FD1410F4D6EE90AECCA /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -435,6 +615,52 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		166FD44641B6A8A8A01EB51F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.RunnerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Runner;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		16930F003624403382F3416C /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.RunnerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Runner;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -513,6 +739,32 @@
 			};
 			name = Profile;
 		};
+		298E1304F431CB76AB5C03FF /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CirrusWidget/CirrusWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.CirrusWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
 		331C8088294A63A400263BE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 05A7AA55C02D9B48E28DB9DA /* Pods-RunnerTests.debug.xcconfig */;
@@ -562,6 +814,32 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
 			};
 			name = Profile;
+		};
+		4B69F36EC6225E7C80D1A904 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CirrusWidget/CirrusWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.CirrusWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		97C147031CF9000F007C117D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -727,6 +1005,55 @@
 			};
 			name = Release;
 		};
+		AE75B2879F8F01563F039542 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.RunnerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Runner;
+			};
+			name = Debug;
+		};
+		FF4896AC1664624F9D5249C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CirrusWidget/CirrusWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.CirrusWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -736,6 +1063,16 @@
 				331C8088294A63A400263BE5 /* Debug */,
 				331C8089294A63A400263BE5 /* Release */,
 				331C808A294A63A400263BE5 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		598B1928A85D51ED4771435C /* Build configuration list for PBXNativeTarget "RunnerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				166FD44641B6A8A8A01EB51F /* Release */,
+				AE75B2879F8F01563F039542 /* Debug */,
+				16930F003624403382F3416C /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -756,6 +1093,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A0CCA3A931CAF4CCF91A6DB6 /* Build configuration list for PBXNativeTarget "CirrusWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF4896AC1664624F9D5249C2 /* Release */,
+				4B69F36EC6225E7C80D1A904 /* Debug */,
+				298E1304F431CB76AB5C03FF /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
