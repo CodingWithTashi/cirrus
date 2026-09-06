@@ -10,7 +10,25 @@ import 'package:last_puff/data/stores/widget_coordinator.dart';
 import 'package:last_puff/data/stores/widget_mirror.dart';
 import 'package:last_puff/domain/date_key.dart';
 
+import 'package:last_puff/data/seed/seed_data.dart';
+import 'package:last_puff/domain/models/journey_state.dart';
+
 import '../helpers.dart';
+
+/// Placeholder copy for the pure-`buildMirror` cases below; the widget cases
+/// take the real thing from ARB through `_WidgetSync`.
+const _copy = WidgetCopy(
+  day: r'day %1$d',
+  dayFreedom: 'Freedom Day',
+  dayPastOne: r'%1$d day past',
+  dayPastOther: r'%1$d days past',
+  leftAhead: r'%1$d left',
+  leftTight: r'%1$d left',
+  overLimit: 'over',
+  emptyTitle: 'Start your plan',
+  emptyBody: 'Tap to open Cirrus',
+  watchOpenPhone: 'Open Cirrus on your iPhone',
+);
 
 /// What the app pushes to the home-screen widget.
 ///
@@ -277,5 +295,89 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.refreshes, redraws);
+  });
+
+  group('the Apple Watch half of the mirror', () {
+    // A watch is a second DEVICE, not a second process, so two things the
+    // home-screen widget never needed are in the document for it: the account
+    // the numbers belong to, and a line of copy that does not say "tap to open
+    // Cirrus" (watchOS cannot launch its companion iPhone app).
+
+    testWidgets('the account id travels with the numbers, and only with them', (
+      tester,
+    ) async {
+      final (container, store) = await open(tester);
+      // Signed out: nothing numeric, and nothing to attribute either.
+      expect(mirrorIn(store).containsKey('sid'), isFalse);
+
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      container.read(widgetSessionProvider.notifier).bind('uid-demo');
+      await tester.pumpAndSettle();
+      expect(mirrorIn(store)['sid'], 'uid-demo');
+
+      // And it goes when the account does — which is what makes the wrist
+      // forget a queue it can no longer attribute to anyone.
+      container.read(quitStoreProvider.notifier).signOut();
+      await tester.pumpAndSettle();
+      final after = mirrorIn(store);
+      expect(after['hasJourney'], isFalse);
+      expect(after.containsKey('sid'), isFalse);
+    });
+
+    test('an unresolved id is absent, never empty', () {
+      // The race the watch's keep-what-you-have rule exists for: the first push
+      // of a cold launch can beat the async uid lookup, and an EMPTY sid would
+      // be indistinguishable from a different one.
+      final journey = SeedData.journey(DateTime.now());
+      Map<String, dynamic> build(String? sid) => buildMirror(
+        journey: journey,
+        snapshot: TodaySnapshot.of(journey, DateTime.now()),
+        copy: _copy,
+        now: DateTime.now(),
+        sid: sid,
+      );
+      expect(build('uid-x')['sid'], 'uid-x');
+      expect(build(null).containsKey('sid'), isFalse);
+      expect(build('').containsKey('sid'), isFalse);
+    });
+
+    testWidgets('the wrist gets its own empty line, in every language', (
+      tester,
+    ) async {
+      const expected = {
+        'en': 'Open Cirrus on your iPhone',
+        'es': 'Abre Cirrus en tu iPhone',
+        'fr': 'Ouvre Cirrus sur ton iPhone',
+        'de': 'Öffne Cirrus auf deinem iPhone',
+        'pt': 'Abra o Cirrus no seu iPhone',
+      };
+      for (final locale in expected.keys) {
+        final (_, store) = await open(tester, locale: Locale(locale));
+        final copy = mirrorIn(store)['copy'] as Map<String, dynamic>;
+        expect(copy['watchOpenPhone'], expected[locale], reason: locale);
+        // Distinct from the home screen's line, which tells you to tap.
+        expect(copy['watchOpenPhone'], isNot(copy['emptyBody']), reason: locale);
+      }
+    });
+
+    testWidgets('every push reaches the wrist, sign-out included', (
+      tester,
+    ) async {
+      // Writing the document is not enough for a watch either — but where the
+      // launcher needs a repaint, the watch needs a radio. Without this the
+      // wrist keeps the last person's count until it next comes forward.
+      final (container, store) = await open(tester);
+      final before = store.watchSyncs;
+      expect(before, greaterThan(0));
+
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await tester.pumpAndSettle();
+      final afterSeed = store.watchSyncs;
+      expect(afterSeed, greaterThan(before));
+
+      container.read(quitStoreProvider.notifier).signOut();
+      await tester.pumpAndSettle();
+      expect(store.watchSyncs, greaterThan(afterSeed));
+    });
   });
 }

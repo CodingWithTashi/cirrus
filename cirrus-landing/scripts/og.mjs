@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 import opentype from 'opentype.js';
+import { MARK_FILL, MARK_PATH, MARK_RECT } from './mark-path.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -55,6 +56,29 @@ const DOMAIN = 'cirrusquit.com';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/**
+ * The Cirrus mark, `size` px tall, its left edge at x and centred on y.
+ *
+ * Both cards used to draw a plain orange circle here — a stand-in that was the
+ * wrong shape AND the wrong brand colour (ember, on a mark that is volt), and
+ * it was the only version of the logo anyone saw in a shared link. The path
+ * comes from assets/images/icon-square.png via scripts/icons.py, which also
+ * writes the favicons, so there is one mark and it is the one on the phone.
+ *
+ * The glyph alone, not the launcher tile: the tile's ground is #161a21 and
+ * these cards are Void, so a tile draws a visibly lighter grey box around the
+ * mark. Same reason the site header renders src/assets/mark.png. The tile
+ * survives only where the ground is unknown — the favicon and the touch icon.
+ */
+const mark = (x, y, size) => {
+  const [bx, by, , bh] = MARK_RECT;
+  const k = size / bh;
+  const tx = x - bx * k;
+  const ty = y - (by + bh / 2) * k;
+  return `<g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${k.toFixed(4)})">
+    <path fill="${MARK_FILL}" d="${MARK_PATH}"/>
+  </g>`;
+};
 const MARGIN = 88;
 const MAX_W = 1200 - MARGIN * 2;
 const SIZE = 76;
@@ -90,8 +114,8 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
   <rect width="1200" height="630" fill="url(#glow)"/>
   <rect x="0" y="0" width="1200" height="6" fill="#c8f542"/>
 
-  <circle cx="${MARGIN}" cy="84" r="13" fill="#ff8a00"/>
-  <text x="${MARGIN + 30}" y="96" font-family="Space Grotesk" font-size="34"
+  ${mark(MARGIN, 84, 40)}
+  <text x="${MARGIN + 40}" y="96" font-family="Space Grotesk" font-size="34"
         font-weight="700" fill="#ffffff">${esc(title)}</text>
 
   <text font-family="Space Grotesk" font-size="${SIZE}" font-weight="700" fill="#ffffff">
@@ -121,25 +145,10 @@ const resvg = new Resvg(svg, {
 
 writeFileSync(here('../public/og.png'), resvg.render().asPng());
 
-// Apple touch icon: the brand mark on Void, 180x180. Same renderer so the ember
-// glow matches the card exactly.
-const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
-  <defs>
-    <radialGradient id="g" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ff8a00" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="180" height="180" fill="#0a0c10"/>
-  <circle cx="90" cy="90" r="72" fill="url(#g)"/>
-  <circle cx="90" cy="90" r="34" fill="#ff8a00"/>
-</svg>`;
-writeFileSync(
-  here('../public/apple-touch-icon.png'),
-  new Resvg(iconSvg, { fitTo: { mode: 'width', value: 180 } }).render().asPng(),
-);
-
-console.log(`wrote public/og.png (1200x630) — headline on ${lines.length} line(s), and apple-touch-icon.png (180x180)`);
+// The Apple touch icon used to be rendered here, as an orange disc. It is a
+// resize of the real app art now, written by scripts/icons.py along with the
+// favicons — this file owns the social cards and nothing else.
+console.log(`wrote public/og.png (1200x630) — headline on ${lines.length} line(s)`);
 
 // ---------------------------------------------------------------------------
 // Per-post cards.
@@ -226,6 +235,21 @@ const POSTS = [
     ],
   },
   {
+    slug: 'best-quit-vaping-apps',
+    eyebrow: 'QUIT VAPING APPS · PRICED AND CHECKED',
+    headline: 'Cirrus vs Puff Count vs Kwit',
+    // The annual price each store showed on 6 September 2026, and the one fact
+    // that decides it for most readers: which phone they are holding. Volt is
+    // not "the good one" here — the post takes no ranking, so the colour marks
+    // the cheapest number and the split platform, nothing more.
+    blocks: [
+      { n: '$39.99', label: 'Cirrus, a year', color: VOLT },
+      { n: '$59.99', label: 'Puff Count, a year', color: EMBER },
+      { n: '$46–128', label: 'Kwit, a year', color: EMBER },
+      { n: '1 of 3', label: 'on both platforms', color: VOLT },
+    ],
+  },
+  {
     slug: 'how-to-choose-a-puff-counter-app',
     eyebrow: 'PUFF COUNTER APPS · WHAT TO LOOK FOR',
     headline: 'How to choose a puff counter app',
@@ -294,8 +318,8 @@ for (const post of POSTS) {
   <rect width="1200" height="630" fill="url(#glow)"/>
   <rect x="0" y="0" width="1200" height="6" fill="#c8f542"/>
 
-  <circle cx="${MARGIN}" cy="82" r="12" fill="#ff8a00"/>
-  <text x="${MARGIN + 28}" y="93" font-family="Space Grotesk" font-size="30"
+  ${mark(MARGIN, 82, 38)}
+  <text x="${MARGIN + 38}" y="93" font-family="Space Grotesk" font-size="30"
         font-weight="700" fill="#ffffff">${esc(title)}</text>
   <text x="1112" y="93" font-family="Inter" font-size="20" fill="#9aa3b2"
         text-anchor="end">${esc(DOMAIN)}</text>

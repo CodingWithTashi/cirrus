@@ -3312,6 +3312,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get widgetEmptyBody => 'Touche pour ouvrir Cirrus';
 
   @override
+  String get widgetWatchOpenPhone => 'Ouvre Cirrus sur ton iPhone';
+
+  @override
   String get milestoneNotifTitle => 'Viens voir ta flamme';
 
   @override

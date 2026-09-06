@@ -7,27 +7,57 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03AD1A8566E6644F66EB1613 /* CirrusOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF7694710BB70725951E49 /* CirrusOutbox.swift */; };
 		03FA19EE2E35FFDF3EFF3EE6 /* CirrusWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		05B63FCBB319C9CE0FB35154 /* CirrusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */; };
+		0E7023E71B60839D5BAE7D36 /* CirrusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */; };
+		10D0AC73181A86103E6AF670 /* CirrusOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF7694710BB70725951E49 /* CirrusOutbox.swift */; };
+		13F98915244F3F7C82D8D644 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6E6B45594CEA8B297A0EBC /* WatchHomeView.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		2A227E8448748707EB7AFAEF /* WatchPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1DECA029197B45CE06306D /* WatchPalette.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		34FCAAD422AEBF356FAD3173 /* CirrusWatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C87392820A697EBCAC95D6 /* CirrusWatchLink.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		3FC7D51E86A7E991D2CC12F8 /* WatchWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2208E46764DEDAA1A652DC3A /* WatchWire.swift */; };
+		48CF29E43FFF67C0E6576830 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 381D33E8F748BF3FF0CABB9A /* WatchConnectivity.framework */; };
 		5133C32DF28FF5BC95A7FF20 /* CirrusOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF7694710BB70725951E49 /* CirrusOutbox.swift */; };
+		5704444E967FDC21F9566CAF /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94731EF951A345257D5EE5D2 /* WidgetKit.framework */; };
 		5E3543BB5186A744D89E65F5 /* LogPuffIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA50A7BE77B9D1EF43CC799 /* LogPuffIntent.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		76F4764EA1372D6023E79BB9 /* WatchKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65D8C0EF470EA3DD0D965399 /* WatchKit.framework */; };
 		775D0583E41152A3E3CCF641 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED1630135D8E4221C184188C /* SwiftUI.framework */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
+		83B9CEEB6850586CA3256438 /* CirrusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */; };
+		8E8872718B08E5DCE1057F89 /* CirrusWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1B8EFE776F11595B3BE6D55B /* CirrusWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		90594F1B5E269B4CB31F5E1D /* CirrusOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF7694710BB70725951E49 /* CirrusOutbox.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9BA6C976DDFFFE3641A96768 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED1630135D8E4221C184188C /* SwiftUI.framework */; };
 		9BB7CF162B0136BDD00342D7 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */; };
+		A05754D05F0D8CC63B808DC1 /* WatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D3C61CC010AE420AB600C3E /* WatchLink.swift */; };
 		A219E6830EF973C484BC2021 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94731EF951A345257D5EE5D2 /* WidgetKit.framework */; };
+		AD8A1BE8FE9A9AA833695A5B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94731EF951A345257D5EE5D2 /* WidgetKit.framework */; };
 		BCAE8BD68CAA798A9022CDAF /* CirrusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */; };
 		CEE6D3A9C23CA89DF68C2C98 /* CirrusWidgetUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */; };
 		CFDDEEBE8C53C07A8D277805 /* CirrusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308A2141A4D48424E014C372 /* CirrusWidget.swift */; };
+		CFF4DF872A0F3E8ACDD5E491 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1CA009F0594393951910E387 /* Assets.xcassets */; };
+		D00CCBC3CF6CF0A89548FA60 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED1630135D8E4221C184188C /* SwiftUI.framework */; };
 		D5B181AC513813C27F9E00D7 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FBB8B25D5FED25E84BA6B051 /* Pods_Runner.framework */; };
+		DA4CCBCFC370BD70B26A8F5B /* WatchWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2208E46764DEDAA1A652DC3A /* WatchWire.swift */; };
+		DF10DB9EE3549C5B5AEF43EF /* CirrusComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AE5B0EF8145DF96C135C5EB /* CirrusComplication.swift */; };
+		DF2DF29938E328837AD05DE4 /* CirrusWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71571D43569AA4559F563D6B /* CirrusWatchApp.swift */; };
+		DF8F9204770C612C286407E0 /* CirrusWatchComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 58E23E2E046629FDFB8B9DB8 /* CirrusWatchComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2BDEAEFDCEB3D90AECFA06E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3498CA7931FDB195EEE3AC7A;
+			remoteInfo = CirrusWatch;
+		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -42,6 +72,13 @@
 			remoteGlobalIDString = 3D7414FABEEA81378029AF6C;
 			remoteInfo = CirrusWidget;
 		};
+		6EBB859DBB0E9948E2525121 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FA378E8CCF5119CF5DEA7B8F;
+			remoteInfo = CirrusWatchComplication;
+		};
 		F2CDA87C94A2F9F275ED5345 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -52,6 +89,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		1E57F6FF21928E98D9FAA09F /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				8E8872718B08E5DCE1057F89 /* CirrusWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		47B5F01F0FF929B4289B5D4E /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -73,26 +121,50 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CFBB62217201D5886BB3A6CA /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DF8F9204770C612C286407E0 /* CirrusWatchComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		05A7AA55C02D9B48E28DB9DA /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1B8EFE776F11595B3BE6D55B /* CirrusWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CirrusWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C95462A9ED8D662256465F2 /* CirrusWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CirrusWidget.entitlements; sourceTree = "<group>"; };
+		1CA009F0594393951910E387 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2208E46764DEDAA1A652DC3A /* WatchWire.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchWire.swift; sourceTree = "<group>"; };
+		2240E0E7A1C5167DC23B68F6 /* CirrusWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CirrusWatch.entitlements; sourceTree = "<group>"; };
 		308A2141A4D48424E014C372 /* CirrusWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWidget.swift; sourceTree = "<group>"; };
 		31EA869D24C84728F42BBD96 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		381D33E8F748BF3FF0CABB9A /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		3AE5B0EF8145DF96C135C5EB /* CirrusComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusComplication.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3EDE4D9CCDA1BC7057E4DECF /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		42C87392820A697EBCAC95D6 /* CirrusWatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWatchLink.swift; sourceTree = "<group>"; };
 		43E68C49A61942CBBF457106 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		4EA50A7BE77B9D1EF43CC799 /* LogPuffIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LogPuffIntent.swift; sourceTree = "<group>"; };
+		58E23E2E046629FDFB8B9DB8 /* CirrusWatchComplication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CirrusWatchComplication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C9C8AC4615BF7F455D3B9CD /* CirrusShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusShared.swift; sourceTree = "<group>"; };
+		5CF7958F94B2E0731A4680A6 /* CirrusWatchComplication.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CirrusWatchComplication.entitlements; sourceTree = "<group>"; };
+		5FF81F11320FDB0DAA5919A0 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		65D8C0EF470EA3DD0D965399 /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
+		71571D43569AA4559F563D6B /* CirrusWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWatchApp.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		7D3C61CC010AE420AB600C3E /* WatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
 		873C86E462932012DA685F12 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		94731EF951A345257D5EE5D2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -102,6 +174,7 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9A1DECA029197B45CE06306D /* WatchPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPalette.swift; sourceTree = "<group>"; };
 		A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B78751EB7CDD5D54E2EACD73 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		BAC9507649EADEAFCAC22F59 /* RunnerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -109,12 +182,23 @@
 		C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CirrusWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D90A481799175FCEBAEB5CEF /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CirrusWidgetUITests.swift; sourceTree = "<group>"; };
+		DCDD292CB53990EC396F2A96 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DF6E6B45594CEA8B297A0EBC /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
 		ED1630135D8E4221C184188C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F537566E4F69AED9AC36CCFD /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		FBB8B25D5FED25E84BA6B051 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		3B71300F994745E91A5B23E8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9BA6C976DDFFFE3641A96768 /* SwiftUI.framework in Frameworks */,
+				AD8A1BE8FE9A9AA833695A5B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7C9F2B09B40181BB20427FB0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -135,6 +219,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				D5B181AC513813C27F9E00D7 /* Pods_Runner.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C9194BCF7488D67E3555E09C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00CCBC3CF6CF0A89548FA60 /* SwiftUI.framework in Frameworks */,
+				48CF29E43FFF67C0E6576830 /* WatchConnectivity.framework in Frameworks */,
+				76F4764EA1372D6023E79BB9 /* WatchKit.framework in Frameworks */,
+				5704444E967FDC21F9566CAF /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,6 +260,8 @@
 				A2446AA791EA9F3132002698 /* Pods_RunnerTests.framework */,
 				94731EF951A345257D5EE5D2 /* WidgetKit.framework */,
 				ED1630135D8E4221C184188C /* SwiftUI.framework */,
+				381D33E8F748BF3FF0CABB9A /* WatchConnectivity.framework */,
+				65D8C0EF470EA3DD0D965399 /* WatchKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -191,6 +288,8 @@
 				66AF59D5B64686041D37D4D4 /* Frameworks */,
 				DD5FF1BFBE5DB4CDD8BBB240 /* CirrusWidget */,
 				E128D4A13C1028C3BBD19B2A /* RunnerUITests */,
+				ECEF58D4EB9C54F4165A0713 /* CirrusWatch */,
+				DF0FB79C59E54170E821E750 /* CirrusWatchComplication */,
 			);
 			sourceTree = "<group>";
 		};
@@ -201,6 +300,8 @@
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				C0AE677D2560AB348A47F2FF /* CirrusWidget.appex */,
 				BAC9507649EADEAFCAC22F59 /* RunnerUITests.xctest */,
+				1B8EFE776F11595B3BE6D55B /* CirrusWatch.app */,
+				58E23E2E046629FDFB8B9DB8 /* CirrusWatchComplication.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -218,6 +319,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				43E68C49A61942CBBF457106 /* Runner.entitlements */,
+				42C87392820A697EBCAC95D6 /* CirrusWatchLink.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -236,6 +338,17 @@
 			path = CirrusWidget;
 			sourceTree = "<group>";
 		};
+		DF0FB79C59E54170E821E750 /* CirrusWatchComplication */ = {
+			isa = PBXGroup;
+			children = (
+				3AE5B0EF8145DF96C135C5EB /* CirrusComplication.swift */,
+				5FF81F11320FDB0DAA5919A0 /* Info.plist */,
+				5CF7958F94B2E0731A4680A6 /* CirrusWatchComplication.entitlements */,
+			);
+			name = CirrusWatchComplication;
+			path = CirrusWatchComplication;
+			sourceTree = "<group>";
+		};
 		E128D4A13C1028C3BBD19B2A /* RunnerUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -243,6 +356,22 @@
 			);
 			name = RunnerUITests;
 			path = RunnerUITests;
+			sourceTree = "<group>";
+		};
+		ECEF58D4EB9C54F4165A0713 /* CirrusWatch */ = {
+			isa = PBXGroup;
+			children = (
+				71571D43569AA4559F563D6B /* CirrusWatchApp.swift */,
+				DF6E6B45594CEA8B297A0EBC /* WatchHomeView.swift */,
+				7D3C61CC010AE420AB600C3E /* WatchLink.swift */,
+				9A1DECA029197B45CE06306D /* WatchPalette.swift */,
+				2208E46764DEDAA1A652DC3A /* WatchWire.swift */,
+				DCDD292CB53990EC396F2A96 /* Info.plist */,
+				2240E0E7A1C5167DC23B68F6 /* CirrusWatch.entitlements */,
+				1CA009F0594393951910E387 /* Assets.xcassets */,
+			);
+			name = CirrusWatch;
+			path = CirrusWatch;
 			sourceTree = "<group>";
 		};
 		F0337E57C3EBA537046C7582 /* Pods */ = {
@@ -279,6 +408,25 @@
 			productName = RunnerTests;
 			productReference = 331C8081294A63A400263BE5 /* RunnerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3498CA7931FDB195EEE3AC7A /* CirrusWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EFF3891F423C6F0A30DB90BB /* Build configuration list for PBXNativeTarget "CirrusWatch" */;
+			buildPhases = (
+				E94E96B6D40A003BC5E5C56B /* Sources */,
+				C9194BCF7488D67E3555E09C /* Frameworks */,
+				4D99F68CB203BE958CFA19D3 /* Resources */,
+				CFBB62217201D5886BB3A6CA /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0168E93DD905E42B0BD45355 /* PBXTargetDependency */,
+			);
+			name = CirrusWatch;
+			productName = CirrusWatch;
+			productReference = 1B8EFE776F11595B3BE6D55B /* CirrusWatch.app */;
+			productType = "com.apple.product-type.application";
 		};
 		3D7414FABEEA81378029AF6C /* CirrusWidget */ = {
 			isa = PBXNativeTarget;
@@ -326,6 +474,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				47B5F01F0FF929B4289B5D4E /* Embed Foundation Extensions */,
+				1E57F6FF21928E98D9FAA09F /* Embed Watch Content */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				35604D8D0899DAF0EEBFB992 /* [CP] Embed Pods Frameworks */,
 				E492C1B81D193D176055DA8E /* [CP] Copy Pods Resources */,
@@ -334,11 +483,29 @@
 			);
 			dependencies = (
 				D453F85F27065EBBCFDFA553 /* PBXTargetDependency */,
+				928CC91B9B359ED37B332B24 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		FA378E8CCF5119CF5DEA7B8F /* CirrusWatchComplication */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 112EF8ECA2FA5112ED450F98 /* Build configuration list for PBXNativeTarget "CirrusWatchComplication" */;
+			buildPhases = (
+				7D5F100AB0C62917D43EBEC2 /* Sources */,
+				3B71300F994745E91A5B23E8 /* Frameworks */,
+				5912399C99B0A2A1D8285379 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CirrusWatchComplication;
+			productName = CirrusWatchComplication;
+			productReference = 58E23E2E046629FDFB8B9DB8 /* CirrusWatchComplication.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -354,6 +521,9 @@
 						CreatedOnToolsVersion = 14.0;
 						TestTargetID = 97C146ED1CF9000F007C117D;
 					};
+					3498CA7931FDB195EEE3AC7A = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					3D7414FABEEA81378029AF6C = {
 						CreatedOnToolsVersion = 26.3;
 					};
@@ -364,6 +534,9 @@
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
+					};
+					FA378E8CCF5119CF5DEA7B8F = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -384,6 +557,8 @@
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				3D7414FABEEA81378029AF6C /* CirrusWidget */,
 				8946ACB1DD1694A3E79B6708 /* RunnerUITests */,
+				3498CA7931FDB195EEE3AC7A /* CirrusWatch */,
+				FA378E8CCF5119CF5DEA7B8F /* CirrusWatchComplication */,
 			);
 		};
 /* End PBXProject section */
@@ -397,6 +572,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		49DEDC1E6CCAE8F24A75CCA3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D99F68CB203BE958CFA19D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CFF4DF872A0F3E8ACDD5E491 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5912399C99B0A2A1D8285379 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -563,6 +753,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7D5F100AB0C62917D43EBEC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DF10DB9EE3549C5B5AEF43EF /* CirrusComplication.swift in Sources */,
+				0E7023E71B60839D5BAE7D36 /* CirrusShared.swift in Sources */,
+				03AD1A8566E6644F66EB1613 /* CirrusOutbox.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -570,16 +770,46 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				83B9CEEB6850586CA3256438 /* CirrusShared.swift in Sources */,
+				10D0AC73181A86103E6AF670 /* CirrusOutbox.swift in Sources */,
+				DA4CCBCFC370BD70B26A8F5B /* WatchWire.swift in Sources */,
+				34FCAAD422AEBF356FAD3173 /* CirrusWatchLink.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E94E96B6D40A003BC5E5C56B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DF2DF29938E328837AD05DE4 /* CirrusWatchApp.swift in Sources */,
+				13F98915244F3F7C82D8D644 /* WatchHomeView.swift in Sources */,
+				A05754D05F0D8CC63B808DC1 /* WatchLink.swift in Sources */,
+				2A227E8448748707EB7AFAEF /* WatchPalette.swift in Sources */,
+				3FC7D51E86A7E991D2CC12F8 /* WatchWire.swift in Sources */,
+				05B63FCBB319C9CE0FB35154 /* CirrusShared.swift in Sources */,
+				90594F1B5E269B4CB31F5E1D /* CirrusOutbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0168E93DD905E42B0BD45355 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CirrusWatchComplication;
+			target = FA378E8CCF5119CF5DEA7B8F /* CirrusWatchComplication */;
+			targetProxy = 6EBB859DBB0E9948E2525121 /* PBXContainerItemProxy */;
+		};
 		331C8086294A63A400263BE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		928CC91B9B359ED37B332B24 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CirrusWatch;
+			target = 3498CA7931FDB195EEE3AC7A /* CirrusWatch */;
+			targetProxy = 2BDEAEFDCEB3D90AECFA06E4 /* PBXContainerItemProxy */;
 		};
 		A5265898E4C9EAD175D06D77 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -660,6 +890,33 @@
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Profile;
+		};
+		201658B25BBCD216B33E1D06 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CirrusWatch/CirrusWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
 		};
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
@@ -838,6 +1095,58 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F50F36A6E9055DA50AEB1B4 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CirrusWatch/CirrusWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Profile;
+		};
+		94D92CF0676E16C3AFB7321D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CirrusWatchComplication/CirrusWatchComplication.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatchComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -1028,6 +1337,83 @@
 			};
 			name = Debug;
 		};
+		BB4F54AB3BBF54146D91D05A /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CirrusWatchComplication/CirrusWatchComplication.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatchComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Profile;
+		};
+		E573D261C9812FC9D299FFD8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CirrusWatch/CirrusWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		F98B4B18CC73E1BE3DD701DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CirrusWatchComplication/CirrusWatchComplication.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZFFFQ5T9X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CirrusWatchComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.quitvape.lastPuff.watch.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
 		FF4896AC1664624F9D5249C2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
@@ -1057,6 +1443,16 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		112EF8ECA2FA5112ED450F98 /* Build configuration list for PBXNativeTarget "CirrusWatchComplication" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F98B4B18CC73E1BE3DD701DE /* Release */,
+				94D92CF0676E16C3AFB7321D /* Debug */,
+				BB4F54AB3BBF54146D91D05A /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1103,6 +1499,16 @@
 				FF4896AC1664624F9D5249C2 /* Release */,
 				4B69F36EC6225E7C80D1A904 /* Debug */,
 				298E1304F431CB76AB5C03FF /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EFF3891F423C6F0A30DB90BB /* Build configuration list for PBXNativeTarget "CirrusWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E573D261C9812FC9D299FFD8 /* Release */,
+				201658B25BBCD216B33E1D06 /* Debug */,
+				8F50F36A6E9055DA50AEB1B4 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

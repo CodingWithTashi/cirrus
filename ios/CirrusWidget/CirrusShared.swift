@@ -46,6 +46,15 @@ extension UserDefaults {
 /// drifted once.
 struct CirrusMirror {
     var hasJourney = false
+    /// Which account these numbers belong to — the opaque id the app files its
+    /// journey under, absent when nobody is signed in.
+    ///
+    /// The home-screen widget never needs it: it lives in the same container as
+    /// the app, so sign-out forgets its queue synchronously. The watch cannot
+    /// be reached synchronously, so it is the one surface that has to be able
+    /// to ask "are these still the same person's numbers?" — see
+    /// `WatchWire.applyContext`.
+    var sid = ""
     var dayKey = ""
     var planStartDayKey = ""
     var dayNumber = 0
@@ -65,12 +74,29 @@ struct CirrusMirror {
     var copyOverLimit = ""
     var copyEmptyTitle = ""
     var copyEmptyBody = ""
+    /// The watch app's empty-card body. `copyEmptyBody` says "Tap to open
+    /// Cirrus", which watchOS cannot do — it has no way to launch its companion
+    /// iPhone app. Unused by the widget, and carried in the same document so
+    /// the wrist needs no ARB file of its own.
+    var copyWatchOpenPhone = ""
 
     /// Never throws. An unreadable mirror renders as "no journey yet", which is
     /// the honest empty state rather than a blank rectangle.
-    static func read() -> CirrusMirror {
+    ///
+    /// `defaults` exists so one process can hold two containers: the watch app
+    /// and the phone speak the same struct over WatchConnectivity, and
+    /// `test/ios_watch_contract_test.dart` plays both sides at once. Every
+    /// in-app and in-extension call site takes the default.
+    static func read(_ defaults: UserDefaults? = .cirrus) -> CirrusMirror {
+        decode(defaults?.string(forKey: CirrusKeys.mirror))
+    }
+
+    /// The parser itself, over the document rather than the container it sits
+    /// in — because the watch receives that same document over the air and must
+    /// not grow a second decoder for it (`WatchWire.applyContext`).
+    static func decode(_ raw: String?) -> CirrusMirror {
         guard
-            let raw = UserDefaults.cirrus?.string(forKey: CirrusKeys.mirror),
+            let raw,
             let data = raw.data(using: .utf8),
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             json["v"] as? Int == CirrusKeys.schema
@@ -80,9 +106,11 @@ struct CirrusMirror {
         var mirror = CirrusMirror()
         mirror.copyEmptyTitle = copy["emptyTitle"] as? String ?? ""
         mirror.copyEmptyBody = copy["emptyBody"] as? String ?? ""
+        mirror.copyWatchOpenPhone = copy["watchOpenPhone"] as? String ?? ""
         guard json["hasJourney"] as? Bool == true else { return mirror }
 
         mirror.hasJourney = true
+        mirror.sid = json["sid"] as? String ?? ""
         mirror.dayKey = json["dayKey"] as? String ?? ""
         mirror.planStartDayKey = json["planStartDayKey"] as? String ?? ""
         mirror.dayNumber = json["dayNumber"] as? Int ?? 0

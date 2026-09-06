@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 /// The key-value store the home-screen widget and the app both reach.
@@ -20,6 +23,18 @@ abstract interface class WidgetStore {
 
   /// Tells the OS to re-render every placed instance of the widget.
   Future<void> refresh();
+
+  /// Pushes the mirror to a paired Apple Watch, if there is one.
+  ///
+  /// Separate from [refresh] because it crosses a device boundary, not a
+  /// process one: an App Group is per-device, so the watch cannot read the
+  /// store this interface describes at all. The native side reads the mirror it
+  /// has just been handed here and sends it over WatchConnectivity
+  /// (`ios/Runner/CirrusWatchLink.swift`). No payload travels through this
+  /// call — the container is the single source of truth on both sides of it.
+  ///
+  /// A no-op everywhere but iOS.
+  Future<void> syncWatch();
 
   /// Arms a repaint at each of [times].
   ///
@@ -49,6 +64,13 @@ class HomeWidgetStore implements WidgetStore {
   static const String androidProvider =
       'com.quitvape.last_puff.widget.CirrusWidgetProvider';
   static const String iOSName = 'CirrusWidget';
+
+  /// The one channel to `CirrusWatchLink`. Pinned against the Swift by
+  /// `test/ios_watch_test.dart` — a renamed channel throws
+  /// `MissingPluginException` into the catch below and the wrist silently stops
+  /// updating, which is the same silence a wrong `androidProvider` buys.
+  static const String watchChannel = 'cirrus/watch';
+  static const String watchSyncMethod = 'sync';
 
   /// Declares the shared container, once per process.
   ///
@@ -107,6 +129,18 @@ class HomeWidgetStore implements WidgetStore {
   }
 
   @override
+  Future<void> syncWatch() async {
+    if (!Platform.isIOS) return;
+    try {
+      await const MethodChannel(watchChannel).invokeMethod<void>(watchSyncMethod);
+    } on Object {
+      // No watch paired, no session yet, or an older build of the app shell.
+      // The native side re-pushes on every foreground, so a missed sync heals
+      // itself; there is nothing here worth surfacing to anyone.
+    }
+  }
+
+  @override
   Future<void> refresh() async {
     try {
       await _ensureGroup();
@@ -136,6 +170,7 @@ class HomeWidgetStore implements WidgetStore {
 class MemoryWidgetStore implements WidgetStore {
   final Map<String, String> values = {};
   int refreshes = 0;
+  int watchSyncs = 0;
   List<DateTime> scheduled = const [];
 
   @override
@@ -146,6 +181,9 @@ class MemoryWidgetStore implements WidgetStore {
 
   @override
   Future<void> refresh() async => refreshes++;
+
+  @override
+  Future<void> syncWatch() async => watchSyncs++;
 
   @override
   Future<void> scheduleRepaints(List<DateTime> times) async =>

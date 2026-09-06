@@ -5,7 +5,7 @@
 // still works with JavaScript off. The script upgrades it to an inline success
 // state so nobody loses their place on the page.
 import { Image } from 'astro:assets';
-import logo from '../assets/logo.png';
+import mark from '../assets/mark.png';
 import { WAITLIST_COUNT } from '../consts';
 
 interface Props {
@@ -60,7 +60,7 @@ const {
   </form>
 
   <div class="waitlist__done">
-    <Image src={logo} width={44} height={44} layout="fixed" alt="" />
+    <Image src={mark} height={44} layout="fixed" alt="" />
     <div>
       <strong>You're on the list.</strong>
       <span>Check your email to confirm. That's the step everyone forgets.</span>

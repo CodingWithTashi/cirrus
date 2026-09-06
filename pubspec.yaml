@@ -109,6 +109,18 @@ flutter:
 # "AppIcon" (a loose match on the ASSETCATALOG_COMPILER_ prefix — the real
 # APPICON_NAME setting is already correct, so just `git checkout` that file),
 # and it minifies AppIcon.appiconset/Contents.json onto one line.
+#
+# That `git checkout` is only safe because the three generated Xcode targets are
+# committed: CirrusWidget, CirrusWatch + CirrusWatchComplication, and
+# RunnerUITests. If any ever goes missing, re-run tool/ios_widget_target.rb,
+# tool/ios_watch_target.rb and tool/ios_uitests_target.rb — all three are
+# no-ops once their targets exist, and test/ios_{widget,watch}_test.dart fail if
+# they do not.
+#
+# And re-copy the watch app icon afterwards: it is the iOS 1024 verbatim
+# (ios/CirrusWatch/Assets.xcassets/AppIcon.appiconset/Icon-Watch-1024.png),
+# pinned byte-for-byte by test/ios_watch_test.dart so it cannot go stale
+# silently.
 flutter_launcher_icons:
   # Legacy Android mipmaps (API 21-25 launchers draw the bitmap as-is, with
   # no mask) get the pre-rounded cut of the art; iOS gets the full-bleed

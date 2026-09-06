@@ -179,7 +179,9 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   font-weight: 700;
   font-size: 1.2rem;
 }
-.brand img { display: block; border-radius: 7px; }
+/* No corner radius: this is the mark on transparency now, not the launcher
+   tile, and a radius clips the glyph instead of rounding a ground. */
+.brand img { display: block; }
 
 .site-nav {
   display: flex;
@@ -321,7 +323,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   padding: 1.1rem 1.25rem;
   box-shadow: var(--glow-volt);
 }
-.waitlist__done img { width: 44px; height: 44px; border-radius: 10px; }
+.waitlist__done img { height: 44px; width: auto; }
 .waitlist__done strong { font-family: var(--font-display); font-size: 1.05rem; display: block; }
 .waitlist__done span { color: var(--muted); font-size: 0.875rem; }
 
