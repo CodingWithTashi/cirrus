@@ -3286,4 +3286,4 @@ repaint to the empty card with no tap on them) rather than by a count rising.
 
 **Merged the same evening with §27's day clamp:** `CirrusShared.swift` gained `totalDays` and the three day-line templates, and `dayLabel` now says Freedom Day and "N days past" exactly as Kotlin's `dayLine` does — the harness runs it for day 12, day 30, day 31, day 34 and a legacy mirror without `totalDays`.
 
-`flutter analyze` 0 · `flutter test` **1494/1494** before the merge (1469 + the 21 iOS pins + the 4 Swift round-trips), the merged tree's count on the tracker · the simulator loop above run twice end to end, the second time on a fresh throwaway account after the medium-layout fix.
+`flutter analyze` 0 · `flutter test` **1494/1494** before the merge (1469 + the 21 iOS pins + the 4 Swift round-trips), **1598/1598** on the merged tree · the simulator loop above run twice end to end, the second time on a fresh throwaway account after the medium-layout fix.
