@@ -49,16 +49,38 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
   }
 
-  testWidgets('opening the flow tells the server a craving started', (
-    tester,
-  ) async {
+  testWidgets('starting a craving tells the server; building the provider '
+      'does not', (tester) async {
     final c = await mount(tester);
+    // The notifier is app-lifetime and the arena reads it too, so merely
+    // existing must not count as a craving.
     c.read(panicProvider);
     await tester.pumpAndSettle();
+    expect(panic.begins, 0);
+    expect(c.read(panicProvider).startedAt, isNull);
 
+    c.read(panicProvider.notifier).start();
+    await tester.pumpAndSettle();
     expect(panic.begins, 1);
     // And the first step is already on screen — nothing awaited the call.
     expect(c.read(panicProvider).step, 0);
+    expect(c.read(panicProvider).startedAt, isNotNull);
+  });
+
+  testWidgets('previewStep opens a craving when none is, and only then', (
+    tester,
+  ) async {
+    final c = await mount(tester);
+    c.read(panicProvider.notifier).previewStep(2);
+    await tester.pumpAndSettle();
+    expect(panic.begins, 1);
+    expect(c.read(panicProvider).step, 2);
+
+    // A second jump inside the same craving opens nothing new.
+    c.read(panicProvider.notifier).previewStep(1);
+    await tester.pumpAndSettle();
+    expect(panic.begins, 1);
+    expect(c.read(panicProvider).step, 1);
   });
 
   testWidgets('a re-rated craving reports both numbers and the game', (
@@ -77,8 +99,12 @@ void main() {
     expect(panic.survivedAfter, [3]);
     expect(panic.survivedGames, [GameId.blocks]);
 
-    // Skipping the re-ask sends nothing in its place, never a guess.
-    c.read(panicProvider.notifier).survive();
+    // The next craving, with no game played and the re-ask skipped: nothing
+    // is sent in either's place, never a guess — and nothing is inherited
+    // from the craving before it.
+    c.read(panicProvider.notifier)
+      ..start()
+      ..survive();
     await tester.pumpAndSettle();
     expect(panic.survivedAfter, [3, null]);
     expect(panic.survivedGames, [GameId.blocks, null]);
@@ -106,7 +132,7 @@ void main() {
   ) async {
     panic.failure = const NoConnectionException();
     final c = await mount(tester);
-    c.read(panicProvider);
+    c.read(panicProvider.notifier).start();
     await tester.pumpAndSettle();
 
     // Optimistic on purpose: withholding help because wifi dropped is the one
@@ -122,7 +148,7 @@ void main() {
       sessionsToday: 2,
     );
     final c = await mount(tester);
-    c.read(panicProvider);
+    c.read(panicProvider.notifier).start();
     await tester.pumpAndSettle();
 
     expect(c.read(panicProvider).availability.aiAvailable, isFalse);
@@ -141,7 +167,7 @@ void main() {
 
   testWidgets('an offered AI layer reports no wall', (tester) async {
     final c = await mount(tester);
-    c.read(panicProvider);
+    c.read(panicProvider.notifier).start();
     await tester.pumpAndSettle();
 
     expect(analytics.propsOfAll('limit_reached'), isEmpty);
@@ -155,7 +181,7 @@ void main() {
     // would inflate the one number that decides whether 1/day is right.
     panic.failure = const NoConnectionException();
     final c = await mount(tester);
-    c.read(panicProvider);
+    c.read(panicProvider.notifier).start();
     await tester.pumpAndSettle();
 
     expect(analytics.propsOfAll('limit_reached'), isEmpty);
@@ -311,11 +337,15 @@ void main() {
   /// Mounts the real PanicFlow against a container the TEST owns, so
   /// replacing the tree (what popping the route does) disposes the widget
   /// without disposing the providers underneath it.
-  Future<ProviderContainer> mountFlow(WidgetTester tester) async {
+  Future<ProviderContainer> mountFlow(
+    WidgetTester tester, {
+    DateTime Function()? now,
+  }) async {
     final c = ProviderContainer(
       overrides: [
-        ...fastBackendOverrides(),
+        ...fastBackendOverrides(analytics: analytics),
         panicRepositoryProvider.overrideWithValue(panic),
+        if (now != null) nowProvider.overrideWithValue(now),
       ],
     );
     addTearDown(c.dispose);
@@ -382,11 +412,95 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await unmountFlow(tester, c);
 
-    // survive() invalidates the notifier, so a `ref.read` in dispose would
-    // hand back a FRESH, unresolved session and count this same craving twice.
+    // `_resolved` is set by `survive()` and stays set until the next
+    // `start()`, so the flow's dispose has nothing to report.
     expect(tester.takeException(), isNull);
     expect(panic.survivedIntensities, hasLength(1));
     expect(c.read(quitStoreProvider)!.cravingsSurvivedTotal, before + 1);
+    final outcomes = analytics.propsOfAll('craving_outcome');
+    expect(outcomes, hasLength(1));
+    expect(outcomes.single['survived'], 'true');
+  });
+
+  /// The same container, the takeover shown again — what pushing `/panic`
+  /// a second time does to the app-lifetime notifier.
+  Future<void> reopenFlow(WidgetTester tester, ProviderContainer c) async {
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+          theme: LpTheme.midnight(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const PanicFlow(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  testWidgets('a craving closed with back leaks nothing into the next one', (
+    tester,
+  ) async {
+    // The 607:31 timer. The notifier is app-lifetime and used to reset only
+    // on "it passed", so a takeover closed at 11:10 PM handed its clock, its
+    // step and its intensity to the next morning's craving — which opened on
+    // the loop screen, at intensity 9, with ten hours on the pill.
+    final clock = _MovableClock(DateTime(2026, 9, 5, 23, 10));
+    final c = await mountFlow(tester, now: clock.read);
+    expect(panic.begins, 1, reason: 'opening the takeover opens a craving');
+    final vm = c.read(panicProvider.notifier)
+      ..previewStep(2)
+      ..setIntensity(9);
+    await tester.pump(const Duration(milliseconds: 400));
+    clock.now = clock.now.add(const Duration(hours: 10, minutes: 7));
+    expect(vm.elapsed, const Duration(hours: 10, minutes: 7));
+
+    // The back gesture.
+    await unmountFlow(tester, c);
+    expect(analytics.propsOfAll('craving_outcome').single['survived'], 'false');
+
+    // The next morning.
+    await reopenFlow(tester, c);
+    expect(panic.begins, 2, reason: 'a new craving is a new server session');
+    final session = c.read(panicProvider);
+    expect(session.step, 0, reason: 'the breathing ring, not the loop screen');
+    expect(session.intensity, 7);
+    expect(c.read(panicProvider.notifier).elapsed, Duration.zero);
+    expect(tester.takeException(), isNull);
+    await unmountFlow(tester, c);
+  });
+
+  testWidgets('"it passed" opens no phantom second session', (tester) async {
+    // `survive()` used to `invalidateSelf()`, and Riverpod re-ran `build`
+    // while the flow was still mounted under the survived screen — a second
+    // `begin()` per survived craving, counted by the server as a session
+    // nobody had.
+    final c = await mountFlow(tester);
+    c.read(quitStoreProvider.notifier).seedDemoJourney();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    c.read(panicProvider.notifier).survive();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(seconds: 1));
+    expect(panic.begins, 1);
+
+    // And the craving after it starts clean.
+    await unmountFlow(tester, c);
+    await reopenFlow(tester, c);
+    expect(panic.begins, 2);
+    expect(c.read(panicProvider).step, 0);
+    await unmountFlow(tester, c);
+  });
+
+  testWidgets('ensureStarted opens one craving, never two', (tester) async {
+    // The arena's entry: a no-op from the flow, the start from a deep link.
+    final c = await mount(tester);
+    c.read(panicProvider.notifier)
+      ..ensureStarted()
+      ..ensureStarted();
+    await tester.pumpAndSettle();
+    expect(panic.begins, 1);
   });
 }
 

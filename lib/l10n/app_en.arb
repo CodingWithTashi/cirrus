@@ -677,6 +677,29 @@
   "paywallRestoreNothing": "Nothing to restore on this store account yet.",
   "paywallPurchasePending": "Your payment is pending. Premium switches on as soon as the store confirms it.",
   "paywallPricesUnavailable": "Live prices aren't loading right now — the store shows the exact price before you confirm.",
+  "premiumWelcomeEyebrow": "Premium unlocked",
+  "premiumWelcomeTitle": "You're in.",
+  "premiumWelcomeTrialBody": "{days, plural, =1{One day} other{{days} days}} of everything, on us.",
+  "@premiumWelcomeTrialBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "premiumWelcomeBody": "Everything below is yours, from this second.",
+  "premiumWelcomeUnlocks": "What just unlocked",
+  "premiumWelcomeCharge": "First charge {date}.",
+  "@premiumWelcomeCharge": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumWelcomeReminder": "We'll remind you the day before.",
+  "premiumWelcomeCta": "Let's go",
+  "premiumWelcomeCtaDay1": "Set up my day 1",
   "premiumLockTitle": "Premium",
   "premiumLockCta": "See Premium",
   "premiumPitchInsight": "Your weekly report, written from your own numbers.",
@@ -2156,6 +2179,18 @@
       }
     }
   },
+  "settingsQuietHoursLabel": "Quiet hours",
+  "settingsQuietHoursHint": "Drag the ends. Nothing we send lands inside it.",
+  "settingsQuietHoursLength": "{count, plural, =1{1 hour} other{{count} hours}}",
+  "@settingsQuietHoursLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsQuietHoursStartHandle": "Quiet hours start",
+  "settingsQuietHoursEndHandle": "Quiet hours end",
   "trialEndingPushTime": "now",
   "trialEndingPush": "your trial ends tomorrow — as promised, here's the heads-up. No surprise charges.",
   "trialEndingTitle": "Trial ends tomorrow.",

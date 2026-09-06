@@ -386,10 +386,17 @@ void main() {
       final entitlement = container.read(entitlementProvider);
       expect(entitlement.isActive, isTrue);
       expect(entitlement.period, PlanPeriod.yearly, reason: 'preselected');
-      // Popped back to where they came from, rather than stranded on the
-      // paywall they have just paid past.
-      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      // The welcome took the place of the paywall they have just paid past
+      // (docs/10 §28); its CTA pops back to where they came from.
+      expect(
+        container.read(routerProvider).state.uri.path,
+        Routes.premiumWelcome,
+      );
       expect(find.text(l10n.paywallCta), findsNothing);
+      expect(find.text(l10n.premiumWelcomeTitle), findsOneWidget);
+      await tester.tap(find.text(l10n.premiumWelcomeCta));
+      await tester.pumpAndSettle();
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
       expect(analytics.names, containsAllInOrder(['trial_started', 'purchase_completed']));
     });
 
@@ -450,6 +457,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(isPremiumProvider), isTrue);
+      // Bought on the retry: the welcome, then Home underneath it.
+      expect(
+        container.read(routerProvider).state.uri.path,
+        Routes.premiumWelcome,
+      );
+      await tester.tap(find.text(l10n.premiumWelcomeCta));
+      await tester.pumpAndSettle();
       expect(container.read(routerProvider).state.uri.path, Routes.home);
     });
 
@@ -492,16 +506,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(isPremiumProvider), isTrue);
+      // The welcome took the paywall's place — once (docs/10 §28). Its CTA
+      // lands on Home with nothing left to pop.
+      expect(
+        container.read(routerProvider).state.uri.path,
+        Routes.premiumWelcome,
+      );
+      await tester.tap(find.text(l10n.premiumWelcomeCta));
+      await tester.pumpAndSettle();
       expect(container.read(routerProvider).state.uri.path, Routes.home);
       expect(container.read(routerProvider).canPop(), isFalse);
 
-      // A second change (a renewal) finds no paywall to pop and pops nothing
-      // else — Home stays exactly where it is.
+      // A second change (a renewal) finds no paywall and moves nothing —
+      // Home stays exactly where it is.
       unawaited(container.read(entitlementProvider.notifier).restore());
       await tester.pumpAndSettle();
       expect(container.read(routerProvider).state.uri.path, Routes.home);
-      // The "Premium is active" snack's fallback timer.
-      await tester.pump(const Duration(seconds: 6));
     });
   });
 
@@ -524,6 +544,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(entitlementProvider).period, PlanPeriod.monthly);
+      // The welcome replaces the card; its CTA pops to Home underneath.
+      expect(
+        container.read(routerProvider).state.uri.path,
+        Routes.premiumWelcome,
+      );
+      await tester.tap(find.text(l10n.premiumWelcomeCta));
+      await tester.pumpAndSettle();
       expect(container.read(routerProvider).state.uri.path, Routes.home);
     });
   });

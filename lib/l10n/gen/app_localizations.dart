@@ -1945,6 +1945,60 @@ abstract class AppLocalizations {
   /// **'Live prices aren\'t loading right now — the store shows the exact price before you confirm.'**
   String get paywallPricesUnavailable;
 
+  /// No description provided for @premiumWelcomeEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium unlocked'**
+  String get premiumWelcomeEyebrow;
+
+  /// No description provided for @premiumWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re in.'**
+  String get premiumWelcomeTitle;
+
+  /// No description provided for @premiumWelcomeTrialBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{One day} other{{days} days}} of everything, on us.'**
+  String premiumWelcomeTrialBody(int days);
+
+  /// No description provided for @premiumWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything below is yours, from this second.'**
+  String get premiumWelcomeBody;
+
+  /// No description provided for @premiumWelcomeUnlocks.
+  ///
+  /// In en, this message translates to:
+  /// **'What just unlocked'**
+  String get premiumWelcomeUnlocks;
+
+  /// No description provided for @premiumWelcomeCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'First charge {date}.'**
+  String premiumWelcomeCharge(String date);
+
+  /// No description provided for @premiumWelcomeReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll remind you the day before.'**
+  String get premiumWelcomeReminder;
+
+  /// No description provided for @premiumWelcomeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s go'**
+  String get premiumWelcomeCta;
+
+  /// No description provided for @premiumWelcomeCtaDay1.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up my day 1'**
+  String get premiumWelcomeCtaDay1;
+
   /// No description provided for @premiumLockTitle.
   ///
   /// In en, this message translates to:
@@ -5094,6 +5148,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Never between {range} — quiet hours.'**
   String settingsQuietHours(String range);
+
+  /// No description provided for @settingsQuietHoursLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get settingsQuietHoursLabel;
+
+  /// No description provided for @settingsQuietHoursHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the ends. Nothing we send lands inside it.'**
+  String get settingsQuietHoursHint;
+
+  /// No description provided for @settingsQuietHoursLength.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hour} other{{count} hours}}'**
+  String settingsQuietHoursLength(int count);
+
+  /// No description provided for @settingsQuietHoursStartHandle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours start'**
+  String get settingsQuietHoursStartHandle;
+
+  /// No description provided for @settingsQuietHoursEndHandle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours end'**
+  String get settingsQuietHoursEndHandle;
 
   /// No description provided for @trialEndingPushTime.
   ///

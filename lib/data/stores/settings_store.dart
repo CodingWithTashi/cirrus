@@ -53,6 +53,11 @@ class SettingsState {
   /// flag there is no way to tell "9pm, because they said so" from "9pm,
   /// because nobody has said anything", and the detected hours would never win.
   final bool dangerHoursCustom;
+
+  /// The window no notification lands in — the danger-hour nudge, the trial
+  /// reminder and the milestone celebration all read it. Wraps midnight when
+  /// start > end; the shipped 23 → 8 is docs/03 §8. The user's own since
+  /// Sep 6 2026, dragged on the rail in the danger-hours sheet.
   final int quietStartHour;
   final int quietEndHour;
   final bool trialReminderOn;
@@ -134,6 +139,8 @@ class SettingsState {
     int? dangerStartHour,
     int? dangerEndHour,
     bool? dangerHoursCustom,
+    int? quietStartHour,
+    int? quietEndHour,
     bool? trialReminderOn,
     bool? winbackShown,
     String? launchPaywallShownDay,
@@ -151,8 +158,8 @@ class SettingsState {
     dangerStartHour: dangerStartHour ?? this.dangerStartHour,
     dangerEndHour: dangerEndHour ?? this.dangerEndHour,
     dangerHoursCustom: dangerHoursCustom ?? this.dangerHoursCustom,
-    quietStartHour: quietStartHour,
-    quietEndHour: quietEndHour,
+    quietStartHour: quietStartHour ?? this.quietStartHour,
+    quietEndHour: quietEndHour ?? this.quietEndHour,
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
     winbackShown: winbackShown ?? this.winbackShown,
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
@@ -235,6 +242,17 @@ class SettingsStore extends Notifier<SettingsState> {
       dangerHoursCustom: true,
     ),
   );
+
+  /// The window no notification lands in. Hours 0–23; start > end wraps
+  /// midnight (23 → 8). Start == end would mean "no quiet hours" to the
+  /// planner and cannot be drawn on the rail, so it is refused rather than
+  /// stored — the sheet's track never produces it, and nothing else writes.
+  void setQuietHours(int startHour, int endHour) {
+    final start = startHour % 24;
+    final end = endHour % 24;
+    if (start == end) return;
+    _commit(state.copyWith(quietStartHour: start, quietEndHour: end));
+  }
 
   void setTrialReminder(bool on) =>
       _commit(state.copyWith(trialReminderOn: on));

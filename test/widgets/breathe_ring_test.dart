@@ -54,6 +54,11 @@ void main() {
         ),
       ),
     );
+    // The takeover opens its craving after its first frame (Riverpod forbids
+    // the provider write inside `initState`), painting only its ground until
+    // then — under the route's fade-in from zero on a device. One more frame,
+    // no time elapsed: what follows is still the instant the step appears.
+    await tester.pump();
   }
 
   BreathRingPainter painterOf(WidgetTester tester) {

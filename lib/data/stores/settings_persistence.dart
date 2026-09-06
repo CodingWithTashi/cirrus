@@ -26,6 +26,8 @@ abstract final class SettingsPersistence {
   static const _dangerStart = 'settings.dangerStartHour';
   static const _dangerEnd = 'settings.dangerEndHour';
   static const _dangerCustom = 'settings.dangerHoursCustom';
+  static const _quietStart = 'settings.quietStartHour';
+  static const _quietEnd = 'settings.quietEndHour';
   static const _trialReminderOn = 'settings.trialReminderOn';
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
@@ -55,6 +57,8 @@ abstract final class SettingsPersistence {
         dangerEndHour: prefs.getInt(_dangerEnd) ?? defaults.dangerEndHour,
         dangerHoursCustom:
             prefs.getBool(_dangerCustom) ?? defaults.dangerHoursCustom,
+        quietStartHour: prefs.getInt(_quietStart) ?? defaults.quietStartHour,
+        quietEndHour: prefs.getInt(_quietEnd) ?? defaults.quietEndHour,
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
@@ -91,6 +95,8 @@ abstract final class SettingsPersistence {
       await prefs.setInt(_dangerStart, state.dangerStartHour);
       await prefs.setInt(_dangerEnd, state.dangerEndHour);
       await prefs.setBool(_dangerCustom, state.dangerHoursCustom);
+      await prefs.setInt(_quietStart, state.quietStartHour);
+      await prefs.setInt(_quietEnd, state.quietEndHour);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_winbackShown, state.winbackShown);
       await prefs.setBool(_milestonesAdopted, state.milestonesAdopted);

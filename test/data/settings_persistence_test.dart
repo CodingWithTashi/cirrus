@@ -37,6 +37,8 @@ void main() {
       notificationsOn: false,
       dangerStartHour: 19,
       dangerEndHour: 23,
+      quietStartHour: 22,
+      quietEndHour: 7,
       trialReminderOn: false,
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
@@ -71,6 +73,10 @@ void main() {
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
+    // The user's own quiet window (Sep 6 2026): a restart that reset it to
+    // 23→8 would move the nudge, the trial reminder and the milestone push.
+    expect(loaded.quietStartHour, 22);
+    expect(loaded.quietEndHour, 7);
     expect(loaded.trialReminderOn, isFalse);
     expect(loaded.winbackShown, isTrue);
     // A lifetime counter that resets on every launch would hand out an
@@ -96,24 +102,12 @@ void main() {
         .map((m) => m.group(1)!)
         .toSet();
 
-    // Fixed by docs/03 §8 and settable by nobody: they have defaults, no
-    // `copyWith` parameter, and no setter, so there is no user choice to
-    // persist. Asserted rather than assumed — the moment one becomes
-    // settable it must also become persisted.
-    const fixed = {'quietStartHour', 'quietEndHour'};
-    for (final name in fixed) {
-      expect(
-        body.contains('    int? $name,'),
-        isFalse,
-        reason: '$name is settable now, so it must be persisted too',
-      );
-    }
     // Describes the store, not a choice: whether disk has answered yet. It
     // must never be written, or a reload would come back claiming to be
     // hydrated before it is.
     const transient = {'hydrated'};
 
-    expect(declared.difference(fixed).difference(transient), {
+    expect(declared.difference(transient), {
       'themeMode',
       'palette',
       'locale',
@@ -121,6 +115,10 @@ void main() {
       'dangerStartHour',
       'dangerEndHour',
       'dangerHoursCustom',
+      // Fixed by docs/03 §8 until Sep 6 2026; the user's own since, dragged
+      // on the rail in the danger-hours sheet.
+      'quietStartHour',
+      'quietEndHour',
       'trialReminderOn',
       'winbackShown',
       'launchPaywallShownDay',

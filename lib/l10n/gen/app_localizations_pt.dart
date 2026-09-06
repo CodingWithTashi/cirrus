@@ -1092,6 +1092,44 @@ class AppLocalizationsPt extends AppLocalizations {
       'Os preços em direto não estão a carregar — a loja mostra-te o preço exato antes de confirmares.';
 
   @override
+  String get premiumWelcomeEyebrow => 'Premium desbloqueado';
+
+  @override
+  String get premiumWelcomeTitle => 'Estás dentro.';
+
+  @override
+  String premiumWelcomeTrialBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dias',
+      one: 'Um dia',
+    );
+    return '$_temp0 com tudo, por nossa conta.';
+  }
+
+  @override
+  String get premiumWelcomeBody =>
+      'Tudo o que está abaixo é teu, a partir deste segundo.';
+
+  @override
+  String get premiumWelcomeUnlocks => 'O que acabou de desbloquear';
+
+  @override
+  String premiumWelcomeCharge(String date) {
+    return 'Primeira cobrança a $date.';
+  }
+
+  @override
+  String get premiumWelcomeReminder => 'Avisamos-te no dia anterior.';
+
+  @override
+  String get premiumWelcomeCta => 'Vamos lá';
+
+  @override
+  String get premiumWelcomeCtaDay1 => 'Preparar o meu dia 1';
+
+  @override
   String get premiumLockTitle => 'Premium';
 
   @override
@@ -3084,6 +3122,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String settingsQuietHours(String range) {
     return 'Nunca entre $range — horas de silêncio.';
   }
+
+  @override
+  String get settingsQuietHoursLabel => 'Horas de silêncio';
+
+  @override
+  String get settingsQuietHoursHint =>
+      'Arrasta as pontas. Nada do que enviamos cai aí dentro.';
+
+  @override
+  String settingsQuietHoursLength(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count horas',
+      one: '1 hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsQuietHoursStartHandle => 'Início das horas de silêncio';
+
+  @override
+  String get settingsQuietHoursEndHandle => 'Fim das horas de silêncio';
 
   @override
   String get trialEndingPushTime => 'agora';

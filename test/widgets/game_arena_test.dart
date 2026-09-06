@@ -766,9 +766,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await play(tester, 3);
 
-      // The paywall closes itself once there is nothing left to sell, so the
-      // arena is back — showing the board they actually bought, not the Orbs
-      // they were parked on.
+      // The paywall closes itself once there is nothing left to sell — into
+      // the welcome (docs/10 §28), whose CTA pops back to the arena: showing
+      // the board they actually bought, not the Orbs they were parked on.
+      expect(c.read(routerProvider).state.uri.path, Routes.premiumWelcome);
+      await tester.tap(find.text(l10n.premiumWelcomeCta));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(c.read(routerProvider).state.uri.path, Routes.game);
       expect(find.byType(BlocksField), findsOneWidget);
       expect(find.byType(OrbsField), findsNothing);

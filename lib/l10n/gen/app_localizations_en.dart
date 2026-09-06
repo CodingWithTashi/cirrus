@@ -1086,6 +1086,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'Live prices aren\'t loading right now — the store shows the exact price before you confirm.';
 
   @override
+  String get premiumWelcomeEyebrow => 'Premium unlocked';
+
+  @override
+  String get premiumWelcomeTitle => 'You\'re in.';
+
+  @override
+  String premiumWelcomeTrialBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: 'One day',
+    );
+    return '$_temp0 of everything, on us.';
+  }
+
+  @override
+  String get premiumWelcomeBody =>
+      'Everything below is yours, from this second.';
+
+  @override
+  String get premiumWelcomeUnlocks => 'What just unlocked';
+
+  @override
+  String premiumWelcomeCharge(String date) {
+    return 'First charge $date.';
+  }
+
+  @override
+  String get premiumWelcomeReminder => 'We\'ll remind you the day before.';
+
+  @override
+  String get premiumWelcomeCta => 'Let\'s go';
+
+  @override
+  String get premiumWelcomeCtaDay1 => 'Set up my day 1';
+
+  @override
   String get premiumLockTitle => 'Premium';
 
   @override
@@ -3069,6 +3107,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsQuietHours(String range) {
     return 'Never between $range — quiet hours.';
   }
+
+  @override
+  String get settingsQuietHoursLabel => 'Quiet hours';
+
+  @override
+  String get settingsQuietHoursHint =>
+      'Drag the ends. Nothing we send lands inside it.';
+
+  @override
+  String settingsQuietHoursLength(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsQuietHoursStartHandle => 'Quiet hours start';
+
+  @override
+  String get settingsQuietHoursEndHandle => 'Quiet hours end';
 
   @override
   String get trialEndingPushTime => 'now';

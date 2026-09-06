@@ -474,4 +474,50 @@ void main() {
     );
     expect(e2e.showing(e2e.l10n.freePlanColPro), isFalse);
   });
+
+  testWidgets('buying from Settings lands on "You\'re in", and Let\'s go '
+      'returns to Settings', (tester) async {
+    // The screen after a purchase (docs/10 §28). On a device because the
+    // welcome REPLACES a pushed paywall and its CTA pops whatever was under
+    // it — a disposed paywall route and the real router are what only a
+    // device sees.
+    final e2e = await freeAccount(tester);
+    final router = e2e.container.read(routerProvider);
+    unawaited(router.push(Routes.settings));
+    await e2e.waitFor(const Duration(seconds: 1));
+    unawaited(router.push(Routes.paywallFrom('settings')));
+    await e2e.waitFor(const Duration(seconds: 2));
+    expectPaywallFrom(e2e, 'settings');
+
+    // The fake store completes the purchase. The CTA's words depend on
+    // whether a trial is on offer, so take whichever is on screen.
+    final cta = e2e.showing(e2e.l10n.paywallCta)
+        ? e2e.l10n.paywallCta
+        : e2e.l10n.paywallCtaSubscribe;
+    await e2e.scrollTo(find.text(cta));
+    await e2e.tapText(cta);
+    await e2e.waitFor(const Duration(seconds: 3));
+
+    expect(
+      router.state.uri.path,
+      Routes.premiumWelcome,
+      reason: 'no welcome after the purchase; on screen: ${e2e.texts()}',
+    );
+    expect(e2e.container.read(isPremiumProvider), isTrue);
+    expect(e2e.showing(e2e.l10n.premiumWelcomeTitle), isTrue);
+    // A lapsed subscriber pays from day one: the plain body, no charge line.
+    expect(e2e.showing(e2e.l10n.premiumWelcomeBody), isTrue);
+    expect(e2e.showing(e2e.l10n.paywallFeatCoach), isTrue);
+
+    await e2e.tapText(e2e.l10n.premiumWelcomeCta);
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(
+      router.state.uri.path,
+      Routes.settings,
+      reason: "Let's go did not pop to Settings; on screen: ${e2e.texts()}",
+    );
+    expect(e2e.showing(e2e.l10n.premiumWelcomeTitle), isFalse);
+    expect(e2e.showing(e2e.l10n.paywallTitleUpgrade), isFalse,
+        reason: 'the paywall must be gone from the stack, not under us');
+  });
 }

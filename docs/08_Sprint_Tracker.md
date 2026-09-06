@@ -431,6 +431,26 @@ header "day 2", and Ember saying "day one … 2.74 dollars". `docs/10 §27` is t
   notification marking a badge celebrated for ever, a delivered celebration handed back and
   delivered again). `milestone_ledger_test` is new; `SettingsState.hydrated` and
   `armedMilestoneAt` are the two fields behind it
+- [x] `S5-33` **The offline pill that showed on every unlock** (`docs/10 §28.1`): one failed DNS
+  lookup was the verdict. `ConnectivityStore` now reads the OS transport stream
+  (`connectivity_plus`), a two-host probe with three-failure hysteresis, and the app lifecycle;
+  `connectivity_store_test` (9). Still to verify on the iPhone: lock/unlock on wifi, airplane on/off
+- [x] `S5-34` **The 607:31 craving timer** (`docs/10 §28.2`): the panic notifier reset only on
+  "it passed", never on back, and its `invalidateSelf` opened a phantom second server session per
+  survived craving. A craving now starts on entry (`start()`), post-frame; nothing carries over
+- [x] `S5-35` **Quiet hours on the danger-hours sheet** (`docs/10 §28.3`): a noon-to-noon rail
+  with two knobs; the chips and the promise re-answer live; Save writes both; persisted; every
+  planner follows. Founder-approved from the live preview artifact ("go")
+- [x] `S5-36` **"You're in." after a purchase** (`docs/10 §28.4`): the post-purchase screen every
+  completed purchase reaches, replacing the paywall; trial days and first charge from the store's
+  own end, the seven paywall lines as doors. Never for Pending; Restore keeps its snack
+
+**Gates (Sep 6):** `flutter analyze` clean · `flutter test` **1605** · **emulator 56/56**
+(`emulator-5554`, Android 17, fake backend: every suite but the production-only `f_`, plus
+the new `j_craving_and_quiet_hours` and the purchase → "You're in." case in `i_monetisation`)
+· the four surfaces also driven by hand there with screenshots (`docs/10 §28.6`) ·
+`functions/` untouched (no `verify` run) · **iPhone still owed**: the unlock-on-wifi pill,
+which an emulator's radio cannot reproduce (`docs/13` rows 25b, 88, 101b, 115).
 
 **Gates (Sep 5):** `flutter analyze` clean · `flutter test` **1570** · `npm run verify`
 **227** · `npm run test:integration` **286** · **on-device 70/70 on a Pixel 8** (53 against

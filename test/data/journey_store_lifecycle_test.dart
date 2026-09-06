@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/backend_mode.dart';
+import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
@@ -19,6 +20,10 @@ void main() {
       overrides: [
         backendModeProvider.overrideWithValue(BackendMode.fake),
         fakeServerProvider.overrideWithValue(server),
+        // No Flutter binding here: the connectivity store must stay inert
+        // (no probe, no OS stream, no lifecycle listener), as in
+        // `fastBackendOverrides()`.
+        connectivityPollIntervalProvider.overrideWithValue(null),
       ],
     );
     addTearDown(container.dispose);

@@ -2,7 +2,7 @@ name: last_puff
 description: "Cirrus — the honest, AI-native quit-vaping app."
 publish_to: 'none'
 
-version: 1.0.11+12
+version: 1.0.12+13
 
 environment:
   sdk: ^3.11.4
@@ -56,6 +56,7 @@ dependencies:
   # as the B18 receivers that fired into nothing. `test/android_widget_test.dart`
   # fails if it moves back.
   home_widget: ^0.9.4
+  connectivity_plus: ^7.3.1
 
 
 dev_dependencies:

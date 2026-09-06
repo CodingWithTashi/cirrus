@@ -1097,6 +1097,44 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les prix en direct ne se chargent pas pour le moment — la boutique affiche le prix exact avant confirmation.';
 
   @override
+  String get premiumWelcomeEyebrow => 'Premium débloqué';
+
+  @override
+  String get premiumWelcomeTitle => 'Tu y es.';
+
+  @override
+  String premiumWelcomeTrialBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days jours',
+      one: 'Un jour',
+    );
+    return '$_temp0 avec tout, offerts.';
+  }
+
+  @override
+  String get premiumWelcomeBody =>
+      'Tout ce qui suit est à toi, dès cette seconde.';
+
+  @override
+  String get premiumWelcomeUnlocks => 'Ce qui vient de se débloquer';
+
+  @override
+  String premiumWelcomeCharge(String date) {
+    return 'Premier prélèvement le $date.';
+  }
+
+  @override
+  String get premiumWelcomeReminder => 'On te préviendra la veille.';
+
+  @override
+  String get premiumWelcomeCta => 'C\'est parti';
+
+  @override
+  String get premiumWelcomeCtaDay1 => 'Préparer mon jour 1';
+
+  @override
   String get premiumLockTitle => 'Premium';
 
   @override
@@ -3096,6 +3134,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String settingsQuietHours(String range) {
     return 'Jamais entre $range — heures calmes.';
   }
+
+  @override
+  String get settingsQuietHoursLabel => 'Heures calmes';
+
+  @override
+  String get settingsQuietHoursHint =>
+      'Fais glisser les extrémités. Rien de ce qu\'on envoie ne tombe dedans.';
+
+  @override
+  String settingsQuietHoursLength(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count heures',
+      one: '1 heure',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsQuietHoursStartHandle => 'Début des heures calmes';
+
+  @override
+  String get settingsQuietHoursEndHandle => 'Fin des heures calmes';
 
   @override
   String get trialEndingPushTime => 'maintenant';

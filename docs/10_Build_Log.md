@@ -3158,3 +3158,223 @@ dynamic as it can be; will a working connection ever show a network error.
    every Play user and the coach says "signal dropped" — the §17 failure at
    population scale. Verify it on the internal-testing build before the first
    user does: open Coach, send one message.
+
+---
+
+## 28. THE PILL THAT LIED ON EVERY UNLOCK, AND THE TIMER THAT SAID 607 (Sep 6) — four founder reports on an iPhone
+
+Three screenshots between 9:14 and 9:19 on the iPhone, with the wifi icon
+lit in the status bar of every one, and four reports: "this no internet
+message is not proper … sometime when I open app, or unlock phone I see
+this"; the panic loop screen's pill reading **craving timer · 607:31 · you're
+past the worst spike** after one 60-second round of Blocks; "let the user
+decide quiet hour by drag and drop in same bottom sheet"; and "when I upgrade
+to pro, I dont see any celebration or ui that says you are now in pro". Two
+were bugs and were fixed first; two were designs, previewed as a live
+artifact (both mocks draggable, on the real tokens and the real planner
+math) and built on the founder's "go".
+
+### 28.1 The offline pill — one failed lookup was the whole verdict
+
+`ConnectivityStore` was one `InternetAddress.lookup('one.one.one.one')` every
+five seconds, and a single failure flipped the state. On resume the timer
+fires while the radio is still re-associating; the lookup fails for a reason
+that has nothing to do with connectivity; the pill slides in; five seconds
+later the next poll passes and it slides out. That is exactly what "sometime
+when I open app, or unlock phone" describes, and it is the wrong sentence to
+show someone who has done nothing wrong.
+
+Rebuilt on three signals, none of which is trusted alone:
+
+- **The OS transport stream** (`connectivity_plus` 7.3.1,
+  `Connectivity().onConnectivityChanged`): event-driven, so airplane mode is
+  known the instant it is switched on, with no probe to wait for. It only
+  ever *disqualifies* — a wifi with no uplink still reports an interface —
+  and its `none` is held for **1.2 s** first, because a wifi→cellular
+  handover reports `none` between the two networks and used to be a
+  guaranteed flash.
+- **The probe** now asks two resolvers in parallel (`one.one.one.one`,
+  `dns.google`; the first yes wins, only both failing fails), and a failure
+  is **re-asked 1.5 s later** rather than believed. With an interface up it
+  takes **three straight failures** to go offline; **one success** comes back,
+  and it is asked for the moment a transport appears (after a 600 ms settle
+  for DHCP) or the app resumes (after 800 ms), never left to the next poll.
+  The poll itself is 10 s now, not 5: the stream catches the common changes,
+  the poll only has to notice the rare dead wifi.
+- **The app lifecycle**: nothing probes in the background, and a probe in
+  flight across a resume, a background or a transport event is discarded by
+  a generation counter — its answer was about a world that no longer exists.
+
+Two construction traps, both found by the suite. The two OS signals need a
+Flutter binding, and an event channel touched without one fails inside an
+*async* `onListen`/`onCancel` whose future the broadcast controller
+discards — an uncaught error no `try` or `.ignore()` can reach — which took
+down every plain `test()` that wires the fake backend without
+`fastBackendOverrides()` (`plan_advice_test`, `journey_store_lifecycle_test`,
+`account_deletion_test`). The store checks `_hasBinding()` and stays
+probe-only without one; those three files now set the null poll interval
+like the helper does. And `refresh()` is inert when the store is disabled —
+a retry button under `fastBackendOverrides()` must never reach DNS.
+`test/data/connectivity_store_test.dart` (9) pins each rule, and disposes its
+container inside the test body because flutter_test checks for pending
+timers *before* tearDowns run.
+
+**Seen on the emulator (§28.6):** airplane on shows the pill in ~1.5–3 s and
+off hides it in ~3 s; lock/unlock, background/resume, wifi → cellular and a
+sub-second no-network blip all show nothing. **Still to see on the iPhone:**
+the original report — an unlock on wifi — because an emulator's radio never
+wakes; the same walk is the one to repeat there. The Mac needs a
+`pod install` for the new plugin; `flutter run` does it.
+
+### 28.2 The timer — a closed craving handed its clock to the next one
+
+`panicProvider` is an app-lifetime `NotifierProvider` (the arena reads it too,
+and a `?g=` link reaches the arena with no flow beneath), and it reset itself
+in exactly one place: `survive()`, through `invalidateSelf()`. `abandon()` —
+the back gesture — reset nothing. So a takeover opened at 23:10 the night
+before (the danger-hour nudge is at 10:50 PM; the test that followed it is
+the obvious one) and closed with back kept its `startedAt`, its step and its
+intensity, and the next morning's craving inherited all three: the pill read
+607:31 (9:18 − 23:10:29), the flow reopened on the loop screen instead of the
+breathing ring, and the server was never told a new craving had started.
+
+The invalidation had a cost of its own. Riverpod re-runs `build()` on the
+same instance while there are listeners, and the flow is still mounted under
+the Survived screen when `survive()` runs — so every survived craving opened
+a **phantom second server session** (`panicSession` counts each call) and
+reset `_resolved`, after which the flow's dispose reported the same craving
+**abandoned** as well. The guardrail rate reads those events.
+
+Now a craving is opened by `start()` — fresh clock off `nowProvider`, step 0,
+default intensity, `begin()` — from `PanicFlow`'s post-frame callback.
+Post-frame because Riverpod refuses a provider write from `initState`
+("Tried to modify a provider while the widget tree was building"; the check
+is a `markNeedsBuild` on the root scope, which throws mid-build), and the
+flow paints only its ground for that one frame, under the route's own
+fade-in from zero, so the previous step can never flash. The arena calls
+`ensureStarted()` in the same place, a no-op from the flow. `survive()`
+invalidates nothing; `abandon()` and `survive()` both close the craving;
+`previewStep()` (tests) jumps inside the open one. The two "It passed" taps
+in the flow now navigate before they mutate, as the arena already did.
+`panic_session_test` gained the reopen (a 10 h 7 m clock, step 2, intensity
+9 → back → `0:00`, step 0, 7, a second `begin()`), the single `begin()` per
+survived craving, and the single `craving_outcome` event.
+
+### 28.3 Quiet hours, on the rail
+
+`SettingsState.quietStartHour/EndHour` were fixed 23 → 8 with no setter and
+no `copyWith` parameter (the persistence test asserted exactly that). Now
+`setQuietHours()` (start == end refused: the planner reads it as *no* quiet
+hours), persisted under `settings.quietStartHour/EndHour`, and every planner
+already read the setting, so the danger-hour nudge, the trial reminder and
+the milestone celebration all follow the new window without a line changed.
+
+The control is `QuietHoursBand` (`features/settings/quiet_hours_band.dart`):
+a 24-cell rail from noon to noon, so the usual night is one contiguous band
+rather than two stubs at the ends; positions map to hours as
+`(12 + p) % 24`, and `QuietTrack` holds the span with its limits (1–23
+hours, never crossing noon — the only windows anyone sets). A knob drag moves
+that end with a selection tick per hour and a pill naming the hour above the
+knob; a drag from inside the band slides the whole window, length kept; a
+tap on the rail brings the nearer knob; horizontal drags only, so the sheet's
+scroll and swipe-to-dismiss are never contested; `DragStartBehavior.down`,
+the Blocks lesson. Oxygen, not ember — the danger chips wear ember and the
+two selections must never read as one. Two `Semantics` sliders, one per knob,
+an hour a step (a node with increase/decrease and a value must also carry
+`increasedValue`/`decreasedValue`; the framework asserts on it, and the
+suite caught it).
+
+In the sheet the chips are re-derived from the window under the finger
+through the same `eligibleStartHours` the scheduler applies, inside an
+`AnimatedSize` so a row leaving never jumps; a selection that stops
+qualifying steps to the nearest hour that still fires (`_nearestOf`, clock-
+face distance) and pops once; the promise card re-prints the nudge time and
+the quiet range on every move; Save writes both. `danger_hours_sheet_test`
+drags the knob (11 PM selected → start to 9 PM → 10 PM and 11 PM gone, 9 PM
+✓, 8:50 PM, "9 PM – 8 AM", saved as 21/8/21), slides the band (1 AM – 10 AM,
+nine hours kept), taps the rail, swipes away unsaved, and drives a knob
+through its slider semantics; `quiet_track_test` (10) pins the mapping and
+the limits.
+
+### 28.4 "You're in."
+
+A purchase used to `leavePaywall()` — a pop — and say nothing. The gates
+unlocked and the person was back on Settings with no word that anything had
+happened. `PremiumWelcomeScreen` (`/premium/welcome`) is the beat in between:
+confetti and the celebrate haptic, "You're in.", the trial's days and its
+first charge (`entitlement.expiresAt`, the instant the trial reminder is
+planned from; the reminder sentence only when both toggles are on) or the
+plain "yours from this second" for a purchase with no trial, then the
+paywall's own seven `paywallFeat*` lines ticking in 80 ms apart, each a door
+— coach and the community and Stats are `go`ne to (a pushed shell would
+stack a second one), a theme, the arena on Blocks, the plan and the report
+are pushed so back returns here. Reached with `pushReplacement` over
+whichever screen sold it, so back can never land on a paywall just paid
+past; its CTA pops to what was under that screen, or Home when nothing was.
+From onboarding (`?next=day1`) the CTA carries on to the Day-1 checklist and
+the rows are not doors: the router would send the shell tabs back to the
+checklist anyway.
+
+Every completed purchase reaches it — the paywall CTA, the win-back card,
+onboarding, and an entitlement arriving under an open paywall (a pending
+payment settling, a purchase made on another device). Never for
+`PurchasePending`, whose honest snack stays; Restore keeps its "welcome back"
+snack, because nothing new was bought. No new analytics — `purchase_completed`
+already fires — and no new numbers: every word on the screen existed before
+it did. `premium_welcome_test` (5) covers the copy in both shapes, the
+reminder toggle, the doors, and the onboarding CTA; `paywall_test`'s four
+purchase endings and the arena's lock-card purchase now step through it.
+
+### 28.5 Fourteen strings, five locales
+
+Five for the rail (`settingsQuietHoursLabel/Hint/Length/StartHandle/
+EndHandle`), nine for the welcome (`premiumWelcome*`), added to all five ARB
+files through a JSON round-trip that touched nothing else (91 insertions,
+0 deletions), in each locale's informal register. `l10n_parity_test` green.
+
+### 28.6 Gates
+
+`flutter analyze` clean · `flutter test` **1605** (from 1570; 32 new across
+`connectivity_store_test`, `quiet_track_test`, `premium_welcome_test`, the
+sheet and panic suites) · **on the emulator (`emulator-5554`, Android 17
+x86_64, fake backend): 56/56** — the nine existing suites minus the
+production-only `f_` (16 + 17 + 21) plus the new `j_craving_and_quiet_hours`
+(2), run in three chunks so each stayed under the tool's ten-minute cap.
+`i_monetisation` gained the purchase → "You're in." → back-to-Settings case;
+`j_` carries the craving reopen and the rail drag inside the real sheet (a
+horizontal drag through the modal's own dismiss-drag and scroll view — the
+gesture arena only a device can answer). The first `j_` run failed on its
+own assertion (a fresh clock read exactly 5 s after the harness's device-
+paced waits; it now compares start instants) and that abort exposed a
+teardown hole: with the takeover still up, the container was disposed before
+the flow, and `abandon()` reported through a dead `ref`. It returns early
+once its notifier is disposed now. Not run: `npm run verify` (nothing in
+`functions/` changed), the `f_` production suite, the iPhone. `pubspec.yaml`:
+`connectivity_plus ^7.3.1`; the version line was already `1.0.12+13` in the
+working tree.
+
+**By hand on the same emulator, screenshots in the session:** the pill
+absent at launch and on sign-in; present ~1.5–3 s into airplane mode and gone
+~3 s after; absent through lock → 5 s → unlock (frames at 0/1/2/4 s),
+background → 6 s → resume (0/1/3 s), wifi off with cellular remaining
+(1/2.5/6.5 s) and a 0.4 s wifi+data blip (1.2/2.7/5.7 s). The craving timer at
+0:01 on open, 1:02 on step 3, 0:51 after a round of Orbs and back, and 0:01
+on step 1 after both a back gesture and an "it passed"; the intensity back at
+7. The rail: 11 PM selected, start knob dragged two cells → 10 PM and 11 PM
+gone, 9 PM ✓, "8:50 PM", "9 PM – 8 AM · 11 hours", saved and persisted across
+a reopen; the band slid by its middle to 11 PM – 10 AM with its length kept;
+a swipe-away discarded the change.
+
+### 28.7 Left as found, on purpose
+
+- `panicSession` counts the `survived` call as a session too, so the server's
+  `sessionsToday` runs one ahead of cravings. The client no longer adds a
+  third; the server-side double count changes no rule (free: `sessionsToday
+  <= 1` on the first `begin()`), so it stays for a `functions/` session.
+- The Settings row still shows the danger hour alone; the quiet window is one
+  tap away on the sheet, and a second line on the row is for a day the row
+  is redesigned.
+- The welcome's games row opens the arena, which starts a craving session
+  (`ensureStarted`) — a subscriber trying Blocks from the welcome registers
+  as a craving opened and abandoned. Rare against the volume of real
+  cravings; noted so the guardrail rate is read with it in mind.
