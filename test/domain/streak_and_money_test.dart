@@ -265,6 +265,79 @@ void main() {
       ];
       expect(MoneyEngine.puffsNotTaken(plan, logs), 50);
     });
+
+    test('an unconfirmed zero-puff day saves nothing', () {
+      // `InitialJourney` mints day 1 as a 0-puff, UNCONFIRMED log, and a mood
+      // check-in or a survived craving mints one too. Each used to be
+      // credited as a whole baseline day kept — "$4 saved · 100 puffs not
+      // taken" on an account that had not logged a thing. Same rule as the
+      // streak now: an unknown day is unknown.
+      final unknown = log(day(1), puffs: 0, limit: 160);
+      expect(unknown.isConfirmed, isFalse);
+      expect(MoneyEngine.savedOn(plan, unknown), 0);
+      expect(MoneyEngine.puffsNotTaken(plan, [unknown]), 0);
+      expect(MoneyEngine.lifetimeSaved(plan, [unknown]), 0);
+      // A CONFIRMED vape-free day keeps the whole baseline.
+      final clean = log(day(1), puffs: 0, limit: 160, vapeFree: true);
+      expect(
+        MoneyEngine.savedOn(plan, clean),
+        closeTo(200 * plan.costPerPuff, 1e-9),
+      );
+      expect(MoneyEngine.puffsNotTaken(plan, [clean]), 200);
+    });
+
+    test('lifetimeSaved sums confirmed days only', () {
+      final logs = [
+        log(day(3), puffs: 100, limit: 160), // 100 under
+        log(day(2), puffs: 0, limit: 160), // unknown
+        log(day(1), puffs: 0, limit: 160, vapeFree: true), // 200 under
+        log(day(0), puffs: 250, limit: 160), // over baseline
+      ];
+      expect(
+        MoneyEngine.lifetimeSaved(plan, logs),
+        closeTo(300 * plan.costPerPuff, 1e-9),
+      );
+      expect(MoneyEngine.puffsNotTaken(plan, logs), 300);
+    });
+
+    test('dailyRunRate averages over known days, and is 0 with none', () {
+      expect(MoneyEngine.dailyRunRate(plan, const []), 0);
+      expect(
+        MoneyEngine.dailyRunRate(plan, [log(day(0), puffs: 0, limit: 160)]),
+        0,
+        reason: 'an unconfirmed day is not a day at zero — it is unknown',
+      );
+      final logs = [
+        log(day(2), puffs: 100, limit: 160), // 100 under
+        log(day(1), puffs: 0, limit: 160), // unknown: neither adds nor dilutes
+        log(day(0), puffs: 150, limit: 160), // 50 under
+      ];
+      expect(
+        MoneyEngine.dailyRunRate(plan, logs),
+        closeTo(75 * plan.costPerPuff, 1e-9),
+      );
+    });
+
+    test('daysToGoal is 0 when funded, null when stalled, else the ceiling', () {
+      const goal = SavingsGoal(id: 'g', emoji: '✈️', name: 'Trip', price: 100);
+      expect(MoneyEngine.daysToGoal(goal, 100, 3), 0);
+      expect(MoneyEngine.daysToGoal(goal, 120, 3), 0);
+      expect(MoneyEngine.daysToGoal(goal, 40, 0), isNull);
+      expect(MoneyEngine.daysToGoal(goal, 40, 7), 9); // 60 / 7 = 8.57
+    });
+
+    test('a zero baseline costs nothing per puff, never infinity', () {
+      final none = QuitPlan(
+        method: QuitMethod.coldTurkey,
+        paceDays: 30,
+        startDate: DateTime(2026, 8, 4),
+        baselinePuffsPerDay: 0,
+        weeklySpend: 42,
+        strength: NicStrength.mg50,
+      );
+      expect(none.costPerPuff, 0);
+      expect(MoneyEngine.savedOn(none, log(day(0), puffs: 0, limit: 0, vapeFree: true)), 0);
+    });
   });
 
   group('DependenceLevel', () {

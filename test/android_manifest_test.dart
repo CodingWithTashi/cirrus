@@ -103,6 +103,21 @@ void main() {
       expect(declaresPermission('POST_NOTIFICATIONS'), isTrue);
     });
 
+    test('opts out of Auto Backup', () {
+      // Android backs up an app's SharedPreferences by default and restores
+      // them onto a reinstall or a new phone. This app keeps account-shaped
+      // state there on purpose (the widget mirror and outbox, the milestone
+      // ledger, the paywall counters) and forgets it on sign-out — a restore
+      // is the one door that bypasses the sign-out, and it opens onto a
+      // launcher widget showing the last person's numbers before the app has
+      // run. The attribute must sit on <application>, in markup, not prose.
+      final application = RegExp(r'<application[^>]*>', dotAll: true)
+          .firstMatch(manifest)
+          ?.group(0);
+      expect(application, isNotNull);
+      expect(application, contains('android:allowBackup="false"'));
+    });
+
     /// App Links fail silently in both directions: claim too little and the
     /// link opens a browser with no error anywhere, claim too much and the app
     /// starts swallowing URLs meant for the website. Both are pinned.

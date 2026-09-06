@@ -114,6 +114,12 @@ void main() {
       'freePlanFeat3',
       'freePlanFeat4',
       'freePlanFeat5',
+      // Appearance became mode-only when the palette FAMILY moved to its own
+      // Theme row (Sep 5 2026). These two named the Ember family's two modes,
+      // which is wrong the moment the family is Hearth or Tide — the sheet
+      // now says Dark/Light and the family is named on the row below it.
+      'settingsAppearanceMidnight',
+      'settingsAppearanceDaylight',
     ];
     for (final locale in locales) {
       for (final key in retired) {

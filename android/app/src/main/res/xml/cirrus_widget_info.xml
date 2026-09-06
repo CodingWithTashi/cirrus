@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One provider, two layouts. The widget reflows from 2x2 to 4x2 rather than
+  shipping two entries in the picker: the founder's call, and it halves the
+  native surface to keep in step.
+
+  updatePeriodMillis is 1800000 (30 minutes), which is the platform floor.
+  It is what repaints the widget across local midnight without the app ever
+  running — the day number and the count both change there. It is deliberately
+  NOT an alarm: the framework delivers these with an inexact, batched
+  ELAPSED_REALTIME alarm that does not wake a sleeping device, and Cirrus holds
+  neither exact-alarm permission and never will (founder decision Sep 2 2026,
+  after Play rejected the build for USE_EXACT_ALARM).
+
+  Staleness is bounded rather than prevented, and that is safe: the provider
+  recomputes the day number from the plan's start date on every render, and
+  reads the day's limit out of the mirror's own seven-day window, so a widget
+  that has not repainted yet is only showing old pixels — it can never show a
+  wrong number. Anything at all (a reboot, a resize, a tap, the app opening)
+  heals it immediately.
+
+  android:configure is absent on purpose: the widget has to be useful the
+  instant it lands on the home screen.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="320dp"
+    android:maxResizeHeight="200dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/cw_picker_description"
+    android:previewLayout="@layout/cirrus_widget_small"
+    android:previewImage="@mipmap/ic_launcher"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/cirrus_widget_small"/>

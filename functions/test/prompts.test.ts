@@ -13,10 +13,10 @@
 import {describe, expect, it} from 'vitest';
 import {
   COACH_SUMMARY_PROMPT,
-  DAY_ANCHOR_INSTRUCTION,
   EMBER_SYSTEM_PROMPT,
   buildCoachInstruction,
   coachNameInstruction,
+  dayAnchorInstruction,
   localeInstruction,
   memorySection,
   panicAddendum,
@@ -102,6 +102,8 @@ describe('buildCoachInstruction', () => {
     coachName: 'Sparky',
     panicIntensity: 7,
     cardText: 'USER CARD\nalias: TestFox',
+    day: 12,
+    todayKey: '2026-08-15',
     summary: 'They walk Rufus after dinner.',
     memories,
   };
@@ -122,14 +124,41 @@ describe('buildCoachInstruction', () => {
     );
   });
 
-  it('carries the day anchor outside panic mode, and drops it inside', () => {
+  it('names the plan day in the anchor outside panic mode', () => {
     // The model once announced "day two" to a day-1 user off a "good
     // morning" greeting; the anchor forbids deriving the day from anything
-    // but the card. Panic mode omits it — breath and presence only.
-    expect(
-      buildCoachInstruction({...inputs, panicIntensity: null}),
-    ).toContain(DAY_ANCHOR_INSTRUCTION);
-    expect(buildCoachInstruction(inputs)).not.toContain('DAY & DATE');
+    // but the card — and since Sep 5 2026 it says which number that is.
+    const built = buildCoachInstruction({...inputs, panicIntensity: null});
+    expect(built).toContain(dayAnchorInstruction(12, '2026-08-15'));
+    expect(built).toContain('It is plan day 12 for this user (2026-08-15');
+    // Between the card and the summary — the slot it has always had.
+    const card = built.indexOf('USER CARD');
+    const anchor = built.indexOf('DAY & DATE');
+    const summary = built.indexOf('EARLIER CONVERSATIONS');
+    expect(anchor).toBeGreaterThan(card);
+    expect(summary).toBeGreaterThan(anchor);
+  });
+
+  it('the anchor is a function of the day, never a constant', () => {
+    // The generic version ("answer with the card's numbers") lost to a card
+    // carrying "week 1", "streak: 1d" and "1 day so far" beside "day 2", and
+    // Ember told a day-2 user they were on day one.
+    const anchor = dayAnchorInstruction(2, '2026-09-05');
+    expect(anchor).toContain('It is plan day 2 for this user (2026-09-05');
+    expect(anchor).toContain('it is day 2.');
+    expect(anchor).not.toContain('12');
+  });
+
+  it('panic mode carries no day anchor at all, and the rider comes last', () => {
+    // Eval #15: a data directive between the card and the rider made the
+    // lite model lecture mid-craving. A ten-word closing clause was tried on
+    // Sep 5 2026 and withdrawn — the panic replies overran the rider's word
+    // cap on both models. Breath and presence only; the rider is the last
+    // thing the model reads.
+    const built = buildCoachInstruction(inputs);
+    expect(built).not.toContain('DAY & DATE');
+    expect(built).not.toContain('it is day 12');
+    expect(built.trimEnd().endsWith(panicAddendum(7).trimEnd())).toBe(true);
   });
 
   it('orders the data sections card → summary → memories', () => {
@@ -150,6 +179,8 @@ describe('buildCoachInstruction', () => {
       coachName: null,
       panicIntensity: null,
       cardText: 'USER CARD',
+      day: 1,
+      todayKey: '2026-08-15',
       summary: '',
       memories: [],
     });

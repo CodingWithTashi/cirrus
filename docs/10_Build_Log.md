@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5) · §25 The review pass (Sep 5)
 
 ---
 
@@ -2531,3 +2531,630 @@ reports a missing plugin module, count the `from project 'Pods'` lines in the
 log *before* opening the plugin's podspec.
 
 Pinned as a gotcha in `CLAUDE.md`. No code changed — there was nothing to fix.
+
+---
+
+## 23. THE WIDGET THE STORE HAD ALREADY SOLD (Sep 4) — and the notification seventeen badges never got
+
+Two of the 52 design frames were never finished, and a cross-check found both: frame 52's home-screen widget did not exist, and frame 51's streak celebration did not exist. The forcing function was **B21** — the live Play listing advertises the widget twice — so this was a shipping-honesty fix, not a feature.
+
+### The widget
+
+`CirrusWidgetProvider`, the first hand-written native code in this repo. One resizable provider (2x2 → 4x2), **day number on top, count below**, with a `+` and a `−`.
+
+**The design's two frames collapse into one.** Android has no phone lock-screen widget — Google removed them in 5.0 and Android 14 brought them back for tablets only — so the lock-screen frame is iOS-only. And `RemoteViews` has no long-click API (there is no `setOnLongClickPendingIntent`, and the launcher swallows long-press to move the widget anyway), so the correction affordance is a persistent `−` rather than the long-press first chosen.
+
+**The architecture is an outbox, which `docs/03 §2` already specified**: *"widget logs queue via App Group storage and flush on next app/widget process wake."* The widget never touches Firebase. It appends a timestamped event; the app drains it through the same `JourneyStore.logPuff(at:)` the in-app button uses, so day keys, hour buckets, over-limit transitions and the repair-token wallet have exactly one implementation. A second copy of that maths in Kotlin is how `streakEngine.ts` and `streak_engine.dart` drifted (B12).
+
+**Every shared key has exactly one writer.** Neither `SharedPreferences` nor `UserDefaults` offers compare-and-swap, so a key written by both processes is a read-modify-write race and a tap can simply vanish. `lp.outbox` and `lp.seq` are the widget's; `lp.cursor` and `lp.mirror` are the app's. Dart never writes the queue — it reads what is above the cursor, applies it, and publishes a new cursor. The widget prunes below that cursor on its next append, which is what bounds the queue.
+
+**Three bugs found and fixed on the way:**
+
+1. **`lastPuffAt` moved backwards.** `logPuff` set it unconditionally, and every caller in `lib/` passed `at: null`, so nothing had ever exercised it. A tap queued at 23:50 and drained at 09:00 would have dragged the health timeline's anchor back overnight and handed the user recovery milestones they had not earned. It now only ever moves forward — a no-op for all four existing callers.
+2. **`undoPuffs` was today-only.** A `−` tapped at 23:58 and drained at 00:04 would have taken a puff off *today*, corrupting two days at once: the one that keeps a puff it did not have and the one that loses one it did. It takes an `at` now, like `logPuff`.
+3. **The milestone planner rolled the day with `LpDate.addDays`**, which deliberately lands on local midnight because it exists to build day keys — so the celebration lost its 08:00. It read correctly only because the default 23→8 quiet window pushed midnight back up to 08:00; anyone who widened their quiet hours would have been congratulated at midnight. Caught by a test, pinned by two more.
+
+**The drain is one document write, not N.** `journeys/{uid}` is a whole-document `set()`, so twelve queued events would have been twelve unordered fire-and-forget writes of strictly superseded states — eleven of them waste, and any one of them the last thing the server saw if the app died. `applyPendingPuffs` holds the write back. It deliberately does **not** await it: Firestore's write future completes on *server* ack, so awaiting would hang for a whole offline session, and a cursor that waits for that ack never advances — which is precisely how the next launch double-counts. The SDK's own mutation queue is durable, so "called" is as good as "landed".
+
+**Device verification** (Pixel 8, Android 17, process killed with `am kill` — never `force-stop`, which sets `FLAG_STOPPED` and makes Android drop every broadcast to the package): a tap cold-started the process and appended one event; the sequence `+1 −1 −1 −1` tracked 3→2→1→0 and the next `−` was refused at zero with no event written; the drain applied a net −1 exactly and moved the cursor to 5; three relaunches over the same queue changed nothing; the next append pruned all five drained events.
+
+**Two things worth knowing.** `home_widget` drags in `androidx.work`, which adds the `FOREGROUND_SERVICE` permission and a startup initializer this app never uses — left in place because removing an androidx component's permission risks a crash for no user-visible gain, but it is the B19 shape and worth a look before submission. And `home_widget` was sitting in `dev_dependencies`: Flutter's Gradle plugin strips dev-dependency plugins from **release** builds, so the widget would have worked perfectly in every debug build and silently vanished from the Play bundle — the same shape as the B18 receivers. `test/android_widget_test.dart` fails if it moves back.
+
+### The celebration
+
+`ReminderKind.milestone`, id 3000+. The name is not a choice: `test/copy_honesty_test.dart` is keyed off the enum and retires its own ban on the word the day a value called exactly that exists. The permission screen sold "milestone celebrations" in five languages while seventeen badges unlocked in silence; that copy is honest again now, and the ban on the word *streak* stays, because there is still no streak-risk reminder.
+
+**It only ever celebrates a badge already earned.** `earnedBadges` is a set union that never removes, so a scheduled celebration is a statement about something that has permanently happened — no forward-guessing a streak that might break tonight, which is the only way this notification could lie. Five moments across a 30-day plan: the ember-family badges at 3, 7, 14 and 30 days, plus Freedom Day. The other twelve are deliberately silent — they are all earned while the person is already looking at the app.
+
+### The day-rollover pass (same day, on device)
+
+Two more bugs, both found only by driving the clock on a real phone — neither
+was reachable from a unit test, and both were silent.
+
+1. **The widget never repainted when the app pushed a mirror.** `home_widget`
+   resolves `androidName` as `"<applicationId>.<value>"`, so passing a
+   fully-qualified provider name there looked up
+   `com.quitvape.last_puff.com.quitvape.last_puff.widget.CirrusWidgetProvider`,
+   threw `ClassNotFoundException` inside the plugin, returned an error across
+   the channel, and was swallowed by the write-behind catch. The mirror updated
+   every time; the pixels never did. It reads exactly like "the widget is
+   laggy" rather than like a bug. The parameter is `qualifiedAndroidName`, and
+   the gate test now pins both the name and the parameter it travels in.
+2. **Nothing repainted the widget at midnight with the app closed.** The day
+   number and the count both change there, and the only fallback was the
+   30-minute `updatePeriodMillis` floor. `HomeWidgetScheduler` now arms the next
+   seven local midnights whenever the day turns, delivered to
+   `HomeWidgetScheduledUpdateReceiver` — which the plugin deliberately does not
+   declare itself, so an app that forgets gets silence and a log line. Inexact
+   (`setAndAllowWhileIdle`, a one-hour window) and therefore **no new
+   permission**: `USE_EXACT_ALARM` is the one Play rejected this app for in the
+   first place, and the device pass proved it is not needed.
+
+**The matrix, on a Pixel 8 (Android 17), clock driven with `cmd alarm set-time`:**
+
+| Case | Result |
+|---|---|
+| Day 1 → 2, app opened | widget `day 2 · 0 · /90`, matches mirror |
+| Day 2 → 3 → 4 → 5, **app closed throughout** | `day 3 · /85`, `day 4 · /81`, `day 5 · /76` — the taper curve exactly, while the mirror stayed frozen on day 2 |
+| Day 8 (past the 7-day limit window) | `day 8`, count only, **no limit drawn** — it refuses to guess |
+| 3 taps on day 5, app closed | widget `3`, all three events stamped `2026-09-08` |
+| App opened after those taps | mirror `day 5 · 3 · /76`, cursor advanced, no double count |
+| 2 taps with the app **backgrounded** | widget `5` at once, mirror `3`; on resume both read `5` |
+| 6th `−` at zero | `refused`, no event written |
+| Reboot, app never launched | midnight alarm re-armed by `BOOT_COMPLETED` |
+| Clock restored | back to `day 1 · 35 · /95`, untouched |
+
+The day number is recomputed natively from the plan's start date on every
+render, so a missed repaint costs stale pixels and never a wrong number — and
+a tap on a stale widget still files the puff on the day it really happened,
+because `CirrusOutbox.append` re-reads the clock at tap time.
+
+### The reconciliation pass
+
+The 30-minute repaint floor is accepted as a display lag. What is not
+acceptable is the two sides ever *settling* on different numbers, so the drain
+was audited for every way it could fail to converge. One live bug and four
+holes.
+
+**The bug, caught on device.** Applying the drained events commits the journey,
+which triggers the app's own mirror push — and that push renders while the
+cursor is still at its old value, so the widget draws
+`newCount + theSameEventsStillPending` and reads one too high. Moving the
+cursor a moment later makes that number wrong, and because the mirror content
+has not changed since, the fingerprint skips every subsequent push. The widget
+showed **2 against a journey of 1, permanently**. A drain now always ends by
+repainting *after* the cursor lands.
+
+**The four holes, all closed:**
+
+1. **A refused write used to advance the cursor.** `save()` was fire-and-forget,
+   so a write the backend rejected outright — no signed-in account being the
+   realistic one — left the puffs in RAM only while the cursor moved past them.
+   A cold start reloaded a journey that never received them. Now the write is
+   awaited and the three outcomes are distinguished: **completes** → advance;
+   **times out** → advance, because Firestore's own mutation queue is durable
+   from the moment `set()` is called and a cursor that waits for a server ack
+   never advances offline; **throws** → do not advance.
+2. **...and the throw case had to become transactional.** Holding the cursor is
+   only right if the journey is also put back: otherwise the events stay queued
+   (correct) on top of a state that has already applied them (wrong), and the
+   next drain counts every one twice. The batch now rolls back to the exact
+   prior state.
+3. **A future-stamped event could mint a future day.** A clock that was wrong
+   when the tap happened would have `logPuff(at:)` create a day that has not
+   occurred, which then sits in the map as a confirmed day and can hand out a
+   streak nobody lived. Stamps are clamped to the drain's own clock.
+4. **A repaint that failed was never retried,** because `push` skips identical
+   content. Every foreground now invalidates the fingerprint first, so one trip
+   through the app heals the widget whatever went wrong.
+
+**Device evidence (Pixel 8, real Firebase):**
+
+| Case | Result |
+|---|---|
+| Tap during the stale window, just after midnight | pixels still read `day 1 · 35`; the tap computed `-> 1` — the display never contaminates the arithmetic |
+| That tap, after the app opened | `day 2 · 1`, day 1 still 35 |
+| 4 taps closed → open | widget 5 before and after the drain; mirror 5. The number never jumps |
+| 3 taps in airplane mode → open offline | drained to 8, widget and mirror agree |
+| Back online, flush, cold restart | still 8 — nothing lost, nothing doubled |
+| **12 concurrent taps**, app closed | exactly 12 applied; 8 → 20 |
+| Three kill/reopen cycles after that | 20, 20, 20 — no drift |
+| Clock restored | `day 1 · 35 · /95`, untouched |
+
+The invariant that makes the display lag harmless: **the count is recomputed
+from the clock at tap time, never read off the pixels.** A tap on a widget
+showing yesterday still files today's puff on today.
+
+`flutter analyze` 0 · `flutter test` **1111/1111**.
+
+---
+
+## 24. TWO PALETTES FOR SALE (Sep 5) — a Premium feature you can see without opening anything
+
+Premium had six bullets and every one of them was either metered (coach
+messages, posts) or invisible until the moment you needed it (the adaptive
+plan, forecasts, the weekly report). Nothing on the list showed up in a
+screenshot, and nothing on it was visible at rest. A palette is the one thing
+a person sees every second they hold the phone.
+
+**Shipped:** two new palette families, dark and light each, Premium only.
+
+| Family | Tier | Dark | Light |
+|---|---|---|---|
+| **Ember** | free, default | Midnight Ember `#0A0C10` | Daylight Ember `#F6F8F4` |
+| **Hearth** | Premium | Hearth Night `#12100D` — amber `#FFA62B` on warm charcoal | Hearth Day `#FBF6EE` — linen |
+| **Tide** | Premium | Deep Tide `#080F18` — teal `#4FD8E8` on indigo | Arctic Tide `#F2F7FB` |
+
+### The four decisions worth keeping
+
+**1. The family is a second axis, not more values on `ThemeMode`.** `ThemeMode`
+has three values and `MaterialApp` takes two `ThemeData`s, so flattening six
+palettes into one list would have deleted "Match system" — for subscribers
+only, which is the worst possible group to take it from. `LpPalette` picks the
+family, `ThemeMode` still picks the mode inside it. Settings grew a second row
+rather than a longer sheet.
+
+**2. The tokens are hue-named but role-used, so nothing else moved.** `volt`
+means "primary accent", not "lime". Repainting the slot is the whole of what a
+family is: 29 tokens × 4 new instances, and **zero widget changes** across ~58
+files that read `context.lp`. The one thing this cost was a doc-comment fix —
+`volt` claimed to be "identical in both themes", which was true when there was
+one family.
+
+**3. Clamped on render, never on selection.** `LpPaletteCatalog.resolveFor`
+copies `GameCatalog.resolveFor` exactly, including why `entries.first` has to
+be the free one. `LastPuffApp.build` resolves against `isPremiumProvider`, so
+an expiry re-themes the app back to Ember by itself — and the stored choice is
+left alone, so resubscribing brings their palette straight back with no
+migration and no stuck state. The picker never stores a locked family; only a
+lapse can produce that state, and the clamp is what makes it harmless.
+
+**4. Locked cards stay visible, tappable, and truthful.** Same call as the
+panic switcher: hiding them would make the cleanest sheet and sell nothing.
+Each card shows the family's real ground/primary/streak/calm swatches off
+`LpColors`, so a locked card is a genuine preview rather than a mock-up — which
+is the only reason it is allowed to make its own argument. The tap opens the
+lock card and commits nothing.
+
+### What the work found in passing
+
+- **`LpChip` dispatches on colour equality.** `accent == lp.ember ? lp.emberText
+  : accent == lp.oxygen ? … : lp.voltText`. Two accents sharing a value inside
+  one palette would route a chip to the wrong text token — in that palette
+  only, with nothing to see in the diff and no compiler complaint. Pinned per
+  family now. It is why Tide's "calm" slot is periwinkle rather than a second
+  cyan a shade off its primary.
+- **`breathe_ring_test` was measuring mount count, not colour.** Extending its
+  two-theme loop to six made it fail on the last iteration — and reversing the
+  order moved the failure to whatever was last, not to a palette. Six
+  `mountFlow`s in one `testWidgets` overflow by 22px on the sixth. Split into
+  one test per palette and mode.
+- **`Appearance` was naming the wrong thing.** It printed "Midnight"/"Daylight",
+  which are the *Ember family's* two modes, and stop being true the moment the
+  family is Hearth. It now says Dark/Light; the two keys are retired.
+- **The `source` registry was already stale.** There is no enum — the only list
+  of paywall doors is the doc comment on `paywallViewed`, and it was missing
+  `panic_game`, `free_plan` and `direct` before `theme` was added. Fixed, and
+  labelled as the registry so the next door knows where to go.
+
+### Contrast, measured rather than asserted
+
+WCAG 2.1 ratios against each palette's own ground, pinned in
+`test/app/lp_palette_test.dart`. The floors are set by **what already ships**,
+not by an aspiration — Daylight Ember's `voltText` is 4.47 and its `emberText`
+is 3.46, both under AA for body text:
+
+| Palette | textPrimary | textSecondary | voltText | onVolt/volt | worst accent |
+|---|---|---|---|---|---|
+| Midnight Ember | 19.57 | 7.69 | 15.47 | 15.47 | 6.47 |
+| Daylight Ember | 15.77 | 4.57 | **4.47** | 15.47 | **3.46** |
+| Hearth Night | 18.99 | 7.82 | 11.40 | 9.68 | 7.52 |
+| Hearth Day | 15.85 | 4.88 | 4.65 | 9.68 | 4.54 |
+| Deep Tide | 19.23 | 7.66 | 13.10 | 11.13 | 7.62 |
+| Arctic Tide | 16.06 | 4.66 | 5.49 | 11.13 | 3.95 |
+
+Hearth Day clears AA on all eight pairs — the only palette in the app that
+does. `danger` is the same `#FF5C5C` in all six on purpose: an alert must not
+change meaning when the reader changes their theme.
+
+### Deliberately untouched
+
+The Android home-screen widget. `cirrus_widget_colors.xml` mirrors Ember's
+hexes and follows the **system** theme, because the launcher inflates it in its
+own process against its own configuration — a widget is chrome on the home
+screen and should match the screen it sits on, not the app it opens. That was
+already a documented deviation before this work and six families do not change
+it. Same for `LpCrashScreen`, which reads platform brightness because it can
+render in a tree with no `Theme` at all.
+
+`flutter analyze` 0 · `flutter test` **1456/1456** (was 1111; the palette sweep
+in `screen_layout_test` went from 2 themes to 6).
+
+---
+
+## 25. THE REVIEW PASS (Sep 5) — six fixes the widget feature needed, and one it does not
+
+A `/code-review high` over the branch before committing the palettes. **Nothing
+against the palette work.** Seven findings, all in §23's widget/milestone code
+and one line of §24's. Six fixed, one documented and left alone.
+
+### The two that mattered
+
+**1. The milestone ledger was device-scoped with no reset.**
+`celebratedMilestones` lives in SharedPreferences with no uid in the key, and a
+badge marked settled makes `MilestoneReminderPlanner.plan` answer null for ever.
+So on a shared phone, the second person to sign in inherited the first person's
+settled badges and **would never have received a single milestone
+celebration** — silently, with nothing in any log. `discardQueued()` guards
+exactly this case for the widget outbox; the ledger simply never got the same
+treatment. `signOut`/`deleteAccount` now reset it, beside `analytics.reset()`
+and `EntitlementStore.unbind()`.
+
+**2. A ledger that has never been initialised is not an empty one.**
+Fixing (1) exposed the second half: a user upgrading across the build that
+introduced the key — and now anyone signing in after a reset — has a full
+`earnedBadges` and an empty ledger, so the first sync would arm *"Two weeks. TWO
+WEEKS."* for something they did a month ago.
+
+The fix is a `milestonesAdopted` flag rather than "is the ledger empty",
+because an empty ledger is **also** the honest state of somebody about to earn
+their first badge, and suppressing that one is the bug in the other direction.
+On first sync with a journey in hand, whatever is already earned is *adopted* as
+settled and nothing is announced. Three situations, one answer: fresh install
+(adopts nothing), upgrade (adopts the backlog), account switch (adopts the new
+account's history).
+
+Blast radius today was internal testers only — Play submission is still
+unshipped, so at launch every install is fresh and `earnedBadges` is empty. It
+would have become real for every updating user afterwards.
+
+### The other four
+
+| Fix | What it was |
+|---|---|
+| `puff_logged` replayed on a refused drain | Emitted inside the batch, before the write was known to land. A refused batch rolls the journey back and leaves the events queued, so the taps were counted once for a batch that never landed and again on the retry — inflating the WAQ funnel the event exists to compute. Now buffered and flushed only on success. |
+| `discardQueued()` racing a live drain | It did not chain `_inFlight`. A drain can sit up to `widgetFlushTimeout` awaiting the journey write and finishes by writing its own cursor, so a sign-out underneath it was overwritten and the previous account's taps came back. Now serialised the same way `drain` already was. |
+| Android widget drew a 100%-full bar at zero puffs | `knowsLimit` is `limit >= 0` on purpose — 0 is a real limit on the last plan day and every maintenance day after. But `percent` fell back to `100` for `limit <= 0`, so a user who had logged nothing saw a full consumption bar. **iOS already gated on `limit > 0`**; the two platforms were rendering the same mirror differently. |
+| Post-frame `ref.read` with no `mounted` guard | `_WidgetSyncState` reads a provider at end-of-frame; a tree replacement or test teardown in that window puts a `StateError` into the frame callback. |
+
+### The one left alone, on purpose
+
+**The drain's cursor window.** There is a gap between the journey write becoming
+durable and the cursor landing — Firestore queues the mutation on `set()`, and
+`applyPendingPuffs` then waits up to 3s for the ack, so a process death inside
+that wait replays the events. Advancing the cursor first only moves the loss to
+the other side. There is no transaction spanning a preferences file and a
+Firestore document; the current ordering is the one that fails toward "counted
+twice" rather than "silently lost", and closing it properly needs a two-phase
+intent record reconciled on the next launch. Written down at the call site
+rather than churned. Revisit if the field shows it happening.
+
+`flutter analyze` 0 · `flutter test` **1463/1463**.
+
+### Afterwards: the widget must never outlive the session
+
+Founder rule, raised the same day: *"if user is logout or new install or
+anything, then widget should simply show some message rather than still showing
+the counter."*
+
+Checked rather than assumed, and **the behaviour was already correct** — the
+live mirror on the Pixel reads
+
+```json
+{"v":1,"hasJourney":false,"copy":{…,"emptyTitle":"Start your plan","emptyBody":"Tap to open Cirrus"}}
+```
+
+with no `puffs`, `dayNumber`, `streak` or `limits` key at all. The numbers are
+absent, not merely flagged, which is what makes `CirrusPending.append`'s
+`if (!mirror.hasJourney) return null` safe: there is nothing left to draw even
+if something did read it.
+
+What was missing was any test holding it there. Four guards existed across two
+languages and **not one of them was pinned**, so any of them could have been
+deleted silently:
+
+| Guard | Now pinned by |
+|---|---|
+| `buildMirror` emits no numeric keys when the journey is null | `widget_mirror_test.dart` — "signing out replaces the numbers with the empty card" |
+| The launcher is actually told to repaint | same file — "and the launcher is told to repaint" |
+| An absent / stale-schema / unreadable document reads as `absent` | `android_widget_test.dart` |
+| `append` refuses every tap while `!hasJourney` | `android_widget_test.dart` |
+| The empty branch hides `cw_active` and returns before setting a count or a tap target | `android_widget_test.dart` |
+
+The deletion path is covered at container level in `account_deletion_test.dart`
+rather than duplicated as a widget test: `await`ing the erasure inside
+`testWidgets` deadlocks the fake-async zone against its own pending timers, and
+a hanging test is worse than an absent one. It reaches the mirror through the
+identical `journey == null` branch the sign-out test already exercises.
+
+`flutter analyze` 0 · `flutter test` **1468/1468**.
+
+## 26. THE SPLASH THAT WAS NEVER CENTRED (Sep 5) — final launcher art, and a Stack that measured itself
+
+The founder dropped the final icon art into `assets/images` — `icon-square.png`
+(full bleed, opaque), `icon-rounded.png` (the tile as a launcher draws it),
+`icon-play-512.png` and four pre-cut iOS sizes — and asked for two things: the
+launcher icons re-cut from it, and the splash to look like the tile centred
+over the wordmark instead of "showing at the top left".
+
+### The icons
+
+Both platforms regenerated with `dart run flutter_launcher_icons`, from two
+crops of the same art rather than one file:
+
+| Surface | Source | Why |
+|---|---|---|
+| Legacy Android mipmaps (API 21–25) | `icon-rounded.png` | Those launchers draw the bitmap as-is, no mask, so a square would sit sharp-cornered among rounded neighbours. |
+| iOS, every size | `icon-square.png` | Apple masks it itself and rejects an alpha channel; `remove_alpha_ios` strips the (all-opaque) one the PNG carries. |
+| Adaptive foreground | `icon-square.png` on a flat `#161A21` | The art's own edges are `#161A21` to within two levels — its radial gradient only lightens the centre — so the inset seam is invisible under every mask. |
+| Themed (Android 13+) | `cirrus_monochrome.png`, regenerated | The old silhouette was the old swirl. New `tool/monochrome_icon.py` cuts it from the square art: the mark is a flat `#B4DC28` on a near-black gradient, so a linear alpha ramp on the green channel (48→212) reproduces the art's own antialiasing. |
+
+**The inset is measured, not chosen.** The smoke tip sits 97.5% of the
+half-width from the art's centre. Android guarantees only a 66dp circle of the
+108dp canvas is never masked, so the art may be at most 33/0.975 = 33.8dp of
+half-width → 67.7dp of 108 → **19% inset** (it was 21% for the old art). At 19%
+the tip lands at 32.6dp of the 33dp radius; a contact sheet under circle and
+squircle masks with the safe circle drawn confirmed the whole mark, tail
+included, inside it. The cost is written down: because the tail reaches the top
+edge of the art, the O itself is ~43% of the visible circle. Re-centring the
+foreground on the mark's own bounding box (73px above the art's centre) would
+buy ~14% more size; not done, noted for whenever the icon gets another pass.
+
+Only `icon-rounded.png` is bundled (the first `assets:` entry the pubspec has
+ever had) — the Play 512 and the iOS sizes are store and generator inputs, not
+app assets. `cirrus.png` (the old art) is deleted. The generator's two known
+side effects were undone as documented (`project.pbxproj` checked out,
+`Contents.json` re-indented), plus one new one worth a line: **Python's text
+mode writes CRLF on Windows**, so both files it touched had to be normalised
+back to LF before git would show a sane diff.
+
+### The splash
+
+"At the top left" was exact. `SplashScreen` was a `Stack(alignment: center)`
+straight in the Scaffold body. The body hands its child **loose** constraints,
+and a Stack under loose constraints sizes itself to its largest non-positioned
+child — the 340dp glow — so the whole thing was a 340dp square at the origin,
+with the wordmark centred only within *it*. A probe pumping the old structure
+put the text centre at (170, 170) on an 800×600 surface. It had been that way
+since Frame 25 landed; nothing in the suite asserted where the splash draws,
+only what it shows and where it routes.
+
+Now: `Align(0, −0.1)` fills the body and places a Column — the launcher tile
+(128dp, the same rounded PNG the home screen shows), the wordmark, the tagline
+— a touch above centre, where a lone mark reads as centred. The breathing glow
+sits behind the **tile**, not the group: an `OverflowBox` inside the tile's
+128dp box lets the 340dp gradient spill out while the Column still measures
+only the tile. `test/widgets/splash_screen_test.dart` pins the three parts on
+the horizontal centre, stacked tile → name → tagline, with the group's midpoint
+within 15% of the screen's.
+
+`flutter analyze` 0 · `flutter test` **1469/1469**.
+
+---
+
+## 27. THE DAY THAT WAS RIGHT EVERYWHERE (Sep 5) — and the seven numbers around it that were not
+
+The founder filed three screenshots taken at the same moment (Sat Sep 5,
+14:12, US Eastern): Home said **Day 2 of 30 · $3 saved · 🔥 1 day**, the
+home-screen widget said **day 2**, the coach header said **day 2**, and
+Ember's reply said *"you've already made it this far into **day one**. You've
+saved **2.74 dollars**"*. "This is a big issue. Test rigorously for all the
+day and puff count display and trends data." Then, mid-session: releasing
+after this, so find every functional bug there is.
+
+### 27.1 What the screenshots actually were
+
+1. **The day number did not diverge.** It is ONE formula on all four
+   surfaces — `QuitPlan.dayNumber` (`LpDate.daysBetween(start, date) + 1`),
+   `taperEngine.ts dayNumber(plan, dayKey)`, and the widget's
+   `LocalDate.now().toEpochDay() − start + 1` — and the IANA zone is threaded
+   from `LpFunctions` through `requireCaller` to `buildMemoryCard`. In New
+   York at 14:12 the card said `day 2 of 30`. A UTC fallback could only have
+   pushed the day *forward* after 20:00 local, never back to 1.
+2. **Ember paraphrased.** On day 2 the card carried four other literal ones
+   beside its single day line: `week 1 of 5`, `streak: 1d`, and `w1 (current,
+   1 day so far)`. `DAY_ANCHOR_INSTRUCTION` interpolated no number and only
+   spoke to "when their day comes up"; the model volunteered "day one"
+   unprompted, so the instruction never even applied. Second time this class
+   of bug has shipped (§12.1 was the reverse direction); the first fix
+   anchored the *date*, this one anchors the *number*.
+3. **"$3" and "2.74" were the same number.** `MoneyEngine.lifetimeSaved` and
+   the card's inline sum agree to the cent; Home renders through
+   `LpFormat.money` (0 decimals, `$`), the card wrote `toFixed(2)` with no
+   symbol. Every non-round saving would have made them disagree on sight —
+   against `memoryCard.ts`'s own first rule.
+4. **"🔥 1 day" beside "Day 2 of 30" is the streak**, by design: day 1 held
+   its line, today is unconfirmed, the walk anchors on yesterday. Founder
+   decision: keep it as it is.
+
+### 27.2 The server, so the coach can never contradict Home again
+
+`memoryCard.ts`: the day line leads and is labelled — `plan day: 2 of 30
+(taper) · alias: …`, and past the plan `plan day: 37 · 7 days past Freedom
+Day (30-day plan finished, maintenance)` so "day 37 of 30" never reaches the
+model. The current week line reads `w1 (current, 1 completed day; today is
+plan day 2)`. Money is `wholeDollars(saved)` — `Intl.NumberFormat` currency
+with zero fraction digits, half-away-from-zero like Dart's `num.round()`
+inside intl (pinned at exactly 2.5 on both sides) — and sums **confirmed days
+only** (27.3 A5). `prompts.ts`: `dayAnchorInstruction(day, todayKey)` names
+the number ("If you mention their day at all — even in passing, in a greeting
+or a compliment — it is day 2"). Panic mode stays anchor-free: a ten-word
+closing clause on the rider was tried and withdrawn (27.6).
+
+Pinned by: `memoryCard.test.ts` (the Sep 5 fixture — `plan day: 2 of 30`,
+`today: 0/90`, `streak: 1d`, `money saved: $3`, no `2.74`, no `1 day so far`;
+`card.day` under Tokyo / Los Angeles / UTC for the same instant; the 2.5
+rounding case; an unconfirmed zero day saves nothing; day 167 of a 30-day
+plan never prints `of 30`), `prompts.test.ts` (the anchor is a function of the
+day; panic mode carries only the clause, last), an emulator case in
+`aiCoachChat.test.ts` (22:30 in New York, already tomorrow in UTC → the
+instruction says `plan day: 2`, the envelope says `day: 2`), and a mechanical
+eval scenario, `20-what-day` (must answer the card's day, must not name a
+neighbour or "one"). The parity twin of the fixture is
+`test/domain/today_snapshot_test.dart`.
+
+### 27.3 Seven client bugs the pass found, none of them the reported one
+
+| | Where | What it was |
+|---|---|---|
+| A1 | Stats records | **"longest gap" was fabricated**: `8 + longestStreak ~/ 2` capped at 16 — always 8–16h, "8h" with no data, rendered as the user's own record. Now `PuffGaps.longestGapHours`: whole hours walked off the hour buckets, a day counting only when its buckets account for every puff (or it is confirmed vape-free), unknown days breaking the run, the live stretch since the last puff included, `—` when nothing is known. |
+| A2 | Stats records | "best day" read the raw clock and ignored `isConfirmed`, so **every account read "best day 0" on day 2** off the factory's unconfirmed log. Confirmed completed days only; `—` otherwise. |
+| A3 | Coach week card | Captioned **every** week "trending down — {day} was the hard one" with no trend computed, and painted today as the win whatever its count. `WeekTrend` (shared with Stats): hard day = most puffs, win = fewest among confirmed, "down" only when the later half of the completed week averaged fewer than the earlier half; `coachWeekCardCaptionFlat` ×5 otherwise. |
+| A4 | Health timeline | `DateTime.now()` in build (frozen under the keep-alive shell), and **"0m ago" with no puff on record**. Minute clock; `healthAnchorNone` ×5. |
+| A5 | Money engine | `savedOn`/`puffsNotTaken` never checked `isConfirmed`, and `InitialJourney` mints day 1 as an unconfirmed 0-puff log — so **a brand-new account read "$4 saved so far · 100 puffs not taken" before its first puff**, and every mood check-in on a quiet day minted another full day saved. Same rule as the streak now, on both sides of the seam. Founder decision: an unknown day is unknown. |
+| C5 | `TodaySnapshot` | A future-dated log (a wrong device clock) counted as money already saved. Excluded. |
+| C6 | Android widget | Recomputed its day number natively with **no upper clamp** and ignored the `totalDays` the mirror already shipped: **"day 31" on the launcher while Home said "1 day past Freedom Day"**. Kotlin reads `totalDays` and Home's copy (`widgetDayFreedom`, `widgetDayPastOne/Other` ×5) and draws `dayLine`; falls back to the plain count for an older mirror. |
+| C7 | Insight | Charted the last seven **logged** days; the report (`trailingDays`) covers the seven calendar days before today. `DayWindow.logged` is that window on this side; the header range is now through yesterday. |
+| B | Sweep | Raw `DateTime.now()` where the clock seam exists: the day-1 tour gate in the router, the Plan screen's advice check, the day editor's today/past decision, the Insight header, the community store and composer, the arena's plan day — and **the fake backend itself**, which seeded the demo journey and minted day 1 against the real clock under an injected one (`FakeServer.now`, wired to `nowProvider`; the launch-paywall test had been leaning on exactly that inconsistency to reach day 14). |
+
+### 27.4 The test campaign
+
+Domain: `today_snapshot_test` (the Sep 5 fixture; day 1 with the factory
+log; days 30, 31; future day excluded; run rate window; vs-day-1), `day_number_test`
+(1-based, both DST boundaries, the reflow), `journey_factory_test`, `danger_hours_test`
+(first engine test it ever had), `puff_gaps_test` (12), `week_trend_test` (9), and the
+MoneyEngine group grown to nine cases. Widget: `home_day_matrix_test` — for day ∈ {1, 2,
+3, 7, 8, 14, 15, 29, 30, 31, 45} the header, the `of N` line, the ahead/tight/over line
+through real taps, the streak pill, the ring, then the coach header and the widget mirror
+reading the same number; `home_midnight_rollover_test` (rendered rollover, and a day
+editor opened before midnight still editing that day); `stats_numbers_test` (bar heights
+per calendar day, −20% vs last, the caption, the danger window, the nicotine figure, the
+records row, `—` with nothing confirmed, Day and Month views); `coach_week_card_test`;
+`health_timeline_test`; and the mirror, Android, Insight and money suites extended.
+`test/helpers.dart` gained `journeyOnDay(day, now:)`, the fixture every one of them uses.
+
+**One trap for the next test writer:** under the test's fake clock the fake
+backend's zero-length "thinking" timer fires only when the tester pumps, so
+`await store.sendChip(...)` inside `testWidgets` is a deadlock — `unawaited`
+it and pump. Cost an hour.
+
+### 27.5 Gates
+
+`flutter analyze` 0 · `flutter test` **1570** (after the review pass, 27.7) ·
+`npm run verify` **227** · `npm run test:integration` **286** · `eval:coach` —
+not green on both models in one roll after five rolls (27.6). **Deployed to
+`alastpuff` Sep 5 2026 on the founder's instruction**, all 24 functions
+behind a clean `verify`, twice: the card change, then the review pass's
+future-day cut.
+
+### 27.6 The eval, and the panic clause that came out
+
+The first cut also put a ten-word clause at the end of the panic rider ("If
+their day comes up, it is day N.") with a scenario to exercise it — the user
+says "day 1 and I already can't do this" mid-craving, the reply must not echo
+it. Roll 1: 21/21 on `gemini-3.6-flash`, 17/21 on lite (#01 and #13 judge
+flips on replies that met the bar on reading; #15 and #21 over the rider's
+30-word cap at 36 and 45 words). Roll 2: #15 green, but #21 over the cap on
+BOTH models (42 and 31 words) and the lite reply still opened "I know that
+first day feels impossible". A clause that costs the rider its word cap and
+does not stop the echo is not worth its ten words. Withdrawn, with the
+scenario; the panic rider is byte-identical to the one the suite has been
+green on, and the normal-mode anchor — the mode the founder's screenshot was
+in — carries the fix.
+
+Rolls 3–5 gated the shipped prompt (20 scenarios). The lite model was
+**20/20 twice** (rolls 3 and 5) and 19/20 once (#15, a 33-word panic reply on
+the unchanged rider). The premium model never gave a clean roll: 19/20, 18/20,
+18/20 — every miss a JUDGE verdict on #02 (the slip reply "doesn't erase all
+that progress for your daughter" read as moralizing, while #01's judge
+*requires* anchoring to the daughter) or #13 (weight gain: once for naming a
+snack, once for not naming a doctor), plus one 82-word #01 against an 80 cap.
+`20-what-day` passed on both models in every roll, as did #10, #16 and #17,
+the other scenarios that read the card's numbers. Five rolls was the budget.
+The founder read the two judge verdicts as the suite's noise and had the
+functions deployed; the transcripts are in `functions/evals/`. The
+production `f_firebase_backend` suite on the Pixel is the check that the
+deployed coach answers (27.8).
+
+### 27.7 The review pass — four in the new code, six older
+
+A `/code-review high` over the whole change set, verified finding by finding.
+
+**In the day's own code, all fixed:**
+
+| | What it was |
+|---|---|
+| Insight window | The bars followed `now`; the report follows its own `weekId` (the user's Sunday). A Sunday report opened on Thursday drew four days the model never saw under prose about four it did, and by Saturday the two had nothing in common. The charts and the header are anchored on the report's week now, and the test opens a Sep 13 report on Sep 17. |
+| `PuffGaps` | Walked the first logged day from hour 0, so somebody who signed up at 9 PM after vaping all day opened Stats to a 21-hour "record". Nothing counts before the first puff walked (a confirmed vape-free day anchors itself). |
+| `WeekTrend.bestIndex` | Included an in-progress today — one puff at 08:10 painted a day that ends at fifty as the week's best. Completed days only, like `isDown`. |
+| Future-dated logs | The cut lived only in `TodaySnapshot`; `_withBadges` still minted the $100 badge (and its celebration) off an unfiltered sum, and the card summed every key. Both cut at today now. |
+
+**Older, all real, all fixed:**
+
+| | What it was |
+|---|---|
+| Drain rollback | `applyPendingPuffs` restored `state = before` on a refused write even when an in-app tap or the plan-advice pull had committed on top of the batch meanwhile — erasing that mutation from memory. It rolls back only while the batch is still the newest state. |
+| Settings hydration | `ReminderCoordinator.sync` ran the instant a journey landed. On a cold start where Firestore answered before SharedPreferences it adopted the ledger on the DEFAULT settings and committed them — fourteen defaults written over the user's theme, language and danger hours — and cleared the device against a ledger that did not know a celebration was armed. `SettingsState.hydrated` (never persisted) says whether disk has answered; the coordinator waits for it, and hydration itself triggers the sync that matters. |
+| Refused schedules | `scheduleOnce` swallowed every failure and the coordinator marked the badge celebrated regardless — silencing that celebration for ever on a phone whose plugin was not ready or whose permission was revoked. The sink answers whether the notification armed; a refusal leaves the badge owed and the fingerprint clear, so the next sync tries again (the trial reminder too). |
+| Delivered vs armed | `armedMilestone` never became "delivered", so notifications off a month after the 08:00 celebration un-settled it and notifications on delivered "Two weeks. TWO WEEKS." again. `armedMilestoneAt` is persisted with it; handing back a celebration already past its due time keeps it settled. |
+
+**Seen and left**, with the reasoning in place: `day1_task_done` still fires
+during a drain that later rolls back (analytics only, one funnel row); the
+iOS widget has the same Freedom-Day drift as the Android one had (B22, the
+target is unbuilt). Tests: `milestone_ledger_test` (new), and cases in
+`reminder_coordinator_test`, `settings_persistence_test`, `puff_gaps_test`,
+`week_trend_test`, `weekly_insight_test`, `memoryCard.test.ts`.
+
+### 27.8 On the Pixel
+
+The whole `integration_test` directory on the Pixel 8 (Android 17), the
+evening of Sep 5: **53/53 against the fake backend** (the first attempt was
+killed by the machine running out of memory beside a full `flutter test`, an
+eval roll and the review agent; the 7 pm retry ran alone) and **17/17 in
+`f_firebase_backend` against production** on the redeployed functions — the
+deployed `aiCoachChat` answering through App Check, chip-sized follow-ups,
+none mid-craving, and `deleteUserData` erasing the throwaway account at the
+end. `flutter analyze` 0 · `flutter test` **1570**.
+
+Still manual, and still the founder's: the `cmd alarm set-time` day-rollover
+matrix from §23 on a real day 1 → 2 → 3 account (Home, the widget and the
+coach header agreeing), and asking Ember "what day am I on?" on day 2 and
+mid-craving against the deployed card.
+
+### 27.9 Four confirmations the founder asked for, and the one gap they found
+
+Asked, with a thousand users incoming: are dates and times local; does the
+widget stay in step through sign-out, reinstall and midnight; is the coach as
+dynamic as it can be; will a working connection ever show a network error.
+
+1. **Dates and times.** Every day key is local midnight (`LpDate.dayStart`),
+   every day count is calendar days (`daysBetween`, DST-pinned), the day
+   clock rolls at local midnight, the server computes the day in the caller's
+   IANA zone and the widget in the device's. Nothing in `lib/features` or
+   `lib/core` touches UTC. The subscription expiry — the one instant that
+   arrives in UTC — is converted to local by both decoders
+   (`entitlement_codec.dart`, `revenuecat_billing_repository.dart`) before
+   Settings or the paywall format it. Known and documented: `taperRecalc`
+   runs on the zone `syncUserContext` last stored, so a traveller's nightly
+   recalc keeps their old midnight until the app next syncs.
+2. **The widget.** In-app changes reach it after the frame (fingerprinted);
+   its own taps queue in an outbox and drain on the next app open, one
+   Firestore write; seven midnight repaints are armed and re-armed on boot,
+   with the day number recomputed natively and the limit read from a
+   seven-day window (past that: the count alone). Sign-out and deletion push
+   the empty card and discard the queue (§25). **The gap: Auto Backup.** The
+   manifest set no backup policy, so Android's default backed up the widget
+   preferences, the milestone ledger and the paywall counters, and would have
+   restored them onto a reinstall or a new phone — the sign-out that forgets
+   them never runs on that path, and a re-added widget would have shown the
+   last person's numbers before the app had opened. `android:allowBackup=
+   "false"` now, pinned by `android_manifest_test`; the journey lives in
+   Firestore and a theme is cheap to choose again.
+3. **The coach.** Free on `gemini-3.5-flash-lite` at 5 messages a day,
+   Premium on `gemini-3.6-flash` at 100; the card recomputed every turn,
+   long-term memories by vector search, a rolling summary, follow-up chips in
+   the user's voice (`COACH_FOLLOWUPS=true`), streaming with a plain-call
+   retry; the day anchor from §27.2. `AI_COST_PANIC=false`, the switch that
+   routes everyone to the lite model if spend runs away.
+4. **Network.** The probe is one DNS lookup every five seconds; it drives the
+   offline pill, the entitlement re-check and the paywall's offering refetch,
+   and it gates only the FAKE backend. No Firebase call is ever refused on
+   its say-so, so a network that blocks that one hostname shows a pill and
+   nothing else. Real failures reach the designated surfaces with the
+   designated copy. **The one thing a working connection cannot save is App
+   Check:** a Play-installed build attests with Play Integrity, and S1-2 on
+   the board still records the Play app-signing SHA-256 as unverified in the
+   Firebase console. If it is not registered, every callable is refused for
+   every Play user and the coach says "signal dropped" — the §17 failure at
+   population scale. Verify it on the internal-testing build before the first
+   user does: open Coach, send one message.

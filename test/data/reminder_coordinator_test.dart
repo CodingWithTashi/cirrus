@@ -15,8 +15,15 @@ class _FakeSink implements ReminderSink {
 
   final List<List<ReminderSlot>> applied = [];
   final List<OneShotReminder> scheduledOnce = [];
+  final List<ReminderKind> kinds = [];
+  final List<String> bodies = [];
   final List<int> cancelled = [];
   int cancels = 0;
+
+  /// Whether the device accepts one-shots. False stands in for a plugin that
+  /// is not ready or a permission that was revoked — the real scheduler
+  /// swallows those and answers false.
+  bool arms = true;
 
   @override
   Future<void> apply(
@@ -26,11 +33,20 @@ class _FakeSink implements ReminderSink {
   }) async => applied.add(slots);
 
   @override
-  Future<void> scheduleOnce(
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
-  }) async => scheduledOnce.add(reminder);
+  }) async {
+    if (!arms) return false;
+    scheduledOnce.add(reminder);
+    // The payload is the only thing that tells a tap where to land, so which
+    // kind went through this door is worth recording.
+    kinds.add(kind);
+    bodies.add(body);
+    return true;
+  }
 
   @override
   Future<void> cancel(int id) async => cancelled.add(id);
@@ -261,6 +277,336 @@ void main() {
         body: body,
       );
       expect(sink.cancels, 1);
+    });
+  });
+
+  group('the milestone celebration', () {
+    JourneyState earned(Set<String> badges) =>
+        journeyWith({21: 30}).copyWith(earnedBadges: badges);
+
+    Future<void> sync(
+      _FakeSink sink,
+      JourneyState journey, {
+      Set<String> celebrated = const {},
+      ReminderCoordinator? on,
+      // Every case below is about an account this device has already watched.
+      // The adoption path — a ledger that has never been initialised — has its
+      // own tests at the end of this group.
+      bool adopted = true,
+    }) => (on ?? ReminderCoordinator(sink)).sync(
+      journey: journey,
+      settings: SettingsState(
+        celebratedMilestones: celebrated,
+        milestonesAdopted: adopted,
+      ),
+      title: title,
+      body: body,
+      milestoneTitle: 'Come see your flame',
+      milestoneBody: (badgeId) => 'you earned $badgeId',
+      now: () => DateTime(2026, 8, 20, 14),
+    );
+
+    test('is scheduled once, with its own kind and id', () async {
+      final sink = _FakeSink();
+
+      await sync(sink, earned({'weekFlame'}));
+
+      expect(sink.scheduledOnce, hasLength(1));
+      expect(sink.scheduledOnce.single.id, 3001);
+      expect(sink.kinds.single, ReminderKind.milestone);
+      expect(sink.bodies.single, 'you earned weekFlame');
+    });
+
+    test('a second sync with the same inputs touches nothing', () async {
+      // This runs on every puff tap. The important behaviour is the one that
+      // does nothing.
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+
+      await sync(sink, earned({'weekFlame'}), on: coordinator);
+      await sync(sink, earned({'weekFlame'}), on: coordinator);
+
+      expect(sink.scheduledOnce, hasLength(1));
+    });
+
+    test('is never withdrawn once armed', () async {
+      // Unlike the trial reminder, whose reason can evaporate, an earned badge
+      // stays earned — and the moment it is marked celebrated the planner
+      // answers null. A cancel-on-null branch would delete the very
+      // notification the previous sync had just armed.
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+
+      await sync(sink, earned({'weekFlame'}), on: coordinator);
+      await sync(
+        sink,
+        earned({'weekFlame'}),
+        celebrated: {'weekFlame'},
+        on: coordinator,
+      );
+
+      // Scoped to its own id: 2000 IS cancelled here, correctly, because the
+      // fixture has no trial to remind anyone about.
+      expect(sink.cancelled, isNot(contains(3001)));
+      expect(sink.scheduledOnce, hasLength(1));
+    });
+
+    test('nothing earned schedules nothing', () async {
+      final sink = _FakeSink();
+
+      await sync(sink, earned(const {}));
+
+      expect(sink.scheduledOnce, isEmpty);
+    });
+
+    test('a danger-hour resync never touches it', () async {
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+      await sync(sink, earned({'weekFlame'}), on: coordinator);
+
+      // The hour moved: the danger schedule reapplies, the celebration must not.
+      await coordinator.sync(
+        journey: journeyWith({14: 30}).copyWith(earnedBadges: {'weekFlame'}),
+        settings: const SettingsState(milestonesAdopted: true),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        now: () => DateTime(2026, 8, 20, 14),
+      );
+
+      expect(sink.scheduledOnce, hasLength(1));
+      expect(sink.cancelled, isNot(contains(3001)));
+    });
+
+    test('reports the badge so it is never promised twice', () async {
+      final sink = _FakeSink();
+      final marked = <String>[];
+      final covered = <String>{};
+
+      await ReminderCoordinator(sink).sync(
+        journey: earned({'spark'}),
+        settings: const SettingsState(milestonesAdopted: true),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestoneScheduled: (armed, covers, at) {
+          marked.add(armed);
+          covered.addAll(covers);
+          expect(at, sink.scheduledOnce.single.at, reason: 'the due time travels with it');
+        },
+        now: () => DateTime(2026, 8, 20, 14),
+      );
+
+      expect(marked, ['spark']);
+      expect(covered, {'spark'});
+    });
+
+    test('a celebration the device refused to arm is not settled, and is retried', () async {
+      // `ReminderScheduler.scheduleOnce` swallows every failure — plugin not
+      // initialised, POST_NOTIFICATIONS revoked — so without a signal back
+      // the badge was marked celebrated for a notification that never
+      // existed, and the planner answered null for it for ever.
+      final sink = _FakeSink()..arms = false;
+      final marked = <String>[];
+      final coordinator = ReminderCoordinator(sink);
+      Future<void> attempt() => coordinator.sync(
+        journey: earned({'spark'}),
+        settings: const SettingsState(milestonesAdopted: true),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestoneScheduled: (armed, covers, at) => marked.add(armed),
+        now: () => DateTime(2026, 8, 20, 14),
+      );
+
+      await attempt();
+      expect(sink.scheduledOnce, isEmpty);
+      expect(marked, isEmpty, reason: 'nothing armed, nothing settled');
+
+      sink.arms = true;
+      await attempt();
+      expect(sink.scheduledOnce, hasLength(1), reason: 'the next sync tries again');
+      expect(marked, ['spark']);
+    });
+
+    test('a restored journey settles the whole backlog in one go', () async {
+      // `earnedBadges` comes back from the server while the record of what has
+      // been celebrated is device-local, so a reinstall finds several owed at
+      // once. Only the strongest is announced; the rest are settled silently,
+      // or the user wakes to four separate 08:00 notifications about
+      // milestones from weeks ago.
+      final sink = _FakeSink();
+      final marked = <String>[];
+      final covered = <String>{};
+
+      await ReminderCoordinator(sink).sync(
+        journey: earned({'spark', 'weekFlame', 'twoWeekFlame', 'inferno'}),
+        settings: const SettingsState(milestonesAdopted: true),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestoneScheduled: (armed, covers, _) {
+          marked.add(armed);
+          covered.addAll(covers);
+        },
+        now: () => DateTime(2026, 8, 20, 14),
+      );
+
+      expect(sink.scheduledOnce, hasLength(1));
+      expect(marked, ['inferno'], reason: 'only the strongest is announced');
+      expect(covered, {'spark', 'weekFlame', 'twoWeekFlame', 'inferno'});
+    });
+
+    test('switching notifications off hands the armed badge back', () async {
+      // `cancelAll` takes ids 3000-3004 with it. The badge is marked settled at
+      // scheduling time, so without a withdraw the celebration is not paused —
+      // it is destroyed, and switching notifications back on finds nothing owed.
+      final sink = _FakeSink();
+      var withdrawn = 0;
+
+      await ReminderCoordinator(sink).sync(
+        journey: earned({'weekFlame'}),
+        settings: const SettingsState(notificationsOn: false),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestonesWithdrawn: (_) => withdrawn++,
+      );
+
+      expect(withdrawn, 1);
+    });
+
+    test('nothing runs before the stored settings have been read', () async {
+      // Cold start: `restoreSession` can land the journey before
+      // SharedPreferences answers, and the store shows its defaults until
+      // then. Acting on them adopted the ledger (committing every default
+      // over the user's stored settings) and cleared the device against a
+      // ledger that did not know a celebration was armed.
+      final sink = _FakeSink();
+      var withdrawn = 0;
+      final adopted = <String>{};
+      final marked = <String>[];
+      Future<void> syncWith(SettingsState settings, {JourneyState? journey}) =>
+          ReminderCoordinator(sink).sync(
+            journey: journey,
+            settings: settings,
+            title: title,
+            body: body,
+            milestoneTitle: 'Come see your flame',
+            milestoneBody: (badgeId) => 'you earned $badgeId',
+            onMilestoneScheduled: (armed, covers, _) => marked.add(armed),
+            onMilestonesWithdrawn: (_) => withdrawn++,
+            onMilestonesAdopted: adopted.addAll,
+            now: () => DateTime(2026, 8, 20, 14),
+          );
+
+      // Unhydrated, no journey yet: the cold-start clear must wait.
+      await syncWith(const SettingsState(hydrated: false));
+      expect(sink.cancels, 0);
+      expect(withdrawn, 0);
+      // Unhydrated, journey in hand: neither adoption nor a celebration.
+      await syncWith(const SettingsState(hydrated: false), journey: earned({'spark'}));
+      expect(adopted, isEmpty);
+      expect(marked, isEmpty);
+      expect(sink.applied, isEmpty);
+      // Hydrated: the same inputs act.
+      await syncWith(const SettingsState(), journey: earned({'spark'}));
+      expect(adopted, {'spark'});
+    });
+
+    test('notifications off still clears everything', () async {
+      final sink = _FakeSink();
+
+      await ReminderCoordinator(sink).sync(
+        journey: earned({'weekFlame'}),
+        settings: const SettingsState(notificationsOn: false),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+      );
+
+      expect(sink.scheduledOnce, isEmpty);
+      expect(sink.cancels, 1);
+    });
+
+    group('a ledger this device has never initialised', () {
+      test('adopts what is already earned instead of celebrating it late',
+          () async {
+        // The case that bites every existing install the day it updates, and
+        // every account that signs in on a phone someone else used: badges
+        // earned before this device was watching must not wake the user at
+        // 08:00 with "Two weeks. TWO WEEKS." about a milestone from a month
+        // ago.
+        final sink = _FakeSink();
+        final adopted = <String>{};
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned({'spark', 'weekFlame', 'twoWeekFlame'}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          onMilestonesAdopted: adopted.addAll,
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+
+        expect(adopted, {'spark', 'weekFlame', 'twoWeekFlame'});
+        expect(
+          sink.scheduledOnce,
+          isEmpty,
+          reason: 'adoption settles the backlog, it does not announce it',
+        );
+      });
+
+      test('a fresh account adopts nothing and stays able to celebrate',
+          () async {
+        // The bug in the other direction: an empty ledger is ALSO the honest
+        // state of someone about to earn their first badge, which is why
+        // adoption is a flag rather than "is the ledger empty".
+        final sink = _FakeSink();
+        final adopted = <String>{};
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned(const {}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          onMilestonesAdopted: adopted.addAll,
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+        expect(adopted, isEmpty);
+
+        // Day 3 arrives on an adopted ledger: the celebration lands.
+        await sync(sink, earned({'spark'}));
+        expect(sink.scheduledOnce, hasLength(1));
+      });
+
+      test('the danger-hour and trial schedules still run', () async {
+        // Adoption returns early out of the MILESTONE sync only. A first
+        // launch must still arm the nudges it was always going to arm.
+        final sink = _FakeSink();
+
+        await ReminderCoordinator(sink).sync(
+          journey: earned({'weekFlame'}),
+          settings: const SettingsState(),
+          title: title,
+          body: body,
+          milestoneTitle: 'Come see your flame',
+          milestoneBody: (badgeId) => 'you earned $badgeId',
+          now: () => DateTime(2026, 8, 20, 14),
+        );
+
+        expect(sink.applied, hasLength(1));
+      });
     });
   });
 }

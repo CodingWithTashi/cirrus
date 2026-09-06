@@ -2,12 +2,25 @@ import 'package:flutter/material.dart';
 
 /// Semantic color tokens for the LastPuff design system.
 ///
-/// Two official palettes exist (docs/07 §3 + Claude Design runs 1–3):
-///  * **Midnight Ember** — dark, the brand default.
-///  * **Daylight Ember** — light, from "LastPuff Run 2 Light".
+/// Three palette FAMILIES exist, each with a dark and a light mode. Which one
+/// is active is `LpPalette` (see `lp_palette.dart`), chosen in Settings and
+/// clamped to the free family for anyone without Premium:
+///
+///  * **Ember** — free, the brand default (docs/07 §3 + Claude Design runs
+///    1–3). [LpColors.midnight] dark, [LpColors.daylight] light.
+///  * **Hearth** — Premium. Warm and Ember-led: amber takes the primary slot
+///    from Volt lime over a warm charcoal / linen ground.
+///  * **Tide** — Premium. Cool and Oxygen-led: a teal-cyan primary over deep
+///    indigo / arctic.
+///
+/// The token names are HUE-named for historical reasons but ROLE-used: [volt]
+/// is "the primary accent", [onVolt] is "ink on the primary fill", [voltText]
+/// is "accent text on the ground". A new family therefore repaints the slots
+/// and never renames them — which is why adding two families touched no
+/// widget. Do not read [volt] as "lime"; read it as "primary".
 ///
 /// Widgets never reference raw hex values; they read roles off this extension
-/// via `context.lp` so both themes stay in lockstep.
+/// via `context.lp` so every family stays in lockstep.
 class LpColors extends ThemeExtension<LpColors> {
   const LpColors({
     required this.background,
@@ -112,6 +125,159 @@ class LpColors extends ThemeExtension<LpColors> {
         brightness: Brightness.light,
       );
 
+  /// Hearth Night — Premium. Warm charcoal ground, amber primary.
+  ///
+  /// [oxygen] is deliberately left at the brand cyan: it is the only cold
+  /// thing on the screen, and without it a warm ground plus a warm primary
+  /// plus a warm streak colour reads as mud. [caution] is pulled off the
+  /// brand `0xFFE8C547` to a duller gold, because beside an amber primary the
+  /// brand yellow stops reading as a separate signal — and caution is a
+  /// dependence badge, so it has to stay legible AS a warning.
+  const LpColors.hearthNight()
+    : this(
+        background: const Color(0xFF12100D),
+        panicBackground: const Color(0xFF090807),
+        surface: const Color(0xFF1D1915),
+        surfaceSubtle: const Color(0xFF17130F),
+        surfaceInset: const Color(0xFF12100D),
+        border: const Color(0xFF302921),
+        borderSubtle: const Color(0xFF251F19),
+        textPrimary: const Color(0xFFFFFFFF),
+        textBody: const Color(0xFFF2ECE2),
+        textSecondary: const Color(0xFFB3A492),
+        textFaint: const Color(0xFF5E5346),
+        volt: const Color(0xFFFFA62B),
+        voltStrong: const Color(0xFFFFA62B),
+        voltText: const Color(0xFFFFBC5C),
+        voltFocus: const Color(0xFFFFA62B),
+        voltSoft: const Color(0x1FFFA62B),
+        onVolt: const Color(0xFF14100C),
+        ember: const Color(0xFFFF6B3D),
+        emberText: const Color(0xFFFF8F66),
+        emberSoft: const Color(0x1FFF6B3D),
+        oxygen: const Color(0xFF6EE7FF),
+        oxygenText: const Color(0xFF6EE7FF),
+        oxygenSoft: const Color(0x1F6EE7FF),
+        caution: const Color(0xFFD6B24A),
+        cautionText: const Color(0xFFE4C46A),
+        danger: const Color(0xFFFF5C5C),
+        dangerText: const Color(0xFFFF7A7A),
+        dangerSoft: const Color(0x1AFF5C5C),
+        navBar: const Color(0xF217130F),
+        brightness: Brightness.dark,
+      );
+
+  /// Hearth Day — Premium. Warm linen ground, amber primary.
+  const LpColors.hearthDay()
+    : this(
+        background: const Color(0xFFFBF6EE),
+        panicBackground: const Color(0xFFF5EDE2),
+        surface: const Color(0xFFFFFFFF),
+        surfaceSubtle: const Color(0xFFF4EDE2),
+        surfaceInset: const Color(0xFFFBF6EE),
+        border: const Color(0xFFE8DFD0),
+        borderSubtle: const Color(0xFFEFE7DA),
+        textPrimary: const Color(0xFF211B14),
+        textBody: const Color(0xFF453A2D),
+        textSecondary: const Color(0xFF786A58),
+        textFaint: const Color(0xFFB3A794),
+        volt: const Color(0xFFFFA62B),
+        voltStrong: const Color(0xFFC97A00),
+        voltText: const Color(0xFFA35F00),
+        voltFocus: const Color(0xFFE08C0F),
+        voltSoft: const Color(0x1AFFA62B),
+        onVolt: const Color(0xFF14100C),
+        ember: const Color(0xFFFF6B3D),
+        emberText: const Color(0xFFC4441A),
+        emberSoft: const Color(0x1FFF6B3D),
+        oxygen: const Color(0xFF6EE7FF),
+        oxygenText: const Color(0xFF0F7A9E),
+        oxygenSoft: const Color(0x1F6EE7FF),
+        caution: const Color(0xFFD6B24A),
+        cautionText: const Color(0xFF8A6D00),
+        danger: const Color(0xFFFF5C5C),
+        dangerText: const Color(0xFFC23B3B),
+        dangerSoft: const Color(0x1AFF5C5C),
+        navBar: const Color(0xF7FFFFFF),
+        brightness: Brightness.light,
+      );
+
+  /// Deep Tide — Premium. Deep indigo ground, teal-cyan primary.
+  ///
+  /// [ember] stays the brand orange: against a cold ground it is the
+  /// hardest-popping colour the brand owns, and a streak milestone should hit
+  /// hardest here. [oxygen] moves to periwinkle instead, so the "calm" family
+  /// can never be mistaken for the primary — they would otherwise be two
+  /// cyans a shade apart.
+  const LpColors.deepTide()
+    : this(
+        background: const Color(0xFF080F18),
+        panicBackground: const Color(0xFF04080E),
+        surface: const Color(0xFF101B2A),
+        surfaceSubtle: const Color(0xFF0B1420),
+        surfaceInset: const Color(0xFF080F18),
+        border: const Color(0xFF1C2C42),
+        borderSubtle: const Color(0xFF162435),
+        textPrimary: const Color(0xFFFFFFFF),
+        textBody: const Color(0xFFE4EEF6),
+        textSecondary: const Color(0xFF8FA6BE),
+        textFaint: const Color(0xFF47586E),
+        volt: const Color(0xFF4FD8E8),
+        voltStrong: const Color(0xFF4FD8E8),
+        voltText: const Color(0xFF6FE6F4),
+        voltFocus: const Color(0xFF4FD8E8),
+        voltSoft: const Color(0x1F4FD8E8),
+        onVolt: const Color(0xFF04121A),
+        ember: const Color(0xFFFF8A00),
+        emberText: const Color(0xFFFFA23D),
+        emberSoft: const Color(0x1FFF8A00),
+        oxygen: const Color(0xFF8B9BFF),
+        oxygenText: const Color(0xFFA3AFFF),
+        oxygenSoft: const Color(0x1F8B9BFF),
+        caution: const Color(0xFFE8C547),
+        cautionText: const Color(0xFFE8C547),
+        danger: const Color(0xFFFF5C5C),
+        dangerText: const Color(0xFFFF7A7A),
+        dangerSoft: const Color(0x1AFF5C5C),
+        navBar: const Color(0xF20B1420),
+        brightness: Brightness.dark,
+      );
+
+  /// Arctic Tide — Premium. Arctic ground, teal-cyan primary.
+  const LpColors.arcticTide()
+    : this(
+        background: const Color(0xFFF2F7FB),
+        panicBackground: const Color(0xFFE6F1F8),
+        surface: const Color(0xFFFFFFFF),
+        surfaceSubtle: const Color(0xFFEAF1F7),
+        surfaceInset: const Color(0xFFF2F7FB),
+        border: const Color(0xFFD7E3EE),
+        borderSubtle: const Color(0xFFE2EAF2),
+        textPrimary: const Color(0xFF101B2A),
+        textBody: const Color(0xFF2D3D50),
+        textSecondary: const Color(0xFF5E7186),
+        textFaint: const Color(0xFFA2B2C2),
+        volt: const Color(0xFF4FD8E8),
+        voltStrong: const Color(0xFF0E8FA3),
+        voltText: const Color(0xFF0A6E7E),
+        voltFocus: const Color(0xFF2AAEC2),
+        voltSoft: const Color(0x1A4FD8E8),
+        onVolt: const Color(0xFF04121A),
+        ember: const Color(0xFFFF8A00),
+        emberText: const Color(0xFFC25F00),
+        emberSoft: const Color(0x1FFF8A00),
+        oxygen: const Color(0xFF8B9BFF),
+        oxygenText: const Color(0xFF4652C9),
+        oxygenSoft: const Color(0x1F8B9BFF),
+        caution: const Color(0xFFE8C547),
+        cautionText: const Color(0xFF8A6D00),
+        danger: const Color(0xFFFF5C5C),
+        dangerText: const Color(0xFFC23B3B),
+        dangerSoft: const Color(0x1AFF5C5C),
+        navBar: const Color(0xF7FFFFFF),
+        brightness: Brightness.light,
+      );
+
   final Color background;
   final Color panicBackground;
   final Color surface;
@@ -124,13 +290,14 @@ class LpColors extends ThemeExtension<LpColors> {
   final Color textSecondary;
   final Color textFaint;
 
-  /// Raw Volt — CTA fills and glows; identical in both themes.
+  /// The raw primary — CTA fills and glows. Identical across a family's two
+  /// modes; different in every family (Volt lime, Hearth amber, Tide teal).
   final Color volt;
 
-  /// Volt with enough contrast to draw strokes/rings on [background].
+  /// The primary with enough contrast to draw strokes/rings on [background].
   final Color voltStrong;
 
-  /// Volt with enough contrast to set text on [background].
+  /// The primary with enough contrast to set text on [background].
   final Color voltText;
 
   /// Border color of a focused input.

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
+import 'package:last_puff/core/utils/lp_format.dart';
 import 'package:last_puff/core/widgets/progress_ring.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/home/widgets/log_feedback.dart';
@@ -147,6 +148,33 @@ void main() {
 
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
+    });
+  });
+
+  group('money screen', () {
+    testWidgets('the hero and the run rate are the engine\'s figures', (
+      tester,
+    ) async {
+      // No money string had a widget assertion. The hero is `savedLifetime`
+      // rounded to whole dollars — the same rounding the coach card now
+      // uses — and the line under it is the run rate with cents.
+      final container = await pumpApp(tester);
+      unawaited(container.read(routerProvider).push(Routes.money));
+      await tester.pumpAndSettle();
+
+      final snap = container.read(todayProvider)!;
+      final journey = container.read(quitStoreProvider)!;
+      expect(snap.savedLifetime, greaterThan(0));
+      expect(find.text(LpFormat.money(snap.savedLifetime, 'en')), findsOneWidget);
+      expect(
+        find.text(
+          l10n.moneySavedSince(
+            LpFormat.shortDate(journey.plan.startDate, 'en'),
+            LpFormat.money(snap.savedRunRatePerDay, 'en', cents: true),
+          ),
+        ),
+        findsOneWidget,
+      );
     });
   });
 

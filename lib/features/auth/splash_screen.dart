@@ -8,14 +8,20 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
-import '../../core/widgets/lp_misc.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/date_key.dart';
 import '../../domain/logic/launch_paywall_policy.dart';
 
-/// Frame 25 — Volt glow breathes, wordmark fades up, auto-advances ~1.5s.
+/// Frame 25 — the launcher tile over a breathing Volt glow, wordmark fades
+/// up, auto-advances ~1.5s.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
+
+  /// The launcher tile, exactly as the home screen draws it: the same art the
+  /// launcher icons are cut from, pre-rounded. The only file under
+  /// `assets/images` the app bundles — everything else there is generator
+  /// input (see the `flutter_launcher_icons` block in pubspec.yaml).
+  static const iconAsset = 'assets/images/icon-rounded.png';
 
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
@@ -84,59 +90,104 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
+    // The Scaffold hands its body LOOSE constraints, and a Stack under loose
+    // constraints sizes itself to its largest non-positioned child. So a bare
+    // `Stack(alignment: center)` here was a 340dp square parked in the
+    // top-left corner of the screen, with the wordmark centred only within
+    // *it*. Align fills the body first, then places the group — a touch above
+    // the middle, where a lone mark reads as centred.
     return Scaffold(
-      body: Stack(
+      body: Align(
+        alignment: const Alignment(0, -0.1),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 400),
+          builder: (context, t, child) => Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(0, 12 * (1 - t)),
+              child: child,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AppIcon(breath: _breath),
+              const SizedBox(height: 20),
+              Text(
+                context.l10n.appName,
+                style: TextStyle(
+                  fontFamily: LpType.display,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 44,
+                  letterSpacing: -1.5,
+                  color: lp.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                context.l10n.appTagline,
+                textAlign: TextAlign.center,
+                style: LpType.body15(lp.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The launcher tile over the breathing glow.
+///
+/// The glow is centred on the TILE, not on the group. It is far larger than
+/// the tile, so it overflows the tile's box through an [OverflowBox]: the
+/// Column measures only the tile and the wordmark sits at its natural
+/// distance below, while the glow spills out behind everything.
+class _AppIcon extends StatelessWidget {
+  const _AppIcon({required this.breath});
+
+  final Animation<double> breath;
+
+  static const double size = 128;
+  static const double glowSize = 340;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
         alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
           AnimatedBuilder(
-            animation: _breath,
-            builder: (context, _) => Container(
-              width: 340,
-              height: 340,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    lp.volt.withValues(alpha: 0.10 + 0.07 * _breath.value),
-                    lp.volt.withValues(alpha: 0),
-                  ],
+            animation: breath,
+            builder: (context, _) => OverflowBox(
+              maxWidth: glowSize,
+              maxHeight: glowSize,
+              child: Container(
+                width: glowSize,
+                height: glowSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      lp.volt.withValues(alpha: 0.10 + 0.07 * breath.value),
+                      lp.volt.withValues(alpha: 0),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 400),
-            builder: (context, t, child) => Opacity(
-              opacity: t,
-              child: Transform.translate(
-                offset: Offset(0, 12 * (1 - t)),
-                child: child,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const VoltDot(size: 20),
-                const SizedBox(height: 22),
-                Text(
-                  context.l10n.appName,
-                  style: TextStyle(
-                    fontFamily: LpType.display,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 44,
-                    letterSpacing: -1.5,
-                    color: lp.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  context.l10n.appTagline,
-                  textAlign: TextAlign.center,
-                  style: LpType.body15(lp.textSecondary),
-                ),
-              ],
-            ),
+          Image.asset(
+            SplashScreen.iconAsset,
+            width: size,
+            height: size,
+            filterQuality: FilterQuality.medium,
+            excludeFromSemantics: true,
           ),
         ],
       ),

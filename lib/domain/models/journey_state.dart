@@ -161,11 +161,13 @@ class TodaySnapshot {
     final todayLog = s.logFor(now);
     final limit = s.limitOn(now);
     final streak = StreakEngine.currentStreak(s.days, now);
-    final logs = s.days.values.toList()
+    final todayKey = JourneyState.dateKey(now);
+    // Days after today are excluded. A log stamped in the future — a device
+    // clock that was wrong when a puff was filed — would otherwise be counted
+    // as money already saved and puffs already not taken.
+    final logs = s.days.values.where((l) => !l.date.isAfter(todayKey)).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
-    final completed = logs
-        .where((l) => l.date.isBefore(JourneyState.dateKey(now)))
-        .toList();
+    final completed = logs.where((l) => l.date.isBefore(todayKey)).toList();
     int vsDay1 = 0;
     if (completed.length >= 2) {
       final first = completed.first.puffs;

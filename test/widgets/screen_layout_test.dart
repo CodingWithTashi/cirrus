@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/auth/auth_screens.dart';
@@ -125,7 +126,18 @@ void main() {
   String firstLineOf(Object error) =>
       error.toString().split(RegExp(r'\r?\n')).first;
 
-  for (final theme in {'midnight': LpTheme.midnight(), 'daylight': LpTheme.daylight()}.entries) {
+  // Every family in both modes. A palette cannot change layout on its own,
+  // but it can change what a widget MEASURES — an accent that resolves to a
+  // different token feeds different text through the same box — and this
+  // sweep is cheap next to finding that on a device.
+  final themes = <String, ThemeData>{
+    for (final entry in LpPaletteCatalog.entries) ...{
+      '${entry.id.name}-dark': LpTheme.dark(entry.id),
+      '${entry.id.name}-light': LpTheme.light(entry.id),
+    },
+  };
+
+  for (final theme in themes.entries) {
     for (final size in sizes.entries) {
       for (final screen in screens.entries) {
         testWidgets('${screen.key} lays out (${theme.key}, ${size.key})', (

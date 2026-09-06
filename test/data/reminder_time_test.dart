@@ -183,11 +183,12 @@ class _RecordingSink implements ReminderSink {
   }) async => last = slots;
 
   @override
-  Future<void> scheduleOnce(
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
-  }) async {}
+  }) async => true;
 
   @override
   Future<void> cancel(int id) async {}

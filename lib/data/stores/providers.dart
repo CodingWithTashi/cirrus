@@ -47,6 +47,8 @@ import 'entitlement_store.dart';
 import 'journey_store.dart';
 import 'moderation_store.dart';
 import 'settings_store.dart';
+import 'widget_coordinator.dart';
+import '../api/widget_store.dart';
 import '../../domain/date_key.dart';
 
 // ---- backend seam -----------------------------------------------------------
@@ -81,6 +83,8 @@ final fakeServerProvider = Provider<FakeServer>(
     // Synchronous read on purpose (sync-apply invariant): when the device is
     // offline the fake backend is unreachable, exactly like a real one.
     isOnline: () => ref.read(connectivityProvider),
+    // The same clock the app reads, so a pinned `now` pins the backend too.
+    now: ref.watch(nowProvider),
   ),
 );
 
@@ -383,6 +387,23 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => null,
     BackendMode.firebase => ReminderCoordinator(ReminderScheduler()),
+  },
+);
+
+/// Keeps the home-screen widget in step with the journey, and drains the puffs
+/// it logged while the app was closed.
+///
+/// Null on the fake backend for the same reason [reminderCoordinatorProvider]
+/// is: `home_widget`'s methods are platform channels, the test platform
+/// reports android, and reading [backendModeProvider] rather than
+/// `resolveBackendMode()` is what keeps `flutter test` off a channel that is
+/// not there. Tests that want the real behaviour override this with a
+/// coordinator over a [MemoryWidgetStore] — the logic is identical, only the
+/// far side of the store changes.
+final widgetCoordinatorProvider = Provider<WidgetCoordinator?>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => null,
+    BackendMode.firebase => WidgetCoordinator(const HomeWidgetStore()),
   },
 );
 

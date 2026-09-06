@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only user-visible strings in this app that cannot come from an ARB
+     file. The launcher reads them out of our resources before a line of our
+     code runs: the widget-picker label and description, and the placeholder
+     text baked into previewLayout (API 31+ inflates the layout with its XML
+     defaults, with no RemoteViews action applied). Everything the widget shows
+     in use is pushed from Dart, pre-localized, so ARB stays the single source
+     for the rest. test/android_widget_test.dart pins these five locales in
+     parity, exactly as l10n_parity_test.dart does for the ARBs. -->
+<resources>
+    <string name="cw_picker_label">Cirrus</string>
+    <string name="cw_picker_description">Log a puff and see your day, without opening the app.</string>
+    <string name="cw_preview_day">day 12</string>
+    <string name="cw_preview_count">52</string>
+    <string name="cw_preview_of">/ 98</string>
+    <string name="cw_preview_left">46 left · ahead of your curve</string>
+    <string name="cw_plus_label">+</string>
+    <string name="cw_minus_label">−</string>
+    <string name="cw_plus_a11y">Log a puff</string>
+    <string name="cw_minus_a11y">Remove the last puff</string>
+    <string name="cw_minus_off_a11y">Nothing to remove</string>
+    <string name="cw_empty_title">Start your plan</string>
+    <string name="cw_empty_body">Tap to open Cirrus</string>
+</resources>

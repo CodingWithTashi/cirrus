@@ -3,10 +3,22 @@ import 'package:flutter/services.dart';
 
 import 'lp_colors.dart';
 import 'lp_dimens.dart';
+import 'lp_palette.dart';
 import 'lp_typography.dart';
 
-/// Builds the two official ThemeData objects from the LastPuff token set.
+/// Builds ThemeData from the LastPuff token set, one per palette and mode.
 abstract final class LpTheme {
+  /// The light `ThemeData` of [palette] — `MaterialApp.theme`.
+  static ThemeData light(LpPalette palette) =>
+      _build(LpPaletteCatalog.resolve(palette).light);
+
+  /// The dark `ThemeData` of [palette] — `MaterialApp.darkTheme`.
+  static ThemeData dark(LpPalette palette) =>
+      _build(LpPaletteCatalog.resolve(palette).dark);
+
+  /// The free family's two modes. Kept as named shorthands because a dozen
+  /// widget tests mount a bare `MaterialApp(theme: LpTheme.midnight())` and
+  /// there is nothing to gain from churning them.
   static ThemeData midnight() => _build(const LpColors.midnight());
 
   static ThemeData daylight() => _build(const LpColors.daylight());
@@ -15,7 +27,16 @@ abstract final class LpTheme {
       ? SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent)
       : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent);
 
-  static ThemeData _build(LpColors lp) {
+  /// `_build` is pure and `MaterialApp` rebuilds on every settings change, so
+  /// the six results are built once and handed back. Keyed by identity: every
+  /// palette is a `const LpColors`, so the catalogue's entries are canonical
+  /// instances and `LpColors` has no `==` to lean on anyway.
+  static final Map<LpColors, ThemeData> _cache = {};
+
+  static ThemeData _build(LpColors lp) =>
+      _cache.putIfAbsent(lp, () => _compose(lp));
+
+  static ThemeData _compose(LpColors lp) {
     final base = ThemeData(
       useMaterial3: true,
       brightness: lp.brightness,

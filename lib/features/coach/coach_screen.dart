@@ -21,6 +21,7 @@ import '../../data/stores/coach_store.dart';
 import '../../data/stores/providers.dart';
 import '../day1/day1_spotlight.dart';
 import '../../domain/logic/day_window.dart';
+import '../../domain/logic/week_trend.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -823,10 +824,14 @@ class _WeekCard extends StatelessWidget {
     if (week.where((l) => l.puffs > 0).length < 2) {
       return const SizedBox.shrink();
     }
-    var hardest = 0;
-    for (var i = 0; i < week.length; i++) {
-      if (week[i].puffs > week[hardest].puffs) hardest = i;
-    }
+    // The same three verdicts Stats draws, from the one engine: the hard day
+    // is the most puffs, the win is the fewest among CONFIRMED days (today
+    // used to be painted as the win whatever its count), and "trending down"
+    // is said only when the later half of the completed week averaged fewer
+    // puffs than the earlier half — it used to be the caption on every week.
+    final hardest = WeekTrend.hardestIndex(week);
+    final best = WeekTrend.bestIndex(week, now);
+    final down = WeekTrend.isDown(week, now) ?? false;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -850,14 +855,18 @@ class _WeekCard extends StatelessWidget {
               height: 44,
               gap: 5,
               radius: 4,
-              highlight: {hardest},
-              positive: {week.length - 1},
+              highlight: {if (hardest != -1) hardest},
+              positive: {if (best != -1) best},
             ),
             const SizedBox(height: 8),
             Text(
-              l10n.coachWeekCardCaption(
-                LpFormat.weekday(week[hardest].date, locale),
-              ),
+              down
+                  ? l10n.coachWeekCardCaption(
+                      LpFormat.weekday(week[hardest].date, locale),
+                    )
+                  : l10n.coachWeekCardCaptionFlat(
+                      LpFormat.weekday(week[hardest].date, locale),
+                    ),
               style: LpType.caption11(lp.textSecondary),
             ),
           ],

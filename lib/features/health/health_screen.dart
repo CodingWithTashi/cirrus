@@ -26,9 +26,16 @@ class HealthScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final snap = ref.watch(todayProvider);
     if (snap == null) return const SizedBox.shrink();
-    final sinceLastPuff = snap.lastPuffAt == null
+    // The minute clock, never `DateTime.now()` in build: this screen can sit
+    // under the keep-alive shell, and a raw read froze "71h ago" at whatever
+    // it was when the tree was first built. A last puff stamped after now (a
+    // clock that has since been corrected) reads as no time at all, never as
+    // a negative one.
+    final now = ref.watch(minuteClockProvider);
+    final lastPuffAt = snap.lastPuffAt;
+    final sinceLastPuff = lastPuffAt == null || lastPuffAt.isAfter(now)
         ? Duration.zero
-        : DateTime.now().difference(snap.lastPuffAt!);
+        : now.difference(lastPuffAt);
 
     final milestones = <(Duration, String, String, bool)>[
       (
@@ -92,10 +99,14 @@ class HealthScreen extends ConsumerWidget {
             Text(
               // Hours past 24 on purpose: the timeline below is denominated
               // in 24h/48h/72h milestones, and "71h" says how close the next
-              // node is where "2d" would hide it.
-              l10n.healthAnchor(
-                LpFormat.compactAgo(sinceLastPuff, dayBucket: false),
-              ),
+              // node is where "2d" would hide it. With no puff on record
+              // there is no anchor to describe — "0m ago" was a claim about
+              // a puff that never happened.
+              lastPuffAt == null
+                  ? l10n.healthAnchorNone
+                  : l10n.healthAnchor(
+                      LpFormat.compactAgo(sinceLastPuff, dayBucket: false),
+                    ),
               style: LpType.body13(lp.textSecondary),
             ),
             const SizedBox(height: 22),

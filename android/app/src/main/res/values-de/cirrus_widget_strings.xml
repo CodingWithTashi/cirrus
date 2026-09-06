@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cw_picker_label">Cirrus</string>
+    <string name="cw_picker_description">Einen Zug festhalten und den Tag sehen, ohne die App zu öffnen.</string>
+    <string name="cw_preview_day">Tag 12</string>
+    <string name="cw_preview_count">52</string>
+    <string name="cw_preview_of">/ 98</string>
+    <string name="cw_preview_left">noch 46 · du bist vorne</string>
+    <string name="cw_plus_label">+</string>
+    <string name="cw_minus_label">−</string>
+    <string name="cw_plus_a11y">Einen Zug festhalten</string>
+    <string name="cw_minus_a11y">Letzten Zug entfernen</string>
+    <string name="cw_minus_off_a11y">Nichts zu entfernen</string>
+    <string name="cw_empty_title">Starte deinen Plan</string>
+    <string name="cw_empty_body">Tippen, um Cirrus zu öffnen</string>
+</resources>

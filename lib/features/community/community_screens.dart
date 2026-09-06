@@ -73,8 +73,10 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     final l10n = context.l10n;
     final community = ref.watch(communityStoreProvider);
     final journey = ref.watch(quitStoreProvider);
+    // The minute clock: an SOS pin expires within the hour, and this tab
+    // lives in the keep-alive shell where a raw clock read would freeze.
     final posts = community
-        .visible(DateTime.now())
+        .visible(ref.watch(minuteClockProvider))
         .where((p) => _filter == null || p.tag == _filter)
         .toList();
 
@@ -707,7 +709,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                               child: Text(
                                 l10n.communityPostingAs(
                                   journey?.profile.alias ?? '',
-                                  journey?.plan.dayNumber(DateTime.now()) ?? 1,
+                                  ref.watch(todayProvider)?.dayNumber ?? 1,
                                 ),
                                 style: LpType.caption(lp.textSecondary),
                               ),

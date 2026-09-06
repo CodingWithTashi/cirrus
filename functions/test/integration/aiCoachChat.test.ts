@@ -11,7 +11,7 @@
  * The model is stubbed. What is under test is what the handler does around it:
  * who gets charged a message, who gets it back, and what the client is told.
  */
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const generate = vi.fn();
 const generateStream = vi.fn();
@@ -146,6 +146,46 @@ beforeEach(async () => {
   await journeyDoc('alice').set(JOURNEY);
   // Tier comes from the server mirror, never from `profile.tier`.
   await userDoc('alice').set({entitlement: {tier: 'premium'}}, {merge: true});
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('the day the coach is anchored to', () => {
+  it("anchors to the caller's calendar day, not UTC's", async () => {
+    // 22:30 on Sat Sep 5 in New York is already Sep 6 in UTC. The card, the
+    // anchor and the envelope must all say day 2 (the Home header's number),
+    // never day 3. Only `Date` is faked: faking the timers as well freezes the
+    // Firestore SDK's own I/O (see weeklyInsight.test.ts).
+    vi.useFakeTimers({toFake: ['Date']});
+    vi.setSystemTime(new Date('2026-09-06T02:30:00.000Z'));
+    await journeyDoc('alice').set({
+      ...JOURNEY,
+      plan: {
+        method: 'taper', paceDays: 30, startDate: '2026-09-04',
+        baselinePuffsPerDay: 100, weeklySpend: 30, strength: 'mg50', stretchDays: 0,
+      },
+      days: {
+        '2026-09-04': {
+          puffs: 36, limit: 95, hourBuckets: {'14': 36}, cravingsSurvived: 0,
+          mood: null, moodNote: null, vapeFreeConfirmed: false,
+          slipTrigger: null, repairTokenUsed: false,
+        },
+      },
+    });
+
+    const reply = await run(caller({timeZone: 'America/New_York'}));
+
+    // The first generate of a non-streaming turn is the coach reply itself.
+    const instruction = (generate.mock.calls[0]![0] as {systemInstruction: string})
+      .systemInstruction;
+    expect(instruction).toContain('plan day: 2 of 30');
+    expect(instruction).toContain('It is plan day 2 for this user (2026-09-05');
+    expect(instruction).not.toContain('plan day: 3');
+    expect(instruction).toContain('money saved: $3');
+    expect(reply.args['day']).toBe(2);
+  });
 });
 
 describe('the happy path', () => {

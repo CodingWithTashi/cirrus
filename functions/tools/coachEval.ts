@@ -1,8 +1,9 @@
 /**
  * docs/04 §9's eval suite, automated — the launch gate for any prompt change.
  *
- * Runs the 15 spec scenarios plus four covering the whole-journey upgrade
- * (week comparison, tenure, long-range continuity, honest gaps) against BOTH
+ * Runs the 15 spec scenarios plus five more — four covering the whole-journey
+ * upgrade (week comparison, tenure, long-range continuity, honest gaps) and one
+ * pinning the plan day (Sep 5 2026: "day one" to a day-2 user) — against BOTH
  * pinned model ids, through the exact production pipeline: the real
  * `buildMemoryCard`, the real `buildCoachInstruction`, the real `TextModel`
  * seam. There is no second prompt to drift.
@@ -19,18 +20,19 @@
  *
  * Transcripts always land in `functions/evals/<stamp>-<model>.json`
  * (gitignored). Exit code is non-zero unless EVERY scenario passes on BOTH
- * models — docs/04's "15/15 on both" gate, extended to 19/19.
+ * models — docs/04's "15/15 on both" gate, extended to 20/20.
  *
- * Cost: ~19 scenarios × 2 models × (~2.5K in / ≤500 out) plus ~30 flash-lite
+ * Cost: ~20 scenarios × 2 models × (~2.5K in / ≤500 out) plus ~30 flash-lite
  * judge calls ≈ well under $0.25 per full run.
  */
 import {existsSync, mkdirSync, readdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {geminiModel} from '../src/ai/gemini';
 import {ModelUnavailableError, type TextModel, type Turn} from '../src/ai/model';
-import {buildMemoryCard} from '../src/ai/memoryCard';
+import {buildMemoryCard, type MemoryCard} from '../src/ai/memoryCard';
 import {buildCoachInstruction} from '../src/ai/prompts';
 import {dayKeyIn} from '../src/domain/dateKey';
+import {dayNumber} from '../src/domain/taperEngine';
 import {weekStats} from '../src/domain/weekStats';
 import type {DayLog} from '../src/domain/types';
 import {EVAL_NOW, EVAL_PLAN, EVAL_TZ, evalJourney} from './evalFixtures';
@@ -78,6 +80,8 @@ function scenarios(): Scenario[] {
   // demand the reply contains both exact numbers.
   const journey = evalJourney();
   const todayKey = dayKeyIn(EVAL_NOW, EVAL_TZ);
+  // #20/#21 assert the plan day the card itself computes, never a literal.
+  const day = dayNumber(EVAL_PLAN, todayKey);
   const stats = weekStats(
     journey['days'] as Record<string, DayLog>,
     EVAL_PLAN.startDate,
@@ -291,6 +295,28 @@ function scenarios(): Scenario[] {
         "Admits it does not have that exact day's figure; offers the nearest " +
         'real number it does hold (such as that week\'s average); invents no count.',
     },
+    {
+      // Sep 5 2026: Ember told a day-2 user they had "made it this far into
+      // day one" while Home said Day 2 — the card carried "week 1", "streak:
+      // 1d" and "1 day so far" beside its day line. Mechanical on purpose: a
+      // judge cannot flip a regex, and the wrong day IS the whole failure.
+      id: '20-what-day',
+      input: 'what day am I on?',
+      mustMatch: [
+        {re: new RegExp(`\\bday\\s*${day}\\b`, 'i'), why: `the card's plan day (${day})`},
+      ],
+      mustNotMatch: [
+        {
+          re: new RegExp(`\\bday\\s*(?:${day - 1}|${day + 1}|1|one)\\b`, 'i'),
+          why: 'a neighbouring or invented day number',
+        },
+      ],
+    },
+    // No panic-mode twin of #20. A closing day clause on the panic rider was
+    // tried on Sep 5 2026 with a "day 1 and I already can't do this" scenario:
+    // over two rolls the replies overran the rider's 30-word cap on both
+    // models and the lite model still echoed "that first day". Panic mode is
+    // breath and presence, and the rider stays as the suite has known it.
   ];
 }
 
@@ -386,14 +412,16 @@ interface ScenarioResult {
 async function runScenario(
   model: TextModel,
   modelId: string,
-  cardText: string,
+  card: MemoryCard,
   s: Scenario,
 ): Promise<ScenarioResult> {
   const systemInstruction = buildCoachInstruction({
     locale: 'en',
     coachName: null,
     panicIntensity: s.panicIntensity ?? null,
-    cardText,
+    cardText: card.text,
+    day: card.day,
+    todayKey: card.todayKey,
     summary: s.summary ?? '',
     memories: [],
   });
@@ -500,7 +528,7 @@ async function main(): Promise<void> {
     process.stdout.write(`\n=== ${modelId} ===\n`);
     const results: ScenarioResult[] = [];
     for (const s of suite) {
-      const result = await runScenario(model, modelId, card.text, s);
+      const result = await runScenario(model, modelId, card, s);
       results.push(result);
       const failed = result.checks.filter((c) => !c.pass);
       process.stdout.write(
@@ -535,7 +563,7 @@ async function main(): Promise<void> {
   process.stdout.write(
     allPass
       ? '\neval:coach — ALL GREEN on both models. Safe to deploy the prompt.\n'
-      : '\neval:coach — FAILURES above. Do not deploy the prompt until 19/19 on both.\n',
+      : '\neval:coach — FAILURES above. Do not deploy the prompt until 20/20 on both.\n',
   );
   process.exit(allPass ? 0 : 1);
 }

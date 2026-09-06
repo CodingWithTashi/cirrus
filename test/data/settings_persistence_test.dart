@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/data/stores/settings_persistence.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,10 @@ void main() {
     final loaded = await SettingsPersistence.load();
 
     expect(loaded.themeMode, defaults.themeMode);
+    // A fresh install wears the free family, whatever the tier turns out to be.
+    expect(loaded.palette, LpPalette.ember);
+    // Nothing adopted yet — the first sync with a journey in hand decides.
+    expect(loaded.milestonesAdopted, isFalse);
     expect(loaded.locale, isNull);
     expect(loaded.notificationsOn, defaults.notificationsOn);
     expect(loaded.dangerStartHour, defaults.dangerStartHour);
@@ -25,8 +30,9 @@ void main() {
   });
 
   test('every field survives a save and reload', () async {
-    const saved = SettingsState(
+    final saved = SettingsState(
       themeMode: ThemeMode.dark,
+      palette: LpPalette.tide,
       locale: Locale('fr'),
       notificationsOn: false,
       dangerStartHour: 19,
@@ -35,14 +41,33 @@ void main() {
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
       launchPaywallShownCount: 3,
+      celebratedMilestones: {'spark', 'weekFlame'},
+      armedMilestone: 'weekFlame',
+      armedMilestoneAt: DateTime(2026, 9, 6, 8),
+      milestonesAdopted: true,
     );
 
     await SettingsPersistence.save(saved);
     final loaded = await SettingsPersistence.load();
     expect(loaded.launchPaywallShownDay, '2026-09-02');
+    // Loaded from disk IS hydrated — the flag describes the store, and is the
+    // one field deliberately not written.
+    expect(loaded.hydrated, isTrue);
+    // The due time is what tells "handed back" from "already delivered".
+    expect(loaded.armedMilestoneAt, DateTime(2026, 9, 6, 8));
 
     expect(loaded.themeMode, ThemeMode.dark);
+    // Stored even for a reader who is not entitled to it: the clamp happens at
+    // render, so a lapse must not destroy the choice they paid for.
+    expect(loaded.palette, LpPalette.tide);
     expect(loaded.locale?.languageCode, 'fr');
+    // A promise already made must not be made twice on the next launch.
+    expect(loaded.celebratedMilestones, {'spark', 'weekFlame'});
+    // Which one is on the device clock has to survive too, or switching
+    // notifications off after a restart cannot hand it back.
+    expect(loaded.armedMilestone, 'weekFlame');
+    // Without this the next launch re-adopts, wiping the ledger it just read.
+    expect(loaded.milestonesAdopted, isTrue);
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -83,9 +108,14 @@ void main() {
         reason: '$name is settable now, so it must be persisted too',
       );
     }
+    // Describes the store, not a choice: whether disk has answered yet. It
+    // must never be written, or a reload would come back claiming to be
+    // hydrated before it is.
+    const transient = {'hydrated'};
 
-    expect(declared.difference(fixed), {
+    expect(declared.difference(fixed).difference(transient), {
       'themeMode',
+      'palette',
       'locale',
       'notificationsOn',
       'dangerStartHour',
@@ -95,6 +125,10 @@ void main() {
       'winbackShown',
       'launchPaywallShownDay',
       'launchPaywallShownCount',
+      'celebratedMilestones',
+      'armedMilestone',
+      'armedMilestoneAt',
+      'milestonesAdopted',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });
@@ -123,5 +157,13 @@ void main() {
     });
 
     expect((await SettingsPersistence.load()).themeMode, ThemeMode.system);
+  });
+
+  // A palette written by a NEWER build must not take the launch down on a
+  // downgrade, and `LpPalette.values.byName` would throw here.
+  test('a palette this build has never heard of falls back', () async {
+    SharedPreferences.setMockInitialValues({'settings.palette': 'obsidian'});
+
+    expect((await SettingsPersistence.load()).palette, LpPalette.ember);
   });
 }

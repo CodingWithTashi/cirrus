@@ -104,6 +104,28 @@ void main() {
     expect(path(container), Routes.home);
   });
 
+  testWidgets('a milestone celebration opens the badge grid', (tester) async {
+    final (container, sink) = await open(tester);
+    sink.taps.add(ReminderKind.milestone);
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.milestones);
+  });
+
+  testWidgets('a milestone tap PUSHES, so the badge grid can be left', (
+    tester,
+  ) async {
+    // Milestones is a pushed detail screen with a back chevron. A `go` would
+    // land there with nothing to go back to.
+    final (container, sink) = await open(tester);
+    sink.taps.add(ReminderKind.milestone);
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.milestones);
+
+    container.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+  });
+
   testWidgets('a tap that cold-started the app waits for the splash', (
     tester,
   ) async {
@@ -142,11 +164,12 @@ class _TapSink implements ReminderSink {
   }) async {}
 
   @override
-  Future<void> scheduleOnce(
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
+    required ReminderKind kind,
     required String title,
     required String body,
-  }) async {}
+  }) async => true;
 
   @override
   Future<void> cancel(int id) async {}

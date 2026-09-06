@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 24–25: the system font.
+
+     `android:fontFamily="@font/…"` is an API 26 framework attribute; on 24/25
+     the value is read as a family NAME and the reference never resolves. The
+     typeface therefore lives in a style, overridden wholesale in
+     values-v26/ — one layout, two small values files, correct on both.
+
+     NOT in values/styles.xml: that file is Flutter's own template (LaunchTheme
+     / NormalTheme) and a tool upgrade rewrites it. -->
+<resources>
+    <!-- Dot-separated style names imply a parent in Android: "CirrusWidget.Day"
+         inherits from "CirrusWidget", and aapt fails the whole link if it does
+         not exist. Declaring it empty is the conventional way to root a family. -->
+    <style name="CirrusWidget"/>
+    <style name="CirrusWidget.Day">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/cw_volt</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.10</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="CirrusWidget.Count">
+        <item name="android:textSize">44sp</item>
+        <item name="android:textColor">@color/cw_text</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="CirrusWidget.CountOver" parent="CirrusWidget.Count">
+        <item name="android:textColor">@color/cw_danger</item>
+    </style>
+    <style name="CirrusWidget.OfLimit">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/cw_text_dim</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="CirrusWidget.Caption">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/cw_text_dim</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="CirrusWidget.Plus">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/cw_on_volt</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:letterSpacing">0.04</item>
+    </style>
+    <style name="CirrusWidget.Minus">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/cw_text_dim</item>
+        <item name="android:gravity">center</item>
+    </style>
+</resources>

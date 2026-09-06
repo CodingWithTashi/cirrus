@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/app/router/app_router.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
 
@@ -129,6 +130,30 @@ void main() {
     );
 
     settings.setLocale(null);
+    settings.setThemeMode(ThemeMode.dark);
+    await e2e.settle();
+  });
+
+  // The family is the second theming axis, and it is the one that can be
+  // taken away — so it is worth walking on a real device, in a real tree,
+  // where a disposal or a torn-down route can actually happen.
+  testWidgets('a palette family applies live, and survives the mode', (
+    tester,
+  ) async {
+    final e2e = await signedIn(tester);
+    final settings = e2e.container.read(settingsStoreProvider.notifier);
+
+    for (final entry in LpPaletteCatalog.entries) {
+      for (final mode in const [ThemeMode.dark, ThemeMode.light]) {
+        settings.setPalette(entry.id);
+        settings.setThemeMode(mode);
+        await e2e.settle();
+        expect(tester.takeException(), isNull, reason: '${entry.id.name} $mode');
+        expect(e2e.container.read(settingsStoreProvider).palette, entry.id);
+      }
+    }
+
+    settings.setPalette(LpPalette.ember);
     settings.setThemeMode(ThemeMode.dark);
     await e2e.settle();
   });

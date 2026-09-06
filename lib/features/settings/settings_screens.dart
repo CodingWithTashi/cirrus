@@ -7,11 +7,14 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
+import '../../app/theme/lp_palette.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/billing_catalog.dart';
 import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_format.dart';
+import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
@@ -38,11 +41,23 @@ class SettingsScreen extends ConsumerWidget {
     final journey = ref.watch(quitStoreProvider);
     final entitlement = ref.watch(entitlementProvider);
 
+    // Mode only. The family used to be named here ("Midnight"/"Daylight"),
+    // which stopped being true the moment a family other than Ember existed.
     String appearanceValue() => switch (settings.themeMode) {
       ThemeMode.system => l10n.settingsAppearanceSystem,
-      ThemeMode.dark => l10n.settingsAppearanceMidnight,
-      ThemeMode.light => l10n.settingsAppearanceDaylight,
+      ThemeMode.dark => l10n.settingsAppearanceDark,
+      ThemeMode.light => l10n.settingsAppearanceLight,
     };
+
+    // The family the app is actually WEARING, not the one on disk: a lapsed
+    // subscriber sees Ember here, because Ember is what they are looking at.
+    String themeValue() => _paletteName(
+      l10n,
+      LpPaletteCatalog.resolveFor(
+        settings.palette,
+        premium: ref.watch(isPremiumProvider),
+      ).id,
+    );
 
     String languageValue() => settings.locale == null
         ? l10n.settingsLanguageSystem
@@ -272,6 +287,12 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => _showAppearanceSheet(context, ref),
             ),
             row(
+              emoji: '🌈',
+              label: l10n.settingsTheme,
+              value: themeValue(),
+              onTap: () => _showThemeSheet(context, ref),
+            ),
+            row(
               emoji: '🌐',
               label: l10n.settingsLanguage,
               value: languageValue(),
@@ -386,13 +407,41 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 option(ThemeMode.system, l10n.settingsAppearanceSystem, '⚙️'),
-                option(ThemeMode.dark, l10n.settingsAppearanceMidnight, '🌑'),
-                option(ThemeMode.light, l10n.settingsAppearanceDaylight, '☀️'),
+                option(ThemeMode.dark, l10n.settingsAppearanceDark, '🌑'),
+                option(ThemeMode.light, l10n.settingsAppearanceLight, '☀️'),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  static String _paletteName(AppLocalizations l10n, LpPalette id) =>
+      switch (id) {
+        LpPalette.ember => l10n.settingsThemeEmber,
+        LpPalette.hearth => l10n.settingsThemeHearth,
+        LpPalette.tide => l10n.settingsThemeTide,
+      };
+
+  static String _paletteBlurb(AppLocalizations l10n, LpPalette id) =>
+      switch (id) {
+        LpPalette.ember => l10n.settingsThemeEmberSub,
+        LpPalette.hearth => l10n.settingsThemeHearthSub,
+        LpPalette.tide => l10n.settingsThemeTideSub,
+      };
+
+  /// The palette-family picker.
+  ///
+  /// A `ConsumerStatefulWidget` rather than the flat builder the appearance
+  /// sheet uses, because this one has to WATCH the tier: a purchase made
+  /// through the lock card must unlock the cards underneath it without the
+  /// reader reopening the sheet.
+  void _showThemeSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _ThemeSheet(),
     );
   }
 
@@ -489,6 +538,227 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The palette-family picker.
+///
+/// Locked families stay visible and stay tappable, which is the same call the
+/// panic arena's `GameSwitcher` made and for the same reason: hiding them
+/// would make the cleanest sheet and sell nothing, because nobody upgrades
+/// for a feature they have never seen exist. Disabling them would answer the
+/// tap with silence. So the tap is answered with the lock card.
+///
+/// Each card shows the family's REAL colours — ground, primary, streak, calm,
+/// straight off `LpColors`. That is a truthful preview rather than a mock-up,
+/// which is what lets a locked card carry its own argument.
+class _ThemeSheet extends ConsumerStatefulWidget {
+  const _ThemeSheet();
+
+  @override
+  ConsumerState<_ThemeSheet> createState() => _ThemeSheetState();
+}
+
+class _ThemeSheetState extends ConsumerState<_ThemeSheet> {
+  /// The locked family whose card is open, if any. Cleared by a purchase.
+  LpPalette? _locked;
+  bool _reported = false;
+
+  /// Where this reader is in their own quit — a dimension on the gate events.
+  /// Read, never watched: watching would rebuild the sheet on every puff tap.
+  int? get _planDay {
+    final journey = ref.read(quitStoreProvider);
+    if (journey == null) return null;
+    return journey.plan.dayNumber(ref.read(nowProvider)());
+  }
+
+  void _tap(PaletteEntry entry, bool premium) {
+    // A locked family answers with the card, not with silence and not by
+    // being worn for a second. Nothing is committed: they never had it, and a
+    // stored choice they were never entitled to would surface the day they
+    // subscribed for something else entirely.
+    if (entry.premium && !premium) {
+      // No second `gateShown` here. The impression was counted when the sheet
+      // opened; counting the tap as another one would cap
+      // `gate_tapped/gate_shown` at 50% for this door no matter how well it
+      // converts, and that ratio is the only thing the event is for.
+      LpHaptics.light();
+      setState(() => _locked = entry.id);
+      return;
+    }
+    ref.read(settingsStoreProvider.notifier).setPalette(entry.id);
+    Navigator.of(context).pop();
+  }
+
+  void _openPaywall() {
+    const source = 'theme';
+    ref.read(analyticsProvider).gateTapped(source);
+    // Pop first, push second. `showModalBottomSheet` pushes an imperative
+    // `ModalBottomSheetRoute` onto the same navigator go_router drives, so a
+    // `context.push` under a live sheet is asking two route stacks to
+    // interleave — the arena can unlock in place because it is a screen, not
+    // a sheet. Returning from the paywall lands on Settings, where the Theme
+    // row is one tap away and already reads the new tier.
+    Navigator.of(context).pop();
+    context.push(Routes.paywallFrom(source));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    // Watched, not read: an entitlement can arrive while this sheet is open
+    // without anyone touching it — a restore, the `rcWebhook` mirror landing,
+    // a purchase made on another device — and a lock card still sitting over
+    // a family they now own would be a lie.
+    final premium = ref.watch(isPremiumProvider);
+    final current = LpPaletteCatalog.resolveFor(
+      ref.watch(settingsStoreProvider).palette,
+      premium: premium,
+    ).id;
+    if (premium && _locked != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _locked = null);
+      });
+    }
+    if (!_reported) {
+      _reported = true;
+      // Fires whether or not a locked card is opened, so the sheet's own
+      // view-to-tap rate is readable. Deferred a frame: `build` must stay
+      // free of side effects and a sink can reach a platform channel.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !premium) {
+          ref.read(analyticsProvider).gateShown('theme', planDay: _planDay);
+        }
+      });
+    }
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.settingsTheme, style: LpType.titleSm(lp.textPrimary)),
+            const SizedBox(height: 16),
+            for (final entry in LpPaletteCatalog.entries) ...[
+              _PaletteCard(
+                entry: entry,
+                selected: current == entry.id,
+                locked: entry.premium && !premium,
+                onTap: () => _tap(entry, premium),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (_locked != null) ...[
+              const SizedBox(height: 2),
+              LpNoteCard(l10n.settingsThemeLocked),
+              const SizedBox(height: 12),
+              LpButton(l10n.premiumLockCta, glow: false, onTap: _openPaywall),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One family's card: its name, its blurb, and four real swatches.
+class _PaletteCard extends StatelessWidget {
+  const _PaletteCard({
+    required this.entry,
+    required this.selected,
+    required this.locked,
+    required this.onTap,
+  });
+
+  final PaletteEntry entry;
+  final bool selected;
+  final bool locked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    // Swatches come from the mode the reader is actually looking at, so the
+    // preview matches what tapping would produce rather than always showing
+    // the dark half of a family.
+    final preview = lp.isDark ? entry.dark : entry.light;
+    return OptionCard(
+      selected: selected,
+      onTap: onTap,
+      title: SettingsScreen._paletteName(l10n, entry.id),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      SettingsScreen._paletteName(l10n, entry.id),
+                      style: LpType.emphasis(
+                        selected ? lp.voltText : lp.textPrimary,
+                        size: 16,
+                      ),
+                    ),
+                    if (locked) ...[
+                      const SizedBox(width: 7),
+                      Icon(Icons.lock_outline, size: 14, color: lp.textFaint),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  SettingsScreen._paletteBlurb(l10n, entry.id),
+                  style: LpType.body13(lp.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                _Swatches(preview: preview),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          SelectCheck(selected: selected),
+        ],
+      ),
+    );
+  }
+}
+
+class _Swatches extends StatelessWidget {
+  const _Swatches({required this.preview});
+
+  final LpColors preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    Widget dot(Color c, {double width = 22}) => Container(
+      width: width,
+      height: 22,
+      decoration: BoxDecoration(
+        color: c,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: lp.border),
+      ),
+    );
+    return Row(
+      children: [
+        dot(preview.background, width: 34),
+        const SizedBox(width: 5),
+        dot(preview.surface),
+        const SizedBox(width: 5),
+        dot(preview.volt),
+        const SizedBox(width: 5),
+        dot(preview.ember),
+        const SizedBox(width: 5),
+        dot(preview.oxygen),
+      ],
     );
   }
 }

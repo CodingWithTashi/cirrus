@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/theme/lp_palette.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/features/panic/breath_pacer.dart';
 import 'package:last_puff/features/panic/breath_ring.dart';
@@ -146,23 +147,33 @@ void main() {
     expect(haptics, ['HapticFeedbackType.lightImpact']);
   });
 
-  testWidgets('the ring lays out on a small phone in both themes', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  // One test per palette and mode rather than one test that mounts them all:
+  // stacking six `mountFlow`s in a single `testWidgets` overflows on the last
+  // one whichever palette is last, so it measures mount count, not colour.
+  for (final entry in LpPaletteCatalog.entries) {
+    for (final mode in const [Brightness.dark, Brightness.light]) {
+      final theme = mode == Brightness.dark
+          ? LpTheme.dark(entry.id)
+          : LpTheme.light(entry.id);
+      testWidgets(
+        'the ring lays out on a small phone (${entry.id.name}, ${mode.name})',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 640);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
 
-    for (final theme in [LpTheme.midnight(), LpTheme.daylight()]) {
-      await mountFlow(tester, theme: theme);
-      await tester.pump(const Duration(seconds: 2));
-      final ring = tester.getSize(find.byType(BreathRing));
-      // Shrunk to fit; the orb carries no text, so it may go small. The
-      // overflow check is real here: the fallback font is WIDER than Inter,
-      // so a layout that fits under `flutter test` fits on any device.
-      expect(ring.width, inInclusiveRange(160, 272));
-      expect(ring.width, ring.height);
-      expect(tester.takeException(), isNull);
+          await mountFlow(tester, theme: theme);
+          await tester.pump(const Duration(seconds: 2));
+          final ring = tester.getSize(find.byType(BreathRing));
+          // Shrunk to fit; the orb carries no text, so it may go small. The
+          // overflow check is real here: the fallback font is WIDER than
+          // Inter, so a layout that fits under `flutter test` fits on any
+          // device.
+          expect(ring.width, inInclusiveRange(160, 272));
+          expect(ring.width, ring.height);
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
-  });
+  }
 }
