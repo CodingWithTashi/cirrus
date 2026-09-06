@@ -6,7 +6,7 @@
 // Moved onto the apex domain because legal pages on a different host are a weak
 // trust signal, and because these now appear in the sitemap like any other page.
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED } from '../consts';
+import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED, DELETE_ACCOUNT_URL } from '../consts';
 
 const updated = new Date(LEGAL_LAST_UPDATED).toLocaleDateString('en-GB', {
   day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
@@ -15,7 +15,7 @@ const updated = new Date(LEGAL_LAST_UPDATED).toLocaleDateString('en-GB', {
 
 <BaseLayout
   title="Privacy Policy"
-  description="What the Cirrus quit vaping app stores, who else can see it, and how to delete all of it. No data selling, no ad trackers, deletion in two taps."
+  description="What the Cirrus quit vaping app stores, who else can see it, and how to delete all of it. No data selling, no ad trackers, deletion from inside the app."
   breadcrumbs={[{ label: 'Privacy' }]}
 >
   <div class="wrap page">
@@ -35,7 +35,7 @@ const updated = new Date(LEGAL_LAST_UPDATED).toLocaleDateString('en-GB', {
     <li>The community is anonymous to other users: your posts carry an alias
       you choose, never your account or email.</li>
     <li>You can delete your account and everything in it from inside the app,
-      in two taps, without asking us.</li>
+      in under a minute, without asking us.</li>
   </ul>
 
   <h2>What we store</h2>
@@ -134,14 +134,16 @@ const updated = new Date(LEGAL_LAST_UPDATED).toLocaleDateString('en-GB', {
   is reviewed by a person. You can report or block from any post.</p>
 
   <h2>Deleting everything</h2>
-  <p><strong>Settings → Delete account.</strong> This removes your quit
+  <p><strong>Settings → Delete everything.</strong> This removes your quit
   journey, your conversations with Ember and everything it remembered, your
   craving history, your weekly reports, your subscription record and your
   login. Community posts you wrote are kept but permanently detached from you
   and re-attributed to "a departed quitter", so a conversation other people are
   part of does not disappear from under them.</p>
   <p>Deletion is immediate and cannot be undone. You do not need to email us
-  or wait for us to action it.</p>
+  or wait for us to action it. Deleting the account does not cancel a paid
+  subscription — Google Play and Apple bill those, so cancel with them first.
+  <a href={DELETE_ACCOUNT_URL}>Step-by-step instructions are here</a>.</p>
 
   <h2>How long we keep things</h2>
   <p>Until you delete your account. Ember's memory list is capped and drops the

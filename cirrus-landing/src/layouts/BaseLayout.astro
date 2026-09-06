@@ -2,8 +2,8 @@
 // Every page renders through this layout, so <head> is correct in exactly one
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font, Image } from 'astro:assets';
-import logo from '../assets/logo.png';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL } from '../consts';
+import mark from '../assets/mark.png';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -242,8 +242,11 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
-    {/* SVG first for crisp tabs; PNGs for browsers that ignore it. All generated
-        from the app's own mark — see scripts/ and public/logo.png. */}
+    {/* SVG first for crisp tabs; PNGs for browsers that ignore it. Every one of
+        them is generated from the app's own launcher art by scripts/icons.py
+        (`npm run icons`), so the tab, the home screen and the phone carry the
+        same mark. The touch icon is deliberately square: iOS applies its own
+        squircle and would round a pre-rounded source twice. */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
@@ -286,7 +289,10 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <header class="site-header">
       <div class="wrap">
         <a class="brand" href="/">
-          <Image src={logo} width={30} height={30} layout="fixed" alt="" />
+          {/* Height only — Astro takes the width from the file, so the mark
+              cannot be squashed by a hardcoded ratio that drifts when the art
+              is redrawn. */}
+          <Image src={mark} height={30} layout="fixed" alt="" />
           <span>{SITE_TITLE}</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
@@ -320,7 +326,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <footer class="site-footer">
       <div class="wrap">
         <a class="brand" href="/">
-          <Image src={logo} width={24} height={24} layout="fixed" alt="" />
+          <Image src={mark} height={24} layout="fixed" alt="" />
           <span style="font-size:1rem">{SITE_TITLE}</span>
         </a>
         <p style="margin:0">Built by someone who quit. 17+ &middot; nicotine is addictive.</p>
@@ -328,6 +334,10 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
           <a href="/blog">Blog</a>
           <a href={PRIVACY_URL}>Privacy</a>
           <a href={TERMS_URL}>Terms</a>
+          {/* Play's User Data policy wants the deletion route findable without
+              a login and without the app. Last in the row, not hidden: burying
+              it is the specific thing the policy exists to stop. */}
+          <a href={DELETE_ACCOUNT_URL}>Delete account</a>
         </div>
       </div>
     </footer>

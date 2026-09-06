@@ -56,6 +56,15 @@ export const SOCIAL_PROFILES: string[] = [];
 export const PRIVACY_URL = '/privacy';
 export const TERMS_URL = '/terms';
 
+// The account-deletion instructions (src/pages/delete-account.astro).
+//
+// Google Play's User Data policy requires a publicly reachable URL that explains
+// how to delete an account, and it is submitted in the Data safety form — so
+// this path is effectively frozen once the listing declares it. Change the page,
+// never the URL. It is linked from the footer and from the privacy policy so a
+// person looking for it never has to know the Play console exists.
+export const DELETE_ACCOUNT_URL = '/delete-account';
+
 // The address on both legal pages, and the one data-rights requests arrive at.
 // Defined once so the two policies can never disagree about where to write.
 export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
@@ -66,4 +75,10 @@ export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
 // app and the Play Data Safety form has to agree with this page), and added
 // the "This website" section — the policy documented the app only, which is a
 // gap you cannot have on a site that claims not to track anyone.
-export const LEGAL_LAST_UPDATED = '2026-09-03';
+//
+// 2026-09-06: the deletion section named a button the app does not have
+// ("Settings → Delete account"; the live label is "Delete everything"), and it
+// did not say that deletion leaves a store subscription running — the one thing
+// about deletion that costs a person money if we stay quiet about it. Both
+// fixed, and the section now links to /delete-account for the steps.
+export const LEGAL_LAST_UPDATED = '2026-09-06';

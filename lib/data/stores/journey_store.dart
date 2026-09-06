@@ -78,6 +78,18 @@ class JourneyStore extends Notifier<JourneyState?> {
     _auth.currentUserId().then(billing.bindSession).ignore();
   }
 
+  /// Names the account the home-screen mirror belongs to, for the Apple Watch.
+  ///
+  /// Same shape as [_identifyForAnalytics] and [_bindBilling] — notifier
+  /// captured before the await, for the reason this store has been bitten by
+  /// elsewhere. The watch is the one surface that has to tell one person's
+  /// numbers from the next person's, because it is a second device and cannot
+  /// be forgotten synchronously when someone signs out.
+  void _bindWidgetSession() {
+    final session = ref.read(widgetSessionProvider.notifier);
+    _auth.currentUserId().then(session.bind).ignore();
+  }
+
   /// Everything a freshly-established session should pull from the server.
   /// One call so a new session path cannot wire half of it.
   void _onSessionEstablished() {
@@ -85,6 +97,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     pullPlanAdvice();
     _identifyForAnalytics();
     _bindBilling();
+    _bindWidgetSession();
   }
 
   /// Reads the nightly taper verdict from the server-owned user document and
@@ -373,6 +386,16 @@ class JourneyStore extends Notifier<JourneyState?> {
     // sign in inherits this account's settled badges and never gets a single
     // celebration.
     ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
+    // Fourth instance, and the one that reaches another device: an Apple Watch
+    // holds its own copy of the mirror and its own queue of taps, and it cannot
+    // be cleared synchronously — it may be out of range. Dropping the id here is
+    // what makes the NEXT account's mirror look different to the wrist, which is
+    // the only thing that empties it; until then the wrist simply shows no
+    // numbers, because the mirror says there is no journey. The phone is the
+    // real guard either way: `WatchWire.relay` refuses a batch whose `sid` is
+    // not the phone's own. `_WidgetSync` calls `discardQueued()` for this
+    // device's own queue.
+    ref.read(widgetSessionProvider.notifier).unbind();
     // Release the push registration BEFORE the credential goes, and chain the
     // two rather than firing both: `syncUserContext` is a callable, so it
     // carries the caller's ID token, and a release that raced past
@@ -404,6 +427,9 @@ class JourneyStore extends Notifier<JourneyState?> {
     // what it already celebrated, or starting over on the same phone is a quit
     // with no milestones at all.
     ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
+    // As in `signOut`, and for the same reason: a wrist still showing a deleted
+    // account's count is the leak in its most public form.
+    ref.read(widgetSessionProvider.notifier).unbind();
     // The server side of the push registry died with `recursiveDelete`; this
     // is the local half — without it the device keeps a live FCM token bound
     // to an account that no longer exists. After the await on purpose: a

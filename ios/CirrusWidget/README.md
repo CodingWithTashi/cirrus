@@ -6,6 +6,14 @@ top, today's count below, `+`/`−` that log a puff while the app is dead. It is
 same loop Android passed on a Pixel 8 in docs/10 §23, driven on an iPhone 16
 Pro simulator (iOS 18.3) by `ios/RunnerUITests`.
 
+Its sibling is `ios/CirrusWatch/` — the Apple Watch app and its watch-face
+complication, which are a **third renderer of this same mirror**. Two files here,
+`CirrusShared.swift` and `CirrusOutbox.swift`, are members of that target too (and
+of the complication's, and of Runner's): one contract, four readers, no fork. If
+you change either file, read `ios/CirrusWatch/README.md` first — an App Group does
+not cross the phone↔watch boundary, so the watch reaches this contract over
+WatchConnectivity and a rename lands on more surfaces than it used to.
+
 The Dart side is platform-agnostic: `WidgetMirror` writes the same JSON the
 Android provider reads, `PendingPuffs` drains the same outbox, and
 `HomeWidgetStore` declares the App Group before its first write.

@@ -47,6 +47,18 @@ class WidgetCoordinator {
     _pushed = encoded;
     await _store.write(WidgetMirror.key, encoded);
     await _store.refresh();
+    // And the wrist, which is a device away rather than a process away. It
+    // reads the document just written, so this has to follow the write; the
+    // fingerprint above means an unchanged mirror is not re-sent, and the
+    // native side re-pushes on every foreground anyway.
+    //
+    // This is also how signing out reaches a watch: the mirror carries
+    // `hasJourney: false`, and the wrist stops drawing numbers the moment it
+    // lands. It does NOT throw the wrist's queue away — every phone cold start
+    // pushes that same mirror before `restoreSession` answers, and wiping on it
+    // cost a wrist full of un-handed-over taps on every launch. Only a
+    // different `sid` empties it; see `WatchWire.applyContext`.
+    await _store.syncWatch();
 
     // Re-arm the midnight repaints once a day, not on every puff.
     //
@@ -133,6 +145,10 @@ class WidgetCoordinator {
     // clears the fingerprint so a genuine later push is not skipped either.
     _pushed = null;
     await _store.refresh();
+    // Same reason, for the wrist: the watch adds its own un-handed-over queue on
+    // top of the mirror, so a drain that has just absorbed those taps leaves it
+    // counting them twice until the next push.
+    await _store.syncWatch();
     return events.length;
   }
 

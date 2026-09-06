@@ -32,13 +32,37 @@ enum CirrusOutbox {
         cirrusTodayKey(Date(timeIntervalSince1970: epochMillis / 1000))
     }
 
+    /// How far the reader of this queue has taken responsibility.
+    ///
+    /// A String, because Dart writes it through `saveWidgetData<String>`. On the
+    /// phone that reader is the app; on the watch it is the link handing taps to
+    /// the phone, and the watch app is then this key's one writer in its own
+    /// container.
+    static func drained(in suite: UserDefaults? = .cirrus) -> Int {
+        guard let defaults = suite else { return 0 }
+        return cursor(defaults)
+    }
+
+    /// The queued events above `cursor`, oldest first.
+    ///
+    /// The widget never needs this — on the phone Dart reads the outbox itself.
+    /// It exists so the watch can hand its queue over the radio in the order it
+    /// happened, which is load-bearing: the over-limit crossing, the repair
+    /// token and the slip flow all turn on *which* puff crossed the line.
+    static func queued(above cursor: Int, in suite: UserDefaults? = .cirrus) -> [[String: Any]] {
+        guard let defaults = suite else { return [] }
+        return events(defaults)
+            .filter { ($0["s"] as? Int ?? 0) > cursor }
+            .sorted { ($0["s"] as? Int ?? 0) < ($1["s"] as? Int ?? 0) }
+    }
+
     /// Net deltas still pending AND belonging to today.
     ///
     /// "Still pending" is the load-bearing half: once the app has drained an
     /// event it is inside `mirror.puffs`, and counting it here as well would
     /// show a number one higher than the user's own record.
-    static func pendingToday() -> Int {
-        guard let defaults = UserDefaults.cirrus else { return 0 }
+    static func pendingToday(_ suite: UserDefaults? = .cirrus) -> Int {
+        guard let defaults = suite else { return 0 }
         let cursor = cursor(defaults)
         let today = cirrusTodayKey()
         return events(defaults).reduce(0) { sum, event in
@@ -53,14 +77,27 @@ enum CirrusOutbox {
 
     /// Appends one tap. Returns the count the widget should now draw, or nil
     /// when it was refused — no journey to log against, or a `−` at zero.
+    ///
+    /// `at` is the moment the human tapped, which is not always now: a tap
+    /// relayed from the watch was made before the phone heard about it, and a
+    /// puff taken at 23:58 belongs to that day even when it arrives at 00:04.
+    /// `suite` is the container to append into — see `CirrusMirror.read`.
     @discardableResult
-    static func append(delta: Int) -> Int? {
-        guard let defaults = UserDefaults.cirrus else { return nil }
-        let mirror = CirrusMirror.read()
+    static func append(
+        delta: Int,
+        at: Date = Date(),
+        in suite: UserDefaults? = .cirrus
+    ) -> Int? {
+        guard let defaults = suite else { return nil }
+        let mirror = CirrusMirror.read(defaults)
         guard mirror.hasJourney else { return nil }
 
-        let before = cirrusToday(mirror, pending: pendingToday())
+        let before = cirrusToday(mirror, pending: pendingToday(defaults))
         let step = delta > 0 ? 1 : -1
+        // Today-based, exactly as the widget's own `−` is: a relayed `−` from
+        // yesterday is checked against today's count. `undoPuffs(1, at:)`
+        // no-ops on a day holding no puffs, so the worst case is a queued
+        // event the drain discards — never a negative day.
         if step < 0 && before.count <= 0 { return nil }
 
         let cursor = cursor(defaults)
@@ -79,7 +116,7 @@ enum CirrusOutbox {
             // puff — it never advances the cursor, so it stays "pending" for
             // ever, keeps inflating the count the widget draws, and eventually
             // fills the queue until every further tap is refused.
-            "t": Int(Date().timeIntervalSince1970 * 1000),
+            "t": Int(at.timeIntervalSince1970 * 1000),
             "d": step,
         ])
 

@@ -132,6 +132,11 @@ and we'd rather tell you than waste your evening.
 If you're on Android, neither of us is shipping today, which is worth knowing before you
 scroll through the store hoping.
 
+**Since this was written, Cirrus has launched on Google Play.** For current prices and a
+third app in the mix, see
+[Cirrus vs Puff Count vs Kwit](/blog/best-quit-vaping-apps), re-checked on the stores in
+September.
+
 ## The thing no app can do for you
 
 Tracking is one layer. The strongest evidence in vaping cessation is for stacking things: in

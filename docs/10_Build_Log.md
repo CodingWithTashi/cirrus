@@ -3507,3 +3507,254 @@ repaint to the empty card with no tap on them) rather than by a count rising.
 **Merged the same evening with §27's day clamp:** `CirrusShared.swift` gained `totalDays` and the three day-line templates, and `dayLabel` now says Freedom Day and "N days past" exactly as Kotlin's `dayLine` does — the harness runs it for day 12, day 30, day 31, day 34 and a legacy mirror without `totalDays`.
 
 `flutter analyze` 0 · `flutter test` **1494/1494** before the merge (1469 + the 21 iOS pins + the 4 Swift round-trips), **1598/1598** on the merged tree · the simulator loop above run twice end to end, the second time on a fresh throwaway account after the medium-layout fix.
+
+---
+
+## 29. THE WRIST (Sep 6) — a third renderer, and the one thing that does not cross a device boundary
+
+Founder ask: "like we had widget in android and ios, can you also add puff
+counter for apple watch now." `docs/08` §7 row 9 had the watch adjudicated to
+**V2** on Doc 5 §3's reasoning that it is "effectively a separate native
+mini-app". The decision supersedes the row, and the reasoning turned out to be
+half right: it *is* separate native code, and it is not a second app. It is
+~900 lines of Swift, almost none of which does arithmetic.
+
+**Why it was cheap.** `CirrusShared.swift` and `CirrusOutbox.swift` were already
+Foundation-only — that is how `ios_widget_contract_test.dart` compiles them with
+`xcrun swiftc` on a Mac — so they compile for watchOS unchanged and became
+members of **four** targets: the iOS widget they were written for, the watch app,
+the watch complication, and Runner. `CirrusMirror.read`'s guard chain, the day
+recompute with Home's Freedom-Day clamp, the `-1` "limit unknown" sentinel, the
+seven-day `limits` window, `dayLabel`/`statusLine` off mirror copy, and both of
+`append`'s refusals all arrived for free. The watch computes nothing. It also
+needed **no new localization** beyond one ARB key, because the copy travels
+inside the mirror document.
+
+**The one genuinely new problem: an App Group is per-device.** The identical
+`group.com.quitvape.lastPuff` string resolves to a completely different store on
+the watch. So the wire stands in for it, and the primitives were chosen to match
+the semantics that already existed rather than the other way round:
+`updateApplicationContext` for the mirror (latest-wins, persists, delivered on
+next connection — exactly "mirror"), `transferUserInfo` for the queue (FIFO,
+survives a kill and a reboot, **wakes the iPhone app in the background** to take
+delivery — exactly "outbox"), `sendMessage` only as an optimisation. On the phone
+the relay appends through `CirrusOutbox.append(delta:at:)`, so a watch tap
+becomes an ordinary `lp.outbox` row that `WidgetCoordinator` drains through
+`JourneyStore.logPuff(at:)` like any widget tap. No second drain path.
+
+**`WatchWire.swift` imports no WatchConnectivity, and that absence is the
+design.** Every decision the feature can get wrong is a pure function over two
+`UserDefaults` containers, so `test/ios_watch_contract_test.dart` compiles it
+with `swiftc` and **plays both devices in one process** — the whole two-device
+loop provable from `flutter test`, with no simulator, no pairing and no radio.
+Nine cases, green on the first run: the loop end to end (Dart `buildMirror` →
+context → wrist → `+ + + −` → payload → relay → phone's `lp.outbox` → Dart
+`PendingPuffs.decode`, `t` still an `Int`); the same batch relayed twice landing
+four then zero; a batch with a foreign `sid` and one from a future envelope
+version both refused without costing a puff; a garbled context leaving a good
+mirror alone; and four sign-out shapes. A test that pins the names is cheap; this
+one runs the code, which is the only way to catch the shape of a bug the widget
+already had once.
+
+**`sid` is the one new mirror field, and it exists because a second device
+cannot be forgotten synchronously.** The home-screen widget shares a container
+with the app, so `discardQueued()` clears its queue the instant someone signs
+out. A watch may be out of range, which opens two leaks on a shared phone: it
+keeps *showing* the last person's count, and a tap made on the old account
+*lands* on the new one. The rule, and the middle case is the sharp one:
+
+> forget on `hasJourney: false`, **or** on a different `sid` when both sides name
+> one. An **absent** `sid` is deliberately not a change — the phone's first push
+> after a cold launch can beat its own async uid lookup, and reading "not
+> resolved yet" as "different person" would throw away a good mirror and a queue
+> of real taps on every launch.
+
+And signing straight into a second account never shows `hasJourney: false` at
+all, which is why the flip could not be what the watch keys on. Signing out is
+five things to forget now, not four; the fifth rides the mirror rather than a
+call, because there is nothing synchronous to call.
+
+**Two things the build itself taught us, neither of which looked like what it
+was.**
+
+1. **`flutter build ios --simulator` stopped working, and the error reads like a
+   broken project:** `A device ID is required to build an app with a watchOS
+   companion app.` Flutter has first-class watch support — `containsWatchCompanion`
+   finds the target by reading `ios/CirrusWatch/Info.plist` for a
+   `WKCompanionAppBundleIdentifier` equal to the host's bundle id, and a literal
+   id there means the expensive per-scheme scan is never reached, which is why
+   the watch app deliberately has no scheme. Once it matches, `ios/mac.dart`
+   omits `-sdk` (WatchKit cannot build against the iOS SDK), demands `-d`, and
+   **stops passing `ONLY_ACTIVE_ARCH`/`ARCHS`** because the watch app cannot be
+   built for the Flutter app's architecture. That last one incidentally retires
+   the alternating-arch pod rebuild §28 warns about: every iOS build is the
+   both-archs shape now.
+2. **The `xcodebuild -showBuildSettings` rule survived, and was measured rather
+   than assumed.** Before writing a line, the command was run against the
+   existing tree: with `CirrusWidget` embedded it emits **exactly one** "Build
+   settings for action" block, `target Runner`, `SDKROOT = …iPhoneOS26.2.sdk`.
+   After both watch targets landed: still one block, still iPhoneOS. A watch
+   target leaking into that last-wins parse would have handed Flutter
+   `SDKROOT = watchos`, which is a much worse failure than the widget's would
+   have been.
+
+**Three gem traps, the same shape as §28's.** `new_target(:application, …,
+:watchos, …)` links Foundation through a hard-coded `WatchOS11.0.sdk`
+developer-dir path that does not exist under Xcode 26 (cleared, frameworks
+re-added SDKROOT-relative, and reusing the widget's existing references so the
+navigator does not end up with three SwiftUI.frameworks); the gem's
+`symbol_dst_subfolder_spec` map has no watch entry, so *Embed Watch Content* is
+`:products_directory` (16) with `dstPath = $(CONTENTS_FOLDER_PATH)/Watch` — **not**
+PlugIns, where an `.app` builds and installs and Apple's validator does not
+recognise it as watch content at all; and the app-icon settings the gem writes on
+every target had to be deleted from the extension, which has no catalog. All
+three configurations base on `Flutter/Generated.xcconfig` for the same
+`ITMS-90473` reason the widget's do, and a watch app's version must equal the
+host's exactly — the built bundle carries `1.0.12 (13)`.
+
+**The screen.** One glanceable view, the same reading order and the same shapes
+as both home-screen widgets, scaled for a wrist: day pill, count / limit,
+6pt volt bar, status line, a full-width `+` over a `−`. Three states beyond the
+normal one — no journey (`emptyTitle` plus a line of its own, because
+"Tap to open Cirrus" is false on a wrist: watchOS cannot launch its companion
+app), never synced (the one hardcoded string in the feature, and it cannot be
+otherwise — the copy travels *in* the mirror, so a screen shown because there is
+no mirror has nothing to read), and un-handed-over taps (a small volt dot, since
+"logged here but not on the phone yet" is true and worth saying). A `.click`
+haptic on an accepted tap and `.failure` on a refused one, because a control
+that silently does nothing is a failure this repo has already named. The streak
+number is drawn only when the mirror is about today; the flame still burns on a
+day-old mirror, the count beside it does not.
+
+**The complication** is the surface that will actually be read — a glance costs
+nothing where opening even a watch app is a deliberate act. Four families
+(`accessoryCircular` as a gauge, corner, inline, rectangular), and the
+rectangular one fills a Smart Stack slot on watchOS 10 for free. Deliberately
+untinted: a face tints its own complications and the person chose that tint,
+which is the same reason the iOS lock-screen families are bare.
+
+**Then the simulator earned its keep: three bugs, none of them reachable from a
+test, and each the same shape — code that assumed a lifecycle event fires when
+it does not.**
+
+1. **The wrist never pulled on a cold launch.** `.onChange(of: scenePhase)` does
+   not fire on a launch that is already active, so only `start()` ran and it
+   neither pulled a fresh mirror nor flushed the queue. The wrist would sit on
+   whatever context happened to be waiting until the user backgrounded the app
+   and came back. `start()` now ends in `awake()`, and so does
+   `activationDidCompleteWith` — activation is asynchronous, so `start()`'s call
+   can land on a session that is not up yet, and every step is idempotent for
+   exactly this reason. `sessionReachabilityDidChange` gained the same treatment:
+   it only flushed, but on a cold launch reachability is routinely still false
+   when the session activates (`activated true reachable false`, then `reachable
+   true` forty seconds later), so the phone coming within reach is also the first
+   moment a pull can succeed.
+
+2. **`didFinish` lies on a simulator, and the cursor was moving on it.** The
+   watch flushed, WatchConnectivity called `didFinish` with **no error**, and the
+   phone's `didReceiveUserInfo` was never called — proven by instrumenting both
+   ends and reading `subsystem == "com.quitvape.lastPuff.watch"`. The
+   discriminator was `sendMessage`: the phone logged `message received` and the
+   watch logged `pull answered`, so the phone's inbound delegate is provably
+   fine and it is `transferUserInfo` that is not delivered between paired
+   simulators. The response is not a workaround but a correctness fix, because
+   `didFinish` is the **transport's** opinion and the design was advancing a
+   cursor on it — the "silently lost" failure the outbox exists to prevent.
+   Taps now go by `sendMessage` whenever the phone is reachable and the cursor
+   moves on an **application-level receipt**: the phone opens the envelope,
+   applies what it can, and names the seq it has taken responsibility for.
+   `transferUserInfo` stays for the case it was chosen for — a phone genuinely
+   out of range — where `didFinish` is Apple's documented contract on hardware.
+   A receipt is returned even when nothing landed (a `−` at zero, or a batch from
+   another account, has still been *consumed*), and `receipt(for:)` returns nil
+   for an envelope this build cannot open, so a newer watch talking to an older
+   phone keeps its taps rather than dropping them.
+
+3. **The count dipped after every tap, and a screenshot is what caught it.** The
+   plists all looked right; the pixels said `0 / 190` seconds after three taps.
+   The cursor advanced on the phone's receipt — but the phone only *queues* a
+   relayed tap in `lp.outbox` and folds it into the journey on its next drain,
+   which runs on app resume and can be hours away. So the taps stopped counting
+   as pending while the mirror still did not know about them. A person taps `+`,
+   sees 1, watches it fall back to 0, and taps again: the double-count disaster,
+   arrived at from the other direction. The cursor was doing two jobs and they
+   have been split — `lp.watchSent` is the send floor (so nothing is re-sent) and
+   `lp.cursor` tracks what the *mirror* reflects, advancing only when a mirror
+   arrives whose `<dayKey>|<puffs>` differs from the mark taken at hand-over. On
+   device: tap → `4 / 190` with the un-synced dot, held for thirty seconds;
+   phone relaunched → drained → dot gone, still `4 / 190`. **The number does not
+   move across the hand-off at all.**
+
+   The same investigation found the fourth: **every phone cold start was wiping
+   the wrist's queue.** `_WidgetSync` builds its first mirror before
+   `restoreSession` answers, so it pushes `hasJourney: false` and the real one a
+   moment later — and the watch was treating that as "different person". That is
+   data loss on every launch. Only a **different `sid`** empties the wrist now;
+   `hasJourney: false` shows the empty card and keeps the queue. The id is kept
+   through it too, and that detail is load-bearing: clearing it would make the
+   next flush arrive with an empty `sid`, which `relay` cannot tell from
+   "unknown" and therefore accepts — handing the previous account's taps to
+   whoever signs in. The real guard was always the sid check on the phone, not
+   the wipe.
+
+**And then the device build, which is where the simulator's blind spot lives.**
+Everything above was green on a paired simulator; `flutter build ios --debug`
+for a real device failed, and it fails for the **whole app**, not just the watch.
+`Failed Registering Bundle Identifier: the app identifier
+"com.quitvape.lastPuff.watch.complication" cannot be registered to your
+development team because it is not available`, followed by three App-Group
+errors that are a cascade — signing falls back to a wildcard profile, and a
+wildcard cannot carry App Groups.
+
+Measured three ways before concluding anything, because the first explanation
+was wrong. `.watchkitapp` failed; renaming to `.watch` failed identically (so it
+is **not** a reserved legacy suffix, which is what the first attempt assumed);
+and it failed again after the parent id already existed, so it is not an
+ordering race either. In every case **the watch app's own id registers by
+itself and only the child fails**. A SIBLING id
+(`com.quitvape.lastPuff.watchface`) does register and the whole device build
+succeeds — and was reverted rather than kept, because an embedded extension's
+id must be its container's plus a period and a suffix: a sibling matches only as
+a raw string prefix, so it builds today and is rejected on upload. Trading a
+visible blocker for a hidden one is not a fix.
+
+So the complication's App ID has to be created by hand, once, with App Groups
+attached — `ios/CirrusWatch/README.md` carries the four steps. **A simulator
+never registers an App ID, which is exactly why every simulator pass in this
+feature's history was green while the device build was not.** The same blind
+spot the widget's `--release` App Check trap lived in (§28): the loop that
+proves the feature and the loop that proves it *ships* are not the same loop.
+
+**One bug in the tests themselves, which is worth more than it looks.** The
+watch harness and the widget harness both drove
+`UserDefaults(suiteName: CirrusKeys.appGroup)` — a real file under
+`~/Library/Preferences` on a Mac — and `flutter test` runs suites in parallel.
+They clobbered each other's plist about one run in three, and it presented as a
+flake in an unrelated assertion (`pending` reading 0 instead of 2). Both are now
+suffixed off the production name. **A test that writes to a real shared path is
+not a unit test**, and the tell was that the "flake" only ever appeared in full
+runs, never when the file was run alone.
+
+**Two environment traps that made all of this look like silence.**
+`xcrun simctl spawn <udid> log stream` is broken here (`getpwuid_r did not find
+a match for uid 501`), and `log show` hides `Logger.info` unless `--info` is
+passed — so the first two attempts at reading the diagnostics returned nothing
+at all and looked exactly like "the code never ran". Use
+`log show --last 2m --info --predicate 'subsystem == "com.quitvape.lastPuff.watch"'`.
+
+**And one trap in driving the simulator itself.** The watch device window is
+276x378 and a coordinate found in a `simctl io screenshot` (416x496) maps onto
+it by scale — but at some point Simulator replaced that window with a black
+`Cirrus Watch – External Display`, which matches the same
+`name contains "Cirrus Watch"` lookup and swallows every click silently. A tap
+that lands nowhere looks exactly like a feature that does not work. Shut the
+watch down and boot it again to get the device window back, move it clear of the
+iPhone window (they overlap by default), and `AXRaise` it before clicking.
+
+**What the simulator cannot say**, and what is therefore owed on hardware before
+the listing mentions the watch (`B21`: advertising an unproven surface is the
+bait-and-switch clause in Apple 3.1.2(a)). Exactly three code paths: a
+Bluetooth→wifi handover mid-tap; a watch out of range at tap time, reconnecting
+later, delivering all of it once and in order; and the background launch iOS
+performs to take that delivery, which must land the tap in `lp.outbox` before
+anyone opens the phone app. The checklist is in `ios/CirrusWatch/README.md`.
