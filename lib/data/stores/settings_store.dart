@@ -4,6 +4,8 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/lp_palette.dart';
+import '../api/firebase/push_service.dart';
+import 'providers.dart';
 import 'settings_persistence.dart';
 
 class SettingsState {
@@ -18,6 +20,10 @@ class SettingsState {
     this.quietStartHour = 23,
     this.quietEndHour = 8,
     this.trialReminderOn = true,
+    this.pushRepliesOn = true,
+    this.pushMentionsOn = true,
+    this.pushWeeklyOn = true,
+    this.pushPromptShown = false,
     this.winbackShown = false,
     this.launchPaywallShownDay,
     this.launchPaywallShownCount = 0,
@@ -61,6 +67,27 @@ class SettingsState {
   final int quietStartHour;
   final int quietEndHour;
   final bool trialReminderOn;
+
+  /// Server-decided notifications, one flag per category.
+  ///
+  /// These are the only settings on this screen the SERVER has to know about,
+  /// because the server is what sends them — so every change here rides
+  /// `syncUserContext` as well as being stored locally. A push preference
+  /// kept only on the device silences nothing at all.
+  ///
+  /// They are also account-shaped state in a device-scoped store: like
+  /// `celebratedMilestones`, `SharedPreferences` has no uid in the key, so
+  /// they have to be forgotten on sign-out or the next person on a shared
+  /// phone inherits them and the screen lies about what the server will do.
+  final bool pushRepliesOn;
+  final bool pushMentionsOn;
+  final bool pushWeeklyOn;
+
+  /// Whether the contextual permission ask has been shown, once, ever.
+  ///
+  /// Account-shaped like the flags above, and forgotten with them: a fresh
+  /// person on a shared phone deserves the ask their predecessor declined.
+  final bool pushPromptShown;
 
   /// The founding offer fires once, then never again (Run 1 frame 22).
   final bool winbackShown;
@@ -142,6 +169,10 @@ class SettingsState {
     int? quietStartHour,
     int? quietEndHour,
     bool? trialReminderOn,
+    bool? pushRepliesOn,
+    bool? pushMentionsOn,
+    bool? pushWeeklyOn,
+    bool? pushPromptShown,
     bool? winbackShown,
     String? launchPaywallShownDay,
     int? launchPaywallShownCount,
@@ -161,6 +192,10 @@ class SettingsState {
     quietStartHour: quietStartHour ?? this.quietStartHour,
     quietEndHour: quietEndHour ?? this.quietEndHour,
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
+    pushRepliesOn: pushRepliesOn ?? this.pushRepliesOn,
+    pushMentionsOn: pushMentionsOn ?? this.pushMentionsOn,
+    pushWeeklyOn: pushWeeklyOn ?? this.pushWeeklyOn,
+    pushPromptShown: pushPromptShown ?? this.pushPromptShown,
     winbackShown: winbackShown ?? this.winbackShown,
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
     launchPaywallShownCount:
@@ -232,8 +267,66 @@ class SettingsStore extends Notifier<SettingsState> {
   void setLocale(Locale? locale) =>
       _commit(state.copyWith(locale: () => locale));
 
-  void setNotifications(bool on) =>
-      _commit(state.copyWith(notificationsOn: on));
+  /// The master switch, on both sides of the seam.
+  ///
+  /// Turning it off used to cancel the locally scheduled reminders and stop
+  /// there — so every SERVER push kept arriving, on an app the user had just
+  /// told to be quiet. Two things close that now, and they fail in opposite
+  /// directions on purpose:
+  ///
+  /// * the token is deleted locally, which needs no network and no session
+  ///   and is what actually guarantees this device hears nothing;
+  /// * the preference is mirrored to `users/{uid}`, which is best effort and
+  ///   is what stops us pushing again after the next sign-in mints a token.
+  void setNotifications(bool on) {
+    _commit(state.copyWith(notificationsOn: on));
+    if (!on) PushService.deleteToken().ignore();
+    _syncPushPrefs();
+  }
+
+  void setPushReplies(bool on) {
+    _commit(state.copyWith(pushRepliesOn: on));
+    _syncPushPrefs();
+  }
+
+  void setPushMentions(bool on) {
+    _commit(state.copyWith(pushMentionsOn: on));
+    _syncPushPrefs();
+  }
+
+  /// Burns the one contextual permission ask.
+  ///
+  /// Marked BEFORE the sheet opens, not after: a swipe-away is an answer, and
+  /// a prompt that only counts itself once accepted comes back on every post
+  /// until somebody says yes.
+  void markPushPromptShown() =>
+      _commit(state.copyWith(pushPromptShown: true));
+
+  void setPushWeekly(bool on) {
+    _commit(state.copyWith(pushWeeklyOn: on));
+    _syncPushPrefs();
+  }
+
+  /// Tells the server what it may send.
+  ///
+  /// Write-behind and deliberately unobserved, like every other optimistic
+  /// mutation in this app: the switch has already moved, and a dialog about
+  /// a failed background save is the wrong response to a toggle.
+  void _syncPushPrefs() {
+    ref
+        .read(userContextRepositoryProvider)
+        .sync(
+          pushPrefs: {
+            'all': state.notificationsOn,
+            'communityReply': state.pushRepliesOn,
+            'communityMention': state.pushMentionsOn,
+            'insightReady': state.pushWeeklyOn,
+            'quietStart': state.quietStartHour,
+            'quietEnd': state.quietEndHour,
+          },
+        )
+        .ignore();
+  }
 
   void setDangerWindow(int startHour, int endHour) => _commit(
     state.copyWith(
@@ -331,12 +424,22 @@ class SettingsStore extends Notifier<SettingsState> {
   /// they would never get a single celebration. Same per-account rule as
   /// `analytics.reset()`, `EntitlementStore.unbind()` and
   /// `WidgetCoordinator.discardQueued()` beside it.
+  ///
+  /// The push preferences go with them, for exactly the same reason. They are
+  /// account-shaped too, stored under keys with no uid in them, and leaving
+  /// them behind means the next person on a shared phone inherits the last
+  /// one's choices — and, worse, sees a screen that disagrees with what the
+  /// server will actually send them, since the server's copy is per account.
   void resetMilestoneLedger() => _commit(
     state.copyWith(
       celebratedMilestones: const {},
       armedMilestone: () => null,
       armedMilestoneAt: () => null,
       milestonesAdopted: false,
+      pushRepliesOn: true,
+      pushMentionsOn: true,
+      pushWeeklyOn: true,
+      pushPromptShown: false,
     ),
   );
 

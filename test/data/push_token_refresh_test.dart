@@ -18,7 +18,12 @@ class _RecordingUserContext implements UserContextRepository {
   final synced = <String?>[];
 
   @override
-  Future<void> sync({String? fcmToken}) async => synced.add(fcmToken);
+  Future<void> sync({
+    String? fcmToken,
+    Map<String, Object?>? pushPrefs,
+    List<String>? readThreads,
+    List<String>? readNotifications,
+  }) async => synced.add(fcmToken);
 
   @override
   Future<void> unregister() async {}

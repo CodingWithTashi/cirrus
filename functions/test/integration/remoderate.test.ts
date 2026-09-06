@@ -232,6 +232,12 @@ describe('remoderateOnce', () => {
     expect(result.published).toBe(1);
     expect((await reply.get()).get('status')).toBe('live');
     expect(vi.mocked(classify)).toHaveBeenCalledWith('hang in there', undefined);
-    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith('alice', 'sosReply', '/community');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'alice',
+      'sosReply',
+      expect.stringContaining('/community/post/'),
+      expect.any(Object),
+      expect.any(Number),
+    );
   });
 });

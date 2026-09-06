@@ -172,3 +172,11 @@ Change one engine, change both.
 
 Quit Buddies is cut (founder decision, Aug 2026), so the buddy-ping branch of
 docs/03 §7 and the SOS buddy-notify of §9 are intentionally absent here.
+
+The rest of docs/03 §9's SOS notify is only half absent now. Since Sep 6 2026
+`lib/notifyReply.ts` tells a post's author that somebody answered — on every
+tag, not only `sos` — and notifies anyone named with an `@alias`. What is still
+missing is the fan-out to "the last 5 people they interacted with": a
+notification to people who are not the author needs a decision about how loud a
+community may be to somebody who merely passed through it, and the pipeline it
+would plug into now exists (`docs/08 S3-11`).

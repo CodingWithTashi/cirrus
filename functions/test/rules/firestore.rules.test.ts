@@ -89,6 +89,10 @@ beforeEach(async () => {
       token: 'device-1',
       platform: 'android',
     });
+    await setDoc(doc(db, 'users', ALICE, 'notifThreads', 'p1'), {
+      count: 2,
+      lastReplyAtMs: 1,
+    });
     await setDoc(doc(db, 'postAuthors', 'livePost'), {uid: ALICE});
     await setDoc(doc(db, 'moderation', 'blockedPost'), {action: 'block', reviewed: false});
   });
@@ -167,6 +171,25 @@ describe('users/{uid} — server-owned', () => {
     // `syncUserContext`'s job, and a client that could do it itself could
     // also do it to a device it does not hold.
     await assertFails(deleteDoc(doc(alice(), 'users', ALICE, 'devices', 'seeded')));
+  });
+
+  // Thread-notification state. Server-owned like everything else here: the
+  // collapse counts decide whether somebody gets a push, so a client able to
+  // write them could mute a thread for its author or, by rewinding `seenAtMs`,
+  // make every reply start a fresh group and buzz. Marking one seen goes
+  // through `syncUserContext`, like device registration.
+  it('lets the owner read their own thread-notification state', async () => {
+    await assertSucceeds(getDoc(doc(alice(), 'users', ALICE, 'notifThreads', 'p1')));
+  });
+
+  it('does NOT let the owner write their own thread-notification state', async () => {
+    await assertFails(
+      setDoc(doc(alice(), 'users', ALICE, 'notifThreads', 'p1'), {seenAtMs: 999}),
+    );
+  });
+
+  it('does NOT let another user read what threads someone was notified about', async () => {
+    await assertFails(getDoc(doc(bob(), 'users', ALICE, 'notifThreads', 'p1')));
   });
 });
 

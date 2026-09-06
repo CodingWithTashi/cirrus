@@ -18,7 +18,7 @@ import {readAllowance, REGION} from '../config';
 import {postQuality, prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
-import {asEnum, requireCaller, requireText} from '../lib/guards';
+import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
 import {claimDailyPost, tierFor} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
 
@@ -148,14 +148,15 @@ export const createPost = onCall(
       throw new HttpsError('resource-exhausted', 'Daily post limit reached.');
     }
 
-    const alias = typeof data['alias'] === 'string' ? data['alias'] : 'quitter';
+    const alias = sanitizeAlias(data['alias']);
+    const avatarEmoji = sanitizeEmoji(data['avatarEmoji']);
 
     // A batch, not a transaction: there is nothing to read first, and both
     // writes must still land together or neither does.
     const batch = db.batch();
     batch.set(post, {
       alias,
-      avatarEmoji: typeof data['avatarEmoji'] === 'string' ? data['avatarEmoji'] : '🔥',
+      avatarEmoji,
       dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
       tag,
       text,
@@ -175,7 +176,7 @@ export const createPost = onCall(
     // Same batch, so a post can never exist without its author knowing.
     batch.set(myPostsCol(caller.uid).doc(post.id), {
       alias,
-      avatarEmoji: typeof data['avatarEmoji'] === 'string' ? data['avatarEmoji'] : '🔥',
+      avatarEmoji,
       dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
       tag,
       text,

@@ -27,6 +27,10 @@ class _StubRepository implements CommunityRepository {
       streams[id] ??= StreamController<PostStatus>.broadcast();
 
   @override
+  Future<Post?> fetchPost(String postId) async =>
+      (await fetchPosts()).where((p) => p.id == postId).firstOrNull;
+
+  @override
   Future<List<Post>> fetchPosts() async => initial;
 
   @override

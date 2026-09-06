@@ -6,15 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/widgets/lp_error.dart';
+import '../core/utils/l10n_ext.dart';
 import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
-import '../data/backend_mode.dart';
 import '../data/stores/providers.dart';
 import '../data/stores/widget_mirror.dart';
+import '../domain/analytics/lp_events.dart';
 import '../domain/logic/reminder_planner.dart';
 import '../domain/models/journey_state.dart';
 import '../domain/models/models.dart';
-import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
 import 'theme/lp_palette.dart';
 import 'theme/lp_theme.dart';
@@ -417,6 +417,26 @@ class _PushSync extends ConsumerStatefulWidget {
 
 class _PushSyncState extends ConsumerState<_PushSync> {
   final _subs = <StreamSubscription<Object?>>[];
+  late final GoRouter _router;
+
+  /// A tapped push waiting for the splash to finish deciding.
+  ///
+  /// The splash spends at least 1.5s on its branding beat plus `restoreSession`,
+  /// and up to 2.5s more waiting for entitlements, before it navigates. A push
+  /// tapped from the TERMINATED state resolves within milliseconds of launch —
+  /// well before any of that — so it used to navigate first and be overwritten.
+  ///
+  /// It was worse than being overwritten. Navigating that early meant the
+  /// router's redirect ran while `restoreSession()` was still in flight, saw no
+  /// journey, and sent the tap to `/auth` — which popped the splash, so
+  /// `_advance()` returned at its `!mounted` guard and never navigated at all.
+  /// A signed-in user who tapped a notification with the app closed landed on
+  /// the sign-in screen for the account they were already signed into, and
+  /// stayed there. That shipped, for the SOS and weekly-insight pushes.
+  ///
+  /// So the message waits here, exactly as `_ReminderSync` waits, and the
+  /// `routerDelegate` listener lands it once the splash has had its say.
+  RemoteMessage? _pending;
 
   /// Destinations a push is allowed to ask for. See [PushService.routeFor].
   ///
@@ -435,55 +455,106 @@ class _PushSyncState extends ConsumerState<_PushSync> {
   @override
   void initState() {
     super.initState();
+    _router = ref.read(routerProvider)..routerDelegate.addListener(_flush);
+
     // The PROVIDER, never `resolveBackendMode()` directly: the test platform
     // reports android, so reading the platform here would reach for
     // FirebaseMessaging in every widget test that pumps the app. This is the
     // same trap `fastBackendOverrides()` exists to close for the repositories.
-    if (ref.read(backendModeProvider) != BackendMode.firebase) return;
+    final messages = ref.read(pushMessagesProvider);
+    if (messages == null) return;
 
-    // The Android channel the manifest routes background pushes into has to
-    // actually exist; see PushService.ensureAndroidChannel.
-    PushService.ensureAndroidChannel().ignore();
+    // The Android channels a background push lands in have to actually exist;
+    // see PushService.ensureAndroidChannels.
+    messages.ensureChannels().ignore();
 
     // A rotated token is a device we can no longer reach. Re-register it —
     // through the store, which skips it when nobody is signed in (QA L6).
     _subs.add(
-      PushService.onTokenRefresh.listen(
+      messages.onTokenRefresh.listen(
         (token) =>
             ref.read(quitStoreProvider.notifier).onPushTokenRefreshed(token),
       ),
     );
 
     // Tapped from the background.
-    _subs.add(PushService.onOpened.listen(_openFrom));
+    _subs.add(messages.onOpened.listen(_openFrom));
 
     // Foreground: Android draws nothing itself, so without this the message
     // arrives and the user never learns it did.
     _subs.add(
-      PushService.onForeground.listen((message) {
+      messages.onForeground.listen((message) {
         final body = message.notification?.body;
         if (body == null || body.isEmpty || !mounted) return;
-        showLpSnack(context, body);
+        final route = PushService.routeFor(message, _allowedRoutes);
+        // A banner that cannot be acted on is a banner that wastes the one
+        // moment the reader was interested.
+        showLpSnack(
+          context,
+          body,
+          actionLabel: route == null ? null : context.l10n.pushOpen,
+          onAction: route == null ? null : () => _openFrom(message),
+        );
       }),
     );
 
     // Tapped while the app was not running at all.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final initial = await PushService.initialMessage();
+      final initial = await messages.initialMessage();
       if (initial != null) _openFrom(initial);
     });
   }
 
   void _openFrom(RemoteMessage message) {
+    if (!mounted) return;
+    _pending = message;
+    // The splash must not spend a lifetime-capped launch-paywall slot on an
+    // impression this push is about to cover.
+    ref.read(pushPendingProvider.notifier).state = true;
+    _flush();
+  }
+
+  void _flush() {
+    final message = _pending;
+    if (message == null || !mounted) return;
+    if (_router.state.uri.path == Routes.splash) return;
+    // Not yet: the session is still being restored, and navigating now is
+    // what the redirect turns into a one-way trip to `/auth`. The listener
+    // fires again when the splash lands.
+    if (ref.read(quitStoreProvider) == null) return;
+
+    _pending = null;
+    ref.read(pushPendingProvider.notifier).state = false;
+
     final route = PushService.routeFor(message, _allowedRoutes);
+    // The kind the server stamped on the payload. Never user text — a screen
+    // dimension that could carry any is the trap `LpAnalyticsObserver`
+    // documents.
+    final kind = message.data['kind'];
+    ref
+        .read(analyticsProvider)
+        .pushOpened(
+          kind: kind is String && kind.isNotEmpty ? kind : 'unknown',
+          opened: route != null,
+        );
     // No route, or one we do not accept: opening the app is still the right
     // outcome, so this is deliberately silent rather than an error.
-    if (route == null || !mounted) return;
-    ref.read(routerProvider).go(taggedPushRoute(route));
+    if (route == null) return;
+
+    final tagged = taggedPushRoute(route);
+    // A thread is a detail screen with a back chevron, so it stacks rather
+    // than replacing — `go` would land there with nothing to go back to, and
+    // `GoRouter.pop()` THROWS on an empty stack rather than doing nothing.
+    if (route.startsWith(Routes.communityPostBase)) {
+      _router.push(tagged);
+    } else {
+      _router.go(tagged);
+    }
   }
 
   @override
   void dispose() {
+    _router.routerDelegate.removeListener(_flush);
     for (final sub in _subs) {
       sub.cancel();
     }

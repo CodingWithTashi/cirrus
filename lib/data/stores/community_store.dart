@@ -20,6 +20,7 @@ class CommunityState {
     this.status = FeedStatus.loading,
     this.blocked = const {},
     this.muted = const {},
+    this.threads = const {},
   });
 
   final List<Post> posts;
@@ -28,6 +29,15 @@ class CommunityState {
 
   /// Muted authors: their posts hide for you, without mutual invisibility.
   final Set<String> muted;
+
+  /// How a single-post fetch is going, per post id.
+  ///
+  /// The feed's own [status] cannot answer for a deep link: the feed can be
+  /// perfectly `ready` and simply not contain the post a notification just
+  /// opened, which is the common case days after that post scrolled out of
+  /// the page. Without this the detail screen had nothing to distinguish
+  /// "still loading" from "gone", and rendered an empty Scaffold for both.
+  final Map<String, FeedStatus> threads;
 
 
   /// Feed order: live SOS posts pinned first, then reverse-chron (docs/03 §9).
@@ -59,11 +69,13 @@ class CommunityState {
     FeedStatus? status,
     Set<String>? blocked,
     Set<String>? muted,
+    Map<String, FeedStatus>? threads,
   }) => CommunityState(
     posts: posts ?? this.posts,
     status: status ?? this.status,
     blocked: blocked ?? this.blocked,
     muted: muted ?? this.muted,
+    threads: threads ?? this.threads,
   );
 }
 
@@ -143,6 +155,60 @@ class CommunityStore extends Notifier<CommunityState> {
     if (state.status == FeedStatus.loading) return;
     state = state.copyWith(status: FeedStatus.loading);
     await _load();
+  }
+
+/// Loads one post if the feed does not already hold it.
+  ///
+  /// The entry point for a deep link. `PostDetailScreen` used to read its post
+  /// straight out of the loaded feed and render `Scaffold(body: SizedBox())`
+  /// when it was not there — a blank screen, no app bar, no way back — which
+  /// is exactly what tapping a notification about an older thread produced.
+  ///
+  /// Idempotent and safe to call from `initState` on every build.
+  Future<void> ensurePost(String postId) async {
+    if (state.posts.any((p) => p.id == postId)) return;
+    if (state.threads[postId] == FeedStatus.loading) return;
+    _setThread(postId, FeedStatus.loading);
+    try {
+      final post = await _repo.fetchPost(postId);
+      if (!_alive()) return;
+      if (post == null) {
+        // Gone, blocked, or never visible. `ready` with no post is what the
+        // screen renders its "no longer available" state from.
+        _setThread(postId, FeedStatus.ready);
+        return;
+      }
+      state = state.copyWith(posts: [...state.posts, post]);
+      _setThread(postId, FeedStatus.ready);
+      if (post.status == PostStatus.pending || post.status == PostStatus.held) {
+        _watch(postId);
+      }
+    } on Object {
+      if (!_alive()) return;
+      _setThread(postId, FeedStatus.failed);
+    }
+  }
+
+  /// Re-attempts a single-post load after a failure.
+  Future<void> retryPostFetch(String postId) async {
+    state = state.copyWith(
+      threads: {...state.threads}..remove(postId),
+    );
+    await ensurePost(postId);
+  }
+
+  /// Tells the server this thread has been read.
+  ///
+  /// It is what lets the next reply start a fresh notification group instead
+  /// of adding to a count the reader has already seen. Fire-and-forget: a
+  /// missed one costs a slightly high number on one notification, which is
+  /// not worth blocking a screen that has just opened.
+  void markThreadRead(String postId) {
+    ref.read(userContextRepositoryProvider).sync(readThreads: [postId]).ignore();
+  }
+
+  void _setThread(String postId, FeedStatus status) {
+    state = state.copyWith(threads: {...state.threads, postId: status});
   }
 
   List<Post> get posts => state.posts;

@@ -109,7 +109,13 @@ class ReminderScheduler implements ReminderSink {
     }
     await _plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // The brand ring as a white-on-transparent silhouette, NOT the
+        // launcher icon. Android builds a notification icon from the ALPHA
+        // CHANNEL alone, so a full-colour, fully-opaque launcher icon renders
+        // as a solid white square in the status bar — which is what every
+        // scheduled reminder looked like. Same asset the manifest names for
+        // server pushes, so both halves match.
+        android: AndroidInitializationSettings('@drawable/ic_stat_cirrus'),
         iOS: DarwinInitializationSettings(
           // The OS prompt belongs to the D4 screen, not to plugin init.
           requestAlertPermission: false,

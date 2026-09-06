@@ -191,13 +191,13 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _linkRow(
               context,
-              '🏆',
+              Icons.emoji_events_outlined,
               l10n.milestonesTitle,
               () => context.push(Routes.milestones),
             ),
             _linkRow(
               context,
-              '📊',
+              Icons.insights_rounded,
               l10n.insightLinkTitle,
               () => context.push(Routes.insight),
             ),
@@ -214,9 +214,12 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  /// A drawn icon, not an emoji: these rows sit next to the settings list
+  /// they lead into, and a platform emoji is the one glyph on the screen the
+  /// app has not drawn itself.
   Widget _linkRow(
     BuildContext context,
-    String emoji,
+    IconData icon,
     String label,
     VoidCallback onTap,
   ) {
@@ -230,7 +233,7 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 16)),
+              Icon(icon, size: 19, color: lp.textSecondary),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -263,6 +266,8 @@ class ProfileScreen extends ConsumerWidget {
 class _EditProfileSheet extends ConsumerStatefulWidget {
   const _EditProfileSheet();
 
+  /// emoji-ok: an avatar is the person's own chosen mark, not chrome.
+  /// The rest of this screen is drawn glyphs (`test/icon_honesty_test.dart`).
   static const _options = ['🦊', '🦦', '🦅', '🐺', '🐢', '🐝', '🦉', '🦋'];
 
   @override

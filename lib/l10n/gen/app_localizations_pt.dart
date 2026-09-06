@@ -2786,7 +2786,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get profileBadgesEarned => 'medalhas ganhas';
 
   @override
-  String get profileSettings => '⚙️ Definições';
+  String get profileSettings => 'Definições';
 
   @override
   String get profileEditAlias => 'Escolhe o teu alias';
@@ -3324,4 +3324,77 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get milestoneNotifFreedomDay =>
       'Dia da Liberdade. O plano acabou, e quem terminou foi você.';
+
+  @override
+  String get communityThreadGoneTitle => 'Esse tópico desapareceu';
+
+  @override
+  String get communityThreadGoneBody =>
+      'Pode ter sido apagado ou removido desde que te avisámos.';
+
+  @override
+  String get communityThreadGoneCta => 'Voltar ao mural';
+
+  @override
+  String get pushOpen => 'Abrir';
+
+  @override
+  String get settingsPushTitle => 'O que te enviamos';
+
+  @override
+  String get settingsPushSubtitle =>
+      'Só sobre os teus tópicos. Nunca sobre os dos outros.';
+
+  @override
+  String get settingsPushBlocked =>
+      'As notificações do Cirrus estão desligadas nas definições do teu telemóvel. Liga-as aí e isto volta a funcionar.';
+
+  @override
+  String get settingsPushReplies => 'Respostas às minhas publicações';
+
+  @override
+  String get settingsPushRepliesNote =>
+      'Agrupadas: um tópico movimentado dá uma notificação.';
+
+  @override
+  String get settingsPushMentions => 'Menções';
+
+  @override
+  String get settingsPushMentionsNote =>
+      'Quando alguém te nomeia numa resposta.';
+
+  @override
+  String get settingsPushWeekly => 'Resumo semanal';
+
+  @override
+  String get settingsPushWeeklyNote =>
+      'Quando a tua semana está pronta para ler.';
+
+  @override
+  String get settingsPushCategories => 'Categorias';
+
+  @override
+  String get pushAskTitle => 'Queres saber quando alguém responde?';
+
+  @override
+  String get pushAskBody =>
+      'Só te avisamos sobre as tuas publicações. Nunca sobre as dos outros.';
+
+  @override
+  String get pushAskCta => 'Ativar notificações';
+
+  @override
+  String get notificationsTitle => 'Notificações';
+
+  @override
+  String get notificationsEmptyTitle => 'Ainda nada';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Quando alguém responder a uma publicação tua, aparece aqui.';
+
+  @override
+  String notificationsBadgeLabel(int count) {
+    return '$count notificações por ler';
+  }
 }

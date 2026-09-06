@@ -56,6 +56,83 @@ beforeEach(async () => {
 });
 
 describe('syncUserContext', () => {
+
+  it('stores the push preferences the SERVER decides sends with', async () => {
+    // A preference kept only on the device silences the locally scheduled
+    // reminders and nothing else — which is what `notificationsOn` used to
+    // do, leaving every server push arriving after the user switched
+    // notifications off.
+    await syncUserContext.run(
+      caller({
+        pushPrefs: {all: true, communityReply: false, quietStart: 22, quietEnd: 7},
+      }),
+    );
+
+    const prefs = (await userDoc('alice').get()).get('pushPrefs') as
+      Record<string, unknown>;
+    expect(prefs).toEqual({
+      all: true,
+      communityReply: false,
+      quietStart: 22,
+      quietEnd: 7,
+    });
+  });
+
+  it('refuses keys and shapes it does not recognise', async () => {
+    // This writes into the server-owned row, so "whatever the client sent"
+    // would be a way to smuggle fields into a document the app is otherwise
+    // forbidden to touch.
+    await syncUserContext.run(
+      caller({
+        pushPrefs: {
+          entitlement: 'premium',
+          communityReply: 'yes',
+          quietStart: 99,
+          communityMention: true,
+        },
+      }),
+    );
+
+    expect((await userDoc('alice').get()).get('pushPrefs')).toEqual({
+      communityMention: true,
+    });
+  });
+
+  it('leaves existing preferences alone when a call carries none', async () => {
+    await syncUserContext.run(caller({pushPrefs: {communityReply: false}}));
+    await syncUserContext.run(caller());
+
+    expect((await userDoc('alice').get()).get('pushPrefs')).toEqual({
+      communityReply: false,
+    });
+  });
+
+  it('marks opened threads seen, so the next reply starts a fresh group', async () => {
+    await syncUserContext.run(caller({readThreads: ['p1', 'p2', 'p1']}));
+
+    const p1 = await db.doc('users/alice/notifThreads/p1').get();
+    const p2 = await db.doc('users/alice/notifThreads/p2').get();
+    expect(p1.get('seenAtMs')).toBeGreaterThan(0);
+    expect(p2.exists).toBe(true);
+  });
+
+  it('merges the seen mark rather than flattening the collapse state', async () => {
+    await db.doc('users/alice/notifThreads/p1').set({count: 7, sendsInGroup: 2});
+    await syncUserContext.run(caller({readThreads: ['p1']}));
+
+    const row = await db.doc('users/alice/notifThreads/p1').get();
+    expect(row.get('count')).toBe(7);
+    expect(row.get('seenAtMs')).toBeGreaterThan(0);
+  });
+
+  it('ignores a thread id shaped like a path', async () => {
+    // A slash would let a caller address a subcollection of its choosing.
+    await syncUserContext.run(caller({readThreads: ['../../users/bob', 'p1/x', 7]}));
+
+    const rows = await db.collection('users/alice/notifThreads').get();
+    expect(rows.empty).toBe(true);
+  });
+
   it('creates the row both crons page over', async () => {
     // Before this ran even once, `users` was empty for everybody and
     // `taperRecalc` / `weeklyInsight` silently did nothing, forever.

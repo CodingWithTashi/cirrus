@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../domain/repositories/repositories.dart';
+import '../api/fake/fake_server.dart';
 import '../api/firebase/functions_client.dart';
 import '../api/firebase/push_service.dart';
 
@@ -37,7 +38,12 @@ class FirebaseUserContextRepository implements UserContextRepository {
   final LpFunctions _functions;
 
   @override
-  Future<void> sync({String? fcmToken}) async {
+  Future<void> sync({
+    String? fcmToken,
+    Map<String, Object?>? pushPrefs,
+    List<String>? readThreads,
+    List<String>? readNotifications,
+  }) async {
     // Look the token up here rather than at the call site: every caller wants
     // it registered, and none of them should have to remember. Null is normal
     // — the user may simply not have granted notifications yet.
@@ -46,6 +52,9 @@ class FirebaseUserContextRepository implements UserContextRepository {
       await _functions.call('syncUserContext', {
         'fcmToken': ?token,
         'platform': ?(token == null ? null : PushService.platformName),
+        'pushPrefs': ?pushPrefs,
+        'readThreads': ?readThreads,
+        'readNotifications': ?readNotifications,
       });
     } on Object catch (error) {
       // Every current caller fire-and-forgets this, so a failure reached
@@ -95,13 +104,33 @@ class FirebaseUserContextRepository implements UserContextRepository {
   }
 }
 
-/// The fake-backend stand-in. There is no server to tell anything, so this
-/// does nothing rather than pretending to succeed against a fixture.
+/// The fake-backend stand-in.
+///
+/// Timezone, locale and the device token have no server to go to, so they go
+/// nowhere rather than pretending to succeed against a fixture. Read-marks are
+/// the exception: they DO have somewhere to land, because the fake server owns
+/// the inbox they refer to. Dropping them here would make the badge flicker
+/// back the moment the fake repository's next poll returned the same unread
+/// rows — the optimistic update would be silently undone half a second later.
 class NoopUserContextRepository implements UserContextRepository {
-  const NoopUserContextRepository();
+  const NoopUserContextRepository(this._server);
+
+  final FakeServer _server;
 
   @override
-  Future<void> sync({String? fcmToken}) async {}
+  Future<void> sync({
+    String? fcmToken,
+    Map<String, Object?>? pushPrefs,
+    List<String>? readThreads,
+    List<String>? readNotifications,
+  }) async {
+    if (readNotifications != null && readNotifications.isNotEmpty) {
+      _server.markNotificationsRead(
+        readNotifications,
+        _server.now().millisecondsSinceEpoch,
+      );
+    }
+  }
 
   @override
   Future<void> unregister() async {}

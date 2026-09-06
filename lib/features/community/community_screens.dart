@@ -17,11 +17,12 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
-import '../../data/stores/community_store.dart' show FeedStatus;
+import '../../data/stores/community_store.dart' show CommunityState, FeedStatus;
 import '../../data/stores/providers.dart';
 import '../../domain/logic/allowances.dart';
 import '../../domain/logic/community_rules.dart';
 import '../../domain/models/models.dart';
+import 'push_permission_ask.dart';
 
 /// Resolves seeded demo content to localized copy; user posts are raw text.
 String postText(BuildContext context, Post post) {
@@ -129,7 +130,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                     )
                   : posts.isEmpty && community.status == FeedStatus.failed
                   ? LpErrorState(
-                      emoji: '📡',
+                      icon: Icons.wifi_tethering_off_rounded,
                       title: l10n.errorFeedTitle,
                       body: l10n.errorFeedBody,
                       retryLabel: l10n.errorRetry,
@@ -164,7 +165,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                       itemBuilder: (context, i) => PostCard(
                         post: posts[i],
                         onOpen: () =>
-                            context.push('/community/post/${posts[i].id}'),
+                            context.push(Routes.communityPost(posts[i].id)),
                       ),
                     ),
             ),
@@ -663,6 +664,11 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                                     context.pop();
                                     store.addPost(text: text, tag: tag);
                                     showLpSnack(context, l10n.communityPosted);
+                                    // Their post is away and the screen has
+                                    // left; this asks on top of what just
+                                    // happened rather than standing between
+                                    // a person and posting.
+                                    maybeAskPushPermission(context, ref);
                                   }
                                 : null,
                             child: Opacity(
@@ -875,9 +881,78 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final _reply = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // A deep link can name a post the feed has never loaded — which is the
+    // COMMON case for a notification, since the feed is one bounded page and
+    // a reply can arrive days after its post scrolled out of it.
+    final store = ref.read(communityStoreProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      store.ensurePost(widget.postId);
+      // Reading the thread is what lets the next reply start a fresh
+      // notification group instead of adding to a count already seen.
+      store.markThreadRead(widget.postId);
+    });
+  }
+
+  @override
   void dispose() {
     _reply.dispose();
     super.dispose();
+  }
+
+  /// Back, from a deep link as well as from the feed.
+  ///
+  /// A push opens this screen with nothing beneath it, and `GoRouter.pop()`
+  /// THROWS on an empty stack rather than doing nothing — so the chevron used
+  /// to throw into the crash reporter on exactly the path a notification
+  /// takes.
+  void _back() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.community);
+    }
+  }
+
+  /// What to show while there is no post: loading, failed, or genuinely gone.
+  ///
+  /// Never a blank Scaffold. That is what this screen used to render for all
+  /// three, so a notification tap on an older thread opened a screen with no
+  /// app bar, no spinner, no message and no way back.
+  Widget _pending(BuildContext context, CommunityState community) {
+    final l10n = context.l10n;
+    final status = community.threads[widget.postId] ?? FeedStatus.loading;
+    return Scaffold(
+      appBar: AppBar(
+        leading: BackChevron(onTap: _back),
+        title: Text(l10n.communityTitle),
+      ),
+      body: SafeArea(
+        child: switch (status) {
+          FeedStatus.loading => const _FeedSkeleton(),
+          FeedStatus.failed => LpErrorState(
+            icon: Icons.wifi_tethering_off_rounded,
+            title: l10n.errorFeedTitle,
+            body: l10n.errorFeedBody,
+            retryLabel: l10n.errorRetry,
+            onRetry: () => ref
+                .read(communityStoreProvider.notifier)
+                .retryPostFetch(widget.postId),
+          ),
+          // Loaded, and there is nothing there: deleted, refused, or blocked
+          // since the notification went out. Saying so is the honest answer.
+          FeedStatus.ready => LpErrorState(
+            icon: Icons.filter_drama_outlined,
+            title: l10n.communityThreadGoneTitle,
+            body: l10n.communityThreadGoneBody,
+            retryLabel: l10n.communityThreadGoneCta,
+            onRetry: () => context.go(Routes.community),
+          ),
+        },
+      ),
+    );
   }
 
   @override
@@ -888,12 +963,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final post = community.posts
         .where((p) => p.id == widget.postId)
         .firstOrNull;
-    if (post == null) return const Scaffold(body: SizedBox.shrink());
+    if (post == null) return _pending(context, community);
     final isSos = post.tag == PostTag.sos;
 
     return Scaffold(
       appBar: AppBar(
-        leading: BackChevron(onTap: () => context.pop()),
+        leading: BackChevron(onTap: _back),
         title: Text(post.tag.label(context)),
       ),
       body: SafeArea(
@@ -1022,6 +1097,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _reply.clear();
     LpHaptics.light();
     ref.read(communityStoreProvider.notifier).addReply(post.id, text);
+    maybeAskPushPermission(context, ref);
   }
 }
 

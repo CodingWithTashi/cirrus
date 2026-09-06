@@ -63,7 +63,7 @@ class ModerationScreen extends ConsumerWidget {
           // review" and "we could not look" are the same picture and very
           // different facts.
           ModerationStatus.failed => LpErrorState(
-            emoji: '🛡️',
+            icon: Icons.shield_moon_outlined,
             title: l10n.moderationFailed,
             body: l10n.errorGenericBody,
             retryLabel: l10n.moderationRetry,

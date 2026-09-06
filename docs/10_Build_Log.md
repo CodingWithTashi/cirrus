@@ -3758,3 +3758,287 @@ Bluetooth→wifi handover mid-tap; a watch out of range at tap time, reconnectin
 later, delivering all of it once and in order; and the background launch iOS
 performs to take that delivery, which must land the tap in `lp.outbox` before
 anyone opens the phone app. The checklist is in `ios/CirrusWatch/README.md`.
+
+---
+
+## 30. COMMUNITY PUSH (Sep 6) — the notification nobody could have tapped
+
+The ask was replies-notify-you, grouped so twenty answers are not twenty
+buzzes, `@alias` tags, and a tap that lands on the thread. Most of the spine
+for that already existed — the device registry, the prune cron, `sendToUser`,
+`_PushSync` handling all three app states — behind one line in
+`moderateReply.ts`: `if (post.get('tag') !== 'sos') return;`.
+
+### 30.1 The bug under the feature
+
+A push tapped from the **terminated** state never reached its destination, and
+had not for as long as push has shipped.
+
+`_PushSync` resolves `getInitialMessage()` in a post-frame callback, so it
+navigates within milliseconds of launch — while `restoreSession()` is still in
+flight. The router's redirect therefore ran with no journey, sent the tap to
+`/auth`, and popped the splash; `_advance()` then hit its `!mounted` guard and
+never navigated at all. A signed-in user tapping a notification with the app
+closed landed on **the sign-in screen for the account they were already signed
+into**, and stayed there.
+
+`_ReminderSync` had solved exactly this months earlier — hold the tap in
+`_pending`, return while the path is the splash, flush from a `routerDelegate`
+listener. `_PushSync` now does the same, plus: `push` rather than `go` for a
+thread (`GoRouter.pop()` *throws* on an empty stack, so a `go`-delivered detail
+screen had a back chevron that threw), and it suppresses the launch paywall
+while a tap is pending rather than spending a lifetime-capped slot on an
+impression the thread covers a moment later.
+
+It was untestable, which is why it survived: `_PushSync` read `PushService`'s
+statics and returned unless the backend was Firebase, and `fastBackendOverrides()`
+pins every widget test to the fake. A `PushMessages` seam — the mirror of
+`ReminderSink` — makes the whole tap path reachable; `push_tap_test.dart` is
+eight cases over the real router.
+
+### 30.2 Grouping, and where each half lives
+
+Two mechanisms, and only one of them is ours to decide. **On the phone**, every
+send for a thread carries the same notification tag, so a later one replaces the
+shade line instead of adding to it — that guarantees one visible row whatever
+the server does. **On the server**, `decideNotification` throttles: the first
+reply of a group sends at once, later ones accumulate and only send once 90s
+has passed since the last buzz, capped at four per group, reset when the reader
+opens the thread or after six hours of silence.
+
+The throttle is short on purpose. A long one looks tidier and is worse: a burst
+inside one window would send once saying "1 new reply" and the reader would
+never learn the other nineteen arrived. At 90s a burst costs two or three
+buzzes and ends on an accurate number.
+
+**SOS does not collapse and never goes quiet.** Somebody posts at 2am, three
+people answer inside ninety seconds, and telling them one person replied is the
+product failing at the one moment it exists for.
+
+### 30.3 Quiet hours are a channel, not a flag
+
+From Android 8 the *channel* decides sound, vibration and heads-up; the
+per-message priority FCM accepts is ignored. And a channel's importance is
+fixed at creation — `createNotificationChannel` on an existing id updates only
+its name. So "deliver silently overnight" needs a second channel, and the ids
+shipped here are permanent: `community_replies` / `community_replies_quiet`,
+`insights` / `insights_quiet`, plus `messages` which stays forever because the
+manifest names it as the default. Verified on the device: importances 3, 2, 3,
+2, 3 exactly as declared.
+
+Quiet never suppresses, which is what makes an imperfect timezone cheap — the
+worst a wrong zone does is deliver without a sound. A missing `tz` is read as
+**not quiet**: guessing UTC would silence somebody in Sydney through their
+working afternoon.
+
+### 30.4 Mentions over identifiers that do not identify
+
+`_randomAlias()` mints `@{adj}{animal}{9..98}` on the CLIENT — 5,760
+possibilities, plain `Random()`, no uniqueness check — into the client-owned
+journey doc, and the server has never verified the alias a caller posts under.
+Two users share an alias at around ninety accounts. A global alias-to-uid index
+would be wrong by construction.
+
+So mentions resolve **inside the thread**, against the people already in it,
+which is also the only sense in which anyone types one. Collisions go to
+whoever used the alias *first* — the post's author precedes every reply — so
+replying under somebody's alias cannot steal their mentions or make them
+ambiguous enough to drop. Matching is exact equality against a pre-tokenised
+set, never a regex built from stored text: an alias of `(a+)+$` compiled into a
+pattern is a denial of service, and an alias of `a` used with `includes`
+matches nearly every reply ever written.
+
+That needed a prerequisite. `alias` and `avatarEmoji` arrived on both community
+callables as **completely unvalidated free text** — no type check, no length
+cap, no charset. `sanitizeAlias` / `sanitizeEmoji` in `guards.ts` now bound
+both.
+
+### 30.5 A preference the server never heard
+
+Turning notifications off cancelled the locally scheduled reminders and told
+the backend nothing, so every server push kept arriving. Preferences live on
+`users/{uid}.pushPrefs` now and ride `syncUserContext`; the master switch also
+deletes the FCM token locally, which needs no network and no session and is the
+half that actually guarantees silence. An absent preference reads as enabled, so
+nothing needs migrating.
+
+They are account-shaped state in a device-scoped store, so they join the
+sign-out forget list beside `celebratedMilestones` — the fifth thing on it.
+
+Reading a thread rides `syncUserContext` too. `users/{uid}` is server-write-only
+and a rules carve-out for `seenAt` would have punched the first hole in the one
+architectural rule; a dedicated callable would have cost an App Check round trip
+on every thread open, usually on the cold network a notification tap arrives
+over.
+
+### 30.6 The blank screen behind the deep link
+
+`PostDetailScreen` read its post out of the loaded feed and rendered
+`Scaffold(body: SizedBox.shrink())` when it was not there. That is not an edge
+case for a push: the feed is one page of 50, and a reply can arrive days after
+its post scrolled out. `CommunityRepository.fetchPost` fills it, and the screen
+has loading, retry and "that thread is gone" states. `Reply` gained `createdAt`
+so a thread can be ordered — a notification saying "3 new replies" has to send
+the reader somewhere the new ones actually are.
+
+`fetchPost` deliberately does **not** copy how `fetchPosts` loads replies: that
+runs an unbounded `collectionGroup('replies')` with no post filter, which is
+the right trade for a 50-post feed and would fetch every live reply in the app
+to keep a handful here.
+
+### 30.7 What the phone said
+
+FCM has no emulator, so `tool/push_probe.mjs` sends the exact payload
+`lib/push.ts` builds straight to a device token with the admin key — nothing
+deployed, no production code path run.
+
+Pixel 8, Android 17. Three environment traps first: the pinned `.appcheck_token`
+had drifted out of the console (re-registered), Doze gave the app no DNS while
+the shell resolved fine, and — the expensive one — **`am force-stop` is not
+"terminated"**. A force-stopped Android app receives no FCM at all, so the first
+sends went nowhere in a way that looked exactly like a broken feature. `am kill`
+is the right tool.
+
+Then: one reply posted on `community_replies`, tag `thread:probe-post-1`,
+importance 3, with a sound. Five more on the same tag left **one** row in the
+shade reading "20 new replies." A mention took its own row on its own tag,
+unfolded. A quiet send replaced the thread row in place, now on
+`community_replies_quiet` at importance 2. Android 16's own
+`g:Aggregate_AlertingSection` bundle wrapped them under one app header for
+free, which is the OS-level grouping the design counted on rather than built.
+
+**Not verified on the phone:** the tap landing, and every in-app surface. The
+device is PIN-locked and the PIN is the founder's. Routing is covered by
+`push_tap_test.dart` driving the real `_PushSync` and the real router, which is
+weaker evidence than a thumb and is stated as such.
+
+`flutter analyze` 0 · `flutter test` **1650/1650** · `npm run verify` 277 ·
+`npm run test:integration` 313 · `npm run test:rules` 50. Nothing deployed.
+
+### 30.8 The inbox, and what the emulator caught (Sep 6, same day)
+
+A push is a courtesy that may never arrive: the permission was declined, no
+device is registered, the day's buzz budget is spent, or the shade got swiped
+clear on a bus. Every one of those people still had somebody answer them, and
+there was nowhere to find that out. `users/{uid}/notifications` is the durable
+record, written by `sendToUser` **before** the token check so that somebody
+with no reachable device still gets the in-app row.
+
+That forced a split in the gate. Preferences decide whether the event is
+recorded at all — if you turned replies off, you do not want to know. The daily
+budget decides only whether we may *interrupt* you, so an over-budget event
+still files its row. `openGate` returns `allowed` and `budgeted` separately for
+exactly that reason.
+
+The inbox is keyed by the notification tag, so a busy thread is one row that
+updates rather than twenty — the same thing the tag does to the shade. The bell
+on Home carries the unread count and renders nothing at all at zero, because a
+badge is a claim that something is waiting.
+
+Marking read rides `syncUserContext` beside `readThreads`, for the same reason:
+`users/{uid}` is server-write-only, and a rules carve-out would have been the
+first hole in the one architectural rule.
+
+**The fake backend generates them rather than seeding them.** `FakeCommunityApi
+.addReply` files a row through `FakeServer.notifyPostAuthor` exactly as the
+real trigger does. A seeded notification would render to the reader as
+something that happened to *them*, which is the rule this app breaks hardest
+when it breaks it at all — and an inbox nothing can put anything into is an
+inbox no widget test can reach.
+
+**The first version leaked a timer into 245 tests.** The fake repository polled
+`FakeServer` every 400ms; `flutter test` fails any test that leaves a periodic
+timer pending, and every test that pumps the app subscribes to this. There was
+nothing to poll for anyway — the store being watched is in memory in the same
+isolate — so `FakeServer` now says when it moved and the repository listens.
+
+### 30.9 The emulator pass — three states, real taps
+
+The Pixel proved delivery but is PIN-locked, so nothing could be tapped and no
+screen could be read. The emulator is not, so this pass drove the real UI:
+registration, all 21 onboarding steps, and the Day-1 checklist, by screenshot
+and coordinate tap.
+
+| State | How it was produced | What happened |
+|---|---|---|
+| Background | HOME pressed, process alive | Notification posted; tapping it opened the thread |
+| **Terminated** | HOME then `am kill` — pid empty | Notification posted; tapping it **cold-started the app, waited out the splash, and landed on the thread** |
+| Foreground | app open on Home | In-app banner with an Open action; the app did NOT navigate under the reader |
+
+Then the inbox: the badge appeared on the bell without reopening the app, the
+bell opened the list, a row opened its thread, and the badge was gone on the
+way back.
+
+**`am force-stop` is not "terminated", and it cost three sends to work that
+out.** A force-stopped Android package receives no FCM at all until a human
+launches it again, so the messages were accepted by FCM and simply never
+arrived — indistinguishable from a broken feature. `am kill` ends the process
+without setting the stopped flag, which is what a real swipe-away looks like.
+
+**The emulator found a real bug that no test had.** Tapping a notification for
+a post that does not exist showed "The feed ghosted us — check your signal", on
+a device with a perfectly good connection. The rule is
+`allow read: if signedIn() && resource.data.status == 'live'`, and `resource` is
+null for a document that is not there — so a missing, blocked or unclassified
+post answers **PERMISSION_DENIED rather than an empty snapshot**. That refusal
+IS the answer, and `fetchPost` now reads it as "gone" instead of as a failure.
+Re-verified on the device: the same tap now says "That thread is gone", with a
+back chevron that works from an empty stack.
+
+Two environment traps before any of it ran: the pinned `.appcheck_token` had
+drifted out of the console again, and TalkBack — enabled to expose Flutter's
+semantics tree to `uiautomator` — intercepts single taps for explore-by-touch,
+which makes it useless for driving. Screenshots turned out to be the better
+tool: they need no accessibility service and show exactly what a person would
+see.
+
+`flutter analyze` 0 · `flutter test` **1659/1659** · `npm run verify` 277 ·
+`npm run test:integration` 313 · `npm run test:rules` 50. Still nothing
+deployed — the inbox rows for the emulator pass were written with the admin
+key, in the same shape and collection `recordNotification` writes.
+
+### 30.10 The status-bar icon, and the emoji standing in for icons
+
+Two separate things looked wrong, and only one of them was about push.
+
+**Android had no notification icon at all.** Nothing declared
+`default_notification_icon`, so Firebase fell back to the launcher icon — and
+Android builds a status-bar icon from the **alpha channel alone**. A
+full-colour, fully-opaque launcher icon therefore renders as a solid white
+square. Every scheduled reminder had the same problem from the other
+direction: `AndroidInitializationSettings('@mipmap/ic_launcher')`.
+
+`ic_stat_cirrus` is the fix, generated from the launcher's own monochrome
+layer, which is already a white-on-transparent silhouette. It drops the vapour
+wisp: at 24dp the wisp is a two-pixel scratch, and the tall aspect it forces
+left the whole mark undersized in its canvas. The ring alone is nearly square,
+fills the canvas, and is still unmistakably the brand. Shipped at all five
+densities, tinted with Ember's volt through `default_notification_color`.
+
+**The emoji were doing an icon's job.** A settings list of 🔥 🧠 👤 💳 🔔 🎨 🌈
+🌐 🔒 📄 ✉️ is a column of the *platform's* full-colour artwork at a dozen
+different weights, sitting directly above a nav bar of Material glyphs the app
+does control — and different artwork on every OS version. Same for the bell in
+the Home header, the 44px glyph in every `LpErrorState`, and "⚙️ Settings" as a
+button label with the icon baked into the ARB string.
+
+All of it is drawn now: `LpErrorState` takes an `IconData` and renders it in a
+soft circle, the settings and profile rows take one, and the bell is
+`Icons.notifications_rounded` with a badge that renders **nothing** at zero and
+carries a background-coloured ring so the count stays legible over the glyph.
+
+What deliberately stayed emoji, because it is content rather than chrome: the
+avatar somebody picked, the community tag and reaction marks, and the app's
+written voice — "It passed 🎉 I'm good", the 🔥 on the streak chip, the 🏆 on
+the Freedom Day label. Those are the brand's tone, not its iconography, and
+`test/icon_honesty_test.dart` draws the line where the chrome is: any
+pictograph in a chrome file fails unless an `emoji-ok:` note sits on the line
+or in the comment above it, so an exemption has to be written down next to the
+thing it exempts. It also pins the notification asset at every density and both
+manifest entries.
+
+Verified on the emulator: the ring renders as a clean glyph in the status bar
+beside the clock, the shade shows it with the brand tint, and Settings, Profile
+and the inbox empty state all read as one drawn set.
+
+`flutter analyze` 0 · `flutter test` **1666/1666**.

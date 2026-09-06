@@ -2,6 +2,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+/// Where the OS stands on notifications for this app.
+enum PushPermission {
+  /// Never asked, so the system sheet will actually appear.
+  notAsked,
+
+  /// Refused. Asking again does nothing on Android — it is a system-settings
+  /// trip from here, which is a lot to ask for a nudge, so we do not.
+  denied,
+
+  granted,
+}
+
 /// FCM registration.
 ///
 /// `firebase_messaging` has been a declared dependency that no Dart file ever
@@ -66,34 +78,100 @@ abstract final class PushService {
     }
   }
 
-  /// The channel a background push lands in on Android.
+  /// The channels a background push can land in on Android.
   ///
-  /// Named in the manifest
+  /// `messages` is named in the manifest
   /// (`com.google.firebase.messaging.default_notification_channel_id`), and a
   /// manifest can only NAME a channel — something still has to create it, or
   /// Android quietly files every server push under the plugin's
   /// "Miscellaneous" fallback, where the user cannot find the toggle for it.
+  ///
+  /// The rest are per-category, so somebody can mute replies in system
+  /// settings without losing their weekly report. Each has a QUIET TWIN,
+  /// because from Android 8 the channel decides sound, vibration and
+  /// heads-up: the per-message priority FCM will happily accept is ignored,
+  /// so delivering something silently during quiet hours is a channel swap
+  /// and cannot be anything else.
+  ///
+  /// **These ids are permanent.** A channel's importance is fixed when it is
+  /// created — `createNotificationChannel` on an existing id updates only its
+  /// name and description, because the user owns that setting once they have
+  /// seen it. So none of these can be made quieter later, none can be reused
+  /// for different behaviour, and `messages` can never be deleted without
+  /// discarding whatever its users configured. Mirrors
+  /// `functions/src/lib/pushKinds.ts`.
+  ///
   /// English on purpose, like the danger-hours channel: channel names render
   /// in SYSTEM settings, and this runs at app init where there is no
   /// localization context yet.
-  static Future<void> ensureAndroidChannel() async {
+  static Future<void> ensureAndroidChannels() async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      await FlutterLocalNotificationsPlugin()
+      final android = FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(
-            const AndroidNotificationChannel(
-              'messages',
-              'Messages',
-              description:
-                  'Replies to your SOS posts, and your weekly report.',
-              importance: Importance.defaultImportance,
-            ),
-          );
+          >();
+      if (android == null) return;
+      for (final channel in _channels) {
+        await android.createNotificationChannel(channel);
+      }
     } on Object catch (error) {
       debugPrint('push: channel create failed — $error');
+    }
+  }
+
+  static const _channels = <AndroidNotificationChannel>[
+    AndroidNotificationChannel(
+      'messages',
+      'Messages',
+      description: 'Anything that does not fit the categories below.',
+      importance: Importance.defaultImportance,
+    ),
+    AndroidNotificationChannel(
+      'community_replies',
+      'Replies and mentions',
+      description: 'When someone answers your post or tags you.',
+      importance: Importance.defaultImportance,
+    ),
+    AndroidNotificationChannel(
+      'community_replies_quiet',
+      'Replies during quiet hours',
+      description: 'The same, delivered without a sound overnight.',
+      importance: Importance.low,
+    ),
+    AndroidNotificationChannel(
+      'insights',
+      'Weekly report',
+      description: 'When your week is ready to read back.',
+      importance: Importance.defaultImportance,
+    ),
+    AndroidNotificationChannel(
+      'insights_quiet',
+      'Weekly report during quiet hours',
+      description: 'The same, delivered without a sound overnight.',
+      importance: Importance.low,
+    ),
+  ];
+
+  /// Whether we have been granted permission, refused it, or never asked.
+  ///
+  /// Reads without ever prompting, which is what a second, contextual ask
+  /// depends on: Android auto-denies `requestPermission()` after two
+  /// dismissals without showing anything, so re-asking a refused user is a
+  /// no-op that looks like a broken button.
+  static Future<PushPermission> permissionStatus() async {
+    try {
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      return switch (settings.authorizationStatus) {
+        AuthorizationStatus.authorized ||
+        AuthorizationStatus.provisional => PushPermission.granted,
+        AuthorizationStatus.denied => PushPermission.denied,
+        _ => PushPermission.notAsked,
+      };
+    } on Object catch (error) {
+      debugPrint('push: permission read failed — $error');
+      return PushPermission.notAsked;
     }
   }
 
