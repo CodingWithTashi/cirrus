@@ -160,7 +160,9 @@ class CommunityStore extends Notifier<CommunityState> {
 
   int get _myDay {
     final j = ref.read(quitStoreProvider);
-    return j == null ? 1 : j.plan.dayNumber(DateTime.now()).clamp(1, 9999);
+    return j == null
+        ? 1
+        : j.plan.dayNumber(ref.read(nowProvider)()).clamp(1, 9999);
   }
 
   /// Client-side guard mirroring the moderation policy (docs/03 §9): slurs
@@ -179,7 +181,7 @@ class CommunityStore extends Notifier<CommunityState> {
   /// composer that counted them together would grey out the one control
   /// somebody in trouble needs. The allowance itself is [LpAllowances].
   int myPostsToday({required bool sos}) {
-    final now = DateTime.now();
+    final now = ref.read(nowProvider)();
     return state.posts
         .where(
           (p) =>

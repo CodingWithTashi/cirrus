@@ -14,6 +14,9 @@ import '../../domain/models/journey_state.dart';
 class WidgetCopy {
   const WidgetCopy({
     required this.day,
+    required this.dayFreedom,
+    required this.dayPastOne,
+    required this.dayPastOther,
     required this.leftAhead,
     required this.leftTight,
     required this.overLimit,
@@ -23,6 +26,17 @@ class WidgetCopy {
 
   /// `day %1$d`
   final String day;
+
+  /// The last plan day, said the way Home says it (`Freedom Day 🏆`) — the
+  /// widget used to keep counting past it, reading "day 31" of a 30-day plan
+  /// on the launcher while Home said "1 day past Freedom Day".
+  final String dayFreedom;
+
+  /// `%1$d day past Freedom Day` / `%1$d days past Freedom Day`. Two
+  /// templates because `String.format` has no plural forms; one and other
+  /// cover all five locales.
+  final String dayPastOne;
+  final String dayPastOther;
 
   /// `%1$d left · ahead of your curve`
   final String leftAhead;
@@ -38,6 +52,9 @@ class WidgetCopy {
 
   Map<String, dynamic> toJson() => {
     'day': day,
+    'dayFreedom': dayFreedom,
+    'dayPastOne': dayPastOne,
+    'dayPastOther': dayPastOther,
     'leftAhead': leftAhead,
     'leftTight': leftTight,
     'overLimit': overLimit,

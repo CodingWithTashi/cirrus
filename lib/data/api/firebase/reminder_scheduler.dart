@@ -26,7 +26,13 @@ abstract interface class ReminderSink {
   /// where to land. It was hardcoded to `trial` while that was the only
   /// one-shot; a second kind through the same door had to make it a parameter
   /// or every milestone tap would have opened the trial-ending screen.
-  Future<void> scheduleOnce(
+  ///
+  /// Answers whether the notification is now on the device clock. A refusal
+  /// (plugin not initialised, permission revoked, the platform rejecting the
+  /// instant) is swallowed rather than thrown — reminders are never worth a
+  /// crash — but the caller has to know: a milestone marked "celebrated" on
+  /// the strength of a schedule that never armed is silenced for ever.
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
     required ReminderKind kind,
     required String title,
@@ -199,7 +205,7 @@ class ReminderScheduler implements ReminderSink {
   }
 
   @override
-  Future<void> scheduleOnce(
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
     required ReminderKind kind,
     required String title,
@@ -219,8 +225,10 @@ class ReminderScheduler implements ReminderSink {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: kind.name,
       );
+      return true;
     } on Object catch (error) {
       debugPrint('reminders: one-shot schedule failed — $error');
+      return false;
     }
   }
 

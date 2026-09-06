@@ -140,7 +140,7 @@
 | 53 | **Trigger-hour heatmap** | Your puffs by hour; tapping it opens the danger-hours editor. | Tap the heatmap. |
 | 54 | **Forecast heatmap** (Pro) | The predicted-risk layer. | Free → blurred, with the door. |
 | 55 | **Nicotine trend** | ≈ mg/day, engine-computed. | — |
-| 56 | **Personal records** | Longest gap (h), best day, cravings beaten. Personal bests only, never a leaderboard. | — |
+| 56 | **Personal records** | Longest gap (h) = the longest stretch of whole hours without a logged puff, from the hour buckets plus the time since the last puff (`PuffGaps`; a day counts only when its buckets account for every puff or it was confirmed vape-free). Best day = fewest puffs on a confirmed, completed day. Cravings beaten. Each shows `—` until it is actually known — never a zero, never an estimate. Personal bests only, never a leaderboard. | Fresh account, day 2, nothing confirmed → `—` / `—` / 0. Log a day with puffs at 9 AM and 9 PM, confirm the next morning → gap ≥ 11h. |
 | 57 | **Empty state** | An honest "nothing logged yet" rather than invented bars. | Fresh account → Stats. |
 
 ---

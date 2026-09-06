@@ -12,8 +12,10 @@
  * that the facts are PRESENT and correct, not that the prose is exact.
  */
 import {describe, expect, it} from 'vitest';
-import {buildMemoryCard} from '../src/ai/memoryCard';
-import {addDays} from '../src/domain/dateKey';
+import {buildMemoryCard, wholeDollars} from '../src/ai/memoryCard';
+import {addDays, dayKeyIn} from '../src/domain/dateKey';
+import {dayNumber, limitFor} from '../src/domain/taperEngine';
+import type {QuitPlan} from '../src/domain/types';
 
 const NOW = new Date('2026-08-15T22:14:00.000Z');
 const TZ = 'UTC';
@@ -71,7 +73,7 @@ const journey = (over: Record<string, unknown> = {}): Record<string, unknown> =>
 describe('the user card', () => {
   it('opens with who they are and where they are in the plan', () => {
     const card = buildMemoryCard(journey(), NOW, TZ);
-    expect(card.text).toContain('day 12 of 30');
+    expect(card.text).toContain('plan day: 12 of 30 (taper)');
     expect(card.text).toContain('SteadyFalcon42');
     expect(card.text).toContain('taper');
   });
@@ -308,7 +310,7 @@ describe('the whole journey on the card', () => {
     // Week 2 is in progress: Aug 13 (120/140) and Aug 14 (130/138) hold, the
     // 11th and 12th were never logged, and today (the 15th) is excluded.
     expect(card.text).toContain(
-      'w2 (current, 4 days so far): avg 125 puffs/day · 2/4 on target · 2 unlogged · best day 120',
+      'w2 (current, 4 completed days; today is plan day 12): avg 125 puffs/day · 2/4 on target · 2 unlogged · best day 120',
     );
   });
 
@@ -369,5 +371,147 @@ describe('the whole journey on the card', () => {
     // The budget alarm for the worst realistic case: ~2K tokens at four
     // characters each. The short-fixture test above keeps the tight bound.
     expect(card.text.length).toBeLessThan(8000);
+  });
+});
+
+describe('the day and the money, exactly as Home shows them', () => {
+  // Sat Sep 5 2026, 14:12 in New York: Home said "Day 2 of 30" and "$3 saved",
+  // Ember said "day one" and "2.74 dollars". Same journey, same instant. This
+  // is the card that turn was built from. The twin of this fixture lives in
+  // `test/domain/today_snapshot_test.dart` (parity suite) — keep them equal.
+  const SEP5_PLAN: QuitPlan = {
+    method: 'taper',
+    paceDays: 30,
+    startDate: '2026-09-04',
+    baselinePuffsPerDay: 100,
+    weeklySpend: 30.0,
+    strength: 'mg50',
+    stretchDays: 0,
+  };
+  const SEP5_NOW = new Date('2026-09-05T18:12:00.000Z');
+  const NY = 'America/New_York';
+  const sep5 = (over: Record<string, unknown> = {}) =>
+    journey({
+      plan: {...SEP5_PLAN},
+      days: {'2026-09-04': day({puffs: 36, limit: 95, hourBuckets: {'14': 36}})},
+      cravingsSurvivedTotal: 1,
+      repairTokens: 0,
+      longestStreak: 1,
+      lastPuffAt: '2026-09-04T20:10:00.000',
+      ...over,
+    });
+
+  it('the fixture is on the engine curve', () => {
+    expect(limitFor(SEP5_PLAN, 1)).toBe(95);
+    expect(limitFor(SEP5_PLAN, 2)).toBe(90);
+  });
+
+  it('the Sep 5 screenshot: day 2, $3, and no stray "one"', () => {
+    const card = buildMemoryCard(sep5(), SEP5_NOW, NY);
+    expect(card.day).toBe(2);
+    expect(card.text).toContain(
+      "today's date: 2026-09-05 (Saturday) · their local time: 14:12",
+    );
+    expect(card.text).toContain('plan day: 2 of 30 (taper)');
+    expect(card.text).toContain('today: 0/90');
+    expect(card.text).toContain('streak: 1d');
+    // 64 puffs under a 100 baseline at $30/week = 2.742857…, shown as $3.
+    expect(card.text).toContain('money saved: $3 ·');
+    expect(card.text).toContain('w1 (current, 1 completed day; today is plan day 2)');
+    expect(card.text).not.toContain('2.74');
+    expect(card.text).not.toMatch(/\b1 days? so far\b/);
+    expect(card.text).not.toMatch(/money saved: \$?\d+\.\d/);
+  });
+
+  it('derives the plan day from the caller timezone, not UTC', () => {
+    // 03:30Z on Aug 15 is still Aug 14 in Los Angeles and already Aug 15 in
+    // Tokyo; the plan day follows the user's calendar, never the server's.
+    const early = new Date('2026-08-15T03:30:00.000Z');
+    const plan = journey()['plan'] as QuitPlan;
+    const cases: readonly (readonly [string, number])[] = [
+      ['Asia/Tokyo', 12],
+      ['America/Los_Angeles', 11],
+      ['UTC', 12],
+    ];
+    for (const [tz, expected] of cases) {
+      const card = buildMemoryCard(journey(), early, tz);
+      expect(card.day).toBe(expected);
+      expect(card.day).toBe(dayNumber(plan, dayKeyIn(early, tz)));
+      expect(card.text).toContain(`plan day: ${expected} of 30`);
+    }
+  });
+
+  it('rounds money the way LpFormat.money does', () => {
+    // 100 puffs/day at $35/week is 5¢ a puff; a 50-puff day keeps exactly
+    // $2.50, and both sides round it half away from zero to $3.
+    const halfway = journey({
+      plan: {...SEP5_PLAN, weeklySpend: 35.0},
+      days: {'2026-09-04': day({puffs: 50, limit: 95})},
+    });
+    expect(buildMemoryCard(halfway, SEP5_NOW, NY).text).toContain('money saved: $3 ·');
+    // 56 under at 3/70 a puff = 2.4 → $2.
+    const under = sep5({days: {'2026-09-04': day({puffs: 44, limit: 95})}});
+    expect(buildMemoryCard(under, SEP5_NOW, NY).text).toContain('money saved: $2 ·');
+    expect(wholeDollars(2.5)).toBe('$3');
+    expect(wholeDollars(2.4)).toBe('$2');
+    expect(wholeDollars(1234.4)).toBe('$1,234');
+    expect(wholeDollars(0)).toBe('$0');
+  });
+
+  it('an unconfirmed zero-puff day saves nothing', () => {
+    // `InitialJourney` mints day 1 as a 0-puff, UNCONFIRMED log. It used to
+    // count as a full baseline day saved — "$4 saved" before the first puff.
+    // Same rule as the streak now: an unknown day is unknown.
+    const fresh = sep5({
+      days: {
+        '2026-09-05': day({
+          puffs: 0, limit: 90, hourBuckets: {}, vapeFreeConfirmed: false,
+        }),
+      },
+      lastPuffAt: null,
+    });
+    expect(buildMemoryCard(fresh, SEP5_NOW, NY).text).toContain('money saved: $0 ·');
+    // A CONFIRMED vape-free day keeps the whole baseline: 100 × 30/700 = $4.29.
+    const confirmed = sep5({
+      days: {
+        '2026-09-04': day({
+          puffs: 0, limit: 95, hourBuckets: {}, vapeFreeConfirmed: true,
+        }),
+      },
+    });
+    expect(buildMemoryCard(confirmed, SEP5_NOW, NY).text).toContain('money saved: $4 ·');
+  });
+
+  it('a day after today is not money already saved', () => {
+    // A puff filed by a device clock that was a day ahead. Home drops it
+    // (`TodaySnapshot`); the card must agree, or Ember quotes a saving the
+    // Money screen does not show.
+    const withFuture = sep5({
+      days: {
+        '2026-09-04': day({puffs: 36, limit: 95, hourBuckets: {'14': 36}}),
+        '2026-09-06': day({
+          puffs: 0, limit: 85, hourBuckets: {}, vapeFreeConfirmed: true,
+        }),
+      },
+    });
+    expect(buildMemoryCard(withFuture, SEP5_NOW, NY).text).toContain('money saved: $3 ·');
+  });
+
+  it('never says "day 167 of 30" once the plan is finished', () => {
+    // Home says "137 days past Freedom Day"; a card reading "day 167 of 30"
+    // hands the model a contradiction to resolve on its own.
+    const longAgo = journey({
+      plan: {
+        method: 'taper', paceDays: 30, startDate: '2026-03-02',
+        baselinePuffsPerDay: 200, weeklySpend: 70.0, strength: 'mg50',
+        stretchDays: 0,
+      },
+    });
+    const card = buildMemoryCard(longAgo, NOW, TZ);
+    expect(card.day).toBe(167);
+    expect(card.text).toContain(
+      'plan day: 167 · 137 days past Freedom Day (30-day plan finished, maintenance)',
+    );
+    expect(card.text).not.toMatch(/day 167 of 30/);
   });
 });

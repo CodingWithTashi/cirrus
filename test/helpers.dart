@@ -7,6 +7,10 @@ import 'package:last_puff/data/stores/entitlement_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
+import 'package:last_puff/domain/date_key.dart';
+import 'package:last_puff/domain/logic/taper_engine.dart';
+import 'package:last_puff/domain/models/journey_state.dart';
+import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
 /// Standard test overrides for anything that pumps the app or wires the fake
@@ -63,12 +67,72 @@ List<Override> demoSubscriptionOverrides() {
       (ref) => FakeServer(
         latency: ref.watch(apiLatencyProvider),
         isOnline: () => ref.read(connectivityProvider),
+        now: ref.watch(nowProvider),
       )..seedGuestEntitlement(row),
     ),
     entitlementProvider.overrideWith(
       () => EntitlementStore(initial: EntitlementCodec.decode(row)),
     ),
   ];
+}
+
+/// A journey on plan day [day] of a [totalDays]-day taper, as of [now].
+///
+/// Every day before today is logged at the curve's own limit (confirmed, at
+/// the line, so the chain holds) with all of its puffs at 10 AM; [puffsByDay]
+/// overrides any of them (day number → puffs, 0 = a confirmed vape-free day).
+/// Today is UNLOGGED — the state a real account is in before its first tap —
+/// so `streak` reads `day - 1` and money counts only the completed days.
+///
+/// The defaults are the Sep 5 2026 screenshot's plan (100 puffs/day, $30 a
+/// week): `journeyOnDay(2, now: DateTime(2026, 9, 5, 14, 12), puffsByDay:
+/// {1: 36})` is the journey Home rendered as "Day 2 of 30 · $3 saved · 🔥 1
+/// day", and its twin lives in `functions/test/memoryCard.test.ts`.
+JourneyState journeyOnDay(
+  int day, {
+  required DateTime now,
+  int baseline = 100,
+  double weeklySpend = 30,
+  int totalDays = 30,
+  Map<int, int> puffsByDay = const {},
+  DateTime? lastPuffAt,
+  String alias = '@matrixfox',
+}) {
+  assert(day >= 1, 'plan days are 1-based');
+  final start = LpDate.addDays(LpDate.dayStart(now), -(day - 1));
+  final plan = QuitPlan(
+    method: QuitMethod.taper,
+    paceDays: totalDays,
+    startDate: start,
+    baselinePuffsPerDay: baseline,
+    weeklySpend: weeklySpend,
+    strength: NicStrength.mg50,
+  );
+  final days = <DateTime, DayLog>{};
+  for (var d = 1; d < day; d++) {
+    final date = LpDate.addDays(start, d - 1);
+    final limit = d <= totalDays ? TaperEngine.limitFor(plan, d) : 0;
+    final puffs = puffsByDay[d] ?? limit;
+    days[date] = DayLog(
+      date: date,
+      puffs: puffs,
+      limit: limit,
+      hourBuckets: puffs == 0 ? const {} : {10: puffs},
+      vapeFreeConfirmed: puffs == 0,
+    );
+  }
+  return JourneyState(
+    profile: UserProfile(alias: alias, avatarEmoji: '🦊'),
+    plan: plan,
+    days: days,
+    cravingsSurvivedTotal: 0,
+    repairTokens: 0,
+    longestStreak: 0,
+    goals: const [],
+    earnedBadges: const {},
+    lastPuffAt: lastPuffAt,
+    day1TasksDone: const {0, 1, 2},
+  );
 }
 
 /// Starts offline; tests flip it with `set(true)` to simulate the connection

@@ -38,7 +38,7 @@ class PlanScreen extends ConsumerWidget {
     // displaying — it describes a limit that has already been superseded, and
     // `JourneyStore.applyPlanAdvice` refuses to act on it for the same reason.
     final rawAdvice = journey.planAdvice;
-    final advice = rawAdvice != null && rawAdvice.appliesTo(DateTime.now())
+    final advice = rawAdvice != null && rawAdvice.appliesTo(snap.now)
         ? rawAdvice
         : null;
     final halfway = TaperEngine.halfwayDay(plan);

@@ -58,10 +58,22 @@
     <uses-permission
         android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
         tools:node="remove"/>
+    <!-- No Auto Backup. Everything account-shaped that lives on this device is
+         device-scoped by design and forgotten on sign-out: the widget mirror
+         and its tap outbox (HomeWidgetPreferences), the milestone ledger, the
+         launch-paywall counters and the App Check backoff. A backup restored
+         onto a reinstall - or onto a new phone in a device-to-device transfer
+         - would hand all of it to whoever signs in next: a launcher widget
+         showing the last person's numbers before the app has even opened,
+         queued taps draining into a stranger's journey, and a settled ledger
+         that silences every celebration. The journey itself lives in
+         Firestore and needs no backup; a theme and a language are cheap to
+         choose again. -->
     <application
         android:label="Cirrus"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <!-- Portrait only (android:screenOrientation below). Every one of the
              52 design frames is portrait and nothing has a landscape layout,
              so a rotated phone rendered the app into a viewport it was never

@@ -388,6 +388,30 @@ void main() {
     expect(pubspec.substring(0, split).contains('home_widget'), isTrue);
   });
 
+  group('the day line past Freedom Day', () {
+    // The widget recomputes its day number natively and had no upper clamp:
+    // "day 31" of a 30-day plan on the launcher while Home said "1 day past
+    // Freedom Day" (Sep 5 2026). The mirror ships `totalDays` and Home's own
+    // copy; these pin that Kotlin reads them and draws them.
+    final data = read('$widgetKotlin/CirrusWidgetData.kt');
+    final provider = read('$widgetKotlin/CirrusWidgetProvider.kt');
+
+    test('the widget reads the plan length the app ships', () {
+      expect(data, contains('optInt("totalDays"'));
+      expect(data, contains('dayNumber == mirror.totalDays'));
+      expect(data, contains('dayNumber - mirror.totalDays'));
+    });
+
+    test("and draws Home's copy for the last day and every day after", () {
+      expect(provider, contains('dayLine(mirror, today)'));
+      expect(provider, contains('copyDayFreedom'));
+      expect(provider, contains('copyDayPastOne'));
+      expect(provider, contains('copyDayPastOther'));
+      // Never blank: a mirror from an older app falls back to the plain count.
+      expect(provider, contains('else -> plain'));
+    });
+  });
+
   group('a widget with no journey shows a message, never a counter', () {
     // Founder rule, Sep 5 2026: the home screen outlives the session, so a
     // widget still counting for a signed-out account is the shared-phone leak

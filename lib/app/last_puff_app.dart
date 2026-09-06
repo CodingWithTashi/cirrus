@@ -303,6 +303,9 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
       snapshot: snapshot,
       copy: WidgetCopy(
         day: l10n.widgetDay,
+        dayFreedom: l10n.widgetDayFreedom,
+        dayPastOne: l10n.widgetDayPastOne,
+        dayPastOther: l10n.widgetDayPastOther,
         leftAhead: l10n.widgetLeftAhead,
         leftTight: l10n.widgetLeftTight,
         overLimit: l10n.widgetOverLimit,

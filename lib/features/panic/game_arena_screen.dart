@@ -64,7 +64,9 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   /// Where this reader is in their own quit, read once in [initState]:
   /// Riverpod forbids `ref` on the way out, and the gate events fire from
   /// callbacks that can outlive the frame.
-  late final int? _planDay = _store.journey?.plan.dayNumber(DateTime.now());
+  late final int? _planDay = _store.journey?.plan.dayNumber(
+    ref.read(nowProvider)(),
+  );
 
   late GameEntry _entry;
   late GameSession _run;

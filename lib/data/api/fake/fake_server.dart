@@ -16,10 +16,20 @@ import 'fake_fixtures.dart';
 /// clients and server-computed coach replies consistent — do not introduce
 /// ops that mutate after the delay.
 class FakeServer {
-  FakeServer({this.latency = const Duration(milliseconds: 350), this.isOnline});
+  FakeServer({
+    this.latency = const Duration(milliseconds: 350),
+    this.isOnline,
+    this.now = DateTime.now,
+  });
 
   /// Simulated network round-trip. Widget tests override this to zero.
   final Duration latency;
+
+  /// The backend's clock — `nowProvider` in the app, so a test that pins the
+  /// day pins it on both sides of the seam. It used to read `DateTime.now()`
+  /// directly, so signing in under an injected clock seeded a day-12 journey
+  /// relative to the REAL date, and `startJourney` minted day 1 on it too.
+  final DateTime Function() now;
 
   /// Synchronous read of device connectivity (wired to the connectivity
   /// store). null = always reachable. When it reports offline, every call
@@ -117,11 +127,8 @@ class FakeServer {
     // that onboarded on its own and chose Free. Apple/Google/guest accounts
     // start free, like a fresh install.
     if (!_journeys.containsKey(email)) {
-      _journeys[email] = FakeFixtures.journeyJson(DateTime.now());
-      _entitlements.putIfAbsent(
-        email,
-        () => demoEntitlementJson(DateTime.now()),
-      );
+      _journeys[email] = FakeFixtures.journeyJson(now());
+      _entitlements.putIfAbsent(email, () => demoEntitlementJson(now()));
     }
   }
 
@@ -207,7 +214,7 @@ class FakeServer {
   // ---- community ------------------------------------------------------------
 
   List<Map<String, dynamic>> get posts =>
-      _posts ??= FakeFixtures.communityJson(DateTime.now());
+      _posts ??= FakeFixtures.communityJson(now());
 
   /// The feed as THIS session sees it: other people's posts only when live,
   /// the caller's own posts in every state, `isMine` decided here.
@@ -296,7 +303,7 @@ class FakeServer {
   /// whole contract is that a read reflects what was written.
   DateTime? _lastSosAt() {
     final me = _readerId;
-    final now = DateTime.now();
+    final now = this.now();
     for (final p in posts) {
       if (_postAuthors[p['id']] != me || p['tag'] != 'sos') continue;
       final raw = p['createdAt'];
@@ -316,7 +323,7 @@ class FakeServer {
   /// guarantee `claimDailyPost` gives by only incrementing on success.
   int _myPostsToday({required bool sos}) {
     final me = _readerId;
-    final now = DateTime.now();
+    final now = this.now();
     var count = 0;
     for (final p in posts) {
       if (_postAuthors[p['id']] != me) continue;

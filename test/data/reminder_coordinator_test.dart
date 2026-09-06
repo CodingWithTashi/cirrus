@@ -20,6 +20,11 @@ class _FakeSink implements ReminderSink {
   final List<int> cancelled = [];
   int cancels = 0;
 
+  /// Whether the device accepts one-shots. False stands in for a plugin that
+  /// is not ready or a permission that was revoked — the real scheduler
+  /// swallows those and answers false.
+  bool arms = true;
+
   @override
   Future<void> apply(
     List<ReminderSlot> slots, {
@@ -28,17 +33,19 @@ class _FakeSink implements ReminderSink {
   }) async => applied.add(slots);
 
   @override
-  Future<void> scheduleOnce(
+  Future<bool> scheduleOnce(
     OneShotReminder reminder, {
     required ReminderKind kind,
     required String title,
     required String body,
   }) async {
+    if (!arms) return false;
     scheduledOnce.add(reminder);
     // The payload is the only thing that tells a tap where to land, so which
     // kind went through this door is worth recording.
     kinds.add(kind);
     bodies.add(body);
+    return true;
   }
 
   @override
@@ -384,15 +391,45 @@ void main() {
         body: body,
         milestoneTitle: 'Come see your flame',
         milestoneBody: (badgeId) => 'you earned $badgeId',
-        onMilestoneScheduled: (armed, covers) {
+        onMilestoneScheduled: (armed, covers, at) {
           marked.add(armed);
           covered.addAll(covers);
+          expect(at, sink.scheduledOnce.single.at, reason: 'the due time travels with it');
         },
         now: () => DateTime(2026, 8, 20, 14),
       );
 
       expect(marked, ['spark']);
       expect(covered, {'spark'});
+    });
+
+    test('a celebration the device refused to arm is not settled, and is retried', () async {
+      // `ReminderScheduler.scheduleOnce` swallows every failure — plugin not
+      // initialised, POST_NOTIFICATIONS revoked — so without a signal back
+      // the badge was marked celebrated for a notification that never
+      // existed, and the planner answered null for it for ever.
+      final sink = _FakeSink()..arms = false;
+      final marked = <String>[];
+      final coordinator = ReminderCoordinator(sink);
+      Future<void> attempt() => coordinator.sync(
+        journey: earned({'spark'}),
+        settings: const SettingsState(milestonesAdopted: true),
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestoneScheduled: (armed, covers, at) => marked.add(armed),
+        now: () => DateTime(2026, 8, 20, 14),
+      );
+
+      await attempt();
+      expect(sink.scheduledOnce, isEmpty);
+      expect(marked, isEmpty, reason: 'nothing armed, nothing settled');
+
+      sink.arms = true;
+      await attempt();
+      expect(sink.scheduledOnce, hasLength(1), reason: 'the next sync tries again');
+      expect(marked, ['spark']);
     });
 
     test('a restored journey settles the whole backlog in one go', () async {
@@ -412,7 +449,7 @@ void main() {
         body: body,
         milestoneTitle: 'Come see your flame',
         milestoneBody: (badgeId) => 'you earned $badgeId',
-        onMilestoneScheduled: (armed, covers) {
+        onMilestoneScheduled: (armed, covers, _) {
           marked.add(armed);
           covered.addAll(covers);
         },
@@ -438,10 +475,48 @@ void main() {
         body: body,
         milestoneTitle: 'Come see your flame',
         milestoneBody: (badgeId) => 'you earned $badgeId',
-        onMilestonesWithdrawn: () => withdrawn++,
+        onMilestonesWithdrawn: (_) => withdrawn++,
       );
 
       expect(withdrawn, 1);
+    });
+
+    test('nothing runs before the stored settings have been read', () async {
+      // Cold start: `restoreSession` can land the journey before
+      // SharedPreferences answers, and the store shows its defaults until
+      // then. Acting on them adopted the ledger (committing every default
+      // over the user's stored settings) and cleared the device against a
+      // ledger that did not know a celebration was armed.
+      final sink = _FakeSink();
+      var withdrawn = 0;
+      final adopted = <String>{};
+      final marked = <String>[];
+      Future<void> syncWith(SettingsState settings, {JourneyState? journey}) =>
+          ReminderCoordinator(sink).sync(
+            journey: journey,
+            settings: settings,
+            title: title,
+            body: body,
+            milestoneTitle: 'Come see your flame',
+            milestoneBody: (badgeId) => 'you earned $badgeId',
+            onMilestoneScheduled: (armed, covers, _) => marked.add(armed),
+            onMilestonesWithdrawn: (_) => withdrawn++,
+            onMilestonesAdopted: adopted.addAll,
+            now: () => DateTime(2026, 8, 20, 14),
+          );
+
+      // Unhydrated, no journey yet: the cold-start clear must wait.
+      await syncWith(const SettingsState(hydrated: false));
+      expect(sink.cancels, 0);
+      expect(withdrawn, 0);
+      // Unhydrated, journey in hand: neither adoption nor a celebration.
+      await syncWith(const SettingsState(hydrated: false), journey: earned({'spark'}));
+      expect(adopted, isEmpty);
+      expect(marked, isEmpty);
+      expect(sink.applied, isEmpty);
+      // Hydrated: the same inputs act.
+      await syncWith(const SettingsState(), journey: earned({'spark'}));
+      expect(adopted, {'spark'});
     });
 
     test('notifications off still clears everything', () async {

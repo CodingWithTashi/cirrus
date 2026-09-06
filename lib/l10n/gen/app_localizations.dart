@@ -3199,6 +3199,12 @@ abstract class AppLocalizations {
   /// **'trending down — {day} was the hard one'**
   String coachWeekCardCaption(String day);
 
+  /// Coach week card caption when the week is NOT trending down — the plain sibling of coachWeekCardCaption, which is only shown once the later half of the week averaged fewer puffs than the earlier half.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} was the hard one'**
+  String coachWeekCardCaptionFlat(String day);
+
   /// No description provided for @coachGreeting.
   ///
   /// In en, this message translates to:
@@ -3924,6 +3930,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Based on your last logged puff · {ago} ago'**
   String healthAnchor(String ago);
+
+  /// Health timeline anchor line when the journey has no lastPuffAt — replaces healthAnchor, which would otherwise claim a puff '0m ago' that never happened.
+  ///
+  /// In en, this message translates to:
+  /// **'No puff logged yet'**
+  String get healthAnchorNone;
 
   /// No description provided for @healthYouAreHere.
   ///
@@ -5292,6 +5304,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'day %1\$d'**
   String get widgetDay;
+
+  /// Home-screen widget: the day label on the plan's last day, matching homeGreetingFreedomDay. No placeholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day 🏆'**
+  String get widgetDayFreedom;
+
+  /// Home-screen widget: the day label ONE day after the plan's last day (the singular form of homeGreetingMaintenance). A NATIVE %1$d template filled by Kotlin String.format; two keys stand in for the plural forms String.format lacks.
+  ///
+  /// In en, this message translates to:
+  /// **'%1\$d day past Freedom Day'**
+  String get widgetDayPastOne;
+
+  /// Home-screen widget: the day label two or more days after the plan's last day (the plural form of homeGreetingMaintenance). Native %1$d template.
+  ///
+  /// In en, this message translates to:
+  /// **'%1\$d days past Freedom Day'**
+  String get widgetDayPastOther;
 
   /// Home-screen widget: puffs left when comfortably under the line (mirrors home_screen's puffsLeft > limit * 0.25 rule). Native %1$d template - the widget changes the count itself on a + tap.
   ///

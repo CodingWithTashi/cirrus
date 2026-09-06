@@ -46,11 +46,19 @@ class ReminderCoordinator {
     String trialBody = '',
     String milestoneTitle = '',
     String Function(String badgeId)? milestoneBody,
-    void Function(String armed, Set<String> covers)? onMilestoneScheduled,
-    void Function()? onMilestonesWithdrawn,
+    void Function(String armed, Set<String> covers, DateTime at)?
+        onMilestoneScheduled,
+    void Function(DateTime now)? onMilestonesWithdrawn,
     void Function(Set<String> earned)? onMilestonesAdopted,
     DateTime Function() now = DateTime.now,
   }) async {
+    // Not until the stored settings have been read. Before that [settings] is
+    // the defaults, and every branch below writes something on the strength
+    // of them: the cold-start clear below would cancel an armed celebration
+    // against a ledger that does not yet know it is armed, and adoption would
+    // commit the default state over the user's stored one. The hydration
+    // itself is a settings change, so the sync that matters follows at once.
+    if (!settings.hydrated) return;
     // Signed out, or notifications declined: clear the device rather than
     // simply stopping — yesterday's schedule would otherwise keep firing at
     // someone who has explicitly opted out. Everything goes, both schedules.
@@ -65,8 +73,9 @@ class ReminderCoordinator {
         // `cancelAll` takes the milestone ids with it, and the badge is marked
         // settled at scheduling time — so without this the celebration is not
         // withdrawn, it is destroyed: switching notifications back on finds
-        // nothing owed and never re-arms it.
-        onMilestonesWithdrawn?.call();
+        // nothing owed and never re-arms it. The clock goes with it, so a
+        // celebration that already fired is not handed back a second time.
+        onMilestonesWithdrawn?.call(now());
       }
       return;
     }
@@ -106,7 +115,7 @@ class ReminderCoordinator {
     required DateTime now,
     required String title,
     required String Function(String badgeId) body,
-    void Function(String armed, Set<String> covers)? onScheduled,
+    void Function(String armed, Set<String> covers, DateTime at)? onScheduled,
     void Function(Set<String> earned)? onAdopted,
   }) async {
     // A ledger this device has never initialised for this account: adopt what
@@ -140,13 +149,24 @@ class ReminderCoordinator {
     if (fingerprint == _milestoneApplied) return;
     _milestoneApplied = fingerprint;
 
-    await _sink.scheduleOnce(
+    final armed = await _sink.scheduleOnce(
       celebration.reminder,
       kind: ReminderKind.milestone,
       title: title,
       body: body(celebration.badgeId),
     );
-    onScheduled?.call(celebration.badgeId, celebration.covers);
+    if (!armed) {
+      // The device refused (plugin not ready, permission revoked). Marking
+      // the badge settled now would silence its celebration for ever; leave
+      // it owed and let the next sync try again.
+      _milestoneApplied = null;
+      return;
+    }
+    onScheduled?.call(
+      celebration.badgeId,
+      celebration.covers,
+      celebration.reminder.at,
+    );
   }
 
   Future<void> _syncDangerHours(
@@ -203,12 +223,15 @@ class ReminderCoordinator {
       // is withdrawn along with the reason for it.
       await _sink.cancel(TrialReminderPlanner.id);
     } else {
-      await _sink.scheduleOnce(
+      final armed = await _sink.scheduleOnce(
         reminder,
         kind: ReminderKind.trial,
         title: title,
         body: body,
       );
+      // A refused schedule is not an applied one: forget the fingerprint so
+      // the next sync tries again rather than believing the device has it.
+      if (!armed) _trialApplied = null;
     }
   }
 

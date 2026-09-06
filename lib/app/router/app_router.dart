@@ -157,7 +157,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (journey != null &&
           !journey.day1TourSkipped &&
           journey.day1TasksDone.length < 3 &&
-          journey.plan.dayNumber(DateTime.now()) <= 1 &&
+          journey.plan.dayNumber(ref.read(nowProvider)()) <= 1 &&
           !ref.read(day1TourProvider).running &&
           (path == Routes.home ||
               path == Routes.stats ||

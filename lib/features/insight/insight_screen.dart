@@ -13,6 +13,7 @@ import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/logic/danger_hours.dart';
+import '../../domain/logic/day_window.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -81,15 +82,28 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     final locale = context.localeTag;
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
-    final week = ((snap?.dayNumber ?? 7) / 7).ceil();
-    final now = DateTime.now();
-    final range =
-        '${LpFormat.shortDate(LpDate.addDays(now, -6), locale)}–${LpFormat.shortDate(now, locale)}';
-
     final report = ref.watch(weeklyInsightProvider).valueOrNull;
+    // The week is the REPORT's, not the reader's: `weeklyInsight` windows the
+    // seven days before its own `weekId` (the user's Sunday), and a report
+    // opened on Thursday is still about that week. Anchoring on `now` drew
+    // four days the model never saw under prose about four it did, and by
+    // the next Saturday the two had nothing in common. With no report yet the
+    // header falls back to the reader's own week.
+    final now = snap?.now ?? ref.read(nowProvider)();
+    final weekId = report?.weekId;
+    final anchor = weekId != null && LpDate.isDayKey(weekId)
+        ? LpDate.parseDayKey(weekId)
+        : LpDate.dayStart(now);
+    final lastDay = LpDate.addDays(anchor, -1);
+    final week = journey == null
+        ? 1
+        : (journey.plan.dayNumber(lastDay).clamp(1, 9999) / 7).ceil();
+    final range =
+        '${LpFormat.shortDate(LpDate.addDays(anchor, -7), locale)}–${LpFormat.shortDate(lastDay, locale)}';
+
     final cards = report == null || journey == null
         ? const <_InsightCard>[]
-        : _reportCards(context, report, journey);
+        : _reportCards(context, report, journey, anchor);
 
     return Scaffold(
       backgroundColor: lp.panicBackground,
@@ -179,15 +193,21 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
   /// logs plus 14 days of hour buckets), so the prose and the bars are
   /// describing one week — the brand rule is no invented numbers, and a
   /// decorative chart under a real claim would break it just as badly as a
-  /// made-up figure.
+  /// made-up figure. `DayWindow.logged` IS the server's window (`trailingDays`
+  /// in `streakEngine.ts`): the logs inside the seven calendar days before
+  /// [anchor], the report's own `weekId`. The charts used to take the last
+  /// seven LOGGED days from now, so after a quiet stretch they reached back
+  /// into a week the prose was not about, and they drew today's half-day
+  /// beside six finished ones.
   List<_InsightCard> _reportCards(
     BuildContext context,
     WeeklyInsight report,
     JourneyState journey,
+    DateTime anchor,
   ) {
     final l10n = context.l10n;
-    final week = _trailingDays(journey, 7);
-    final fortnight = _trailingDays(journey, 14);
+    final week = DayWindow.logged(journey, anchor, 7);
+    final fortnight = DayWindow.logged(journey, anchor, 14);
     final hours = DangerHours.aggregate(fortnight);
     final hot = _hottestHours(hours);
 
@@ -217,15 +237,6 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
         action: report.move,
       ),
     ];
-  }
-
-  /// The [count] most recent logged days, oldest first. Days with no log are
-  /// simply absent — a missing day is not a zero-puff day, and charting it as
-  /// one would invent a clean day the user never had.
-  static List<DayLog> _trailingDays(JourneyState journey, int count) {
-    final logs = journey.days.values.toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    return logs.length <= count ? logs : logs.sublist(logs.length - count);
   }
 
   /// The top two puff hours — the same rule the server's report uses, so the

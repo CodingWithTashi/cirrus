@@ -397,6 +397,49 @@ Pixel 8** (Android 17) — 51 against the fake backend plus the whole 17-case
 moderation prompt changed); `eval:coach` not re-gated (`EMBER_SYSTEM_PROMPT` and
 `buildCoachInstruction` byte-identical).
 
+#### S5c — the day-number pass (Sep 5)
+
+Three screenshots at one instant: Home "Day 2 of 30 · $3", the widget "day 2", the coach
+header "day 2", and Ember saying "day one … 2.74 dollars". `docs/10 §27` is the record.
+
+- [x] `S5-29` **The day was right everywhere; the coach card was not.** One formula on all
+  four surfaces and the zone threaded end to end — the model paraphrased "1 day so far" /
+  "week 1" / "streak: 1d" into "day one", and "2.74" was Home's "$3" with two decimals and no
+  symbol. The card now leads with a labelled `plan day: 2 of 30`, says `1 completed day; today
+  is plan day 2`, renders money exactly as `LpFormat.money` does, and the anchor names the
+  number (`dayAnchorInstruction`; a panic-rider clause was tried and withdrawn — `docs/10
+  §27.6`). One mechanical eval scenario (#20 what-day). `memoryCard.test.ts` pins
+  the plan day under three timezones and the Sep 5 fixture; its twin is
+  `test/domain/today_snapshot_test.dart`
+- [x] `S5-30` **Seven live numeric bugs found on the way, all fixed and pinned:** Stats'
+  fabricated "longest gap" (`PuffGaps`), "best day 0" on every second day, the coach week
+  card's unconditional "trending down" (`WeekTrend`), the Health timeline's frozen clock and
+  "0m ago", **money crediting unconfirmed days ("$4 saved" before the first puff — founder
+  decision: confirmed days only, client and card)**, future-dated logs counted, the widget's
+  "day 31 of 30", the Insight charts on a different week from the prose, and a sweep of raw
+  `DateTime.now()` including the fake backend itself
+- [x] `S5-31` **The numeric test campaign:** `home_day_matrix_test` (eleven plan days, header
+  → line → ring → coach header → widget mirror from one snapshot), the rendered midnight
+  rollover, `stats_numbers_test`, `coach_week_card_test`, `health_timeline_test`, six new
+  domain suites and `journeyOnDay()` in `test/helpers.dart`
+
+- [x] `S5-32` **Review pass over the day's diff** (`docs/10 §27.7`): four fixes in the new code
+  (the Insight charts follow the report's own week, the gap engine ignores the hours before the
+  first puff ever logged, the week's best day is never today, future-dated logs never mint a money
+  badge or reach the card) and four older ones (a widget drain rolling back over a concurrent
+  commit, the reminder coordinator acting on settings defaults before disk answered, a refused
+  notification marking a badge celebrated for ever, a delivered celebration handed back and
+  delivered again). `milestone_ledger_test` is new; `SettingsState.hydrated` and
+  `armedMilestoneAt` are the two fields behind it
+
+**Gates (Sep 5):** `flutter analyze` clean · `flutter test` **1570** · `npm run verify`
+**227** · `npm run test:integration` **286** · **on-device 70/70 on a Pixel 8** (53 against
+the fake backend, the 17-case `f_firebase_backend` suite against **production** after the
+redeploy) · `eval:coach` **red after five rolls** — lite
+20/20 twice, premium 19/20 · 18/20 · 18/20 on judge verdicts for #02/#13 only; the day
+scenario passed every roll on both (`docs/10 §27.6`). **Deployed to `alastpuff` Sep 5
+2026** on the founder's instruction, all 24 functions behind a clean `verify`.
+
 **Deployed to `alastpuff` Sep 3 2026**, founder-approved: all 24 functions updated behind a
 clean `verify` gate, with `DAILY_SOS_POSTS=5→3` and `COACH_FOLLOWUPS=true`.
 

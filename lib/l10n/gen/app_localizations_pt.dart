@@ -1930,6 +1930,11 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String coachWeekCardCaptionFlat(String day) {
+    return '$day foi o dia difícil';
+  }
+
+  @override
   String coachGreeting(String name, int puffs, String method, String date) {
     return 'Olá. Sou $name — larguei há dois anos e lembro-me exatamente de como se sente. Li o teu plano: $puffs por dia, $method, Dia da liberdade a $date. De mim nunca vêm sermões. O que se passa agora?';
   }
@@ -2395,6 +2400,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String healthAnchor(String ago) {
     return 'Com base na tua última passa registada · há $ago';
   }
+
+  @override
+  String get healthAnchorNone => 'Ainda nenhuma passa registada';
 
   @override
   String healthYouAreHere(String milestone) {
@@ -3204,6 +3212,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get widgetDay => 'dia %1\$d';
+
+  @override
+  String get widgetDayFreedom => 'Dia da Liberdade 🏆';
+
+  @override
+  String get widgetDayPastOne => '%1\$d dia após o Dia da Liberdade';
+
+  @override
+  String get widgetDayPastOther => '%1\$d dias após o Dia da Liberdade';
 
   @override
   String get widgetLeftAhead => '%1\$d de folga · está adiantado';

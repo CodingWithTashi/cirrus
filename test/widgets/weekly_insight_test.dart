@@ -6,6 +6,8 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/core/widgets/lp_charts.dart';
+import 'package:last_puff/domain/date_key.dart';
+import 'package:last_puff/domain/logic/day_window.dart';
 import 'package:last_puff/features/insight/insight_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
@@ -84,6 +86,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(report.watchout), findsOneWidget);
     expect(find.text(report.move), findsOneWidget);
+  });
+
+  testWidgets("the charts cover the report's own week, whenever it is read", (
+    tester,
+  ) async {
+    // The bars used to be the last seven LOGGED days from now, so after a
+    // quiet stretch they reached back into a week the report never saw, they
+    // drew today's half-day beside six finished ones, and a Sunday report
+    // opened on Thursday showed a different week from its prose. The server
+    // windows the seven days before the report's own `weekId`
+    // (`trailingDays`); `DayWindow.logged` is that window on this side.
+    const sundayReport = WeeklyInsight(
+      weekId: '2026-09-13',
+      headline: 'Thursday is your hard day',
+      pattern: 'Three of your four over-limit days this month were Thursdays.',
+      win: 'You survived nine cravings, up from four last week.',
+      watchout: 'Your 9pm window is creeping back toward baseline.',
+      move: 'Put your kit in another room before 8:30pm on Thursday.',
+    );
+    // Opened the following Thursday.
+    final now = DateTime(2026, 9, 17, 10, 15);
+    final container = ProviderContainer(
+      overrides: [
+        ...fastBackendOverrides(now: now),
+        serverStateRepositoryProvider.overrideWithValue(
+          const _StubServerState(sundayReport),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    // Day 17: days 1–16 logged, day 10 skipped, 5 puffs already today.
+    final journey = journeyOnDay(
+      17,
+      now: now,
+      puffsByDay: {for (var d = 1; d <= 16; d++) d: 40 + d},
+    );
+    final day10 = LpDate.addDays(journey.plan.startDate, 9);
+    final withGap = journey.copyWith(
+      days: {for (final e in journey.days.entries) if (e.key != day10) e.key: e.value},
+    );
+    container.read(quitStoreProvider.notifier).replaceForTest(withGap);
+    container.read(quitStoreProvider.notifier).adjustToday(5);
+    await pumpScreen(tester, container);
+
+    final chart = tester.widget<BarChart>(find.byType(BarChart).first);
+    // Sep 6 → Sep 12 (days 6–12) minus the missing day 10: six bars. Neither
+    // today's 5 nor the four days since the report (days 13–16) appear.
+    expect(chart.values, [46, 47, 48, 49, 51, 52]);
+    expect(
+      chart.values,
+      [for (final d in DayWindow.logged(withGap, DateTime(2026, 9, 13), 7)) d.puffs],
+    );
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(
+      find.text(l10n.insightTitle(2, 'Sep 6–Sep 12')),
+      findsOneWidget,
+      reason: "the header names the report's week, not the reader's",
+    );
   });
 
   testWidgets('no report says so — it never invents one', (tester) async {

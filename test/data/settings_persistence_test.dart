@@ -30,7 +30,7 @@ void main() {
   });
 
   test('every field survives a save and reload', () async {
-    const saved = SettingsState(
+    final saved = SettingsState(
       themeMode: ThemeMode.dark,
       palette: LpPalette.tide,
       locale: Locale('fr'),
@@ -43,12 +43,18 @@ void main() {
       launchPaywallShownCount: 3,
       celebratedMilestones: {'spark', 'weekFlame'},
       armedMilestone: 'weekFlame',
+      armedMilestoneAt: DateTime(2026, 9, 6, 8),
       milestonesAdopted: true,
     );
 
     await SettingsPersistence.save(saved);
     final loaded = await SettingsPersistence.load();
     expect(loaded.launchPaywallShownDay, '2026-09-02');
+    // Loaded from disk IS hydrated — the flag describes the store, and is the
+    // one field deliberately not written.
+    expect(loaded.hydrated, isTrue);
+    // The due time is what tells "handed back" from "already delivered".
+    expect(loaded.armedMilestoneAt, DateTime(2026, 9, 6, 8));
 
     expect(loaded.themeMode, ThemeMode.dark);
     // Stored even for a reader who is not entitled to it: the clamp happens at
@@ -102,8 +108,12 @@ void main() {
         reason: '$name is settable now, so it must be persisted too',
       );
     }
+    // Describes the store, not a choice: whether disk has answered yet. It
+    // must never be written, or a reload would come back claiming to be
+    // hydrated before it is.
+    const transient = {'hydrated'};
 
-    expect(declared.difference(fixed), {
+    expect(declared.difference(fixed).difference(transient), {
       'themeMode',
       'palette',
       'locale',
@@ -117,6 +127,7 @@ void main() {
       'launchPaywallShownCount',
       'celebratedMilestones',
       'armedMilestone',
+      'armedMilestoneAt',
       'milestonesAdopted',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');

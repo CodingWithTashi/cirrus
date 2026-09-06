@@ -8,6 +8,7 @@ import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/core/utils/lp_format.dart';
 import 'package:last_puff/core/widgets/lp_premium_gate.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
+import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/logic/allowances.dart';
@@ -584,6 +585,11 @@ void main() {
       );
       addTearDown(container.dispose);
       final fake = container.read(fakeServerProvider)..signIn('launch@test');
+      // The fake backend reads the same clock the app does now, so the demo
+      // sign-in seeds its day-12 journey against the INJECTED date — it used
+      // to seed against the real one, which is what quietly made "two days
+      // on" land on day 14. Put a day-14 account there outright.
+      fake.putJourney(JourneyCodec.encode(journeyOnDay(14, now: milestone)));
       if (entitlement == null) {
         // The row the demo sign-in seeds is premium; a free account is one
         // whose subscription has run out.

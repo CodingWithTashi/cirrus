@@ -25,6 +25,8 @@ import '../../domain/date_key.dart';
 import '../../domain/logic/allowances.dart';
 import '../../domain/logic/day_window.dart';
 import '../../domain/logic/dependence_engine.dart';
+import '../../domain/logic/puff_gaps.dart';
+import '../../domain/logic/week_trend.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
@@ -60,15 +62,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     // The clock seam, so "what does Stats show on Tue Sep 29 with nothing
     // logged since Sunday" is a widget test.
     final now = snap.now;
-    // Free shows the last 30 days, Premium the whole journey (docs/12 §4.1).
-    // One list, derived once, so every card below agrees on the window.
-    //
-    // It was 7 — shorter than the taper program itself, which runs 30 days
-    // (`P=30`), so a free account could not see its own plan's arc even
-    // though every one of those days is already sitting in their own journey
-    // document. Thirty is the shortest window that can show the thing the
-    // product is for. The Month pill and the forecast stay Premium: those are
-    // different *views*, not a shorter slice of the same data.
+    // Free shows the last `LpAllowances.freeHistoryDays`, Premium the whole
+    // journey. It went 7 → 30 (docs/12 §4.1: a 7-day window cannot show a
+    // 30-day taper working) and back to 7 the same day (docs/12 §5c: Stats is
+    // where the product's central question gets answered, so it is the door
+    // worth keeping). The number lives in `LpAllowances`, never here. The
+    // Month pill and the forecast stay Premium: those are different *views*,
+    // not a shorter slice of the same data.
     final premium = ref.watch(isPremiumProvider);
     final historyFloor = LpDate.addDays(
       LpDate.dayStart(now),
@@ -157,7 +157,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               const SizedBox(height: 10),
               // Records are records, not history browsing: a "best day" over
               // seven days would be a wrong number, not a hidden one.
-              _recordsRow(context, journey, logs),
+              _recordsRow(context, journey, logs, now),
               const SizedBox(height: 12),
               Center(
                 child: Text(
@@ -229,19 +229,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final shown = DayWindow.trailing(journey, now, window);
     // The hard day is the most puffs among days that had any; the best day
     // is the fewest among days the user actually confirmed. An empty day is
-    // neither — it is not a win nobody logged.
-    var hardest = -1;
-    var best = -1;
-    for (var i = 0; i < shown.length; i++) {
-      final log = shown[i];
-      if (log.puffs > 0 &&
-          (hardest == -1 || log.puffs > shown[hardest].puffs)) {
-        hardest = i;
-      }
-      if (log.isConfirmed && (best == -1 || log.puffs < shown[best].puffs)) {
-        best = i;
-      }
-    }
+    // neither — it is not a win nobody logged. The same two rules the coach's
+    // week card reads, from the one engine.
+    final hardest = WeekTrend.hardestIndex(shown);
+    final best = WeekTrend.bestIndex(shown, now);
 
     // Percent vs the previous equal-length window, over confirmed days only
     // — unlogged days are unknown, not zero.
@@ -430,17 +421,25 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     BuildContext context,
     JourneyState journey,
     List<DayLog> logs,
+    DateTime now,
   ) {
     final lp = context.lp;
     final l10n = context.l10n;
+    // Records are about days the user actually lived through and confirmed:
+    // a completed day, logged or confirmed vape-free. The unconfirmed 0-puff
+    // log every account is minted with (and any a mood check-in mints) used
+    // to read as "best day 0" — a win nobody had. With nothing to show, the
+    // cell says so rather than showing a zero.
+    final today = JourneyState.dateKey(now);
     final best = logs
-        .where((l) => l.date.isBefore(JourneyState.dateKey(DateTime.now())))
+        .where((l) => l.isConfirmed && l.date.isBefore(today))
         .fold<int?>(
           null,
           (min, l) => min == null || l.puffs < min ? l.puffs : min,
         );
-    // Longest gap: approximated from the sparsest hour spread of the best day.
-    final longestGapH = 8 + (journey.longestStreak ~/ 2).clamp(0, 8);
+    // The real longest stretch without a puff, from the hour buckets. It was
+    // `8 + longestStreak ~/ 2` — a fabricated number rendered as a record.
+    final longestGapH = PuffGaps.longestGapHours(journey, now);
 
     Widget cell(String value, String label) => Expanded(
       child: LpCard(
@@ -463,9 +462,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
     return Row(
       children: [
-        cell('${longestGapH}h', l10n.statsLongestGap),
+        cell(longestGapH == null ? '—' : '${longestGapH}h', l10n.statsLongestGap),
         const SizedBox(width: 8),
-        cell('${best ?? 0}', l10n.statsBestDay),
+        cell(best == null ? '—' : '$best', l10n.statsBestDay),
         const SizedBox(width: 8),
         cell('${journey.cravingsSurvivedTotal}', l10n.statsCravingsBeaten),
       ],
@@ -517,6 +516,9 @@ class _EditableBars extends ConsumerWidget {
                       child: Align(
                         alignment: Alignment.bottomCenter,
                         child: FractionallySizedBox(
+                          // Keyed by the day, so a test can read the bar a
+                          // calendar day is drawn as.
+                          key: ValueKey(log.date),
                           heightFactor: (log.puffs / maxPuffs).clamp(0.04, 1.0),
                           child: Container(
                             width: double.infinity,
