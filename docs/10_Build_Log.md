@@ -3699,31 +3699,36 @@ it does not.**
 
 **And then the device build, which is where the simulator's blind spot lives.**
 Everything above was green on a paired simulator; `flutter build ios --debug`
-for a real device failed, and it fails for the **whole app**, not just the watch.
+for a real device failed, and it fails for the **whole app**, not just the watch:
 `Failed Registering Bundle Identifier: the app identifier
 "com.quitvape.lastPuff.watch.complication" cannot be registered to your
-development team because it is not available`, followed by three App-Group
-errors that are a cascade — signing falls back to a wildcard profile, and a
-wildcard cannot carry App Groups.
+development team because it is not available`, then three App-Group errors that
+are a cascade — signing falls back to a wildcard profile, and a wildcard cannot
+carry App Groups.
 
-Measured three ways before concluding anything, because the first explanation
-was wrong. `.watchkitapp` failed; renaming to `.watch` failed identically (so it
-is **not** a reserved legacy suffix, which is what the first attempt assumed);
-and it failed again after the parent id already existed, so it is not an
-ordering race either. In every case **the watch app's own id registers by
-itself and only the child fails**. A SIBLING id
-(`com.quitvape.lastPuff.watchface`) does register and the whole device build
-succeeds — and was reverted rather than kept, because an embedded extension's
-id must be its container's plus a period and a suffix: a sibling matches only as
-a raw string prefix, so it builds today and is rejected on upload. Trading a
-visible blocker for a hidden one is not a fix.
+**`.complication` is a reserved suffix.** That took four attempts to establish,
+and the first three conclusions were wrong. It fails as `.watchkitapp`, and as
+`.watch`, so it is not the parent's suffix. It fails again after the parent id
+already exists, so it is not an ordering race. And it fails **in the developer
+portal, typed in by hand** — which is what finally proves it is Apple's rule and
+not something Xcode's automatic signing cannot do. `com.quitvape.lastPuff.watch.widget`
+registered instantly on the next try; presumably `.complication` is held for the
+legacy WatchKit complication bundle. The target is still called
+`CirrusWatchComplication`, because that is what it is; only the bundle id moved.
 
-So the complication's App ID has to be created by hand, once, with App Groups
-attached — `ios/CirrusWatch/README.md` carries the four steps. **A simulator
-never registers an App ID, which is exactly why every simulator pass in this
-feature's history was green while the device build was not.** The same blind
-spot the widget's `--release` App Check trap lived in (§28): the loop that
-proves the feature and the loop that proves it *ships* are not the same loop.
+Two things that are easy to get wrong on the way. A SIBLING id
+(`com.quitvape.lastPuff.watchface`) *does* register and the whole device build
+succeeds with it — and it was reverted rather than kept, because an embedded
+extension's id must be its container's plus a period and a suffix, and a sibling
+matches only as a raw string prefix: it builds today and is rejected on upload.
+And the App Groups tick does **not** survive registration — it has to be set
+again on the saved identifier, with the group chosen through *Configure*, or the
+capability is simply absent and the build fails exactly as before.
+
+**A simulator never registers an App ID at all**, which is why every simulator
+pass in this feature's history was green while the device build was not — the
+same blind spot the widget's `--release` App Check trap lived in (§28). The loop
+that proves a feature and the loop that proves it *ships* are not the same loop.
 
 **A fifth bug, found only by tapping the thing.** The controls were a `+` above
 a `−`, both full width — which measures ~219pt against ~214pt of usable height

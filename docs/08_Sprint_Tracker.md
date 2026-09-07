@@ -461,8 +461,11 @@ end to end** against production `alastpuff` on an iPhone 17 Pro (iOS 26.3) paire
 to an Apple Watch Series 11 (watchOS 26.2): mirror → wrist, tap → relay → drain →
 journey, and the count unchanged across the hand-off (`docs/10 §29`). Four bugs
 found there, all fixed and pinned. Throwaway account deleted via `E2E_STEP=teardown`.
+**Device build signs and completes** (`✓ Built build/ios/iphoneos/Runner.app`) after the
+`com.quitvape.lastPuff.watch.widget` App ID was created by hand — `.complication` is a
+reserved suffix Apple refuses from the portal as well as from Xcode.
 **Owed on hardware:** the three radio paths a simulator cannot exercise, and a
-complication on a real face.
+complication on a real face. No Apple Watch on the desk yet.
 
 **Gates (Sep 6):** `flutter analyze` clean · `flutter test` **1605** · **emulator 56/56**
 (`emulator-5554`, Android 17, fake backend: every suite but the production-only `f_`, plus
