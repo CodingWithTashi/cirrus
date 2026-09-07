@@ -75,11 +75,10 @@ flutter:
   uses-material-design: true
   generate: true
 
-  # The launcher tile the splash draws (SplashScreen.iconAsset). Only this one
-  # file is bundled: everything else under assets/images is launcher-icon or
-  # store-listing source art, read by the generator below and never by the app.
-  assets:
-    - assets/images/icon-rounded.png
+  # NOTHING under assets/images is bundled. The splash draws its mark rather
+  # than loading one (see _MarkPainter), so every file in that folder is now
+  # launcher-icon or store-listing source art, read by the generator below and
+  # never by the app. Adding one back costs its full size in every install.
 
   fonts:
     - family: SpaceGrotesk
