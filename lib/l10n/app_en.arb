@@ -1626,6 +1626,15 @@
     }
   },
   "communityAddVoice": "Add your voice…",
+  "communityMentionTag": "Tag {alias}",
+  "@communityMentionTag": {
+    "description": "Screen-reader label for one suggestion in the reply composer's @-mention strip.",
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
   "communityDayTag": "day {day}",
   "@communityDayTag": {
     "placeholders": {

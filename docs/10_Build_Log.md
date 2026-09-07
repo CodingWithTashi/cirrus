@@ -4288,3 +4288,145 @@ shows the sender and the message instead, and Android's `visibility: PRIVATE`
 locales of copy and threading the alias and body through `notifyReply` →
 `sendLocalized` → `pushCopy`. Worth doing; needs the privacy decision made
 explicitly first, because it reverses a written one.
+
+---
+
+## 32. THE MENTION NOBODY COULD TYPE (Sep 7) — a deployed feature with no door
+
+The server half of community mentions had shipped, been tested and been
+deployed. `mentions.ts` parsed the tokens and resolved them thread-locally with
+a first-claimant rule; `notifyReply` sent a `communityMention` that
+deliberately never collapses; `pushKinds` gave it its own preference and
+`pushCopy` gave it five locales; three integration tests covered it. §30
+described it. `docs/13` row 111 listed it as a feature.
+
+To use it you had to type `@quietfox42` — exactly, by hand, from memory,
+including two digits nothing on screen had ever shown you. So nobody did.
+
+`guards.ts` had been carrying the tell the whole time: `isMentionableAlias` is
+exported and **nothing calls it**. It was written for a picker that was never
+built.
+
+### The picker
+
+Candidates are the post's author plus everyone who has replied, deduped
+first-claimant-first, minus the reader, minus anyone they have blocked or
+muted, minus anyone whose alias the server could not resolve a tag to. All of
+it off state already in memory: **no call, no query, no index**. That is not an
+optimisation, it is the design — `mentions.ts` opens by explaining that a
+global alias→uid index would be wrong by construction, because
+`_randomAlias()` mints from 5,760 combinations client-side with no uniqueness
+check and two users collide at around ninety accounts. An alias identifies a
+voice in a conversation, not a person, and that is the only sense in which
+anybody types one.
+
+It is a horizontal strip above the composer, which is the coach screen's
+existing idiom — there is no `OverlayEntry`, `LayerLink` or `RawAutocomplete`
+anywhere in `lib/`, and this did not add one. As a plain sibling inside the
+`Scaffold`'s resized `Column` it rides above the keyboard with no `viewInsets`
+arithmetic at all. Selecting inserts **plain text**: no ids, no markup, no
+parallel `mentions: []` on the reply. The server resolves from the words, and a
+second representation would be a second thing to keep in step.
+
+`MentionQuery.at` is pure caret arithmetic, kept out of the widget because
+every interesting case in it is an off-by-one: a token opens only at the start
+or after whitespace (so `me@example.com` never offers a picker), closes on the
+first character an alias cannot hold (so `@qui.` offers nothing rather than
+offering against a prefix the server could never parse), and answers null at
+caret −1, which is what a field that has never been focused reports.
+
+### Three things the brief assumed that were not true
+
+**1. The reply floor did not refuse a bare tag.** `@quietfox42` is eleven
+characters, one word and eight distinct letters — it cleared every floor
+`checkReply` has. So a tag-only reply published, and pushed somebody a poke
+with nothing in it, on the one community notification kind that never
+collapses. It had simply never been reachable before; the picker makes it one
+tap. Both sides now strip the addresses first and ask whether a letter
+survives — "no letter left" rather than "nothing left", because `@quietfox42
+!!!` and `@quietfox42 @owlish7` are the same non-message. Measured on what is
+LEFT, never on the words alone: `@quietfox42 yes` is an ordinary reply and
+still publishes. `stripMentions` is uncapped where `parseMentions` stops at
+five — the cap answers "how many will we honour", this answers "what is left
+once the addresses come out", and a sixth address is still an address.
+
+**2. No seeded alias was mentionable.** `@slowturtle`, `@nightbee`, `@owlish`,
+`@quietfox` — not one had the trailing digits the server requires, so on the
+fake backend, which is the whole desktop demo and every widget test, the picker
+had nobody to offer. `guards.ts` even says storage stays permissive "for the
+seed fixtures", describing the gap without closing it. The fixtures now carry
+the digits a real alias has. The persona and its own reply in the SOS thread
+had to move together: leave them apart and the picker offers the reader
+themselves.
+
+**3. A mention did not replace the author's notification.** It arrived
+alongside it. Now a reply that names people is addressed to those people — the
+author hears only when named, or when nobody is.
+
+### The exemption that was not in the brief
+
+Narrowing it everywhere would have broken the SOS. `sosReply` is the one kind
+that neither collapses nor goes quiet, and `pushKinds.ts` gives the reason:
+*the content of the message is how many people came*. Under a flat narrowing,
+one helper replying `@brightmoth17 agreed` would silence the person who asked
+for help — at the exact moment the feature exists for. So an SOS author always
+hears. The test for it is red against the flat version and green against this
+one, which is the only way that clause stays true.
+
+The accepted cost, stated plainly because it is real: on an ordinary post a
+third party can cut the author out of their own thread by tagging somebody
+else. Collapse already held a busy thread to two-to-four buzzes, so the author
+was never being spammed — this is a deliberate narrowing, not de-noising.
+
+### Keeping the demo honest
+
+`FakeCommunityApi` files the author's row on every reply, mirroring
+`notifyReply`. It mirrors the new branch too, including both exceptions: an
+author who was named hears it as a **mention**, and on an SOS they hear
+regardless. It cannot deliver the mention to anybody else — it has no
+alias→account map, and inventing one would mint an identity the demo does not
+have — but a demo inbox that contradicts the server it imitates is worse than
+an empty one.
+
+### Gates
+
+`flutter analyze` 0 · `flutter test` **1760/1760** (+33) · functions `verify`
+**313/313** · `test:integration` **321/321** · `test:rules` **50/50**.
+
+Every new test was run in both directions rather than assumed: the reply floor
+red with the strip removed, the picker red with the self-exclusion removed, the
+notify narrowing red against the pre-change guard, and the SOS exemption red
+against a narrowing without it.
+
+### The device pass, and the one thing it found
+
+Deployed, then probed against production rather than trusted. `tool/
+mention_probe.mjs` writes a real thread into Firestore, lets the real
+`moderateReply` trigger fire, and reads the inbox rows the real `notifyReply`
+wrote — `sendToUser` files those BEFORE the token check, so they land whether
+or not a device is registered, and no phone is needed to see who was told.
+The probe post is never `live`, so the feed rule refuses it to every real
+user, and everything is deleted in a `finally`. All five rows of the worked
+table pass against the deployed build; production was verified clean
+afterwards.
+
+The picker itself was driven by hand on the emulator against the fake backend:
+the strip offers the thread and never the reader, `@ni` narrows it to one, a
+tap inserts `@nightbee14 ` as plain text with the strip gone, the send arrow
+stays dimmed for a tag-only reply and lights the moment a word follows, and
+the sent reply carries the tag as ordinary words. The Pixel is locked behind a
+fingerprint, so the two-account pass is still the founder's.
+
+**What only the device could show:** the strip is a fixed-height tail on the
+thread's `Column`, and in a viewport too short for it the `Column` painted
+`BOTTOM OVERFLOWED BY 20 PIXELS` across the composer. Without the strip the
+same viewport was fine, so this was new. It takes about 175dp of body — a
+third of the shortest phone `screen_layout_test` covers — and the app is
+portrait-locked, so no phone can reach it; split-screen on a tablet can. The
+strip stands down below `kMentionStripMinRoom` now, which is the honest order
+of precedence: the composer is the feature, the picker is the convenience.
+Pinned by `mention_picker_test.dart`, red without the guard.
+
+Still owed, and it cannot be done from here: **two real accounts, phone and
+emulator, against deployed functions.** A same-account reply is dropped by
+design (`authorUid === replierUid`), so one account proves nothing.

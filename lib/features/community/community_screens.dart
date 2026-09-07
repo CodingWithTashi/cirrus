@@ -21,7 +21,9 @@ import '../../data/stores/community_store.dart' show CommunityState, FeedStatus;
 import '../../data/stores/providers.dart';
 import '../../domain/logic/allowances.dart';
 import '../../domain/logic/community_rules.dart';
+import '../../domain/logic/mentions.dart';
 import '../../domain/models/models.dart';
+import 'mention_picker.dart';
 import 'push_permission_ask.dart';
 
 /// Resolves seeded demo content to localized copy; user posts are raw text.
@@ -888,10 +890,15 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final _reply = TextEditingController();
+  final _replyFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    // Not `onChanged`: the mention strip is driven by the CARET, and the
+    // caret moves without the text changing every time somebody taps back
+    // into the middle of what they wrote.
+    _reply.addListener(_onReplyChanged);
     // A deep link can name a post the feed has never loaded — which is the
     // COMMON case for a notification, since the feed is one bounded page and
     // a reply can arrive days after its post scrolled out of it.
@@ -907,8 +914,30 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   void dispose() {
+    _reply.removeListener(_onReplyChanged);
     _reply.dispose();
+    _replyFocus.dispose();
     super.dispose();
+  }
+
+  void _onReplyChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Replaces the half-typed `@token` with the alias, plus a trailing space.
+  ///
+  /// Plain text, deliberately: the server resolves mentions out of the
+  /// reply's words, and a second structured representation would be a second
+  /// thing to keep in step. The space also closes the strip on its own, since
+  /// the caret then follows whitespace.
+  void _insertMention(MentionTarget target) {
+    final query = MentionQuery.at(_reply.text, _reply.selection.baseOffset);
+    if (query == null) return;
+    final inserted = '${target.alias} ';
+    _reply.value = TextEditingValue(
+      text: _reply.text.replaceRange(query.start, query.end, inserted),
+      selection: TextSelection.collapsed(offset: query.start + inserted.length),
+    );
   }
 
   /// Back, from a deep link as well as from the feed.
@@ -974,6 +1003,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         .firstOrNull;
     if (post == null) return _pending(context, community);
     final isSos = post.tag == PostTag.sos;
+    // Everybody already in this thread, minus the reader and minus whoever
+    // they have blocked or muted. Read straight off state — the whole point
+    // of resolving mentions inside a thread is that it costs no round trip.
+    final suggestions = mentionSuggestions(
+      post: post,
+      text: _reply.text,
+      caret: _reply.selection.baseOffset,
+      myAlias: ref.watch(quitStoreProvider)?.profile.alias,
+      hidden: {...community.blocked, ...community.muted},
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -981,128 +1020,140 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         title: Text(post.tag.label(context)),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              // Pull to pick up replies posted while this screen was open.
-              // `ensurePost` re-reads the thread, so the gesture and the
-              // notification tap land on exactly the same code path.
-              child: RefreshIndicator(
-                color: lp.volt,
-                backgroundColor: lp.surface,
-                onRefresh: () => ref
-                    .read(communityStoreProvider.notifier)
-                    .ensurePost(widget.postId),
-                child: ListView(
-                  // A short thread does not fill the viewport, and a list that
-                  // cannot scroll cannot be pulled.
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  children: [
-                    // Only once somebody has actually shown up. An empty rally
-                    // banner promising backup is the loneliest thing this screen
-                    // could show the person who just asked for help.
-                    if (isSos && _backupCount(post) > 0) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: lp.oxygenSoft,
-                          borderRadius: BorderRadius.circular(LpDimens.rInput),
-                          border: Border.all(
-                            color: lp.oxygen.withValues(alpha: 0.45),
-                            width: 1.5,
+        // The strip is a fixed-height tail on this `Column`, so it has to be
+        // able to give way: see `kMentionStripMinRoom`.
+        child: LayoutBuilder(
+          builder: (context, constraints) => Column(
+            children: [
+              Expanded(
+                // Pull to pick up replies posted while this screen was open.
+                // `ensurePost` re-reads the thread, so the gesture and the
+                // notification tap land on exactly the same code path.
+                child: RefreshIndicator(
+                  color: lp.volt,
+                  backgroundColor: lp.surface,
+                  onRefresh: () => ref
+                      .read(communityStoreProvider.notifier)
+                      .ensurePost(widget.postId),
+                  child: ListView(
+                    // A short thread does not fill the viewport, and a list that
+                    // cannot scroll cannot be pulled.
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    children: [
+                      // Only once somebody has actually shown up. An empty rally
+                      // banner promising backup is the loneliest thing this screen
+                      // could show the person who just asked for help.
+                      if (isSos && _backupCount(post) > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: lp.oxygen.withValues(alpha: 0.1),
-                              blurRadius: 24,
+                          decoration: BoxDecoration(
+                            color: lp.oxygenSoft,
+                            borderRadius: BorderRadius.circular(
+                              LpDimens.rInput,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('🛡️', style: TextStyle(fontSize: 16)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                l10n.communitySosBanner(_backupCount(post)),
-                                style: LpType.body13(
-                                  lp.oxygenText,
-                                  weight: FontWeight.w600,
+                            border: Border.all(
+                              color: lp.oxygen.withValues(alpha: 0.45),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: lp.oxygen.withValues(alpha: 0.1),
+                                blurRadius: 24,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Text('🛡️', style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  l10n.communitySosBanner(_backupCount(post)),
+                                  style: LpType.body13(
+                                    lp.oxygenText,
+                                    weight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 14),
+                      ],
+                      PostCard(post: post, expanded: true),
                       const SizedBox(height: 14),
+                      for (final reply in post.replies) ...[
+                        _ReplyBubble(reply: reply, postId: post.id),
+                        const SizedBox(height: 10),
+                      ],
                     ],
-                    PostCard(post: post, expanded: true),
-                    const SizedBox(height: 14),
-                    for (final reply in post.replies) ...[
-                      _ReplyBubble(reply: reply, postId: post.id),
-                      const SizedBox(height: 10),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
-                decoration: BoxDecoration(
-                  color: lp.surface,
-                  borderRadius: BorderRadius.circular(LpDimens.rChip),
-                  border: Border.all(color: lp.border, width: 1.5),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _reply,
-                        style: LpType.body14(lp.textPrimary),
-                        textInputAction: TextInputAction.send,
-                        onChanged: (_) => setState(() {}),
-                        onSubmitted: (_) => _send(post),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: l10n.communityAddVoice,
-                          hintStyle: LpType.body14(lp.textFaint),
-                        ),
-                      ),
-                    ),
-                    // Dimmed rather than dead: `_send` refuses anything
-                    // `createReply` would refuse, and a control that silently
-                    // does nothing reads as a broken app.
-                    Opacity(
-                      opacity: _replyReady(_reply.text) ? 1 : 0.4,
-                      child: PressScale(
-                        onTap: () => _send(post),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isSos ? lp.oxygen : lp.volt,
-                          ),
-                          child: Icon(
-                            Icons.arrow_upward_rounded,
-                            size: 18,
-                            color: lp.onVolt,
+              // Tagging somebody already in the thread. A sibling of the
+              // composer rather than an overlay, so it rides above the keyboard
+              // with no `viewInsets` arithmetic — see `mention_picker.dart`.
+              if (suggestions != null &&
+                  constraints.maxHeight >= kMentionStripMinRoom)
+                MentionStrip(targets: suggestions, onSelected: _insertMention),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
+                  decoration: BoxDecoration(
+                    color: lp.surface,
+                    borderRadius: BorderRadius.circular(LpDimens.rChip),
+                    border: Border.all(color: lp.border, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _reply,
+                          focusNode: _replyFocus,
+                          style: LpType.body14(lp.textPrimary),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(post),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: l10n.communityAddVoice,
+                            hintStyle: LpType.body14(lp.textFaint),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      // Dimmed rather than dead: `_send` refuses anything
+                      // `createReply` would refuse, and a control that silently
+                      // does nothing reads as a broken app.
+                      Opacity(
+                        opacity: _replyReady(_reply.text) ? 1 : 0.4,
+                        child: PressScale(
+                          onTap: () => _send(post),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSos ? lp.oxygen : lp.volt,
+                            ),
+                            child: Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 18,
+                              color: lp.onVolt,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

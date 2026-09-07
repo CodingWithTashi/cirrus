@@ -143,4 +143,38 @@ describe('replyQuality', () => {
     expect(replyQuality('thanks')).toBeNull();
     expect(POST_QUALITY.minReplyChars).toBeLessThan(POST_QUALITY.minPostChars);
   });
+
+  it('refuses a reply that is only an address', () => {
+    // `@quietfox42` clears every floor above on its own — 11 characters, one
+    // word, 8 distinct letters — so without the mention-strip it published,
+    // and pushed somebody a poke with nothing in it on the one community
+    // notification kind that never collapses.
+    for (const bare of [
+      '@quietfox42',
+      '@quietfox42 ',
+      '@quietfox42 @brightmoth17',
+      '@quietfox42 !!!',
+    ]) {
+      expect(replyQuality(bare), bare).toBe('tooShort');
+    }
+  });
+
+  it('still accepts a tag with anything at all after it', () => {
+    // Measured on what is LEFT once the addresses come out, never on the
+    // words alone: `@quietfox42 yes` is an ordinary reply, and a gate that
+    // turns away a real reply costs more than the noise it filters.
+    for (const real of [
+      '@quietfox42 yes',
+      '@quietfox42 thanks, needed that',
+      'thanks @quietfox42',
+    ]) {
+      expect(replyQuality(real), real).toBeNull();
+    }
+  });
+
+  it('does not let an alias-shaped word rescue junk', () => {
+    // The strip runs first, so the letters an address contributes are gone
+    // before anything is counted.
+    expect(replyQuality('@quietfox42 ...')).toBe('tooShort');
+  });
 });

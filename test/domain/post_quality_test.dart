@@ -152,6 +152,46 @@ void main() {
         lessThan(PostQuality.minPostDistinctLetters),
       );
     });
+
+    test('refuses a reply that is only an address', () {
+      // `@quietfox42` clears every floor above on its own — 11 characters,
+      // one word, 8 distinct letters — so before the mention-strip it posted,
+      // and pushed somebody a poke with nothing in it on the one community
+      // notification kind that deliberately never collapses. The picker made
+      // this reachable in one tap, which is what turned it from a curiosity
+      // into a thing people would actually send.
+      for (final bare in [
+        '@quietfox42',
+        '@quietfox42 ',
+        '@quietfox42 @brightmoth17',
+        '@quietfox42 !!!',
+        '@quietfox42 ...',
+      ]) {
+        expect(
+          PostQuality.checkReply(bare),
+          PostQualityIssue.tooShort,
+          reason: '"$bare" is an address, not a message',
+        );
+      }
+    });
+
+    test('accepts a tag with anything at all after it', () {
+      // Measured on what is LEFT once the addresses come out, never on the
+      // words alone. "@quietfox42 yes" is an ordinary reply, and the rule
+      // this file exists to defend is that a gate turning away a real reply
+      // costs far more than the noise it filters.
+      for (final real in [
+        '@quietfox42 yes',
+        '@quietfox42 thanks, needed that',
+        'thanks @quietfox42',
+      ]) {
+        expect(
+          PostQuality.checkReply(real),
+          isNull,
+          reason: '"$real" is a perfectly good reply',
+        );
+      }
+    });
   });
 
   test('the thresholds are the ones the server enforces', () {

@@ -326,7 +326,7 @@ class CommunityStore extends Notifier<CommunityState> {
 
   /// The router gates every community path behind a live journey, so these
   /// fallbacks are unreachable. They are neutral rather than the seeded demo
-  /// identity ('@quietfox'/🦊) on purpose: if that gate ever slips, a post
+  /// identity ('@quietfox42'/🦊) on purpose: if that gate ever slips, a post
   /// should be obviously unattributed, not silently signed with a fixture's
   /// name.
   String get _myAlias =>

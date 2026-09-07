@@ -27,7 +27,7 @@ void main() {
       password: 'hunter22',
     );
     final journey = JourneyCodec.decode(json!);
-    expect(journey.profile.alias, '@quietfox');
+    expect(journey.profile.alias, '@quietfox42');
     expect(journey.plan.baselinePuffsPerDay, 200);
     expect(journey.plan.dayNumber(DateTime.now()), 12);
   });

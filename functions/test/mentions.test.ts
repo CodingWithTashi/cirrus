@@ -3,6 +3,7 @@ import {
   MAX_MENTIONS,
   parseMentions,
   resolveMentions,
+  stripMentions,
   type ThreadParticipant,
 } from '../src/domain/mentions';
 
@@ -45,6 +46,39 @@ describe('parseMentions', () => {
 
   it('returns nothing for empty text', () => {
     expect(parseMentions('')).toEqual([]);
+  });
+});
+
+describe('stripMentions', () => {
+  it('takes the addresses out and leaves the message', () => {
+    expect(stripMentions('@quietfox42 that line got me').trim()).toBe(
+      'that line got me',
+    );
+  });
+
+  it('leaves nothing behind for a reply that is only a tag', () => {
+    expect(stripMentions('@quietfox42').trim()).toBe('');
+    expect(stripMentions('@quietfox42 @calmotter9').trim()).toBe('');
+  });
+
+  it('is UNCAPPED, unlike parseMentions', () => {
+    // The two answer different questions. The cap is "how many will we
+    // honour"; this is "what is left once the addresses come out", and a
+    // sixth address is still an address — so a reply of nothing but eight
+    // tags must strip to nothing, not to three leftover tags.
+    const many = Array.from({length: 8}, (_, i) => `@aliasname${i}`).join(' ');
+    expect(parseMentions(many)).toHaveLength(MAX_MENTIONS);
+    expect(stripMentions(many).trim()).toBe('');
+  });
+
+  it('does not carry regex state between calls', () => {
+    // A module-level /g pattern would make the second call skip the start.
+    expect(stripMentions('@quietfox42 hi').trim()).toBe('hi');
+    expect(stripMentions('@quietfox42 hi').trim()).toBe('hi');
+  });
+
+  it('leaves text that is not alias-shaped alone', () => {
+    expect(stripMentions('email me@example.com')).toBe('email me@example.com');
   });
 });
 

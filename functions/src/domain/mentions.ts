@@ -74,6 +74,21 @@ export function parseMentions(text: string): string[] {
 }
 
 /**
+ * [text] with every mention-shaped token replaced by a space.
+ *
+ * **Uncapped, unlike [parseMentions].** This answers "what is left once the
+ * addresses are removed", which `replyQuality` asks in order to refuse a
+ * reply that is only tags — so a sixth tag has to come out too, even though
+ * this function's neighbour would never have honoured it.
+ *
+ * A fresh pattern for the same reason: a module-level /g regex carries
+ * `lastIndex` between calls, and `replace` with /g resets it only on success.
+ */
+export function stripMentions(text: string): string {
+  return text.replace(new RegExp(MENTION), ' ');
+}
+
+/**
  * The uids [text]'s mentions resolve to, excluding [authorUid] themselves.
  *
  * [participants] must be ordered oldest first — that ordering is what makes

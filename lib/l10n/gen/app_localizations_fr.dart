@@ -2341,6 +2341,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get communityAddVoice => 'Ajoute ta voix…';
 
   @override
+  String communityMentionTag(String alias) {
+    return 'Mentionner $alias';
+  }
+
+  @override
   String communityDayTag(int day) {
     return 'jour $day';
   }

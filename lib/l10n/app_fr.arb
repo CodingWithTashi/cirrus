@@ -678,6 +678,7 @@
   "communityTagRequired": "Choisis un tag — il route ton post vers les bonnes personnes.",
   "communitySosBanner": "🛡️ {count} personnes t'ont soutenu",
   "communityAddVoice": "Ajoute ta voix…",
+  "communityMentionTag": "Mentionner {alias}",
   "communityDayTag": "jour {day}",
   "communityEmptyTitle": "Pas encore de posts — dis bonjour.",
   "communityEmptyBody": "Ton post du Jour 1, c'est celui que quelqu'un au Jour 0 a besoin de lire.",

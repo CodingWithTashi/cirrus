@@ -33,7 +33,7 @@ void main() {
             as Map<String, dynamic>,
       );
       expect(decoded.days.length, 12);
-      expect(decoded.profile.alias, '@quietfox');
+      expect(decoded.profile.alias, '@quietfox42');
       expect(decoded.profile.whys, journey.profile.whys);
       expect(decoded.plan.baselinePuffsPerDay, 200);
       expect(decoded.plan.strength, NicStrength.mg50);
@@ -239,7 +239,7 @@ void main() {
     test('a user-authored post round-trips reactions and replies', () {
       final post = Post(
         id: 'p1',
-        alias: '@quietfox',
+        alias: '@quietfox42',
         avatarEmoji: '🦊',
         dayN: 12,
         tag: PostTag.sos,
@@ -250,7 +250,7 @@ void main() {
         replies: const [
           Reply(
             id: 'r1',
-            alias: '@nightbee',
+            alias: '@nightbee14',
             avatarEmoji: '🐝',
             text: 'hold the line',
           ),

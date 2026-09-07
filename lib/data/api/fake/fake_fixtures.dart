@@ -19,7 +19,7 @@ abstract final class FakeFixtures {
   static List<Post> _posts(DateTime now) => [
     Post(
       id: 'seed-win',
-      alias: '@embermaus',
+      alias: '@embermaus3',
       avatarEmoji: '🐭',
       dayN: 30,
       tag: PostTag.win,
@@ -29,7 +29,7 @@ abstract final class FakeFixtures {
     ),
     Post(
       id: 'seed-sos',
-      alias: '@slowturtle',
+      alias: '@slowturtle9',
       avatarEmoji: '🐢',
       dayN: 4,
       tag: PostTag.sos,
@@ -38,26 +38,26 @@ abstract final class FakeFixtures {
       replies: const [
         Reply(
           id: 'seed-sosReplyWalk',
-          alias: '@quietfox',
+          alias: '@quietfox42',
           avatarEmoji: '🦊',
           seedTextId: 'sosReplyWalk',
           isMine: true,
         ),
         Reply(
           id: 'seed-sosReplyScience',
-          alias: '@nightbee',
+          alias: '@nightbee14',
           avatarEmoji: '🐝',
           seedTextId: 'sosReplyScience',
         ),
         Reply(
           id: 'seed-sosReplyGatorade',
-          alias: '@owlish',
+          alias: '@owlish7',
           avatarEmoji: '🦉',
           seedTextId: 'sosReplyGatorade',
         ),
         Reply(
           id: 'seed-sosReplyUpdate',
-          alias: '@slowturtle',
+          alias: '@slowturtle9',
           avatarEmoji: '🐢',
           seedTextId: 'sosReplyUpdate',
           isOp: true,
@@ -66,7 +66,7 @@ abstract final class FakeFixtures {
     ),
     Post(
       id: 'seed-day1',
-      alias: '@cactusjuice',
+      alias: '@cactusjuice21',
       avatarEmoji: '🌵',
       dayN: 1,
       tag: PostTag.day1,
@@ -76,7 +76,7 @@ abstract final class FakeFixtures {
     ),
     Post(
       id: 'seed-vent',
-      alias: '@moonmoth',
+      alias: '@moonmoth8',
       avatarEmoji: '🦋',
       dayN: 9,
       tag: PostTag.vent,
@@ -86,7 +86,7 @@ abstract final class FakeFixtures {
     ),
     Post(
       id: 'seed-milestone',
-      alias: '@ironlung',
+      alias: '@ironlung55',
       avatarEmoji: '🐺',
       dayN: 14,
       tag: PostTag.milestone,
@@ -96,7 +96,7 @@ abstract final class FakeFixtures {
     ),
     Post(
       id: 'seed-win2',
-      alias: '@quietfox',
+      alias: '@quietfox42',
       avatarEmoji: '🦊',
       dayN: 12,
       tag: PostTag.win,

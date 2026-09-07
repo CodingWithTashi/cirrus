@@ -30,6 +30,8 @@
 /// published slur.
 library;
 
+import 'mentions.dart';
+
 enum CommunityRuleViolation {
   /// A slur or hate term — refused outright, on both sides.
   slur,
@@ -268,12 +270,29 @@ abstract final class PostQuality {
   /// The issue with [text] as a reply. Lower bar in every dimension: a reply
   /// is a nod as often as it is a paragraph, and refusing "thanks" would cost
   /// far more than the noise it filters.
-  static PostQualityIssue? checkReply(String text) => _check(
-    text,
-    minChars: minReplyChars,
-    minWords: 1,
-    minDistinctLetters: minReplyDistinctLetters,
-  );
+  static PostQualityIssue? checkReply(String text) {
+    // An @tag is an ADDRESS, not a message. `@nightbee14` clears every floor
+    // below on its own — 11 characters, one word, 8 distinct letters — so
+    // without this a bare tag publishes and pushes somebody a poke with
+    // nothing in it, on a kind of notification that deliberately never
+    // collapses.
+    //
+    // Asked of what is LEFT once the addresses come out, not of the words on
+    // their own: `@nightbee14 yes` is an ordinary reply and still publishes.
+    // "No letter left" rather than "nothing left" because `@nightbee14 !!!`
+    // and `@nightbee14 @owlish7` are the same non-message.
+    //
+    // Mirrored by `replyQuality` in `functions/src/ai/prefilter.ts`.
+    if (!_letter.hasMatch(LpMentions.strip(text))) {
+      return PostQualityIssue.tooShort;
+    }
+    return _check(
+      text,
+      minChars: minReplyChars,
+      minWords: 1,
+      minDistinctLetters: minReplyDistinctLetters,
+    );
+  }
 
   static PostQualityIssue? _check(
     String text, {

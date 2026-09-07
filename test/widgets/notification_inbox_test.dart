@@ -81,14 +81,16 @@ void main() {
     ProviderContainer container,
     String postId, {
     String replyId = 'r1',
+    String alias = '@brightmoth17',
+    String text = 'this helped me too',
   }) async {
     final pending = container.read(communityRepositoryProvider).addReply(
       postId,
       Reply(
         id: replyId,
-        alias: '@brightmoth17',
+        alias: alias,
         avatarEmoji: '🦋',
-        text: 'this helped me too',
+        text: text,
       ),
     );
     await tester.pumpAndSettle();
@@ -125,6 +127,72 @@ void main() {
 
     expect(container.read(notificationsStoreProvider).items, hasLength(1));
     expect(container.read(notificationsStoreProvider).unread, 1);
+  });
+
+  testWidgets('a reply that tags somebody else is not my news', (tester) async {
+    // The demo backend mirrors `notifyReply`'s branch: a reply that names
+    // people is addressed to THEM, so the post's author is not told. Marking
+    // read first is what makes it visible — the inbox is keyed by thread, so
+    // a wrongly-filed row shows up as the badge coming back rather than as a
+    // second line.
+    final container = await openHome(tester);
+    final postId = await myPost(tester, container);
+    await replyTo(tester, container, postId);
+    container.read(notificationsStoreProvider.notifier).markAllRead();
+    await tester.pumpAndSettle();
+    expect(container.read(notificationsStoreProvider).unread, 0);
+
+    await replyTo(
+      tester,
+      container,
+      postId,
+      replyId: 'r2',
+      alias: '@calmotter9',
+      text: '@brightmoth17 that is exactly it',
+    );
+
+    expect(container.read(notificationsStoreProvider).unread, 0);
+    expect(container.read(notificationsStoreProvider).items, hasLength(1));
+  });
+
+  testWidgets('a reply that tags ME arrives as a mention, on its own row', (
+    tester,
+  ) async {
+    // A mention is the one community notification that never collapses, so it
+    // is keyed by the reply rather than by the thread.
+    final container = await openHome(tester);
+    final postId = await myPost(tester, container);
+    await replyTo(tester, container, postId);
+    await replyTo(
+      tester,
+      container,
+      postId,
+      replyId: 'r2',
+      alias: '@calmotter9',
+      text: '@quietfox42 how did week 2 go',
+    );
+
+    final items = container.read(notificationsStoreProvider).items;
+    expect(items, hasLength(2));
+    expect(items.map((n) => n.kind), contains('communityMention'));
+    expect(items.where((n) => n.id == 'mention:r2'), hasLength(1));
+  });
+
+  testWidgets('answering my own post tells me nothing', (tester) async {
+    // The server compares uids; the fake has one session, so an alias match
+    // asks the same question. Either way, being told about yourself is the
+    // first thing `notifyReply` refuses to do.
+    final container = await openHome(tester);
+    final postId = await myPost(tester, container);
+    await replyTo(
+      tester,
+      container,
+      postId,
+      alias: '@quietfox42',
+      text: 'update: still here, still ok',
+    );
+
+    expect(container.read(notificationsStoreProvider).items, isEmpty);
   });
 
   testWidgets('tapping the bell opens the inbox and clears the badge', (

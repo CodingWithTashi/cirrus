@@ -678,6 +678,7 @@
   "communityTagRequired": "Wähl einen Tag — er bringt deinen Post zu den richtigen Leuten.",
   "communitySosBanner": "🛡️ {count} Leute waren für dich da",
   "communityAddVoice": "Gib deine Stimme dazu…",
+  "communityMentionTag": "{alias} erwähnen",
   "communityDayTag": "Tag {day}",
   "communityEmptyTitle": "Noch keine Posts — sag Hallo.",
   "communityEmptyBody": "Dein Tag-1-Post ist genau der, den jemand an Tag 0 lesen muss.",

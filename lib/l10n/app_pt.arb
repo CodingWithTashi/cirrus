@@ -678,6 +678,7 @@
   "communityTagRequired": "Escolhe uma etiqueta — leva o teu post às pessoas certas.",
   "communitySosBanner": "🛡️ {count} pessoas apoiaram-te",
   "communityAddVoice": "Junta a tua voz…",
+  "communityMentionTag": "Mencionar {alias}",
   "communityDayTag": "dia {day}",
   "communityEmptyTitle": "Ainda não há posts — diz olá.",
   "communityEmptyBody": "O teu post do Dia 1 é o que alguém no Dia 0 precisa de ler.",

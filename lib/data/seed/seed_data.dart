@@ -4,7 +4,7 @@ import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 
 /// Demo account used by "Sign in" (a returning user restoring their journey):
-/// Maya / @quietfox, day 12 of a 30-day taper off 200 puffs/day — the same
+/// Maya / @quietfox42, day 12 of a 30-day taper off 200 puffs/day — the same
 /// journey every design frame depicts. All derived numbers (money, streak,
 /// nicotine) come from the real engines, never hardcoded.
 abstract final class SeedData {
@@ -73,7 +73,7 @@ abstract final class SeedData {
 
     return JourneyState(
       profile: const UserProfile(
-        alias: '@quietfox',
+        alias: '@quietfox42',
         avatarEmoji: '🦊',
         email: 'maya@quitmail.com',
         gender: Gender.woman,

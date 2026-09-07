@@ -21,6 +21,7 @@
  *   (n1gger → nigger). The original text is never altered — normalization is
  *   for matching only.
  */
+import {stripMentions} from '../domain/mentions';
 import type {Verdict} from './moderation';
 
 /**
@@ -235,6 +236,20 @@ export function postQuality(text: string, sos = false): PostQualityIssue | null 
 
 /** The issue with [text] as a reply. Lower bar in every dimension. */
 export function replyQuality(text: string): PostQualityIssue | null {
+  // An @tag is an ADDRESS, not a message. `@nightbee14` clears every floor
+  // below on its own — 11 characters, one word, 8 distinct letters — so
+  // without this a bare tag publishes and pushes somebody a poke with nothing
+  // in it, on a kind of notification that deliberately never collapses.
+  //
+  // Asked of what is LEFT once the addresses come out, not of the words on
+  // their own: `@nightbee14 yes` is an ordinary reply and still publishes.
+  // "No letter left" rather than "nothing left" because `@nightbee14 !!!` and
+  // `@nightbee14 @owlish7` are the same non-message.
+  //
+  // Mirrored by `PostQuality.checkReply` in `lib/domain/logic/
+  // community_rules.dart`.
+  if (!/\p{L}/u.test(stripMentions(text))) return 'tooShort';
+
   return checkQuality(
     text,
     POST_QUALITY.minReplyChars,

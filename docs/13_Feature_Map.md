@@ -21,7 +21,7 @@
 
 **Accounts to test with**
 
-- **Fake backend, day-12 Premium persona:** log in with any email (the field pre-fills `maya@quitmail.com`), password **≥ 6 chars**. A password under 6 chars is the "wrong password" path. Restores Maya / @quietfox, day 12 of a 30-day taper, **Premium**.
+- **Fake backend, day-12 Premium persona:** log in with any email (the field pre-fills `maya@quitmail.com`), password **≥ 6 chars**. A password under 6 chars is the "wrong password" path. Restores Maya / @quietfox42, day 12 of a 30-day taper, **Premium**.
 - **Fake backend, fresh free account:** *Continue with email* → register. New accounts start with **no entitlement** — the only way to see Free gating on the fake backend. Registering `maya@quitmail.com` is refused as already-in-use (deliberate).
 - **Real Firebase:** register, or Google (Android) / Apple (iOS). Tier comes from RevenueCat.
 
@@ -190,6 +190,7 @@
 | 81 | **Post status** 🔥 | Four honest states for your own post: `pending` (spinner, seconds), `held` (a human is looking), `blocked`, `failed` (retry on the row). Retry is safe — posting is idempotent on the client id. | Airplane mode → post → *failed* → retry online. |
 | 82 | **Post detail + replies** | Open a post, reply, and see the backup count — real replies plus reactions; zero renders nothing. Replies are ordered oldest-first, so "3 new replies" sends you somewhere the new ones actually are. | Reply with `thanks`; replies have a much looser floor (6 chars, no word minimum). |
 | 82a | **Opening one post directly** 🔥 | A notification names a post the feed may never have loaded — the feed is one page of 50, and a reply can arrive days later. The screen fetches it, and shows loading, a retry, or "that thread is gone" instead of the blank screen it used to render. | Deep-link a post id that is not in the feed. |
+| 82b | **@-mention picker** | Type `@` in a reply and the people already in that thread are offered with their avatars — the author first, deduped, never yourself, never anyone you blocked. Selecting inserts plain text. Everything comes from the thread in memory: no lookup, no index, and no global alias table, because an alias identifies a voice in a conversation and not a person. | Open a thread, type `@`, then `@n`; tap a suggestion. A reply that is *only* a tag will not send. |
 | 83 | **Reactions** | Emoji pills, one per person, your own outlined. | Tap twice → toggles off. |
 | 84 | **Report / mute / block** | Per-post menu; three reports auto-hide a post. Your own posts show no menu. | Report one post, then check a *different* post is unaffected. |
 | 85 | **Moderation queue** (`/moderation`, Admin) 🔥 | The founder's review queue. No decision looks applied until the server confirms it. | Only visible with the `admin` claim; the Settings row is absent otherwise. |
@@ -249,7 +250,8 @@ you. The two halves obey different rules and are configured in different places.
 |---|---|---|---|
 | 109 | **Reply notification** | Somebody replies to your post and you hear about it. Was SOS-only until Sep 6 2026. | Post, reply from a second account, watch the phone. |
 | 110 | **Grouped, not repeated** 🔥 | Twenty replies is not twenty notifications. The server throttles to at most four buzzes per burst, and every one carries the same tag so it **replaces** the shade line rather than stacking — the last one reads "20 new replies." | `node tool/push_probe.mjs burst` → **one** row in the shade, counting up. |
-| 111 | **Mentions** | Typing `@quietfox42` in a reply notifies that person, on its own line rather than folded into a thread count. Resolved against the people already in the thread, first claimant wins — so replying under somebody's alias cannot steal or kill their mentions. | Reply naming another participant's alias. |
+| 111 | **Mentions** | Tagging somebody in a reply notifies that person, on its own line rather than folded into a thread count. Resolved against the people already in the thread, first claimant wins — so replying under somebody's alias cannot steal or kill their mentions. The picker is row 82b. | Reply naming another participant's alias. |
+| 111a | **A named reply is addressed to them** | A reply that names people notifies **only** those people — the post's author hears nothing unless they were named. A reply naming nobody notifies the author as before. **An SOS is exempt**: its author always hears, because the content of that notification is how many people came. | Two accounts on one thread: tag the other one, and the author gets nothing. Repeat on an SOS post — the author still hears. |
 | 112 | **Never yourself, never twice** | Replying to your own post notifies nobody. A reply that was reported, hidden, then approved does not announce itself a second time. | Reply to your own post; nothing arrives. |
 | 113 | **Quiet hours** | Between your quiet hours a reply arrives **silently** rather than not at all — a second, low-importance Android channel, `interruption-level: passive` on iOS. An SOS reply always rings; that is the hour it exists for. | `node tool/push_probe.mjs quiet` → lands on `community_replies_quiet`. |
 | 114 | **Deep link** | The tap opens the thread itself, not the feed. Works from cold start: the destination waits for the splash instead of racing it. | Kill the app, tap → lands on the post, back chevron returns to the feed. |
@@ -331,3 +333,4 @@ you. The two halves obey different rules and are configured in different places.
 |---|---|
 | Sep 4, 2026 | Created — 120 features mapped from `lib/features/`, the router and the domain layer at commit `9ddb382`. |
 | Sep 6, 2026 | §14 renamed and gained 114b / 114c / 114d — the Apple Watch app, its watch-face complication and the wrist's own no-session guard (docs/10 §29). §16 gained four rows for what the watch deliberately does not do. |
+| Sep 7, 2026 | §10 gained 82b — the @-mention picker, which is what made the deployed mention pipeline reachable at all. §13 gained 111a: a named reply now notifies only the people it names, SOS exempt. The demo aliases gained the digits a real one has, so the picker works on the fake backend (docs/10 §32). |

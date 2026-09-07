@@ -17,6 +17,9 @@
  *   reply itself is the marker. It lives there rather than on the thread's
  *   collapse state because the collapse group has long since expired by then,
  *   and because one field that cannot grow beats a list that can.
+ * * **Tell the author about a reply aimed at somebody else.** A reply that
+ *   names people is addressed to them, so on an ordinary post they are the
+ *   only ones told. An SOS is exempt; see the branch for why.
  * * **Collapse an SOS.** See `pushKinds.ts`.
  */
 import {COMMUNITY_PUSH} from '../config';
@@ -115,13 +118,26 @@ export async function notifyReply(
       );
     }
 
-    // The author hears about it unless they wrote it, or unless they were
-    // already told by name — a mention is the more specific fact, and two
-    // notifications for one reply is the noise this whole design exists to
-    // avoid.
+    // A reply that names people is ADDRESSED to those people, so on an
+    // ordinary post they are the only ones told. The author still hears when
+    // they were named — as the mention, never twice — and whenever the reply
+    // names nobody at all.
+    //
+    // The cost, accepted deliberately (founder call, Sep 7 2026): a third
+    // party can cut an author out of their own thread by tagging somebody
+    // else. Collapse already held a busy thread to two-to-four buzzes, so the
+    // author was never being spammed; this is a narrowing, not de-noising.
+    //
+    // **An SOS is exempt, and that exemption is the whole of `sosReply`.**
+    // The content of that notification is HOW MANY PEOPLE CAME — see
+    // `pushKinds.ts`, which refuses to collapse or silence it for the same
+    // reason. One helper tagging another helper would otherwise silence the
+    // person who asked for help, at the one moment this feature exists for.
+    const addressedElsewhere = !isSos && mentioned.length > 0;
     if (
       authorUid !== null &&
       authorUid !== replierUid &&
+      !addressedElsewhere &&
       !mentioned.includes(authorUid)
     ) {
       await notifyAuthor(authorUid, postId, isSos, nowMs);

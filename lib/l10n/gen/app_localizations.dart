@@ -3817,6 +3817,12 @@ abstract class AppLocalizations {
   /// **'Add your voice…'**
   String get communityAddVoice;
 
+  /// Screen-reader label for one suggestion in the reply composer's @-mention strip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag {alias}'**
+  String communityMentionTag(String alias);
+
   /// No description provided for @communityDayTag.
   ///
   /// In en, this message translates to:

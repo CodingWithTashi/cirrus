@@ -445,6 +445,92 @@ describe('notifyReply', () => {
     expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(3);
   });
 
+  /**
+   * Adds a live reply by [alias] to the thread, so there is somebody other
+   * than the author to tag.
+   *
+   * `thread()` writes no `createdAt`, so `millisOf` answers 0 for everything
+   * it seeds and the in-memory sort carrying the first-claimant rule becomes
+   * a no-op. Anything added here says when it was written.
+   */
+  async function voice(
+    id: string,
+    alias: string,
+    uid: string,
+    atMs: number,
+  ): Promise<void> {
+    await postsCol().doc('p1').collection('replies').doc(id).set({
+      alias,
+      text: 'I am here',
+      status: 'live',
+      createdAt: new Date(atMs),
+    });
+    await db.collection('replyAuthors').doc(id).set({uid, postId: 'p1'});
+  }
+
+  it('a reply tagging another participant leaves the author out of it', async () => {
+    // The narrowing (founder call, Sep 7 2026): a reply that names people is
+    // ADDRESSED to them, so on an ordinary post they are the only ones told.
+    // This used to produce TWO notifications for one reply — the tag to the
+    // person named, and the author's ordinary reply push alongside it.
+    //
+    // The accepted cost is that a third party can cut an author out of their
+    // own thread by tagging somebody else. Collapse already held a busy
+    // thread to two-to-four buzzes, so the author was never being spammed.
+    const ref = await thread({
+      replyId: 'rC',
+      replyAlias: '@calmotter9',
+      replier: 'otter',
+      replyText: '@brightmoth17 how did week 2 go',
+    });
+    await voice('rB', '@brightmoth17', 'moth', 1_000);
+    await publish(ref);
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toBe('moth');
+    expect(calls[0]?.[1]).toBe('communityMention');
+  });
+
+  it('a reply naming two people notifies both, once each', async () => {
+    const ref = await thread({
+      replyId: 'rC',
+      replyAlias: '@calmotter9',
+      replier: 'otter',
+      replyText: '@quietfox42 @brightmoth17 both of you got me through it',
+    });
+    await voice('rB', '@brightmoth17', 'moth', 1_000);
+    await publish(ref);
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls.map((c) => c[0]).sort()).toEqual(['author1', 'moth']);
+    // The author hears it as the tag it was, never as a second reply push.
+    expect(calls.every((c) => c[1] === 'communityMention')).toBe(true);
+  });
+
+  it('an SOS author still hears when one helper tags another', async () => {
+    // The one exemption from the narrowing above, and it is the whole of
+    // `sosReply`: the content of that notification is HOW MANY PEOPLE CAME.
+    // `pushKinds.ts` refuses to collapse or silence it for the same reason.
+    // Without this, one helper answering another would silence the person
+    // who asked for help, at the exact moment the feature exists for.
+    const ref = await thread({
+      tag: 'sos',
+      replyId: 'rC',
+      replyAlias: '@calmotter9',
+      replier: 'otter',
+      replyText: '@brightmoth17 agreed, walk it off',
+    });
+    await voice('rB', '@brightmoth17', 'moth', 1_000);
+    await publish(ref);
+
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls.find((c) => c[0] === 'moth')?.[1]).toBe('communityMention');
+    expect(calls.find((c) => c[0] === 'author1')?.[1]).toBe('sosReply');
+  });
+
   it('notifies the person a reply tags, and not twice over', async () => {
     // The mention is the more specific fact, so it replaces the author's
     // ordinary reply push rather than arriving alongside it.
