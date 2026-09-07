@@ -12,6 +12,10 @@ authorTitle: Content Writer
 image: /og/best-quit-vaping-apps.png
 imageAlt: Three quit vaping apps compared on a dark card - Cirrus, Puff Count and Kwit, with their annual prices
 
+heroImage: ./best-quit-vaping-apps/best-quit-vaping-apps-compared.jpeg
+heroImageAlt: Three friends leaning in around one phone on a sofa, comparing quit vaping apps on the screen together.
+heroImageCaption: Three apps, one question. Platform narrows it faster than any feature list does - and the free tier decides the rest.
+
 takeaways:
   - Only two of the three count individual puffs. Kwit tracks consumption and cravings, which is a different job done well.
   - Platform decides this for most people. Puff Count is iPhone only, Cirrus is Android first, Kwit is on both.

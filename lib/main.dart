@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app_errors.dart';
 import 'app/last_puff_app.dart';
 import 'data/api/firebase/app_check_setup.dart';
+import 'data/api/firebase/push_service.dart';
 import 'data/backend_mode.dart';
 import 'data/repositories/revenuecat_billing_repository.dart';
 import 'firebase_options.dart';
@@ -34,6 +35,10 @@ Future<void> main() async {
     // Deliberately not awaited: a diagnostic must not sit in front of the
     // first frame. It only ever prints.
     unawaited(logAppCheckStatus());
+    // The same diagnostic, for the same reason, on the chain that is even
+    // quieter: a device that can never receive a push looks exactly like one
+    // that can. See `logPushStatus`.
+    unawaited(logPushStatus());
     // Inside the Firebase guard for the same reason everything else is: the
     // fake backend, desktop and every widget test must never touch a store
     // SDK's platform channel. Never throws — see `configure`.

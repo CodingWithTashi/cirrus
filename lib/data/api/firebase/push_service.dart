@@ -284,3 +284,76 @@ abstract final class PushService {
       status == AuthorizationStatus.authorized ||
       status == AuthorizationStatus.provisional;
 }
+
+/// Prints where this device stands in the push chain, stage by stage.
+///
+/// The counterpart of `logAppCheckStatus()`, and it exists for the same
+/// reason: **every failure in this chain is silent.** The permission sheet
+/// appears and reports `granted`, the app installs and runs, and a device
+/// that will never receive a single push is indistinguishable from one that
+/// works — because the failure of a push is silence, and silence looks like
+/// nothing. `ios_push_test.dart` opens by saying exactly that; this is what
+/// lets someone holding the phone tell the stages apart.
+///
+/// The three stages are checked in the order iOS requires them:
+///
+/// 1. **Permission.** Nothing downstream is even attempted without it.
+/// 2. **The APNs device token** (iOS only). This is the stage with no error
+///    of its own: `registerForRemoteNotifications` failing only NSLogs, and
+///    the FCM refusal that follows is caught into the same `null`
+///    [tokenOrNull] uses for "the user declined".
+/// 3. **The FCM registration token.** Without one, no `users/{uid}/devices`
+///    row is ever written and every server send has nothing to send to.
+///
+/// Never throws and never prompts — it reads permission before it asks for
+/// anything, so it cannot trigger the OS sheet the pre-permission screen
+/// exists to precede.
+Future<void> logPushStatus() async {
+  final permission = await PushService.permissionStatus();
+  if (permission != PushPermission.granted) {
+    debugPrint(
+      'push: permission is ${permission.name} — no token will be fetched, '
+      'and nothing this app can do changes that from here.',
+    );
+    return;
+  }
+
+  final messaging = FirebaseMessaging.instance;
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    String? apns;
+    try {
+      apns = await messaging.getAPNSToken();
+    } on Object catch (error) {
+      debugPrint('push: APNs token lookup threw — $error');
+    }
+    if (apns == null) {
+      // Registration has had the whole launch to complete by now, so this is
+      // not the "half a second early" race `_apnsReady` waits out.
+      debugPrint(
+        'push: NO APNs TOKEN. iOS never handed one to FCM, so no FCM token '
+        'can be minted and this device can receive nothing. Check that '
+        'Runner.entitlements declares aps-environment, that the App ID has '
+        'the Push Notifications capability, and that the messaging plugin '
+        'actually called registerForRemoteNotifications on this launch.',
+      );
+      return;
+    }
+    debugPrint('push: APNs token acquired (${apns.length} chars).');
+  }
+
+  try {
+    final token = await messaging.getToken();
+    if (token == null || token.isEmpty) {
+      debugPrint('push: NO FCM TOKEN — no device row can be registered.');
+      return;
+    }
+    // A registration token is a credential — anyone holding one can push to
+    // this device — so only its shape is printed, never the token.
+    debugPrint(
+      'push: FCM token acquired (${token.length} chars, '
+      '…${token.substring(token.length - 6)}).',
+    );
+  } on Object catch (error) {
+    debugPrint('push: FCM token request failed — $error');
+  }
+}
