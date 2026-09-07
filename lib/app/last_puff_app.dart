@@ -376,6 +376,11 @@ class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
         // and burn a refused callable on every single resume.
         if (ref.read(quitStoreProvider) != null) {
           ref.read(userContextRepositoryProvider).sync().ignore();
+          // Separately, and not as a side effect of the line above: a resume
+          // is when the token may have rotated while the app was away, and
+          // when permission may have been granted in system settings — which
+          // the app is never told about. The registrar checks and retries.
+          ref.read(pushTokenRegistrarProvider).onResume();
         }
         // The same problem this widget already solves for plan advice: a
         // process Android froze overnight comes back on yesterday's date, and

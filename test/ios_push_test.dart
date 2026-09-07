@@ -27,6 +27,9 @@ void main() {
   final infoPlist = read('ios/Runner/Info.plist');
   final pbxproj = read('ios/Runner.xcodeproj/project.pbxproj');
   final service = read('lib/data/api/firebase/push_service.dart');
+  final appDelegate = read('ios/Runner/AppDelegate.swift');
+  final store = read('lib/data/stores/journey_store.dart');
+  final registrar = read('lib/data/stores/push_token_registrar.dart');
 
   /// The `<string>` immediately following [key] in a plist.
   String? valueOf(String plist, String key) => RegExp(
@@ -167,6 +170,89 @@ void main() {
         code(service),
         contains('if (defaultTargetPlatform != TargetPlatform.android) return;'),
       );
+    });
+  });
+
+  group('AppDelegate', () {
+    test('starts the APNs round trip itself', () {
+      // The bug this pins: push was completely dead on iOS while Android
+      // worked, because NOTHING called `registerForRemoteNotifications`.
+      //
+      // It looks handled twice over and is not. `Messaging#requestPermission`
+      // — the call behind every permission CTA, and the reason iOS Settings
+      // says "Allow" — only calls `UNUserNotificationCenter
+      // .requestAuthorization`; it never registers for remote notifications.
+      // And the plugin's own call sits in
+      // `setupNotificationHandlingWithRemoteNotification:`, which runs off
+      // `UIApplicationDidFinishLaunchingNotification` or the scene-delegate
+      // connection — while this app registers its plugins from
+      // `didInitializeImplicitFlutterEngine`, by which time the launch
+      // notification has already been posted.
+      //
+      // Without it: no APNs token, so no FCM token, so no
+      // `users/{uid}/devices` row, so every server send finds an empty token
+      // list and returns without a log line. Silent at every stage.
+      expect(
+        code(appDelegate),
+        contains('registerForRemoteNotifications()'),
+        reason: 'nothing else in the app starts the APNs round trip',
+      );
+    });
+
+    test('hands the APNs token to FCM itself', () {
+      // Registering is only half of it. The plugin's `GULAppDelegateSwizzler`
+      // interception is installed by the same setup pass that was never
+      // running, so leaving the answer to it would fix the call above and
+      // still drop the token on the floor.
+      expect(code(appDelegate), contains('Messaging.messaging().apnsToken'));
+      expect(
+        code(appDelegate),
+        contains('didRegisterForRemoteNotificationsWithDeviceToken'),
+      );
+    });
+
+    test('says so when APNs registration fails', () {
+      // The plugin's handler only NSLogs, and downstream the failure is
+      // indistinguishable from "the user declined" — `tokenOrNull()` catches
+      // the FCM refusal into the same null.
+      expect(
+        code(appDelegate),
+        contains('didFailToRegisterForRemoteNotificationsWithError'),
+      );
+    });
+  });
+
+  group('PushTokenRegistrar', () {
+    test('holds a token that arrives before the session does', () {
+      // `onTokenRefresh` fires within milliseconds of launch, while
+      // `restoreSession()` is still in flight — so `if (state == null)
+      // return;` caught the ordinary cold start as well as the signed-out
+      // case it was written for. The token it discarded is the one a
+      // REINSTALL mints, which is exactly when the server is holding a stale
+      // one, so the device went unreachable until something else happened to
+      // call `sync()`. Behaviour is proved in
+      // `test/data/push_token_registrar_test.dart`; this pins that the store
+      // no longer owns it, because a second owner is how it drifts back.
+      expect(code(registrar), contains('_pending'));
+      expect(
+        code(store),
+        isNot(contains('userContextRepositoryProvider).sync(fcmToken:')),
+        reason: 'the token belongs to the registrar, which retries',
+      );
+    });
+
+    test('retries rather than giving up', () {
+      // The whole point. Seven fire-and-forget call sites each `.ignore()`d
+      // their own failure, so a token that could not be read or sent at the
+      // instant one of them ran was never sent at all.
+      expect(code(registrar), contains('_scheduleRetry()'));
+      expect(code(registrar), contains('retryDelays'));
+    });
+
+    test('tells a refusal apart from an APNs token that is merely late', () {
+      // Retrying a decline is pointless and, on Android, actively harmful.
+      // Not retrying a late APNs token is the iOS bug itself.
+      expect(code(registrar), contains('PushPermission.granted'));
     });
   });
 }

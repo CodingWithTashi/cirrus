@@ -278,9 +278,27 @@ class SettingsStore extends Notifier<SettingsState> {
   ///   and is what actually guarantees this device hears nothing;
   /// * the preference is mirrored to `users/{uid}`, which is best effort and
   ///   is what stops us pushing again after the next sign-in mints a token.
+  /// Turning it back ON has to mint and register a NEW token, because
+  /// turning it off destroyed the old one. `deleteToken()` is not a
+  /// preference — it throws the registration away — so without this the
+  /// switch was one-way in practice: the server's row was gone, the local
+  /// token was gone, and nothing re-registered until the app happened to be
+  /// backgrounded and resumed. "I turned notifications back on and still get
+  /// nothing" is the same silence as the original bug, arrived at from a
+  /// different direction.
+  ///
+  /// `forget()` first in both directions: whatever we believed the server
+  /// held stopped being true the moment the token was deleted, and the
+  /// registrar must not skip the re-register as redundant.
   void setNotifications(bool on) {
     _commit(state.copyWith(notificationsOn: on));
-    if (!on) PushService.deleteToken().ignore();
+    final registrar = ref.read(pushTokenRegistrarProvider);
+    registrar.forget();
+    if (on) {
+      registrar.onPermissionGranted();
+    } else {
+      PushService.deleteToken().ignore();
+    }
     _syncPushPrefs();
   }
 

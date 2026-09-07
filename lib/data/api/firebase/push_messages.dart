@@ -31,6 +31,24 @@ abstract interface class PushMessages {
   /// device and the failure is indistinguishable from having nothing to say.
   Stream<String> get onTokenRefresh;
 
+  /// This device's current FCM registration token, or null when there is
+  /// none to have.
+  ///
+  /// On the seam for the same reason the streams are: [PushTokenRegistrar]
+  /// is the one thing standing between "signed in" and "reachable", and a
+  /// registrar that could only be exercised on a real device would be a
+  /// registrar nothing tests.
+  Future<String?> token();
+
+  /// Whether the OS has granted notification permission.
+  ///
+  /// The registrar needs this to tell two very different nulls from [token]
+  /// apart: **"the user declined"**, which is final and must never be
+  /// retried, and **"iOS has not handed APNs' token to FCM yet"**, which is
+  /// temporary and must be. Collapsing them is what let a device that was
+  /// merely half a second early look exactly like one that had opted out.
+  Future<PushPermission> permission();
+
   /// Creates the Android channels a background push lands in.
   ///
   /// On the seam rather than called statically so a test double no-ops:
@@ -56,6 +74,12 @@ class FirebasePushMessages implements PushMessages {
 
   @override
   Stream<String> get onTokenRefresh => PushService.onTokenRefresh;
+
+  @override
+  Future<String?> token() => PushService.tokenOrNull();
+
+  @override
+  Future<PushPermission> permission() => PushService.permissionStatus();
 
   @override
   Future<void> ensureChannels() => PushService.ensureAndroidChannels();

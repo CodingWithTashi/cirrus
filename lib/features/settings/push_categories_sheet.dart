@@ -161,12 +161,14 @@ class _PushCategoriesSheetState extends ConsumerState<_PushCategoriesSheet> {
                           // Register the freshly minted token now; the
                           // alternative is the next resume or cold start, and
                           // somebody who came here deliberately should not
-                          // have to relaunch.
+                          // have to relaunch. Through the registrar because
+                          // on iOS the token is usually not available yet at
+                          // the instant the sheet returns — see the same CTA
+                          // in onboarding.
                           if (granted) {
                             ref
-                                .read(userContextRepositoryProvider)
-                                .sync()
-                                .ignore();
+                                .read(pushTokenRegistrarProvider)
+                                .onPermissionGranted();
                           }
                           final next = await PushService.permissionStatus();
                           if (!mounted) return;

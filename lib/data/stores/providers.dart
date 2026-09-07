@@ -33,6 +33,7 @@ import '../api/firebase/push_messages.dart';
 import '../repositories/fake_notifications_repository.dart';
 import '../repositories/firebase_notifications_repository.dart';
 import 'notifications_store.dart';
+import 'push_token_registrar.dart';
 import '../api/firebase/reminder_scheduler.dart';
 import 'reminder_coordinator.dart';
 import '../repositories/firebase_coach_repository.dart';
@@ -408,6 +409,19 @@ final pushMessagesProvider = Provider<PushMessages?>(
     BackendMode.firebase => const FirebasePushMessages(),
   },
 );
+
+/// The one owner of "a signed-in device is reachable by push".
+///
+/// Everything that could make that false — a session appearing, a resume, a
+/// permission grant, a token rotation — calls into this and forgets; it
+/// retries until the server actually holds the token. See
+/// [PushTokenRegistrar] for why seven fire-and-forget call sites were seven
+/// silent single points of failure.
+final pushTokenRegistrarProvider = Provider<PushTokenRegistrar>((ref) {
+  final registrar = PushTokenRegistrar(ref);
+  ref.onDispose(registrar.dispose);
+  return registrar;
+});
 
 /// Whether a tapped notification is waiting for the splash to get out of the
 /// way.

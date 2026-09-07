@@ -57,7 +57,7 @@ Future<void> maybeAskPushPermission(
   // Register the freshly minted token now: the alternative is waiting for the
   // next resume or cold start, which loses the first day of replies — exactly
   // the day the post they just wrote is being answered.
-  if (granted) ref.read(userContextRepositoryProvider).sync().ignore();
+  if (granted) ref.read(pushTokenRegistrarProvider).onPermissionGranted();
 }
 
 class _AskSheet extends StatelessWidget {
