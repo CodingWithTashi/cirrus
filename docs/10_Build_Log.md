@@ -4262,6 +4262,23 @@ thread; pull down on the phone and it arrives, without leaving the screen.
 
 `flutter analyze` 0 · `flutter test` **1712/1712**.
 
+**And the third way in.** A push that arrives while you are already reading the
+thread it is about used to offer "Open" — which ends in `_router.push`, so it
+would have stacked a SECOND identical copy of the thread on top of the one being
+read: same content, an extra back press to escape, and the new reply in neither
+copy, since neither re-reads on its own. It now says **Refresh** and re-reads in
+place, calling the same `ensurePost` the pull gesture and the notification tap
+call. One code path, three ways in, and they cannot drift apart.
+
+`pushRefresh` is the one new string, in all five locales. The branch is narrow on
+purpose: `_postIdOf` answers null for anything that is not `/community/post/{id}`,
+because a thread is the only destination with something to re-read — Home,
+Insight and Coach rebuild from live providers already, so offering them a Refresh
+would be a button that does nothing visible. `_isCurrentRoute` compares PATHS,
+not the whole location, or the paywall's `?from=` and the arena's `?g=` would
+make the screen you are looking at read as a different one.
+
+
 **Still open, and it is a product call rather than a bug.** The push says
 "Someone replied / Go see what they said." — never the alias, never the text.
 That is deliberate: `pushCopy.ts` documents "no user text ever appears here… a

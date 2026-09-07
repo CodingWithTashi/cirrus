@@ -508,15 +508,22 @@ class _PushSyncState extends ConsumerState<_PushSync> {
         // ways in.
         if (_isCurrentRoute(route)) {
           final postId = _postIdOf(route);
+          // No thread to re-read — an insight or a Home nudge naming the
+          // screen already open. `showLpSnack` substitutes `onPressed:
+          // onAction ?? () {}`, so passing a label with a null action would
+          // draw a Refresh button that does literally nothing. The banner
+          // still says what happened; it just does not pretend to be
+          // actionable.
+          if (postId == null) {
+            showLpSnack(context, body);
+            return;
+          }
           showLpSnack(
             context,
             body,
             actionLabel: context.l10n.pushRefresh,
-            onAction: postId == null
-                ? null
-                : () => ref
-                      .read(communityStoreProvider.notifier)
-                      .ensurePost(postId),
+            onAction: () =>
+                ref.read(communityStoreProvider.notifier).ensurePost(postId),
           );
           return;
         }

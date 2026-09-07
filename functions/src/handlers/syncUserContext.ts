@@ -190,14 +190,30 @@ export const syncUserContext = onCall(
 
     const seen = readIdsFrom(data['readThreads'], MAX_READ_THREADS);
     if (seen.length > 0) {
-      const batch = db.batch();
-      const seenAtMs = Date.now();
-      for (const postId of seen) {
-        // `merge`, and only this field: the rest of the row is collapse
-        // state that the client has no business overwriting.
-        batch.set(notifThreadsCol(caller.uid).doc(postId), {seenAtMs}, {merge: true});
+      // Existing rows only, for exactly the reason the inbox marks above do.
+      // A merging `set` on an unknown id CREATES the document, and a
+      // `{seenAtMs}`-only row carries no `lastReplyAtMs` — the only field
+      // `pruneStaleThreads` sweeps on — so it can never be collected. Twenty
+      // client-supplied ids a call is a cheap way to grow this subcollection
+      // for ever.
+      //
+      // Skipping a thread with no row is also correct on its own terms, not
+      // just cheaper: the mark exists to reset a collapse GROUP, and
+      // `readThreadState` already reads a row without one as "never notified".
+      // There is nothing for a seen-mark to reset when no group exists.
+      const refs = seen.map((postId) => notifThreadsCol(caller.uid).doc(postId));
+      const snaps = await db.getAll(...refs);
+      const present = snaps.filter((snap) => snap.exists);
+      if (present.length > 0) {
+        const batch = db.batch();
+        const seenAtMs = Date.now();
+        for (const snap of present) {
+          // `merge`, and only this field: the rest of the row is collapse
+          // state that the client has no business overwriting.
+          batch.set(snap.ref, {seenAtMs}, {merge: true});
+        }
+        await batch.commit();
       }
-      await batch.commit();
     }
 
     return {ok: true};

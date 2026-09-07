@@ -14,6 +14,10 @@ import {beforeEach, describe, expect, it} from 'vitest';
 import type {CallableRequest} from 'firebase-functions/v2/https';
 import {panicSession} from '../../src/handlers/panicSession';
 import {syncUserContext} from '../../src/handlers/syncUserContext';
+import {
+  decideNotification,
+  readThreadState,
+} from '../../src/domain/notifyCollapse';
 import {reportPost} from '../../src/handlers/reportPost';
 import {reportReply} from '../../src/handlers/reportReply';
 import {matchedTestimonials} from '../../src/handlers/testimonials';
@@ -108,12 +112,45 @@ describe('syncUserContext', () => {
   });
 
   it('marks opened threads seen, so the next reply starts a fresh group', async () => {
+    // Only rows that already carry a collapse group. A seen-mark exists to
+    // RESET a group, and `readThreadState` reads a row without one as "never
+    // notified" — the same answer as no row at all — so creating one changes
+    // nothing a reader would ever notice. What it does change is that the row
+    // has no `lastReplyAtMs`, which is the only field `pruneStaleThreads`
+    // sweeps on: it could never be collected, and twenty client-supplied ids
+    // a call is a cheap way to grow this subcollection for ever.
+    await db.doc('users/alice/notifThreads/p1').set({
+      count: 1,
+      groupStartedAtMs: 1,
+      lastReplyAtMs: 1,
+      lastSentAtMs: 1,
+      sendsInGroup: 1,
+    });
+
     await syncUserContext.run(caller({readThreads: ['p1', 'p2', 'p1']}));
 
     const p1 = await db.doc('users/alice/notifThreads/p1').get();
-    const p2 = await db.doc('users/alice/notifThreads/p2').get();
     expect(p1.get('seenAtMs')).toBeGreaterThan(0);
-    expect(p2.exists).toBe(true);
+    expect(p1.get('count')).toBe(1);
+
+    const p2 = await db.doc('users/alice/notifThreads/p2').get();
+    expect(
+      p2.exists,
+      'a thread nobody has been notified about needs no row',
+    ).toBe(false);
+  });
+
+  it('a thread with no row still notifies on the next reply', async () => {
+    // The behaviour the skipped write must not cost: `decideNotification`
+    // treats a missing row exactly as it treats a `{seenAtMs}`-only one.
+    await syncUserContext.run(caller({readThreads: ['p9']}));
+    expect((await db.doc('users/alice/notifThreads/p9').get()).exists).toBe(
+      false,
+    );
+    expect(readThreadState(undefined)).toBeNull();
+    expect(decideNotification(readThreadState(undefined), Date.now()).send).toBe(
+      true,
+    );
   });
 
   it('merges the seen mark rather than flattening the collapse state', async () => {

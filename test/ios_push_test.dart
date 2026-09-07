@@ -56,6 +56,30 @@ void main() {
       expect(valueOf(code(entitlements), 'aps-environment'), 'development');
     });
 
+    test('is valid XML — no double hyphen inside a comment', () {
+      // XML forbids `--` inside a comment, and Xcode reads this file as a
+      // plist. One "`--release`" written in the prose therefore makes the
+      // WHOLE entitlements file unparseable, and an unparseable entitlements
+      // file is not a warning: the app builds carrying none of these keys, so
+      // push dies, App Attest dies, and the App Group takes code-signing down
+      // with it. It shipped exactly that way and nothing here caught it,
+      // because every other assertion in this group runs against `code()`,
+      // which strips the comments before looking.
+      for (final match in RegExp(r'<!--([\s\S]*?)-->').allMatches(
+        entitlements,
+      )) {
+        final body = match.group(1)!;
+        final firstLine = body.trim().split('\n').first;
+        expect(
+          body.contains('--'),
+          isFalse,
+          reason:
+              'this comment makes Runner.entitlements invalid XML — spell the '
+              'flag out instead: $firstLine',
+        );
+      }
+    });
+
     test('keeps the app group and Apple sign-in it already had', () {
       // A hand-edited entitlements file is one bad merge from dropping a key
       // that fails at code-sign time (the group) or at first callable (App

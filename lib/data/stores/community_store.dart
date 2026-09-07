@@ -98,6 +98,17 @@ class CommunityStore extends Notifier<CommunityState> {
   /// composer's cap check must not count them.
   final Set<String> _refusedAtDoor = {};
 
+  /// Threads with a read in flight right now.
+  ///
+  /// Separate from [FeedStatus.loading] because that status is only set when
+  /// there is nothing cached to show — so for the case that matters, an
+  /// already-rendered thread, it is never `loading` and the status guard is
+  /// dead. Without this the detail screen's post-frame open, a pull-to-refresh
+  /// and a "Refresh" snack tap can all be in flight at once, each writing the
+  /// row on completion, and the `RefreshIndicator` finishes its spinner the
+  /// instant the duplicate call returns rather than when the read lands.
+  final Set<String> _reading = {};
+
   bool Function() _alive = () => false;
 
   @override
@@ -113,6 +124,9 @@ class CommunityStore extends Notifier<CommunityState> {
       _statusSubs.clear();
     });
     _alive = () => alive;
+    // Plain fields survive `invalidateSelf`, and a stale id here would refuse
+    // the next session's first read of that thread.
+    _reading.clear();
     unawaited(_load());
     unawaited(_restorePrefs());
     return const CommunityState(posts: []);
@@ -135,11 +149,37 @@ class CommunityStore extends Notifier<CommunityState> {
     );
   }
 
+  /// Whether [postId] names a row the server has never acknowledged.
+  ///
+  /// `live` is written only by the backend, so "mine and not live" is exactly
+  /// the set that may have no server document: still-syncing (`pending` under
+  /// a local id), refused at the door (`capped`/`blocked`), or never sent at
+  /// all (`failed`, which is the row that carries the Retry). None of them may
+  /// be deleted by a refresh — that would throw away the user's own words.
+  bool _isLocalOnly(String postId) {
+    final post = state.posts.where((p) => p.id == postId).firstOrNull;
+    return post != null && post.isMine && post.status != PostStatus.live;
+  }
+
   Future<void> _load() async {
     try {
       final posts = await _repo.fetchPosts();
       if (_alive()) {
-        state = state.copyWith(posts: posts, status: FeedStatus.ready);
+        // A feed load REPLACES the list, and the server's answer cannot
+        // contain a post the server has never seen. Carrying the local-only
+        // rows across is what stops a pull-to-refresh — now a one-swipe
+        // gesture rather than a rare error-state retry — from silently
+        // erasing an unsent post, its text and its Retry control.
+        final fromServer = {for (final p in posts) p.id};
+        final unsent = [
+          for (final p in state.posts)
+            if (!fromServer.contains(p.id) && _isLocalOnly(p.id)) p,
+        ];
+        state = state.copyWith(
+          // Newest first, and an unsent post was written just now.
+          posts: [...unsent, ...posts],
+          status: FeedStatus.ready,
+        );
         _watchUnsettled(posts);
       }
     } on Exception {
@@ -198,8 +238,9 @@ class CommunityStore extends Notifier<CommunityState> {
   ///
   /// Idempotent and safe to call from `initState` on every build.
   Future<void> ensurePost(String postId) async {
-    // A fetch is already in flight; a second would race it to the same state.
-    if (state.threads[postId] == FeedStatus.loading) return;
+    // A read is already in flight; a second would race it to the same state.
+    if (_reading.contains(postId)) return;
+    _reading.add(postId);
 
     final cached = state.posts.any((p) => p.id == postId);
     // A spinner only when there is genuinely nothing to show. Replacing a
@@ -213,7 +254,19 @@ class CommunityStore extends Notifier<CommunityState> {
       if (post == null) {
         // Gone, blocked, or never visible. `ready` with no post is what the
         // screen renders its "no longer available" state from.
-        if (cached) {
+        //
+        // But "the server does not have it" is NOT the same as "it is gone",
+        // and conflating the two deletes the author's own writing. A post
+        // this device minted has a local id (`p<micros>`) until `_syncPost`
+        // binds the server's, and one refused at the door or dropped offline
+        // never gets a document at all — so `fetchPost` answers null for every
+        // one of them. Removing on that would mean: tap Post, tap your own
+        // "Posting…" row, and watch it become "no longer available" and take
+        // the Retry control and your text with it.
+        //
+        // `live` is only ever written by the server, so "mine and not live"
+        // is exactly the set that may have no document yet.
+        if (cached && !_isLocalOnly(postId)) {
           state = state.copyWith(
             posts: [
               for (final p in state.posts)
@@ -242,6 +295,8 @@ class CommunityStore extends Notifier<CommunityState> {
       // cached copy is stale, not wrong, and an error screen over readable
       // content is the worse of the two.
       if (!cached) _setThread(postId, FeedStatus.failed);
+    } finally {
+      _reading.remove(postId);
     }
   }
 

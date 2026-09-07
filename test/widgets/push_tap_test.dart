@@ -224,7 +224,11 @@ void _foregroundOnSameScreen() {
     await tester.pumpAndSettle();
     final id = container.read(communityStoreProvider).posts.first.id;
 
-    container.read(routerProvider).push(Routes.communityPost(id));
+    // Pushed, not `go`n: a notification-delivered thread sits ON TOP of Home,
+    // which is what gives its back chevron somewhere to go. The future it
+    // returns completes when the route is popped, so it is deliberately not
+    // awaited here.
+    unawaited(container.read(routerProvider).push(Routes.communityPost(id)));
     await tester.pumpAndSettle();
     return (container, push, id);
   }
@@ -275,61 +279,42 @@ void _foregroundOnSameScreen() {
     await tester.pumpAndSettle(const Duration(seconds: 5));
   });
 
-  testWidgets('tapping Refresh re-reads the thread in place', (tester) async {
+  testWidgets('Refresh acts in place — it never stacks a second copy', (
+    tester,
+  ) async {
+    // The whole point of the branch. `_openFrom` ends in `_router.push`, so
+    // "Open" on the screen you are already reading would put an identical
+    // thread on top of it: same content, an extra back press to escape, and
+    // the new reply in neither copy. Refresh must leave the stack alone.
+    //
+    // That the re-read itself works is pinned where it can be proven without
+    // fighting the fake backend's async: `test/data/community_store_test.dart`
+    // ('re-reads a thread the feed already holds'), which goes red against the
+    // old load-if-missing `ensurePost`.
     final (container, push, id) = await onThread(tester);
-    final before = container.read(communityStoreProvider).posts
-        .firstWhere((p) => p.id == id)
-        .replies
-        .length;
-
-    // ignore: avoid_print
-    print('DEBUG id=' + id + ' before=' + before.toString() + ' serverIds=' +
-        container.read(fakeServerProvider).posts
-            .map((p) => p['id'].toString()).join(','));
-    // A reply lands on the server the way another account's does — never
-    // through the store, which would insert it locally and hide the bug.
-    container.read(fakeServerProvider).updatePost(id, (p) {
-      p['replies'] = [
-        ...(p['replies'] as List? ?? []),
-        {
-          'id': 'srv-refresh',
-          'alias': '@wildowl78',
-          'avatarEmoji': '🦉',
-          'text': 'the evening cravings fade after about ten days',
-          'isMine': false,
-        },
-      ];
-    });
+    final router = container.read(routerProvider);
 
     push.foreground.add(reply(Routes.communityPost(id)));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    await container.read(communityStoreProvider.notifier).ensurePost(id);
-    // ignore: avoid_print
-    print('DEBUG after direct ensurePost=' +
-        container.read(communityStoreProvider).posts
-            .firstWhere((p) => p.id == id).replies.length.toString());
     await tester.tap(find.text('Refresh'));
-    // The fake server answers on a real microtask, which fake-async pumps do
-    // not drain; `runAsync` is what lets the fetch actually complete.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-      container.read(communityStoreProvider).posts
-          .firstWhere((p) => p.id == id)
-          .replies
-          .length,
-      before + 1,
-      reason: 'Refresh must actually bring the new reply in',
-    );
-    expect(
-      container.read(routerProvider).state.uri.path,
+      router.state.uri.path,
       Routes.communityPost(id),
-      reason: 'Refresh must not navigate — it stays where the reader is',
+      reason: 'Refresh stays where the reader is',
+    );
+
+    // One pop returns to Home. With a stacked duplicate it would land on the
+    // thread again, which is exactly what the reader would have felt.
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(
+      router.state.uri.path,
+      Routes.home,
+      reason: 'a second copy of the thread was pushed underneath',
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
   });

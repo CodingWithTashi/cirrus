@@ -60,9 +60,11 @@ class FirebaseNotificationsRepository implements NotificationsRepository {
       // any more — a listener that stays open, and keeps billing, for the rest
       // of the process.
       if (done) return;
-      // `authStateChanges` also fires for the same account (a token refresh,
-      // a reload); re-subscribing on those would drop and re-open the snapshot
-      // listener for nothing.
+      // `idTokenChanges` fires for the SAME account too — every hourly token
+      // refresh — and re-subscribing on those would drop and re-open a healthy
+      // snapshot listener for nothing. Which is also what makes it the right
+      // stream: those same events are the second chance a stream that errored
+      // needs, and the `onError` handler clears this guard to take it.
       if (hasBound && uid == bound) return;
       final isRebind = hasBound;
       hasBound = true;
@@ -90,10 +92,14 @@ class FirebaseNotificationsRepository implements NotificationsRepository {
           // an error as an empty inbox, so it would look like nothing was
           // wrong while the bell silently stopped updating until a restart.
           //
-          // Forgetting is enough: the next `authStateChanges` event — a token
-          // refresh, a resume, a re-auth — then counts as a change and binds
-          // again. It is not a retry loop, deliberately; a hard refusal
-          // should not be re-asked in a tight circle.
+          // Forgetting is what lets the next identity event re-bind — and it
+          // is why this listens on `idTokenChanges()` rather than
+          // `authStateChanges()`. The latter fires ONLY on sign-in and
+          // sign-out, so on a session that stays signed in it would never
+          // fire again and the "self-heal" would be a comment describing
+          // nothing. `idTokenChanges` adds the hourly token refresh, which is
+          // a real second chance. Deliberately not a retry loop: a hard
+          // refusal should not be re-asked in a tight circle.
           hasBound = false;
           bound = null;
           out.addError(error, trace);
@@ -103,7 +109,10 @@ class FirebaseNotificationsRepository implements NotificationsRepository {
 
     out = StreamController<List<AppNotification>>(
       onListen: () {
-        session = _auth.authStateChanges().listen((user) => bind(user?.uid));
+        // `idTokenChanges`, not `authStateChanges`: the latter fires only on
+        // sign-in and sign-out, which would leave a stream that errored mid
+        // session with nothing to re-bind it. See the `onError` handler.
+        session = _auth.idTokenChanges().listen((user) => bind(user?.uid));
       },
       onCancel: () async {
         done = true;
