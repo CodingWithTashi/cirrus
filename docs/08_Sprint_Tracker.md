@@ -201,10 +201,10 @@ Doc 3 marks the lock-screen widget founder-locked for MVP. It is the only MVP it
 **iOS — currently unbuildable against Firebase (B6)**
 - [x] `S0-17` ~~Add `ios/Runner/GoogleService-Info.plist`~~ **Not needed:** `main.dart` initializes with `DefaultFirebaseOptions.ios` (`firebase_options.dart`), so there is no plist to ship
 - [x] `S0-18` ~~URL schemes for Google Sign-In~~ **Not needed:** Google is Android-only in the sign-in screen (`_showGoogle`); iOS offers Apple + email
-- [x] `S0-19` `Runner.entitlements` — **Sign in with Apple done (Sep 1)**; `CODE_SIGN_ENTITLEMENTS` on Debug/Release/Profile, automatic signing adds the capability to the App ID on build. Push (`aps-environment`) deliberately not added yet: it needs the Push capability on the App ID and an APNs key in Firebase, and a build fails signing until both exist
+- [x] `S0-19` `Runner.entitlements` — **Sign in with Apple done (Sep 1)**; `CODE_SIGN_ENTITLEMENTS` on Debug/Release/Profile, automatic signing adds the capability to the App ID on build. **Push done Sep 6:** `aps-environment` = `development` (Xcode rewrites it to `production` on export, which is what agrees with the plugin's `DEBUG`-driven Sandbox/Prod choice). Push Notifications was already enabled on the App ID; what was missing was this key and an APNs auth key in Firebase — `Cirrus Push`, key `A76XS6WQ9J`, team `PZFFFQ5T9X`, Sandbox & Production, team-scoped. Pinned both directions by `test/ios_push_test.dart` (docs/10 §31)
 - [x] `S0-20` Clean iOS build verified Sep 1 on a physical iPhone (iOS 18.6, wireless) via `flutter run --dart-define-from-file=.dart_defines.json`: Apple sign-in, App Check token accepted (pinned debug secret), `syncUserContext` wrote `users/{uid}`. Deployment target 15.0 (Firebase 12 pods)
 - [ ] `S0-23` *(iOS submission)* **Revoke the Apple token on account deletion** — App Store 5.1.1(v). `deleteUserData` does not revoke today; the client side is `FirebaseAuth.revokeTokenWithAuthorizationCode`, which needs a fresh authorization code (re-run the Apple sheet at deletion) and the Apple private key configured on the Firebase Apple provider. Not needed for dev-device sign-in
-- [~] `S0-24` *(iOS submission)* **App Attest for the release build** — `AppleAppAttestProvider` is already the release provider in `app_check_setup.dart`; register the iOS app's Team ID under App Check in the Firebase console and add the App Attest capability before the first TestFlight build, or every callable fails on release. **Sep 2: this is exactly what the first TestFlight build did** — the coach answered "the server didn't recognise this app" and step two of the Day-1 walkthrough could not complete (docs/10 §17). The app half is done: `com.apple.developer.devicecheck.appattest-environment` is in `Runner.entitlements`. **Open, founder-only:** Firebase console → App Check → iOS app → App Attest with Team ID `PZFFFQ5T9X`, then a new TestFlight build
+- [~] `S0-24` *(iOS submission)* **App Attest for the release build** — `AppleAppAttestProvider` is already the release provider in `app_check_setup.dart`; register the iOS app's Team ID under App Check in the Firebase console and add the App Attest capability before the first TestFlight build, or every callable fails on release. **Sep 2: this is exactly what the first TestFlight build did** — the coach answered "the server didn't recognise this app" and step two of the Day-1 walkthrough could not complete (docs/10 §17). The app half is done: `com.apple.developer.devicecheck.appattest-environment` is in `Runner.entitlements`. ~~**Open, founder-only:** Firebase console → App Check → iOS app → App Attest with Team ID `PZFFFQ5T9X`~~ — **console half confirmed done Sep 6**: App Check → Apps shows `com.quitvape.lastPuff` → App Attest → Registered. What remains is a new TestFlight build to prove a callable now passes on release
 
 **Foundation**
 - [x] `S0-21` CI running three jobs: Flutter (incl. an l10n-drift check), functions verify, and an emulator job for rules + integration
@@ -462,8 +462,11 @@ end to end** against production `alastpuff` on an iPhone 17 Pro (iOS 26.3) paire
 to an Apple Watch Series 11 (watchOS 26.2): mirror → wrist, tap → relay → drain →
 journey, and the count unchanged across the hand-off (`docs/10 §29`). Four bugs
 found there, all fixed and pinned. Throwaway account deleted via `E2E_STEP=teardown`.
+**Device build signs and completes** (`✓ Built build/ios/iphoneos/Runner.app`) after the
+`com.quitvape.lastPuff.watch.widget` App ID was created by hand — `.complication` is a
+reserved suffix Apple refuses from the portal as well as from Xcode.
 **Owed on hardware:** the three radio paths a simulator cannot exercise, and a
-complication on a real face.
+complication on a real face. No Apple Watch on the desk yet.
 
 **Gates (Sep 6):** `flutter analyze` clean · `flutter test` **1605** · **emulator 56/56**
 (`emulator-5554`, Android 17, fake backend: every suite but the production-only `f_`, plus

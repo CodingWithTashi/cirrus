@@ -399,6 +399,16 @@ function readHour(value: unknown, fallback: number): number {
  * Android 8 the channel decides sound, vibration and heads-up, and the
  * per-message priority FCM accepts is ignored — so `priority` here is only
  * doing work on devices old enough to still read it.
+ *
+ * **iOS has no channels, so `sound` has to be said out loud.** APNs plays
+ * nothing unless the payload names a sound and FCM adds no default of its
+ * own — so every push landed on iOS as a silent banner while the identical
+ * message buzzed on Android, which read as a broken feature on one platform
+ * and was a missing field on the server. It is the exact counterpart of the
+ * quiet channel: normal delivery names `default`, quiet delivery names no
+ * sound at all and adds `interruption-level: passive` so the screen stays
+ * dark too. Never set both — a sound during quiet hours is the one thing
+ * quiet hours exist to prevent.
  */
 export function buildMessage(
   tokens: readonly string[],
@@ -430,7 +440,11 @@ export function buildMessage(
       payload: {
         aps: {
           ...(opts.threadId ? {threadId: opts.threadId} : {}),
-          ...(quiet ? {'interruption-level': 'passive'} : {}),
+          // The iOS half of the quiet-channel swap: a sound, or passive
+          // delivery, never both. See this function's docstring.
+          ...(quiet
+            ? {'interruption-level': 'passive'}
+            : {sound: 'default'}),
         },
       },
     },

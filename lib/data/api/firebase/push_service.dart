@@ -52,10 +52,57 @@ abstract final class PushService {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.getNotificationSettings();
       if (!_granted(settings.authorizationStatus)) return null;
+      if (!await _apnsReady(messaging)) return null;
       return await messaging.getToken();
     } on Object catch (error) {
       debugPrint('push: token lookup failed — $error');
       return null;
+    }
+  }
+
+  /// How long [tokenOrNull] will wait for APNs on iOS, and how often it looks.
+  ///
+  /// Bounded because this sits in front of a fire-and-forget sync that must
+  /// never delay a sign-in, and because `unregister()` chains sign-out behind
+  /// it under a 2s cap of its own — so the wait can only ever cost tidiness,
+  /// never a button that visibly does nothing.
+  static const _apnsWait = Duration(seconds: 3);
+  static const _apnsPoll = Duration(milliseconds: 250);
+
+  /// Whether iOS has handed APNs' device token to FCM yet.
+  ///
+  /// **iOS cannot mint an FCM token before this, and says so by throwing.**
+  /// `FIRMessagingTokenManager` refuses outright — "No APNS token specified
+  /// before fetching FCM Token" — and [tokenOrNull] catches that into the
+  /// same null it uses for "the user declined", so a device that was merely
+  /// half a second early registered nothing and looked exactly like a device
+  /// that had opted out.
+  ///
+  /// That is the state both permission CTAs call `sync()` in: the OS sheet
+  /// returns the moment the user taps Allow, while `registerForRemoteNotifi-
+  /// cations` is still mid round-trip to Apple. Both call sites say in a
+  /// comment that they register the freshly minted token NOW so a grant does
+  /// not lose its first day of pushes — on iOS they did the opposite, and the
+  /// device stayed unreachable until the next resume.
+  ///
+  /// Returning false skips `getToken()` rather than letting it throw: there
+  /// is nothing to report, the resume sync will ask again, and an exception
+  /// here would be indistinguishable in the log from a real FCM failure.
+  ///
+  /// Android has no such step — the token is available as soon as Play
+  /// services is — so this is an iOS-only wait and returns true everywhere
+  /// else without a single channel call.
+  static Future<bool> _apnsReady(FirebaseMessaging messaging) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return true;
+    var waited = Duration.zero;
+    while (true) {
+      if (await messaging.getAPNSToken() != null) return true;
+      if (waited >= _apnsWait) {
+        debugPrint('push: no APNs token after ${_apnsWait.inSeconds}s');
+        return false;
+      }
+      await Future<void>.delayed(_apnsPoll);
+      waited += _apnsPoll;
     }
   }
 

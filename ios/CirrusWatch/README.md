@@ -193,37 +193,27 @@ file on disk lags by seconds.
 
 ## What only the founder can do
 
-- **Developer portal — REQUIRED, and it blocks every device build.** Automatic
-  signing creates `com.quitvape.lastPuff.watch` by itself but **cannot** create
-  `com.quitvape.lastPuff.watch.complication`; it answers *"cannot be registered
-  to your development team because it is not available"* and falls back to a
-  wildcard profile, which cannot carry App Groups. Measured three ways on Sep 6
-  2026 — see `tool/ios_watch_target.rb`. Until the row exists,
-  `flutter build ios` **for a device fails for the whole app**, not just the
-  watch. Simulator builds are unaffected and stay green, which is exactly what
-  makes this easy to miss.
+- **Developer portal — done (Sep 6 2026), and worth knowing why.**
+  `com.quitvape.lastPuff.watch.widget` ("Cirrus Watch Complication") and
+  `com.quitvape.lastPuff.watch` both exist and both carry App Group
+  `group.com.quitvape.lastPuff`. A device build signs and completes:
+  `✓ Built build/ios/iphoneos/Runner.app`.
 
-  Create it by hand, once, at
-  <https://developer.apple.com/account/resources/identifiers>:
+  **`.complication` is a reserved suffix** — Apple refuses
+  `<watch app>.complication` from automatic signing *and* from the portal by
+  hand, so it is the word, not the tooling. `.widget` registers instantly. If a
+  future extension hits the same wall, that is the first thing to try.
 
-  1. **+** → *App IDs* → *App* → **Explicit**, description `Cirrus Watch
-     Complication`, Bundle ID `com.quitvape.lastPuff.watch.complication`.
-  2. Tick **App Groups**, Configure → `group.com.quitvape.lastPuff`, Save.
-  3. While there, confirm `com.quitvape.lastPuff.watch` also has **App Groups**
-     ticked and pointed at the same group — automatic signing creates the id but
-     does not always attach the capability.
-  4. Back in the repo: `flutter build ios --debug` should now finish with
-     `✓ Built build/ios/iphoneos/Runner.app`.
+  Two traps if these rows ever need rebuilding: the **App Groups tick does not
+  survive registration** (set it again on the saved identifier, and pick the
+  group through *Configure*), and a failure here falls back to a wildcard
+  profile which cannot carry App Groups, so the App-Group errors that follow are
+  a cascade rather than the actual problem.
 
-  If step 1 refuses the identifier as unavailable, a stale wildcard
-  `com.quitvape.lastPuff.watch.*` from a failed automatic-signing attempt is the
-  likely cause — delete it on the same page and retry.
+  Two stray App IDs from the failed attempts — `com.quitvape.lastPuff.watchkitapp`
+  and `com.quitvape.lastPuff.watchface` — are unused and can be deleted at
+  leisure. Nothing references them.
 
-  **To unblock a device build before doing any of this**, drop the complication:
-  open `ios/Runner.xcodeproj`, delete the `CirrusWatchComplication` target, and
-  the watch app alone builds and signs (proven). Re-run
-  `/usr/bin/ruby tool/ios_watch_target.rb` after deleting **both** watch targets
-  to put it back.
 - **A real Apple Watch.** The hardware checklist is below, and until it is done
   the store listing must stay silent about the watch. `B21` is the standing
   lesson: advertising a surface that is not proven is the bait-and-switch clause
