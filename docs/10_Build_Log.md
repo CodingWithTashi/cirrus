@@ -4053,3 +4053,221 @@ beside the clock, the shade shows it with the brand tint, and Settings, Profile
 and the inbox empty state all read as one drawn set.
 
 `flutter analyze` 0 · `flutter test` **1666/1666**.
+
+## 31. THE NOTIFICATIONS THAT WERE BUILT AND NEVER ARRIVED (Sep 7) — two silent failures, one on each side of the wire
+
+Founder report, on a real device: push and the in-app inbox both do nothing.
+Not "sometimes", not "the copy is wrong" — nothing at all, on a feature whose
+send path, gate, collapse rules, channels, taps and copy were all written,
+tested and deployed.
+
+Reading the code found nothing, because there was nothing wrong with it. What
+found it was production: `users/` has five rows, four devices are registered
+across two accounts, `syncUserContext` is passing App Check on every call, the
+moderation triggers are firing, and `notifThreads` rows exist. Every stage
+reported success. So the two failures were downstream of everything anybody had
+thought to check, and they were **different bugs that happened to land on the
+same feature at the same time**.
+
+### The inbox: a field override is not additive
+
+`FirebaseNotificationsRepository.watch()` reads the inbox newest-first. Against
+production that query answers:
+
+```
+9 FAILED_PRECONDITION: The query requires a COLLECTION_DESC index
+for collection notifications and field createdAtMs.
+```
+
+A **`fieldOverride` in `firestore.indexes.json` REPLACES Firestore's automatic
+single-field indexes for that field** rather than adding to them. The override
+on `notifications.createdAtMs` was added so `pruneOldNotifications` could run
+its collection-group sweep, and it listed two configs — ASCENDING at each scope.
+That was enough for the cron and it silently **deleted** the descending
+collection-scoped index the app had been relying on since the inbox shipped.
+
+Three separate things then hid it:
+
+* `NotificationsStore`'s stream handler is `onError: … loading: false` — "an
+  inbox that cannot load is an empty inbox, not an error screen", which is the
+  right call for a courtesy surface and, here, the perfect disguise. The screen
+  rendered its honest empty state. The bell showed no badge. Nothing logged.
+* The **emulator does not enforce single-field indexes**, so `test:rules` (42)
+  and `test:integration` (315) were green throughout.
+* The two neighbouring overrides, `devices.lastSeenAt` and
+  `notifThreads.lastReplyAtMs`, are genuinely ascending-only — so the pattern
+  looked consistent and correct.
+
+The fix is one more entry. The guard is `test/firestore_indexes_test.dart`,
+which pins every override against the query that needs each scope AND pins that
+the repository still orders descending — the pairing is the point, so that
+flipping the sort order goes red instead of blank.
+
+### The reply push: the document is not the interface
+
+`notifThreads/{postId}` has two writers. `notifyAuthor` writes the collapse
+group; `syncUserContext`'s read-marks write `set({seenAtMs}, {merge: true})` on
+a document that need not exist. So a row holding **only** `seenAtMs` is not
+corrupt — it is the ordinary shape for somebody who has opened a thread nobody
+has replied to yet, which is nearly everybody, because *the first person to open
+your post is you*.
+
+`notifyAuthor` cast that row straight to `ThreadNotifState`. Every arithmetic
+field became `undefined`, and three things went wrong in a row:
+
+1. `shouldReset` compared a number against `undefined`, got false, and fell into
+   the throttle branch it should never have reached.
+2. That branch computed `count: NaN` and `send: **false**`. No push.
+3. `tx.set` was then handed `groupStartedAtMs: undefined`, which the Admin SDK
+   refuses outright. The throw unwound into `notifyReply`'s catch — so the reply
+   was never marked `notifiedAt`, and **`recordNotification` never ran either**,
+   which is why the inbox had no row to fail to render.
+
+Production held the proof, one reply wide. Three live replies, and exactly the
+one whose post had a real author (`postAuthors.uid` present, replier different)
+carried `notifiedAt: NONE`. The other two were on posts by a departed quitter —
+`authorUid === null`, so `notifyAuthor` was skipped entirely and they sailed
+past to the `notifiedAt` write. The single case the feature exists for was the
+single case that failed.
+
+`readThreadState` parses instead of casting: a row without a complete group
+reads as `null`, which is both what it means and the right answer — the reader
+has seen everything, so this reply is genuinely the first of something new.
+
+### And a third, found on the way
+
+Opening the inbox marks everything on screen read in one `syncUserContext` call.
+The app reads a page of **50**; the server's `MAX_READ_THREADS` capped the list
+at **20** and dropped the rest without a word. The badge cleared optimistically
+and the number came back on the next launch, for ever, since every open sent the
+same over-long list. The two caps are separate constants now, with the page size
+named in the comment.
+
+### Two more, found only by putting it on a phone
+
+Neither of the above would have helped the founder, because their own device
+could not have received a push in any case.
+
+**4. A returning user is never asked for the permission.** `POST_NOTIFICATIONS:
+granted=false`, app notifications `importance=NONE`, `devices/` empty. The OS
+prompt fires from exactly two places: onboarding's D4 step, and the sheet after
+a community post. Somebody who signs in on a NEW device gets neither — their
+journey is restored, so onboarding is skipped — and the Settings sheet handled
+`denied` (a signpost to system settings) but had no branch at all for
+`notAsked`. So every switch on "What we send you" was live while the OS had
+never been asked and no FCM token could exist. That is the exact state a
+reinstall leaves, which is why it hit the founder every single test round.
+`notAsked` now gets a working button there, using the `pushAskCta` string that
+already exists in all five locales.
+
+**5. The unread count was invisible.** `NotificationBell` set its badge digit in
+`lp.emberText` on a `lp.ember` fill. But `emberText` is ember-coloured ink for
+the BACKGROUND — the palette test literally pins it as `emberText on
+background` — and in Midnight Ember it is byte-identical to `ember`
+(`0xFFFF8A00`). Orange on orange: a solid dot, no number, on every phone. This
+is the "tokens are hue-named but role-used" warning going wrong in the one
+direction nothing guarded. `onEmber` now exists in all six palettes, mirroring
+`onVolt`, pinned at 4.5:1 against `ember` the way `onVolt` is against `volt`.
+
+### The shape of it
+
+All five are the same failure mode wearing different clothes: **a component
+that cannot fail loudly**. A courtesy surface that swallows its errors, a push
+path that must never break the moderation pass it rides on, a read-mark on a
+fire-and-forget call, a permission nobody re-checks, and a colour that is
+technically a valid colour. Each swallow is individually correct and none of
+them should change. What was missing is that nothing else was watching — so the
+tests now sit where the swallow is: an index test that reads the config, unit
+cases for the partial row, two emulator tests that seed the exact production
+document, and a contrast floor on the badge ink.
+
+### Verified on a real device (Pixel 8, Android 17, real Firebase)
+
+Deployed `firestore:indexes` + all 24 functions, then drove it by hand:
+
+1. Fresh install, Google sign-in → journey restored, `devices/` **empty**,
+   permission never asked (bug 4, caught here).
+2. Granted the permission → cold start → device row appears, 142-char token.
+3. Seeded `notifThreads/{postId}` with **only `seenAtMs`** — the exact shape
+   that used to break it — and wrote a reply from a second account, so the real
+   deployed `moderateReply` trigger ran the real `notifyReply`.
+4. `notifiedAt` **set**, collapse group written whole
+   (`count:1, groupStartedAtMs, lastSentAtMs, sendsInGroup:1, seenAtMs:null`),
+   inbox row created.
+5. The push arrived: `pkg=com.quitvape.last_puff channel=community_replies
+   tag=thread:… color=0xffc8f542 icon=ic_stat_cirrus`, "Someone replied / Go
+   see what they said."
+6. Bell badged **1**, inbox rendered the row, tapping it opened the thread.
+7. `readAtMs` written server-side; badge stayed clear across a force-stop.
+8. A second reply flipped the same row back to unread and the badge returned
+   **live**, without a restart — the snapshot listener working.
+
+Test post, replies, author maps, thread state and inbox row all deleted from
+production afterwards; the three pre-existing posts are untouched.
+
+`flutter analyze` 0 · `flutter test` **1709/1709** · functions `verify`
+**289/289** · `test:integration` **317/317** (two new, both red before the fix).
+
+One thing deliberately left alone: reply `OMTmEpA1…` on post `98353705…` still
+carries no `notifiedAt`. It is the reply that proved bug 2, from yesterday's QA;
+re-announcing it now would push a day-old notification at somebody.
+
+### 31b. THE NOTIFICATION THAT LED NOWHERE (Sep 7) — a cache that skipped the one case that mattered
+
+Founder report, on the device, after the five fixes above were live: *"I see the
+notification but when pressed nothing shows up. it is default data when I should
+see the all reply."*
+
+Exactly right, and it was a sixth bug. `CommunityStore.ensurePost` opened with:
+
+```dart
+if (state.posts.any((p) => p.id == postId)) return;   // load only what is missing
+```
+
+A load-if-missing cache, which is the correct shape for a deep link into a post
+the feed has never seen — the case it was written for. It is precisely backwards
+for the case that matters most: **a notification means this thread has just
+changed.** So tapping "Someone replied" found the post already in the loaded
+feed, returned immediately, and rendered the feed's copy from *before* the reply
+existed. The one thing missing from the screen was the reply the notification had
+just announced. Verified on the Pixel: Firestore held five live replies, the
+thread drew two.
+
+That is worse than a broken feature. A notification that opens a screen where
+the news is absent teaches the reader that the notification lies.
+
+The shape is stale-while-revalidate now, and every part of it is load-bearing: a
+cached thread renders instantly with **no** skeleton (swapping readable posts for
+placeholders on every open would be its own regression), the fetch runs anyway,
+the row is replaced **in place** so the reverse-chronological feed does not
+reshuffle on every tap, a refetch that comes back empty drops the stale copy
+(deleted or blocked while we held it), and a failed *refresh* leaves the cached
+thread alone rather than throwing an error state over content the reader can
+still use. `test/data/community_store_test.dart` pins all four; two of them go
+red against the old early return.
+
+**Pull to refresh** landed with it, on the founder's ask — the thread and the
+feed both. The thread's `onRefresh` is `ensurePost`, deliberately the same call
+the notification tap makes, so the gesture and the tap can never disagree. The
+feed gets `refreshFeed()` rather than `retryFeed()`, because the latter flips the
+status to `loading` and swaps every post for a skeleton *underneath the
+indicator's own spinner*. Both lists carry `AlwaysScrollableScrollPhysics`: a
+short feed does not fill the viewport, and a list that cannot scroll cannot be
+pulled, so without it the gesture would simply not exist on a quiet day.
+
+Verified on the pair, by hand: emulator (`@wildowl78`) replies → phone
+(`@steadymoth34`) opens the thread from the inbox and draws **all five** replies
+where it had drawn two; emulator posts a sixth while the phone sits on the
+thread; pull down on the phone and it arrives, without leaving the screen.
+
+`flutter analyze` 0 · `flutter test` **1712/1712**.
+
+**Still open, and it is a product call rather than a bug.** The push says
+"Someone replied / Go see what they said." — never the alias, never the text.
+That is deliberate: `pushCopy.ts` documents "no user text ever appears here… a
+lock screen is as public as the home-screen widget". Every mainstream social app
+shows the sender and the message instead, and Android's `visibility: PRIVATE`
+(which these already set) is the standard mitigation. Changing it means five
+locales of copy and threading the alias and body through `notifyReply` →
+`sendLocalized` → `pushCopy`. Worth doing; needs the privacy decision made
+explicitly first, because it reverses a written one.

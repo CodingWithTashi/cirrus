@@ -980,6 +980,7 @@
   "communityThreadGoneBody": "Vielleicht wurde er gelöscht oder entfernt, seit wir dich benachrichtigt haben.",
   "communityThreadGoneCta": "Zurück zum Feed",
   "pushOpen": "Öffnen",
+  "pushRefresh": "Aktualisieren",
   "settingsPushTitle": "Was wir dir schicken",
   "settingsPushSubtitle": "Nur zu deinen eigenen Threads. Nie zu denen anderer.",
   "settingsPushBlocked": "Benachrichtigungen für Cirrus sind in den Einstellungen deines Telefons aus. Schalte sie dort wieder ein, dann funktioniert das hier.",

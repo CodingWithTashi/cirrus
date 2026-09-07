@@ -42,6 +42,18 @@ function label(value: unknown): string | undefined {
 const MAX_READ_THREADS = 20;
 
 /**
+ * Inbox rows one call may mark read.
+ *
+ * Must not be lower than the page the app reads, which is 50
+ * (`FirebaseNotificationsRepository._limit`). Opening the inbox marks
+ * EVERYTHING on screen read in one call, so a cap below the page size drops
+ * the overflow silently: the badge cleared optimistically, the rows past the
+ * cap stayed unread on the server, and the number came back on the next
+ * launch — for ever, since every open sent the same over-long list.
+ */
+const MAX_READ_NOTIFICATIONS = 50;
+
+/**
  * The push preferences a client is allowed to set.
  *
  * Whitelisted rather than merged wholesale: this writes into the
@@ -75,8 +87,8 @@ function pushPrefsFrom(value: unknown): Record<string, boolean | number> | null 
   return Object.keys(prefs).length > 0 ? prefs : null;
 }
 
-/** Post ids from [value], deduped and capped. */
-function readThreadsFrom(value: unknown): string[] {
+/** Document ids from [value], deduped and capped at [limit]. */
+function readIdsFrom(value: unknown, limit: number): string[] {
   if (!Array.isArray(value)) return [];
   const ids = new Set<string>();
   for (const entry of value) {
@@ -86,7 +98,7 @@ function readThreadsFrom(value: unknown): string[] {
     // subcollection of its own choosing under its notifThreads row.
     if (id.length === 0 || id.length > 200 || id.includes('/')) continue;
     ids.add(id);
-    if (ids.size === MAX_READ_THREADS) break;
+    if (ids.size === limit) break;
   }
   return [...ids];
 }
@@ -147,21 +159,36 @@ export const syncUserContext = onCall(
     // the cold network a notification tap arrives over.
     // Notifications the reader has opened, or cleared in one go from the
     // inbox. Same door and same reasoning as `readThreads` below it.
-    const readIds = readThreadsFrom(data['readNotifications']);
+    const readIds = readIdsFrom(data['readNotifications'], MAX_READ_NOTIFICATIONS);
     if (readIds.length > 0) {
-      const batch = db.batch();
-      const readAtMs = Date.now();
-      for (const id of readIds) {
-        batch.set(
-          notificationsCol(caller.uid).doc(id),
-          {readAtMs},
-          {merge: true},
-        );
+      // Existing rows ONLY, and the read is what makes that true.
+      //
+      // A merging `set` CREATES the document when the id is unknown, and the
+      // row it creates carries `readAtMs` and nothing else — no `createdAtMs`.
+      // Such a row is invisible to the app (its query orders by `createdAtMs`,
+      // which excludes documents missing the field) AND to
+      // `pruneOldNotifications` (whose sweep is `createdAtMs < cutoff`), so it
+      // is unreachable and uncollectable, for ever. At 50 ids a call that is a
+      // cheap way for a buggy or hostile client to grow someone's subcollection
+      // without bound.
+      //
+      // `batch.update` is not the fix: a Firestore batch is atomic, so one
+      // stale id would fail every other mark in the same call. Reading first
+      // costs at most 50 gets, once, when somebody opens their inbox.
+      const refs = readIds.map((id) => notificationsCol(caller.uid).doc(id));
+      const snaps = await db.getAll(...refs);
+      const present = snaps.filter((snap) => snap.exists);
+      if (present.length > 0) {
+        const batch = db.batch();
+        const readAtMs = Date.now();
+        for (const snap of present) {
+          batch.set(snap.ref, {readAtMs}, {merge: true});
+        }
+        await batch.commit();
       }
-      await batch.commit();
     }
 
-    const seen = readThreadsFrom(data['readThreads']);
+    const seen = readIdsFrom(data['readThreads'], MAX_READ_THREADS);
     if (seen.length > 0) {
       const batch = db.batch();
       const seenAtMs = Date.now();

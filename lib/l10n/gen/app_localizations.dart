@@ -5503,6 +5503,12 @@ abstract class AppLocalizations {
   /// **'Open'**
   String get pushOpen;
 
+  /// Snackbar action when a push arrives for the thread already on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get pushRefresh;
+
   /// Notification categories sheet.
   ///
   /// In en, this message translates to:

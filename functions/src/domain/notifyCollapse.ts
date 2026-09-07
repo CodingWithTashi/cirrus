@@ -40,6 +40,68 @@ export interface ThreadNotifState {
   readonly seenAtMs: number | null;
 }
 
+/** A number we are willing to do arithmetic with. Rejects NaN and Infinity. */
+function finite(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Reads a stored row into a state [decideNotification] can be trusted with, or
+ * null when the row does not carry a collapse group at all.
+ *
+ * **The document is not the interface.** `users/{uid}/notifThreads/{postId}`
+ * has TWO writers — this collapse state, and `syncUserContext`'s read-marks,
+ * which do `set({seenAtMs}, {merge: true})` on a document that need not exist.
+ * So a row saying only `{seenAtMs}` is not a corrupt row: it is the ordinary
+ * shape for somebody who opened a thread they have never been notified about,
+ * which is nearly everybody, because the first person to open your post is you.
+ *
+ * Casting that row to [ThreadNotifState] — which is what this replaced — made
+ * every arithmetic field `undefined`, and the consequences were silent and
+ * total. `shouldReset` compared against `undefined` and answered false, so the
+ * throttle branch ran with `count: NaN` and `send: false`: no push. Then
+ * `tx.set` was handed `groupStartedAtMs: undefined`, which the Admin SDK
+ * REFUSES outright, so the write threw, `notifyReply`'s catch swallowed it, and
+ * the reply was never marked `notifiedAt` and never recorded in the inbox
+ * either. One reply in production proved all three at once (docs/10 §31).
+ *
+ * A row without a group reads as null — "never notified about this thread" —
+ * which is exactly what it means, and sends immediately. That is also the right
+ * answer on its own terms: the reader has seen everything up to now, so the
+ * reply that just arrived is genuinely the first of something new.
+ */
+export function readThreadState(data: unknown): ThreadNotifState | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const row = data as Record<string, unknown>;
+
+  const count = finite(row['count']);
+  const groupStartedAtMs = finite(row['groupStartedAtMs']);
+  const lastReplyAtMs = finite(row['lastReplyAtMs']);
+  const lastSentAtMs = finite(row['lastSentAtMs']);
+  const sendsInGroup = finite(row['sendsInGroup']);
+
+  // All or nothing: a half-written group would put the same `undefined` back
+  // into the write that this function exists to keep out.
+  if (
+    count === null ||
+    groupStartedAtMs === null ||
+    lastReplyAtMs === null ||
+    lastSentAtMs === null ||
+    sendsInGroup === null
+  ) {
+    return null;
+  }
+
+  return {
+    count,
+    groupStartedAtMs,
+    lastReplyAtMs,
+    lastSentAtMs,
+    sendsInGroup,
+    seenAtMs: finite(row['seenAtMs']),
+  };
+}
+
 export interface CollapseConfig {
   /** Quiet period after a send before another may go out. */
   readonly throttleMs: number;

@@ -157,35 +157,91 @@ class CommunityStore extends Notifier<CommunityState> {
     await _load();
   }
 
-/// Loads one post if the feed does not already hold it.
+  /// Pull-to-refresh on the feed.
+  ///
+  /// Deliberately NOT [retryFeed]: that one flips the status to `loading`,
+  /// which swaps every post out for a skeleton. Under a `RefreshIndicator`
+  /// that is the wrong answer twice over — the indicator is already showing a
+  /// spinner, and tearing down readable posts to put placeholders under it
+  /// makes a refresh look like a reload. A failure here also leaves the feed
+  /// exactly as it was rather than throwing an error state over posts the
+  /// reader can still use; `_load` only sets `failed` from `loading`, so that
+  /// falls out of not touching the status.
+  Future<void> refreshFeed() async {
+    if (state.status == FeedStatus.loading) return;
+    await _load();
+  }
+
+/// Opens one thread: renders whatever we already have, and **always
+  /// re-reads it from the server**.
   ///
   /// The entry point for a deep link. `PostDetailScreen` used to read its post
   /// straight out of the loaded feed and render `Scaffold(body: SizedBox())`
   /// when it was not there — a blank screen, no app bar, no way back — which
   /// is exactly what tapping a notification about an older thread produced.
   ///
+  /// It then acquired the opposite bug, and a worse one. This used to open
+  /// with `if (state.posts.any(...)) return;` — load only what is missing —
+  /// so a thread already sitting in the loaded feed was never re-read. But a
+  /// notification means *this thread has just changed*, and that is precisely
+  /// the case the early return skipped: you tapped "Someone replied", the
+  /// screen rendered the feed's copy from before the reply existed, and the
+  /// one thing missing from it was the reply you had just been told about.
+  /// The notification was not merely useless, it was misleading.
+  ///
+  /// So the shape is stale-while-revalidate, which is what makes it feel
+  /// instant AND be correct: a cached post renders immediately with no
+  /// spinner, the fetch runs anyway, and the row is replaced **in place** so
+  /// the feed keeps its reverse-chronological order. A refetch that comes
+  /// back empty means the thread was deleted or blocked while we held it, so
+  /// the stale copy is dropped rather than left on screen as a lie.
+  ///
   /// Idempotent and safe to call from `initState` on every build.
   Future<void> ensurePost(String postId) async {
-    if (state.posts.any((p) => p.id == postId)) return;
+    // A fetch is already in flight; a second would race it to the same state.
     if (state.threads[postId] == FeedStatus.loading) return;
-    _setThread(postId, FeedStatus.loading);
+
+    final cached = state.posts.any((p) => p.id == postId);
+    // A spinner only when there is genuinely nothing to show. Replacing a
+    // rendered thread with a skeleton on every open would be a regression in
+    // its own right.
+    if (!cached) _setThread(postId, FeedStatus.loading);
+
     try {
       final post = await _repo.fetchPost(postId);
       if (!_alive()) return;
       if (post == null) {
         // Gone, blocked, or never visible. `ready` with no post is what the
         // screen renders its "no longer available" state from.
+        if (cached) {
+          state = state.copyWith(
+            posts: [
+              for (final p in state.posts)
+                if (p.id != postId) p,
+            ],
+          );
+        }
         _setThread(postId, FeedStatus.ready);
         return;
       }
-      state = state.copyWith(posts: [...state.posts, post]);
+      state = state.copyWith(
+        posts: cached
+            ? [
+                for (final p in state.posts)
+                  if (p.id == postId) post else p,
+              ]
+            : [...state.posts, post],
+      );
       _setThread(postId, FeedStatus.ready);
       if (post.status == PostStatus.pending || post.status == PostStatus.held) {
         _watch(postId);
       }
     } on Object {
       if (!_alive()) return;
-      _setThread(postId, FeedStatus.failed);
+      // A failed REFRESH must not blank a thread we can already show — the
+      // cached copy is stale, not wrong, and an error screen over readable
+      // content is the worse of the two.
+      if (!cached) _setThread(postId, FeedStatus.failed);
     }
   }
 

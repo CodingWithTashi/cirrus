@@ -980,6 +980,7 @@
   "communityThreadGoneBody": "Il a pu être supprimé ou retiré depuis qu'on t'a prévenu.",
   "communityThreadGoneCta": "Retour au fil",
   "pushOpen": "Ouvrir",
+  "pushRefresh": "Actualiser",
   "settingsPushTitle": "Ce qu’on t’envoie",
   "settingsPushSubtitle": "Uniquement pour tes propres fils. Jamais pour ceux des autres.",
   "settingsPushBlocked": "Les notifications de Cirrus sont désactivées dans les réglages de ton téléphone. Réactive-les là-bas et tout ceci se remettra à fonctionner.",

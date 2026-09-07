@@ -980,6 +980,7 @@
   "communityThreadGoneBody": "Pode ter sido apagado ou removido desde que te avisámos.",
   "communityThreadGoneCta": "Voltar ao mural",
   "pushOpen": "Abrir",
+  "pushRefresh": "Atualizar",
   "settingsPushTitle": "O que te enviamos",
   "settingsPushSubtitle": "Só sobre os teus tópicos. Nunca sobre os dos outros.",
   "settingsPushBlocked": "As notificações do Cirrus estão desligadas nas definições do teu telemóvel. Liga-as aí e isto volta a funcionar.",

@@ -3351,6 +3351,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pushOpen => 'Ouvrir';
 
   @override
+  String get pushRefresh => 'Actualiser';
+
+  @override
   String get settingsPushTitle => 'Ce qu’on t’envoie';
 
   @override

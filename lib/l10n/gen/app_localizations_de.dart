@@ -3349,6 +3349,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pushOpen => 'Öffnen';
 
   @override
+  String get pushRefresh => 'Aktualisieren';
+
+  @override
   String get settingsPushTitle => 'Was wir dir schicken';
 
   @override

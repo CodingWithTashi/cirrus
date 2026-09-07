@@ -43,6 +43,7 @@ class LpColors extends ThemeExtension<LpColors> {
     required this.ember,
     required this.emberText,
     required this.emberSoft,
+    required this.onEmber,
     required this.oxygen,
     required this.oxygenText,
     required this.oxygenSoft,
@@ -78,6 +79,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF8A00),
         emberText: const Color(0xFFFF8A00),
         emberSoft: const Color(0x1FFF8A00),
+        onEmber: const Color(0xFF0A0C10),
         oxygen: const Color(0xFF6EE7FF),
         oxygenText: const Color(0xFF6EE7FF),
         oxygenSoft: const Color(0x1F6EE7FF),
@@ -113,6 +115,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF8A00),
         emberText: const Color(0xFFCE6A00),
         emberSoft: const Color(0x1FFF8A00),
+        onEmber: const Color(0xFF0A0C10),
         oxygen: const Color(0xFF6EE7FF),
         oxygenText: const Color(0xFF0787B4),
         oxygenSoft: const Color(0x1F6EE7FF),
@@ -155,6 +158,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF6B3D),
         emberText: const Color(0xFFFF8F66),
         emberSoft: const Color(0x1FFF6B3D),
+        onEmber: const Color(0xFF14100C),
         oxygen: const Color(0xFF6EE7FF),
         oxygenText: const Color(0xFF6EE7FF),
         oxygenSoft: const Color(0x1F6EE7FF),
@@ -190,6 +194,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF6B3D),
         emberText: const Color(0xFFC4441A),
         emberSoft: const Color(0x1FFF6B3D),
+        onEmber: const Color(0xFF14100C),
         oxygen: const Color(0xFF6EE7FF),
         oxygenText: const Color(0xFF0F7A9E),
         oxygenSoft: const Color(0x1F6EE7FF),
@@ -231,6 +236,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF8A00),
         emberText: const Color(0xFFFFA23D),
         emberSoft: const Color(0x1FFF8A00),
+        onEmber: const Color(0xFF04121A),
         oxygen: const Color(0xFF8B9BFF),
         oxygenText: const Color(0xFFA3AFFF),
         oxygenSoft: const Color(0x1F8B9BFF),
@@ -266,6 +272,7 @@ class LpColors extends ThemeExtension<LpColors> {
         ember: const Color(0xFFFF8A00),
         emberText: const Color(0xFFC25F00),
         emberSoft: const Color(0x1FFF8A00),
+        onEmber: const Color(0xFF04121A),
         oxygen: const Color(0xFF8B9BFF),
         oxygenText: const Color(0xFF4652C9),
         oxygenSoft: const Color(0x1F8B9BFF),
@@ -306,8 +313,22 @@ class LpColors extends ThemeExtension<LpColors> {
   final Color onVolt;
 
   final Color ember;
+
+  /// Ember with enough contrast to set text on [background] — NOT on [ember].
+  /// In Midnight Ember the two are the same hex, which is why a fill needs
+  /// [onEmber] instead.
   final Color emberText;
   final Color emberSoft;
+
+  /// Ink on an [ember] FILL, the way [onVolt] is ink on a [volt] fill.
+  ///
+  /// It exists because the notification badge reached for [emberText], which
+  /// is the wrong ROLE: that token is ember-coloured text for a dark ground,
+  /// and in Midnight Ember it is byte-identical to [ember] — so the unread
+  /// count rendered orange on orange and was invisible on every phone. The
+  /// tokens here are hue-named but role-used, and this is what that warning
+  /// looks like when it goes wrong.
+  final Color onEmber;
 
   final Color oxygen;
   final Color oxygenText;
@@ -376,6 +397,7 @@ class LpColors extends ThemeExtension<LpColors> {
       ember: c(ember, other.ember),
       emberText: c(emberText, other.emberText),
       emberSoft: c(emberSoft, other.emberSoft),
+      onEmber: c(onEmber, other.onEmber),
       oxygen: c(oxygen, other.oxygen),
       oxygenText: c(oxygenText, other.oxygenText),
       oxygenSoft: c(oxygenSoft, other.oxygenSoft),

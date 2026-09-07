@@ -27,6 +27,8 @@ import '../helpers.dart';
 /// navigated at all. A signed-in user tapping a notification with the app
 /// closed landed on the sign-in screen for the account they were already in.
 void main() {
+  _foregroundOnSameScreen();
+
   Future<(ProviderContainer, _FakePush)> open(
     WidgetTester tester, {
     bool viaSplash = false,
@@ -188,6 +190,151 @@ void main() {
 }
 
 /// A [PushMessages] the test drives by hand.
+/// A push that lands while you are ALREADY reading the thread it is about.
+///
+/// "Open" is the wrong word and the wrong action there. `_openFrom` ends in
+/// `_router.push`, so it would stack a second identical copy of the thread on
+/// top of the one being read — and neither copy would show the new reply,
+/// because neither re-reads on its own. Founder report, Sep 7.
+void _foregroundOnSameScreen() {
+  Future<(ProviderContainer, _FakePush, String)> onThread(
+    WidgetTester tester,
+  ) async {
+    final push = _FakePush();
+    addTearDown(push.dispose);
+    final container = ProviderContainer(
+      overrides: [
+        ...fastBackendOverrides(premium: false),
+        pushMessagesProvider.overrideWithValue(push),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const LastPuffApp(),
+      ),
+    );
+    container.read(quitStoreProvider.notifier).seedDemoJourney();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    container.read(communityStoreProvider);
+    await tester.pumpAndSettle();
+    final id = container.read(communityStoreProvider).posts.first.id;
+
+    container.read(routerProvider).push(Routes.communityPost(id));
+    await tester.pumpAndSettle();
+    return (container, push, id);
+  }
+
+  RemoteMessage reply(String route) => RemoteMessage(
+    data: <String, String>{'route': route, 'kind': 'communityReply'},
+    notification: const RemoteNotification(
+      title: 'Someone replied',
+      body: 'Go see what they said.',
+    ),
+  );
+
+  testWidgets('offers Refresh, not Open, for the thread on screen', (
+    tester,
+  ) async {
+    final (container, push, id) = await onThread(tester);
+    expect(
+      container.read(routerProvider).state.uri.path,
+      Routes.communityPost(id),
+    );
+
+    push.foreground.add(reply(Routes.communityPost(id)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Refresh'), findsOneWidget);
+    expect(
+      find.text('Open'),
+      findsNothing,
+      reason: 'Open would push a second copy of the thread already on screen',
+    );
+    // The snack's fallback timer must not outlive the tree.
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+  });
+
+  testWidgets('still offers Open for a DIFFERENT thread', (tester) async {
+    final (container, push, id) = await onThread(tester);
+    final other = container.read(communityStoreProvider).posts
+        .firstWhere((p) => p.id != id)
+        .id;
+
+    push.foreground.add(reply(Routes.communityPost(other)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Open'), findsOneWidget);
+    expect(find.text('Refresh'), findsNothing);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+  });
+
+  testWidgets('tapping Refresh re-reads the thread in place', (tester) async {
+    final (container, push, id) = await onThread(tester);
+    final before = container.read(communityStoreProvider).posts
+        .firstWhere((p) => p.id == id)
+        .replies
+        .length;
+
+    // ignore: avoid_print
+    print('DEBUG id=' + id + ' before=' + before.toString() + ' serverIds=' +
+        container.read(fakeServerProvider).posts
+            .map((p) => p['id'].toString()).join(','));
+    // A reply lands on the server the way another account's does — never
+    // through the store, which would insert it locally and hide the bug.
+    container.read(fakeServerProvider).updatePost(id, (p) {
+      p['replies'] = [
+        ...(p['replies'] as List? ?? []),
+        {
+          'id': 'srv-refresh',
+          'alias': '@wildowl78',
+          'avatarEmoji': '🦉',
+          'text': 'the evening cravings fade after about ten days',
+          'isMine': false,
+        },
+      ];
+    });
+
+    push.foreground.add(reply(Routes.communityPost(id)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await container.read(communityStoreProvider.notifier).ensurePost(id);
+    // ignore: avoid_print
+    print('DEBUG after direct ensurePost=' +
+        container.read(communityStoreProvider).posts
+            .firstWhere((p) => p.id == id).replies.length.toString());
+    await tester.tap(find.text('Refresh'));
+    // The fake server answers on a real microtask, which fake-async pumps do
+    // not drain; `runAsync` is what lets the fetch actually complete.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      container.read(communityStoreProvider).posts
+          .firstWhere((p) => p.id == id)
+          .replies
+          .length,
+      before + 1,
+      reason: 'Refresh must actually bring the new reply in',
+    );
+    expect(
+      container.read(routerProvider).state.uri.path,
+      Routes.communityPost(id),
+      reason: 'Refresh must not navigate — it stays where the reader is',
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+  });
+}
+
 class _FakePush implements PushMessages {
   final opened = StreamController<RemoteMessage>.broadcast();
   final foreground = StreamController<RemoteMessage>.broadcast();

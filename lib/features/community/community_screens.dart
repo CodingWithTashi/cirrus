@@ -158,14 +158,25 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                         ),
                       ),
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                      itemCount: posts.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) => PostCard(
-                        post: posts[i],
-                        onOpen: () =>
-                            context.push(Routes.communityPost(posts[i].id)),
+                  : RefreshIndicator(
+                      color: lp.volt,
+                      backgroundColor: lp.surface,
+                      onRefresh: () => ref
+                          .read(communityStoreProvider.notifier)
+                          .refreshFeed(),
+                      child: ListView.separated(
+                        // The feed can be shorter than the viewport, and a
+                        // list that cannot scroll cannot be pulled — so the
+                        // gesture would simply not exist on a quiet day.
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                        itemCount: posts.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) => PostCard(
+                          post: posts[i],
+                          onOpen: () =>
+                              context.push(Routes.communityPost(posts[i].id)),
+                        ),
                       ),
                     ),
             ),
@@ -558,9 +569,9 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     // because it is only SOS posts that pin — an ordinary post while your SOS
     // is up is fine, and greying that out would be a rule nobody asked for.
     final pinned = sos
-        ? ref.read(communityStoreProvider.notifier).liveSosOfMine(
-            ref.read(nowProvider)(),
-          )
+        ? ref
+              .read(communityStoreProvider.notifier)
+              .liveSosOfMine(ref.read(nowProvider)())
         : null;
     // Text and tone decided together, in one switch, so they can never
     // disagree: a spent allowance is not an error and must not wear the red
@@ -798,9 +809,8 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                             alignment: Alignment.centerLeft,
                             child: LpTextButton(
                               l10n.premiumLockCta,
-                              onTap: () => context.push(
-                                Routes.paywallFrom('compose'),
-                              ),
+                              onTap: () =>
+                                  context.push(Routes.paywallFrom('compose')),
                             ),
                           ),
                       ],
@@ -864,8 +874,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
 /// banner would look busy, on a screen whose entire value is that someone
 /// really is there. Zero means zero, and the banner does not render.
 int _backupCount(Post post) =>
-    post.replies.length +
-    post.reactions.values.fold(0, (sum, n) => sum + n);
+    post.replies.length + post.reactions.values.fold(0, (sum, n) => sum + n);
 
 /// Frame 45 — SOS rally: live backup banner, replies, poster's update.
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -975,57 +984,70 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         child: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                children: [
-                  // Only once somebody has actually shown up. An empty rally
-                  // banner promising backup is the loneliest thing this screen
-                  // could show the person who just asked for help.
-                  if (isSos && _backupCount(post) > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: lp.oxygenSoft,
-                        borderRadius: BorderRadius.circular(LpDimens.rInput),
-                        border: Border.all(
-                          color: lp.oxygen.withValues(alpha: 0.45),
-                          width: 1.5,
+              // Pull to pick up replies posted while this screen was open.
+              // `ensurePost` re-reads the thread, so the gesture and the
+              // notification tap land on exactly the same code path.
+              child: RefreshIndicator(
+                color: lp.volt,
+                backgroundColor: lp.surface,
+                onRefresh: () => ref
+                    .read(communityStoreProvider.notifier)
+                    .ensurePost(widget.postId),
+                child: ListView(
+                  // A short thread does not fill the viewport, and a list that
+                  // cannot scroll cannot be pulled.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  children: [
+                    // Only once somebody has actually shown up. An empty rally
+                    // banner promising backup is the loneliest thing this screen
+                    // could show the person who just asked for help.
+                    if (isSos && _backupCount(post) > 0) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: lp.oxygen.withValues(alpha: 0.1),
-                            blurRadius: 24,
+                        decoration: BoxDecoration(
+                          color: lp.oxygenSoft,
+                          borderRadius: BorderRadius.circular(LpDimens.rInput),
+                          border: Border.all(
+                            color: lp.oxygen.withValues(alpha: 0.45),
+                            width: 1.5,
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Text('🛡️', style: TextStyle(fontSize: 16)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.communitySosBanner(_backupCount(post)),
-                              style: LpType.body13(
-                                lp.oxygenText,
-                                weight: FontWeight.w600,
+                          boxShadow: [
+                            BoxShadow(
+                              color: lp.oxygen.withValues(alpha: 0.1),
+                              blurRadius: 24,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🛡️', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                l10n.communitySosBanner(_backupCount(post)),
+                                style: LpType.body13(
+                                  lp.oxygenText,
+                                  weight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 14),
+                    ],
+                    PostCard(post: post, expanded: true),
                     const SizedBox(height: 14),
+                    for (final reply in post.replies) ...[
+                      _ReplyBubble(reply: reply, postId: post.id),
+                      const SizedBox(height: 10),
+                    ],
                   ],
-                  PostCard(post: post, expanded: true),
-                  const SizedBox(height: 14),
-                  for (final reply in post.replies) ...[
-                    _ReplyBubble(reply: reply, postId: post.id),
-                    const SizedBox(height: 10),
-                  ],
-                ],
+                ),
               ),
             ),
             Padding(
@@ -1216,46 +1238,50 @@ class _OwnPostStatus extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
-    final (Widget icon, String label, Color color, VoidCallback? onTap) =
-        switch (post.status) {
-          PostStatus.pending => (
-            SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.6,
-                color: lp.textSecondary,
-              ),
-            ),
-            l10n.communityStatusPosting,
-            lp.textSecondary,
-            null,
+    final (
+      Widget icon,
+      String label,
+      Color color,
+      VoidCallback? onTap,
+    ) = switch (post.status) {
+      PostStatus.pending => (
+        SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.6,
+            color: lp.textSecondary,
           ),
-          PostStatus.held => (
-            Icon(Icons.hourglass_top_rounded, size: 14, color: lp.cautionText),
-            l10n.communityStatusHeld,
-            lp.cautionText,
-            null,
-          ),
-          PostStatus.failed => (
-            Icon(Icons.refresh_rounded, size: 14, color: lp.dangerText),
-            l10n.communityStatusFailed,
-            lp.dangerText,
-            () => ref.read(communityStoreProvider.notifier).retryPost(post.id),
-          ),
-          PostStatus.capped => (
-            Icon(Icons.schedule_rounded, size: 14, color: lp.cautionText),
-            l10n.communityStatusCapped,
-            lp.cautionText,
-            null,
-          ),
-          PostStatus.blocked || PostStatus.live => (
-            Icon(Icons.visibility_off_outlined, size: 14, color: lp.dangerText),
-            l10n.communityStatusBlocked,
-            lp.dangerText,
-            null,
-          ),
-        };
+        ),
+        l10n.communityStatusPosting,
+        lp.textSecondary,
+        null,
+      ),
+      PostStatus.held => (
+        Icon(Icons.hourglass_top_rounded, size: 14, color: lp.cautionText),
+        l10n.communityStatusHeld,
+        lp.cautionText,
+        null,
+      ),
+      PostStatus.failed => (
+        Icon(Icons.refresh_rounded, size: 14, color: lp.dangerText),
+        l10n.communityStatusFailed,
+        lp.dangerText,
+        () => ref.read(communityStoreProvider.notifier).retryPost(post.id),
+      ),
+      PostStatus.capped => (
+        Icon(Icons.schedule_rounded, size: 14, color: lp.cautionText),
+        l10n.communityStatusCapped,
+        lp.cautionText,
+        null,
+      ),
+      PostStatus.blocked || PostStatus.live => (
+        Icon(Icons.visibility_off_outlined, size: 14, color: lp.dangerText),
+        l10n.communityStatusBlocked,
+        lp.dangerText,
+        null,
+      ),
+    };
     final row = Row(
       children: [
         icon,

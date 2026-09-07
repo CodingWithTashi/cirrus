@@ -2325,6 +2325,10 @@
   "@pushOpen": {
     "description": "Action on the in-app banner a foreground push draws."
   },
+  "pushRefresh": "Refresh",
+  "@pushRefresh": {
+    "description": "Snackbar action when a push arrives for the thread already on screen."
+  },
   "settingsPushTitle": "What we send you",
   "@settingsPushTitle": {
     "description": "Notification categories sheet."

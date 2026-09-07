@@ -167,6 +167,12 @@ void main() {
           );
           atLeast('voltText on background', lp.voltText, lp.background, 4.4);
           atLeast('onVolt on volt', lp.onVolt, lp.volt, 4.5);
+          // The notification badge sets its unread count in this. It used to
+          // use `emberText`, which is ink for the BACKGROUND and is the same
+          // hex as `ember` in Midnight — orange on orange, so the number was
+          // invisible on every phone. A fill needs its own ink, and that ink
+          // needs a floor.
+          atLeast('onEmber on ember', lp.onEmber, lp.ember, 4.5);
 
           // Accent text: short labels, badges and chips — AA Large / UI.
           atLeast('emberText on background', lp.emberText, lp.background, 3);

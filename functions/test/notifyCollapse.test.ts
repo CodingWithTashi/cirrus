@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {
   DEFAULT_COLLAPSE,
   decideNotification,
+  readThreadState,
   type CollapseConfig,
   type ThreadNotifState,
 } from '../src/domain/notifyCollapse';
@@ -121,5 +122,71 @@ describe('decideNotification', () => {
   it('never announces a count below one', () => {
     const d = decideNotification(null, T0, cfg);
     expect(d.announceCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('readThreadState', () => {
+  it('reads a row written only by syncUserContext as never-notified', () => {
+    // The exact document production held for the post whose reply notified
+    // nobody: `syncUserContext` creates this row with `set({seenAtMs}` merge)`
+    // the moment the author opens their own thread, which is before any reply
+    // can arrive. Casting it to ThreadNotifState is what broke every reply
+    // push at once — see the docstring on readThreadState.
+    expect(readThreadState({seenAtMs: 1_788_753_744_284})).toBeNull();
+  });
+
+  it('reads a missing document as never-notified', () => {
+    expect(readThreadState(undefined)).toBeNull();
+    expect(readThreadState(null)).toBeNull();
+  });
+
+  it('refuses a half-written group rather than passing undefined on', () => {
+    expect(readThreadState({count: 3, groupStartedAtMs: T0})).toBeNull();
+  });
+
+  it('refuses non-numeric and non-finite fields', () => {
+    expect(readThreadState({...fresh(), count: NaN})).toBeNull();
+    expect(readThreadState({...fresh(), lastSentAtMs: '0'})).toBeNull();
+    expect(readThreadState({...fresh(), sendsInGroup: Infinity})).toBeNull();
+  });
+
+  it('round-trips a complete group, keeping seenAtMs', () => {
+    const state = fresh({seenAtMs: T0 - 1});
+    expect(readThreadState({...state, kind: 'communityReply'})).toEqual(state);
+  });
+
+  it('reads an absent seenAtMs as null rather than dropping the group', () => {
+    const {seenAtMs: _drop, ...withoutSeen} = fresh();
+    expect(readThreadState(withoutSeen)).toEqual({...withoutSeen, seenAtMs: null});
+  });
+});
+
+describe('the notifyAuthor path a partial row used to break', () => {
+  /** What notifyReply does: read the row, decide, write `next` back. */
+  function step(row: unknown, nowMs: number) {
+    return decideNotification(readThreadState(row), nowMs, cfg);
+  }
+
+  it('sends, and writes a state Firestore will accept', () => {
+    const d = step({seenAtMs: T0}, T0 + 60_000);
+
+    expect(d.send).toBe(true);
+    expect(d.announceCount).toBe(1);
+    // The half that threw. The Admin SDK refuses `undefined` outright, and
+    // that throw is what stopped `notifiedAt` being written and the inbox row
+    // being recorded — so the failure was total AND silent.
+    for (const [key, value] of Object.entries(d.next)) {
+      expect(value, `${key} must be writable`).not.toBeUndefined();
+      if (typeof value === 'number') {
+        expect(Number.isFinite(value), `${key} must be finite`).toBe(true);
+      }
+    }
+  });
+
+  it('still collapses a genuine burst once the group exists', () => {
+    const first = step({seenAtMs: T0}, T0 + 60_000);
+    const second = step({...first.next, seenAtMs: null}, T0 + 61_000);
+    expect(second.send).toBe(false);
+    expect(second.announceCount).toBe(2);
   });
 });

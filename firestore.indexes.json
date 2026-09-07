@@ -122,12 +122,16 @@
       ]
     },
     {
-      "_comment": "The in-app notification inbox is swept by the same cron with a collection-group query on createdAtMs. Same trap as the two overrides above: without COLLECTION_GROUP scope the query throws FAILED_PRECONDITION at runtime and prunes nothing, silently.",
+      "_comment": "The inbox is read by the app newest-first and swept by the pruneDevices cron oldest-first, so this field needs THREE index configs and every one of them is load-bearing. COLLECTION+DESCENDING is the app's own query (FirebaseNotificationsRepository.watch, orderBy createdAtMs descending); COLLECTION_GROUP+ASCENDING is pruneOldNotifications. A field override REPLACES Firestore's automatic single-field indexes rather than adding to them, so declaring only the two ascending ones DELETED the descending index the app depends on - and the app's failure was invisible, because NotificationsStore treats a stream error as an empty inbox. The inbox rendered its empty state and the bell showed no badge for every user, while the rules, the send path and the cron all stayed green. Adding a scope here is never additive: list every config the field is queried with.",
       "collectionGroup": "notifications",
       "fieldPath": "createdAtMs",
       "indexes": [
         {
           "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
           "queryScope": "COLLECTION"
         },
         {

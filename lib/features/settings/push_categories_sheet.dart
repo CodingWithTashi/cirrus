@@ -6,9 +6,11 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../data/api/firebase/push_service.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 
 /// What the SERVER is allowed to send, one switch per kind.
 ///
@@ -53,6 +55,13 @@ class _PushCategoriesSheetState extends ConsumerState<_PushCategoriesSheet> {
   /// when the OS is dropping them is the kind of dishonesty this app's own
   /// rules single out.
   PushPermission? _permission;
+
+  /// An OS prompt already in flight. The button is awaited twice over
+  /// (`requestPermission`, then `permissionStatus`) and stays tappable
+  /// throughout without this — two taps on a slow cold start would race two
+  /// requests and, worse, file two `notifPrompt` events for ONE decision,
+  /// which is a funnel this app reads its launch gates off.
+  bool _asking = false;
 
   @override
   void initState() {
@@ -110,6 +119,62 @@ class _PushCategoriesSheetState extends ConsumerState<_PushCategoriesSheet> {
                     l10n.settingsPushBlocked,
                     style: LpType.caption(lp.cautionText),
                   ),
+                ),
+              ],
+              if (_permission == PushPermission.notAsked && enabled) ...[
+                const SizedBox(height: 12),
+                // The opposite of the branch above, and the hole it left.
+                //
+                // The OS prompt only ever fires from onboarding's D4 step and
+                // from the sheet after a community post. Somebody who signed
+                // in on a NEW device never sees either — their journey is
+                // restored, so onboarding is skipped — and every switch below
+                // was live while the OS had never been asked and no FCM token
+                // could be minted. The screen said notifications were on, the
+                // registry had no device, and nothing could arrive. That is
+                // the exact state a reinstall leaves, so it is the state a
+                // founder testing on a real phone hits every single time.
+                //
+                // Here it is a working button rather than a signpost, because
+                // `notAsked` is the one status where the OS dialog still opens.
+                //
+                // Gated on `enabled` — the master switch — for a reason that
+                // is easy to miss: turning notifications off calls
+                // `PushService.deleteToken()`, which is the half that actually
+                // guarantees this device goes quiet. Granting here would mint
+                // a fresh token and re-register the device, undoing that,
+                // while every switch below stayed visibly disabled. The button
+                // would have appeared to do nothing and silently done the one
+                // thing the user had just asked us not to.
+                LpButton(
+                  l10n.pushAskCta,
+                  busy: _asking,
+                  onTap: _asking
+                      ? null
+                      : () async {
+                          setState(() => _asking = true);
+                          final granted = await PushService.requestPermission();
+                          if (!mounted) return;
+                          ref
+                              .read(analyticsProvider)
+                              .notifPrompt(granted: granted);
+                          // Register the freshly minted token now; the
+                          // alternative is the next resume or cold start, and
+                          // somebody who came here deliberately should not
+                          // have to relaunch.
+                          if (granted) {
+                            ref
+                                .read(userContextRepositoryProvider)
+                                .sync()
+                                .ignore();
+                          }
+                          final next = await PushService.permissionStatus();
+                          if (!mounted) return;
+                          setState(() {
+                            _permission = next;
+                            _asking = false;
+                          });
+                        },
                 ),
               ],
               const SizedBox(height: 14),

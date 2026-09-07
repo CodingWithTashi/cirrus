@@ -3324,6 +3324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pushOpen => 'Open';
 
   @override
+  String get pushRefresh => 'Refresh';
+
+  @override
   String get settingsPushTitle => 'What we send you';
 
   @override

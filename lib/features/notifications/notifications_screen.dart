@@ -236,8 +236,13 @@ class NotificationBell extends ConsumerWidget {
                     child: Text(
                       unread > 9 ? '9+' : '$unread',
                       textAlign: TextAlign.center,
+                      // `onEmber`, never `emberText`. This is ink on an ember
+                      // FILL, and `emberText` is ember-coloured text for a
+                      // dark GROUND — in Midnight Ember the two are the same
+                      // hex, so the count rendered orange on orange and no
+                      // user ever saw a number. Verified on device.
                       style: LpType.caption(
-                        lp.emberText,
+                        lp.onEmber,
                         weight: FontWeight.w700,
                       ).copyWith(fontSize: 10, height: 1),
                     ),

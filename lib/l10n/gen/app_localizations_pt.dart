@@ -3339,6 +3339,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get pushOpen => 'Abrir';
 
   @override
+  String get pushRefresh => 'Atualizar';
+
+  @override
   String get settingsPushTitle => 'O que te enviamos';
 
   @override

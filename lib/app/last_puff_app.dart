@@ -489,11 +489,43 @@ class _PushSyncState extends ConsumerState<_PushSync> {
         final route = PushService.routeFor(message, _allowedRoutes);
         // A banner that cannot be acted on is a banner that wastes the one
         // moment the reader was interested.
+        if (route == null) {
+          showLpSnack(context, body);
+          return;
+        }
+
+        // Already looking at the very thing the push is about.
+        //
+        // "Open" is the wrong word and the wrong action there. `_openFrom`
+        // ends in `_router.push`, so tapping it would stack a SECOND copy of
+        // the thread on top of the one being read — same content, an extra
+        // back press to get out of, and the new reply still missing from
+        // both, since neither copy re-reads on its own.
+        //
+        // So the label becomes "Refresh" and the action re-reads the thread
+        // in place, which is the same `ensurePost` call the pull-to-refresh
+        // gesture and the notification tap both make. One code path, three
+        // ways in.
+        if (_isCurrentRoute(route)) {
+          final postId = _postIdOf(route);
+          showLpSnack(
+            context,
+            body,
+            actionLabel: context.l10n.pushRefresh,
+            onAction: postId == null
+                ? null
+                : () => ref
+                      .read(communityStoreProvider.notifier)
+                      .ensurePost(postId),
+          );
+          return;
+        }
+
         showLpSnack(
           context,
           body,
-          actionLabel: route == null ? null : context.l10n.pushOpen,
-          onAction: route == null ? null : () => _openFrom(message),
+          actionLabel: context.l10n.pushOpen,
+          onAction: () => _openFrom(message),
         );
       }),
     );
@@ -503,6 +535,30 @@ class _PushSyncState extends ConsumerState<_PushSync> {
       final initial = await messages.initialMessage();
       if (initial != null) _openFrom(initial);
     });
+  }
+
+  /// Whether [route] is the screen already on top.
+  ///
+  /// Compared on PATH only. The router's own location carries the paywall's
+  /// `?from=` tag and the arena's `?g=`, so a raw string compare would answer
+  /// "different screen" for the screen the reader is plainly looking at.
+  bool _isCurrentRoute(String route) {
+    final target = Uri.tryParse(route)?.path;
+    return target != null && target == _router.state.uri.path;
+  }
+
+  /// The post id in a `/community/post/{id}` route, or null for anything else.
+  ///
+  /// Deliberately narrow: a thread is the only destination that has something
+  /// to re-read in place. Home, Insight, Coach and the paywall either rebuild
+  /// from live providers already or have no "newer" state to fetch, so
+  /// offering them a Refresh would be a button that does nothing visible.
+  String? _postIdOf(String route) {
+    final path = Uri.tryParse(route)?.path;
+    if (path == null || !path.startsWith(Routes.communityPostBase)) return null;
+    final id = path.substring(Routes.communityPostBase.length);
+    final trimmed = id.startsWith('/') ? id.substring(1) : id;
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   void _openFrom(RemoteMessage message) {

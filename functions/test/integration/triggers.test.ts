@@ -511,4 +511,62 @@ it('still notifies the author when mention lookup blows up', async () => {
     await publish(ref);
     expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(1);
   });
+
+  it('notifies an author who has already OPENED their own thread', async () => {
+    // The production failure, reproduced exactly (docs/10 §31).
+    //
+    // `syncUserContext` marks a thread seen with `set({seenAtMs}, merge)` on a
+    // document that need not exist, so the collapse row can hold nothing but
+    // that one field — and it usually does, because the first person to open
+    // your post is you, before anybody has replied.
+    //
+    // Casting that row to ThreadNotifState made every arithmetic field
+    // `undefined`: the throttle branch decided `send: false`, and then the
+    // write of `groupStartedAtMs: undefined` was REFUSED by the Admin SDK.
+    // `notifyReply`'s catch swallowed the throw, so the reply was never
+    // marked `notifiedAt` and never recorded in the inbox either. Every
+    // existing test in this block passed, because none of them had opened
+    // the thread first.
+    await db.doc('users/author1/notifThreads/p1').set({seenAtMs: Date.now()});
+
+    const ref = await thread();
+    await publish(ref);
+
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'communityReply',
+      '/community/post/p1',
+      expect.objectContaining({tag: 'thread:p1', count: 1}),
+      expect.any(Number),
+    );
+
+    // The write went through, so the group actually exists afterwards...
+    const state = await db.doc('users/author1/notifThreads/p1').get();
+    expect(state.get('count')).toBe(1);
+    expect(state.get('groupStartedAtMs')).toEqual(expect.any(Number));
+    // ...and the reply is marked, which is what stops it announcing twice.
+    expect((await ref.get()).get('notifiedAt')).toBeDefined();
+  });
+
+  it('starts a fresh group after the reader has caught up', async () => {
+    // The same seenAtMs path on a thread that HAS been notified before: the
+    // reader has seen everything, so the next reply is genuinely news and
+    // must not be throttled against the group they already read.
+    const first = await thread({replyId: 'r0'});
+    await publish(first);
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(1);
+
+    await db
+      .doc('users/author1/notifThreads/p1')
+      .set({seenAtMs: Date.now() + 1000}, {merge: true});
+
+    const second = postsCol().doc('p1').collection('replies').doc('r1');
+    await second.set({alias: '@lateowl9', text: 'me too', status: 'pending'});
+    await db.collection('replyAuthors').doc('r1').set({uid: 'u2', postId: 'p1'});
+    await publish(second);
+
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledTimes(2);
+    const calls = vi.mocked(sendLocalized).mock.calls;
+    expect(calls[1]?.[3]).toEqual(expect.objectContaining({count: 1}));
+  });
 });

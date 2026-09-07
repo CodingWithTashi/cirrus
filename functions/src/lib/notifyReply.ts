@@ -25,8 +25,11 @@ import {
   resolveMentions,
   type ThreadParticipant,
 } from '../domain/mentions';
-import {DEFAULT_COLLAPSE, decideNotification} from '../domain/notifyCollapse';
-import type {ThreadNotifState} from '../domain/notifyCollapse';
+import {
+  DEFAULT_COLLAPSE,
+  decideNotification,
+  readThreadState,
+} from '../domain/notifyCollapse';
 import {FieldValue, db, notifThreadsCol, postsCol} from './firestore';
 import {log} from './logger';
 import {sendLocalized} from './push';
@@ -161,7 +164,9 @@ async function notifyAuthor(
   const ref = notifThreadsCol(uid).doc(postId);
   const decision = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const state = snap.exists ? (snap.data() as ThreadNotifState) : null;
+    // Parsed, never cast: `syncUserContext` writes read-marks into this same
+    // document, so it may hold only `{seenAtMs}`. See `readThreadState`.
+    const state = readThreadState(snap.data());
     const next = decideNotification(state, nowMs, DEFAULT_COLLAPSE);
     tx.set(ref, {...next.next, kind: 'communityReply'}, {merge: true});
     return next;
