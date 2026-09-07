@@ -21,6 +21,7 @@ import {
   COACH_MIN_INSTANCES,
   COACH_SUMMARY_EVERY,
   COACH_SUMMARY_MAX_CHARS,
+  enforceAppCheck,
   GEMINI_API_KEY,
   MAX_OUTPUT_TOKENS,
   MODEL_FREE,
@@ -90,7 +91,7 @@ export const aiCoachChat = onCall(
   {
     region: REGION,
     secrets: [GEMINI_API_KEY],
-    enforceAppCheck: true, // the one setting standing between us and a public Gemini proxy
+    enforceAppCheck, // the one setting standing between us and a public Gemini proxy
     minInstances: COACH_MIN_INSTANCES,
     memory: '512MiB',
     timeoutSeconds: 60,

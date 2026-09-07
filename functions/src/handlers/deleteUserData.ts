@@ -11,7 +11,7 @@
  */
 import {onCall} from 'firebase-functions/v2/https';
 import {getAuth} from 'firebase-admin/auth';
-import {REGION, REVENUECAT_SECRET_API_KEY} from '../config';
+import {enforceAppCheck, REGION, REVENUECAT_SECRET_API_KEY} from '../config';
 import {db, journeyDoc, postsCol, userDoc} from '../lib/firestore';
 import {requireCaller} from '../lib/guards';
 import {log} from '../lib/logger';
@@ -22,7 +22,7 @@ const DEPARTED_ALIAS = '[departed quitter]';
 export const deleteUserData = onCall(
   {
     region: REGION,
-    enforceAppCheck: true,
+    enforceAppCheck,
     memory: '512MiB',
     timeoutSeconds: 300,
     secrets: [REVENUECAT_SECRET_API_KEY],

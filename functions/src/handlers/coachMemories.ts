@@ -18,13 +18,13 @@
  *   granting itself Premium.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {forget, listMemories, type Memory} from '../lib/memories';
 import {requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
 
 export const coachMemories = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{memories: Memory[]}> => {
     const {uid} = requireCaller(request);
     return {memories: await listMemories(uid)};
@@ -32,7 +32,7 @@ export const coachMemories = onCall(
 );
 
 export const forgetCoachMemory = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{forgotten: true}> => {
     const {uid} = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

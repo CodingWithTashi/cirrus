@@ -17,7 +17,7 @@
  * rules are deliberately hiding.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {prefilter, replyQuality} from '../ai/prefilter';
 import {db, FieldValue, postsCol} from '../lib/firestore';
 import {requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
@@ -26,7 +26,7 @@ import {requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/g
 const MAX_REPLY_CHARS = 300;
 
 export const createReply = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{replyId: string}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

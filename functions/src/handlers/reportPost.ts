@@ -14,7 +14,7 @@
  * a report may change is decided here, in one place, on the server.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {db, FieldValue, mirrorPostStatus, moderationDoc, postsCol} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
@@ -26,7 +26,7 @@ import {log} from '../lib/logger';
 const AUTO_HIDE_AT = 3;
 
 export const reportPost = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{ok: true}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

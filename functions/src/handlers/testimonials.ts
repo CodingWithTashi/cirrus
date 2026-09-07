@@ -15,7 +15,7 @@
  * provenance; this returns the two fields the screen renders and nothing else.
  */
 import {onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {testimonialsCol} from '../lib/firestore';
 import {asEnum, requireCaller} from '../lib/guards';
 import {log} from '../lib/logger';
@@ -85,7 +85,7 @@ async function poolFor(language: string): Promise<Testimonial[]> {
 }
 
 export const matchedTestimonials = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (
     request,
   ): Promise<{testimonials: {id: string; text: string}[]}> => {

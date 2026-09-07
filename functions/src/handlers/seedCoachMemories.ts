@@ -26,7 +26,7 @@
  * a client-owned journey plus one validated server-side effect.
  */
 import {onCall} from 'firebase-functions/v2/https';
-import {GEMINI_API_KEY, REGION} from '../config';
+import {enforceAppCheck, GEMINI_API_KEY, REGION} from '../config';
 import {geminiModel} from '../ai/gemini';
 import {decodeJourney, JourneyDecodeError} from '../domain/journeyCodec';
 import {FieldValue, journeyDoc, userDoc} from '../lib/firestore';
@@ -37,7 +37,7 @@ import {EMBEDDING_DIMENSIONS, remember} from '../lib/memories';
 export const seedCoachMemories = onCall(
   {
     region: REGION,
-    enforceAppCheck: true,
+    enforceAppCheck,
     secrets: [GEMINI_API_KEY],
     memory: '256MiB',
     timeoutSeconds: 30,

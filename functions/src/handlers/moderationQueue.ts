@@ -14,7 +14,7 @@
  * The rules keep `moderation` server-only, so this callable is the only door.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {db, FieldValue, mirrorPostStatus, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log} from '../lib/logger';
@@ -67,7 +67,7 @@ function requireAdmin(request: Parameters<typeof requireCaller>[0]): string {
 }
 
 export const moderationQueue = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{items: QueueItem[]}> => {
     const uid = requireAdmin(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
@@ -137,7 +137,7 @@ export const moderationQueue = onCall(
  * "fine as it is" on invisible content means invisible forever.
  */
 export const resolveModeration = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{ok: true}> => {
     const uid = requireAdmin(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

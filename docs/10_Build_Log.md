@@ -4430,3 +4430,52 @@ Pinned by `mention_picker_test.dart`, red without the guard.
 Still owed, and it cannot be done from here: **two real accounts, phone and
 emulator, against deployed functions.** A same-account reply is dropped by
 design (`authorUid === replierUid`), so one account proves nothing.
+
+## 33. ONE FLAG FOR APP CHECK (Sep 7) — sixteen literals, one param, and the boolean that fails open
+
+Every callable carried `enforceAppCheck: true` as its own literal: sixteen
+edits to switch it off in an emergency, and nothing to notice a seventeenth
+callable that shipped without it. Now each passes `enforceAppCheck` from
+`config.ts`, resolved from one deploy-time param, `ENFORCE_APP_CHECK`, set in
+`.env.alastpuff`. `true` is the only production value; `false` + deploy is the
+escape hatch for the day the attestation itself is what is broken (a Play
+Integrity / App Attest registration refusing every real client), when "open
+for an hour while it is fixed" beats "nobody can use the app". It never lives
+long, and like every param it is a deploy, not a live toggle.
+
+Two things about its shape are deliberate, and both were measured rather than
+assumed.
+
+**It is a string read as `!== 'false'`, not a `defineBoolean`.** The SDK's
+`BooleanParam.runtimeValue()` is `process.env[name] === 'true'` — it ignores
+its own `default` when the variable is unset — so a boolean param would have
+turned App Check OFF on every project whose `.env` never named it, in every
+test process, and on every deploy that forgot the file: silently, and in the
+direction that gives the product away. Same sign as the `ENTITLEMENT_MODE`
+lesson (§18): an unresolved value must fail closed. `test/appCheck.test.ts`
+pins the trap itself (`defineBoolean(…, {default: true}).value()` is `false`
+with nothing set) so an SDK release that fixes it is noticed.
+
+**It is a resolved boolean, not `ENFORCE_APP_CHECK.notEquals('false')`,
+though `CallableOptions` types the option as `boolean | Expression<boolean>`
+and invites exactly that.** `onCall` resolves this one option eagerly, calling
+`Expression.value()` where the handler is defined, and `value()` warns under
+`FUNCTIONS_CONTROL_API=true` — which is precisely how the CLI loads the code
+at deploy discovery. Simulated before deploying (`FUNCTIONS_CONTROL_API=true
+node -e "require('./lib/src/index.js')"`): the Expression form printed
+`params.ENFORCE_APP_CHECK != "false".value() invoked during function
+deployment … This is usually a mistake` three times per callable, 48 lines
+per deploy describing the mistake they are not. Reading
+`process.env[ENFORCE_APP_CHECK.name]` gives the same answer
+(`StringParam.runtimeValue()` is `process.env[name] || ''`), the param stays
+declared so the CLI still resolves it from `.env.alastpuff` and uploads it,
+and the same simulation prints nothing.
+
+The test scans `src/handlers` for every `onCall(` and requires the shared
+name on each, imported from config, and no literal anywhere. Run red in both
+directions before being trusted: a literal `true` put back on one callable,
+and the option dropped from it. Resolution checked on the built output:
+`false` → off; `true`, `FALSE`, empty and unset → on.
+
+functions `verify` **322/322** (+9). The app is untouched — the client sends
+its token exactly as before, and the debug-token discipline of §7 stands.

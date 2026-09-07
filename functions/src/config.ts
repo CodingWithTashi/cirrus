@@ -241,6 +241,67 @@ export const ENTITLEMENT_MODE = defineString('ENTITLEMENT_MODE', {
   description: "'mirror' (real entitlements) or 'ungated' (everyone premium).",
 });
 
+/**
+ * Whether a callable refuses a request that carries no valid App Check token.
+ *
+ * ONE flag for every callable: each passes `enforceAppCheck` (below) as its
+ * option, so there is no way for a new callable to ship without it and no
+ * way to turn it off for one without turning it off for all. `rcWebhook` is
+ * an `onRequest` behind its own shared secret and is not covered.
+ *
+ * `true` is the only production value. With it off, `aiCoachChat` is a
+ * public Gemini proxy billed to us and the community is open to anyone
+ * holding an id token. The flag exists for the day the ATTESTATION is what
+ * is broken — a Play Integrity or App Attest registration refusing every
+ * real client, a debug token that drifted out of the console — when the
+ * choice is "nobody can use the app" against "open for an hour while it is
+ * fixed". Set `false` in `.env.alastpuff`, deploy, fix, set `true`, deploy.
+ * It never lives long, and `test/appCheck.test.ts` pins that every callable
+ * reads it and that nothing reads a literal.
+ *
+ * A **string** read as `!== 'false'`, deliberately not `defineBoolean`:
+ * `BooleanParam` resolves an UNSET value to `false` — it ignores its own
+ * default (`params/types.ts`: `process.env[name] === 'true'`) — so a boolean
+ * param would have turned App Check OFF on every project whose `.env` never
+ * named it, every test process, and every deploy that forgot the file,
+ * silently and in the direction that gives the product away. This is the
+ * `ENTITLEMENT_MODE` lesson with the same sign: an unresolved value must
+ * fail CLOSED. Only the exact word `false` disarms it; `FALSE`, `0`, `off`
+ * and an empty string all enforce.
+ */
+export const ENFORCE_APP_CHECK = defineString('ENFORCE_APP_CHECK', {
+  default: 'true',
+  description:
+    "Set 'false' to let callables answer requests without an App Check token.",
+});
+
+/** The rule itself, so `test/appCheck.test.ts` can state it exactly. */
+export function enforceAppCheckFrom(raw: string | undefined): boolean {
+  return raw !== 'false';
+}
+
+/**
+ * What every `onCall` passes as its `enforceAppCheck` option, so the
+ * `!== 'false'` rule exists in exactly one place.
+ *
+ * A plain boolean read off the variable the param resolves to, NOT
+ * `ENFORCE_APP_CHECK.notEquals('false')`, though the option's type invites
+ * that. The SDK resolves this one option eagerly — `onCall` calls
+ * `Expression.value()` where the handler is defined — and `value()` warns
+ * whenever it runs under `FUNCTIONS_CONTROL_API=true`, which is exactly how
+ * the CLI loads the code at deploy discovery. The Expression form put
+ * "`.value()` invoked during function deployment … This is usually a
+ * mistake" into every deploy log three times per callable, 48 lines that
+ * describe the mistake they are not. Reading `process.env` gives the same
+ * answer (`StringParam.runtimeValue()` is `process.env[name] || ''`), the
+ * key is spelled once via `.name`, and the param stays declared so the CLI
+ * still resolves it from `.env.alastpuff` and uploads it. Like every other
+ * param, a change is a deploy, not a live toggle.
+ */
+export const enforceAppCheck: boolean = enforceAppCheckFrom(
+  process.env[ENFORCE_APP_CHECK.name],
+);
+
 /** Kill-switch: flip to "true" to route all AI traffic to the cheap model. */
 export const AI_COST_PANIC = defineString('AI_COST_PANIC', {default: 'false'});
 
