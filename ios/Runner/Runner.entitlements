@@ -16,6 +16,34 @@
 	     of the value; the value only matters for ad-hoc release installs. The
 	     iOS app must also have App Attest configured under Firebase console →
 	     App Check (Team ID PZFFFQ5T9X). -->
+	<!-- Push. Without this key `registerForRemoteNotifications` fails, APNs
+	     hands back no device token, and `FIRMessagingTokenManager` then refuses
+	     to mint an FCM token at all ("No APNS token specified before fetching
+	     FCM Token") — so `PushService.tokenOrNull()` returns null, no device
+	     row is written, and every server push silently goes nowhere. Nothing
+	     surfaces it: the plugin's `didFailToRegisterForRemoteNotifications`
+	     only NSLogs, and the permission sheet still appears and still reports
+	     `granted`. Needs the Push Notifications capability on the App ID
+	     (com.quitvape.lastPuff, team PZFFFQ5T9X) and an APNs Auth Key (.p8)
+	     uploaded to Firebase console → iOS app → Cloud Messaging; one key
+	     serves both environments.
+
+	     `development` is deliberate and is NOT the value that ships: Xcode
+	     rewrites this key to `production` when it exports an archive, which is
+	     what `flutter build ipa` drives. It agrees with the plugin, which picks
+	     the APNs environment from the `DEBUG` macro — Sandbox in a debug build,
+	     Prod otherwise (FLTFirebaseMessagingPlugin.m:605).
+
+	     **The trap that follows from those two halves:** a `--release` or
+	     `--profile` build installed straight onto a device by `flutter run`
+	     skips the export step, so it keeps `development` here while compiling
+	     without `DEBUG` — it registers a Prod token against a sandbox
+	     registration and every push is dropped by APNs with nothing logged
+	     anywhere. Same shape as the App Check note in CLAUDE.md: a release
+	     build that was not distributed through its store track is not a test of
+	     anything. Verify push from a Debug build, or from TestFlight. -->
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>com.apple.developer.devicecheck.appattest-environment</key>
 	<string>production</string>
 	<!-- The container the home-screen widget reads. Must equal

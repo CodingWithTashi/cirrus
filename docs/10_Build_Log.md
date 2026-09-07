@@ -3,7 +3,7 @@
 
 **Created:** Sep 2, 2026 — split out of `docs/08_Sprint_Tracker.md` (its former §10–§23) when the board went to v2.0 · **Status:** APPEND-ONLY — a new session goes at the bottom as the next `## N.`; never renumber. Cite as `docs/10 §N` (subsections as `docs/10 §11.8`); board references are `docs/08 §N`.
 
-> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5) · §25 The review pass (Sep 5)
+> **Contents:** §1 End-to-end verification log (Aug 29) · §2 The integration gap (Aug 29) · §3 Ember's memory (Aug 29) · §4 The honesty pass (Aug 29) · §5 What the E2E pass found (Aug 29) · §6 State as of Aug 29 · §7 The "nothing works" session (Aug 30) · §8 The tailoring pass (Aug 30) · §9 The coach becomes theirs (Aug 30) · §10 Final state (Aug 30) · §11 UX + data review (Aug 30, §11.1–§11.10) · §12 The day-1 field test (Aug 31) · §13 The E2E QA round (Sep 1) · §14 Billing lands (Sep 2) · §15 The panic arcade (Sep 2) · §16 The Play rejection (Sep 2) · §17 The advertising ID (Sep 2) · §18 The cohort that never was (Sep 3) · §19 The flip (Sep 3) · §20 The release APK that could never work (Sep 3) · §21 The generosity pass (Sep 3) · §22 The archive that named the wrong pod (Sep 3) · §23 The widget the store had already sold (Sep 4) · §24 Two palettes for sale (Sep 5) · §25 The review pass (Sep 5) · §31 iOS push, reviewed (Sep 6)
 
 ---
 
@@ -4058,3 +4058,117 @@ beside the clock, the shade shows it with the brand tint, and Settings, Profile
 and the inbox empty state all read as one drawn set.
 
 `flutter analyze` 0 · `flutter test` **1666/1666**.
+
+
+---
+
+## 31. THE PLATFORM THAT COULD NEVER HAVE RECEIVED ONE (Sep 6) — iOS push, reviewed
+
+§30 shipped community push and verified it on Android. This is the iOS review
+of the same feature, and the finding is that **every portable layer was already
+correct and iOS could still never have received a single notification.**
+
+### 31.1 What was right
+
+Nothing in Dart assumed Android. `ensureAndroidChannels()` returns early off
+platform, `platformName` reports `ios`, `permissionStatus` counts iOS's
+`provisional` grant as granted, and `DarwinInitializationSettings` sets
+`requestAlertPermission: false` so `flutter_local_notifications` never opens a
+second prompt behind FCM's. Nothing competes for the
+`UNUserNotificationCenter` delegate — the messaging plugin claims it and this
+version of the local-notifications plugin does not want it. `_PushSync`'s
+splash-wait, the route allow-list and the `push`-not-`go` rule for a thread are
+all platform-neutral. The server was already sending `apns-collapse-id` and
+`thread-id`.
+
+The one thing genuinely missing was the platform's front door.
+
+### 31.2 `aps-environment`, and a chain in which every link swallows
+
+`ios/Runner/Runner.entitlements` carried Sign in with Apple, App Attest and the
+app group, and no push key at all. The consequence is total and completely
+silent:
+
+1. `registerForRemoteNotifications` fails — no entitlement.
+2. `didFailToRegisterForRemoteNotificationsWithError` **only `NSLog`s**
+   (`FLTFirebaseMessagingPlugin.m:613`).
+3. With no APNs token, `FIRMessagingTokenManager` refuses to fetch an FCM
+   token at all: *"No APNS token specified before fetching FCM Token"*
+   (`FIRMessagingTokenManager.m:196`).
+4. `PushService.tokenOrNull()` catches that into the **same `null` it uses for
+   "the user declined"**.
+5. `syncUserContext` omits `fcmToken`, so no `users/{uid}/devices` row exists.
+6. `sendToUser` finds no tokens and returns false.
+
+So the permission sheet appeared, "Allow" worked, `permissionStatus()` read
+`granted` — and nothing ever arrived, with no error at any of the six stages.
+It was tracked as deferred in `docs/08 §S0-19` on the belief that it needed the
+Push capability on the App ID first. It did not: **the capability had been
+enabled on `com.quitvape.lastPuff` all along.** The entitlement and the APNs
+key were the whole of it.
+
+`development` is the value in the file, deliberately. Xcode rewrites it to
+`production` when it exports an archive, and the plugin picks Sandbox vs Prod
+from the `DEBUG` macro — so the two agree at both ends. The trap that falls out
+of that pair is written at the key: a `--release` build installed straight by
+`flutter run` skips the export step, so it keeps `development` while compiling
+without `DEBUG`, registers a Prod token against a sandbox registration, and has
+every push dropped by APNs with nothing logged. Same shape as §20's release APK
+that could never pass App Check — a release build that did not come through its
+store track is not a test of anything.
+
+### 31.3 The silent banner
+
+`buildMessage` set no `aps.sound`. Android takes sound from the channel's
+importance; APNs plays nothing unless the payload names a sound and FCM adds no
+default. Every kind — a reply, a mention, the weekly report, and **an answered
+SOS** — would have arrived on an iPhone as a silent banner. The SOS one is the
+sharpest: `pushKinds.ts` exempts it from quiet hours precisely because the hour
+it matters most is the hour quiet hours would silence it, and on iOS it was
+silent in every hour of the day.
+
+It is the exact counterpart of the quiet channel, so it is written as one
+choice: normal delivery names `sound: 'default'`, quiet delivery names no sound
+and adds `interruption-level: passive`. Never both.
+
+### 31.4 "Register the freshly minted token NOW" did the opposite on iOS
+
+Both permission CTAs — the D4 onboarding step and the post-first-post ask —
+call `sync()` the instant `requestPermission()` returns, each with a comment
+saying a grant that waits loses its first day of pushes. On iOS the OS sheet
+returns the moment the user taps Allow, while `registerForRemoteNotifications`
+is still mid round-trip to Apple, so `getToken()` threw and the sync registered
+nothing. The device stayed unreachable until the next resume.
+
+`PushService._apnsReady` polls `getAPNSToken()` for up to 3s on iOS before
+`getToken()`, and returns false rather than letting the throw happen — there is
+nothing to report, the resume sync asks again, and an exception there would be
+indistinguishable in the log from a real FCM failure. Android returns true
+without a channel call.
+
+### 31.5 What now pins it
+
+`functions/test/devices.test.ts` — the file `buildMessage`'s own docstring has
+named since it was split out, and which did not exist. It is the only check on
+a payload FCM will accept and deliver wrong: the sound, the quiet exclusivity,
+the 64-char collapse-id cap, `threadId` without a raw `thread-id`
+(`INVALID_PAYLOAD` at send time, no local reproduction), the channel swap, and
+that a device id is never the token.
+
+`test/ios_push_test.dart` — the entitlement, its value, its presence on all
+three Runner configurations, the APNs guard ordering, and two absences with
+their reasons: no `remote-notification` background mode (nothing sends
+`content-available`, so the day something does, the test says what else is
+missing) and no `setForegroundNotificationPresentationOptions` (which would
+make iOS draw a system banner on top of the snack `_PushSync` already draws).
+
+### 31.6 Console
+
+Push Notifications: already enabled on the App ID. APNs auth key: Firebase had
+**none**, development or production. Registered `Cirrus Push`
+(`A76XS6WQ9J`, team `PZFFFQ5T9X`) as **Sandbox & Production**, team-scoped —
+the environment cannot be changed after saving, and the team's older
+`FirebaseAPN` key is Sandbox-only, which is that mistake already made once.
+
+`flutter analyze` 0 · `flutter test` **1727/1727** · `npm run verify` green
+(293).
