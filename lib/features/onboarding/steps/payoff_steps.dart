@@ -666,8 +666,15 @@ class NotificationsStep extends ConsumerWidget {
             // exists (startJourney ran before this step), and the only other
             // registration points are the next resume or the next cold start
             // — a grant that waits for those loses the first day of pushes.
+            //
+            // Through the registrar rather than a bare `sync()`: on iOS the
+            // OS sheet returns while `registerForRemoteNotifications` is
+            // still mid round-trip to Apple, so the token is very often not
+            // available at this exact instant. A single fire-and-forget call
+            // here silently registered nothing; the registrar retries until
+            // APNs answers.
             if (granted) {
-              ref.read(userContextRepositoryProvider).sync().ignore();
+              ref.read(pushTokenRegistrarProvider).onPermissionGranted();
             }
             if (context.mounted) context.go(Routes.paywallFrom('onboarding'));
           },

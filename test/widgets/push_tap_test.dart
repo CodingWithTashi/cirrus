@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/data/api/firebase/push_messages.dart';
+import 'package:last_puff/data/api/firebase/push_service.dart';
 import 'package:last_puff/data/stores/providers.dart';
 
 import '../helpers.dart';
@@ -339,6 +340,16 @@ class _FakePush implements PushMessages {
 
   @override
   Future<RemoteMessage?> initialMessage() async => initial;
+
+  /// This suite is about taps, not registration — but the seam carries both,
+  /// so answer honestly: no token, never asked. That is the one combination
+  /// `PushTokenRegistrar` treats as final and does not retry, which keeps its
+  /// backoff timer out of a test that is not about it.
+  @override
+  Future<String?> token() async => null;
+
+  @override
+  Future<PushPermission> permission() async => PushPermission.notAsked;
 
   @override
   Future<void> ensureChannels() async {}

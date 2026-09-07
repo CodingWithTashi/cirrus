@@ -39,8 +39,15 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// It runs after every path that establishes a session because
   /// `users/{uid}` is created here and nowhere else — without it both nightly
   /// crons page over an empty collection and do nothing at all.
-  void _syncUserContext() =>
-      ref.read(userContextRepositoryProvider).sync().ignore();
+  void _syncUserContext() {
+    // Timezone, locale and the read-marks. The DEVICE TOKEN is deliberately
+    // not this call's job any more: it is the one field whose absence is
+    // invisible and unrecoverable, so it belongs to something that checks
+    // and retries rather than to a fire-and-forget whose failure reached
+    // nobody.
+    ref.read(userContextRepositoryProvider).sync().ignore();
+    ref.read(pushTokenRegistrarProvider).onSessionEstablished();
+  }
 
   /// Binds analytics to the account.
   ///
@@ -58,16 +65,16 @@ class JourneyStore extends Notifier<JourneyState?> {
         .ignore();
   }
 
-  /// FCM rotated the device token. Re-register it — but only for a session
-  /// that exists. FCM mints a token on a fresh install before anyone has
-  /// signed in, and re-registering that one burned a refused callable on
-  /// every sessionless cold launch (`syncUserContext failed —
-  /// InvalidCredentialsException`, QA L6). The store is the one place that
-  /// knows whether there is anyone to sync for.
-  void onPushTokenRefreshed(String token) {
-    if (state == null) return;
-    ref.read(userContextRepositoryProvider).sync(fcmToken: token).ignore();
-  }
+  /// FCM rotated the device token.
+  ///
+  /// Delegated to [PushTokenRegistrar], which is the one thing that knows
+  /// whether this device is currently registered and is the only thing that
+  /// retries. The store used to own this and answered a refresh that arrived
+  /// before `restoreSession()` had finished — which is the ordinary cold
+  /// start, and the moment a REINSTALL mints its new token — by discarding
+  /// it.
+  void onPushTokenRefreshed(String token) =>
+      ref.read(pushTokenRegistrarProvider).onTokenRefreshed(token);
 
   /// Binds the store identity to the account, so a purchase is filed under
   /// the same uid the server's entitlement mirror is keyed by. Same shape as
@@ -405,6 +412,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     //
     // `unregister()` is bounded and never throws, so `whenComplete` always
     // runs and the sign-out cannot be held up by a slow backend.
+    // Sixth thing to forget on a shared phone: the belief that this device is
+    // already registered. Without it the next account on the same handset is
+    // assumed done and never registered at all.
+    ref.read(pushTokenRegistrarProvider).forget();
     ref
         .read(userContextRepositoryProvider)
         .unregister()
@@ -436,6 +447,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     // refused deletion must not silence the account it failed to delete. The
     // release callable inside will fail (no session any more) and is
     // swallowed; the `deleteToken` is the part that matters.
+    ref.read(pushTokenRegistrarProvider).forget();
     ref.read(userContextRepositoryProvider).unregister().ignore();
     state = null;
   }
