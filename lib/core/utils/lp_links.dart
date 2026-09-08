@@ -23,6 +23,28 @@ abstract final class LpLinks {
   static final privacy = Uri.parse('$host/privacy');
   static final terms = Uri.parse('$host/terms');
 
+  /// Apple's standard Licensed Application End User License Agreement.
+  ///
+  /// App Store review refused the first submission (Sep 7 2026): an app that
+  /// sells auto-renewable subscriptions must carry a *functional* link to the
+  /// Terms of Use (EULA) on its product page and inside the binary (guideline
+  /// 3.1.2). `/terms` is Cirrus's own terms of service; the EULA Apple means
+  /// is this document unless a custom one is filed in App Store Connect, and
+  /// the standard one is the safer answer — a custom EULA has to reproduce
+  /// Apple's minimum terms verbatim to be accepted. The listing links both,
+  /// and so does the app wherever it links Terms, on Apple platforms only:
+  /// Google has no equivalent document, and a Play reviewer would be sent to
+  /// a page that names the wrong store.
+  static final appleEula = Uri.parse(
+    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+  );
+
+  /// Whether [appleEula] governs this install. It covers App Store
+  /// downloads, and Apple hardware has no other way to install the app.
+  static bool get appleEulaApplies =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   /// The address both legal pages already publish, so this discloses nothing
   /// new. Rendered as visible text wherever it is tappable: if no mail app
   /// handles it, the reader can still see who to write to.

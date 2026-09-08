@@ -82,6 +82,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authPrivacy => 'Confidentialité';
 
   @override
+  String get legalEula => 'CLUF';
+
+  @override
   String get authRegisterTitle => 'Crée ton compte';
 
   @override
@@ -796,6 +799,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get obCoachNameLater =>
       'Tu peux le changer à tout moment dans les Réglages.';
+
+  @override
+  String get obCoachNameAiNote =>
+      'Ton coach est une IA. Ce que tu lui écris est traité par Google Gemini pour répondre — jamais vendu, jamais utilisé pour de la pub.';
 
   @override
   String get obCoachNameErrorEmpty => 'Donne-lui un nom.';
@@ -2048,7 +2055,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String coachSafetyNote(String name) {
-    return '$name est un outil de soutien, pas un médecin. En crise ? Appelle ou texte le 988 (É.-U. & Canada), à toute heure.';
+    return '$name est un outil de soutien basé sur l\'IA, pas un médecin. Tes messages sont traités par Google Gemini. En crise ? Appelle ou texte le 988 (É.-U. & Canada), à toute heure.';
   }
 
   @override
@@ -3048,6 +3055,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsTermsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get settingsEula => 'Contrat de licence (CLUF)';
 
   @override
   String get settingsSupport => 'Contacter le support';

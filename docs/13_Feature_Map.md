@@ -45,7 +45,7 @@
 | 7 | **Forgot password** | Sends a reset link, shows an inline ✓ banner, disables *Resend* for 30s with a live countdown. | `/auth/forgot` → Continue → watch 30 → 0. |
 | 8 | **Sign out** | Confirmation, then back to sign-in. Cancels every scheduled notification. | Settings → *Sign out*. |
 | 9 | **Delete account** 🔥 | Runs `deleteUserData`: journey, server-owned user tree, coach memories, uid↔post map. Community posts are anonymized, not removed, so threads keep no holes. Busy state while it waits. | Settings → Privacy card → *Delete everything* → confirm. Signing in again onboards fresh. |
-| 10 | **Legal + support links** | Terms and Privacy in the sign-in footer and Settings; Website; Support opens a mail app **and** prints the address underneath. | Tap each. With no mail client, the address must still be readable. |
+| 10 | **Legal + support links** | Terms and Privacy in the sign-in footer, the paywall and Settings; on iOS/macOS Apple's standard EULA beside them (App Store 3.1.2 — docs/10 §34), never on Android; Website; Support opens a mail app **and** prints the address underneath. | Tap each. With no mail client, the address must still be readable. On an iPhone the EULA link opens apple.com's standard agreement; on Android there is no such link anywhere. |
 
 ---
 

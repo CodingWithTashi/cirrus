@@ -236,6 +236,12 @@ abstract class AppLocalizations {
   /// **'Privacy'**
   String get authPrivacy;
 
+  /// No description provided for @legalEula.
+  ///
+  /// In en, this message translates to:
+  /// **'EULA'**
+  String get legalEula;
+
   /// No description provided for @authRegisterTitle.
   ///
   /// In en, this message translates to:
@@ -1471,6 +1477,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can change it any time in Settings.'**
   String get obCoachNameLater;
+
+  /// No description provided for @obCoachNameAiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your coach is an AI. What you write to it is processed by Google Gemini to reply — never sold, never used for ads.'**
+  String get obCoachNameAiNote;
 
   /// No description provided for @obCoachNameErrorEmpty.
   ///
@@ -3352,7 +3364,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachSafetyNote.
   ///
   /// In en, this message translates to:
-  /// **'{name} is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.'**
+  /// **'{name} is an AI support tool, not a doctor. Your messages are processed by Google Gemini. In crisis? Call or text 988 (US & Canada), any time.'**
   String coachSafetyNote(String name);
 
   /// No description provided for @planTitle.
@@ -4992,6 +5004,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terms of use'**
   String get settingsTermsOfUse;
+
+  /// No description provided for @settingsEula.
+  ///
+  /// In en, this message translates to:
+  /// **'License agreement (EULA)'**
+  String get settingsEula;
 
   /// No description provided for @settingsSupport.
   ///

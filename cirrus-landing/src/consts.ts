@@ -81,4 +81,4 @@ export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
 // did not say that deletion leaves a store subscription running — the one thing
 // about deletion that costs a person money if we stay quiet about it. Both
 // fixed, and the section now links to /delete-account for the steps.
-export const LEGAL_LAST_UPDATED = '2026-09-06';
+export const LEGAL_LAST_UPDATED = '2026-09-07';

@@ -81,6 +81,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPrivacy => 'Privacy';
 
   @override
+  String get legalEula => 'EULA';
+
+  @override
   String get authRegisterTitle => 'Create your account';
 
   @override
@@ -793,6 +796,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obCoachNameLater => 'You can change it any time in Settings.';
+
+  @override
+  String get obCoachNameAiNote =>
+      'Your coach is an AI. What you write to it is processed by Google Gemini to reply — never sold, never used for ads.';
 
   @override
   String get obCoachNameErrorEmpty => 'Give them something to be called.';
@@ -2032,7 +2039,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachSafetyNote(String name) {
-    return '$name is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.';
+    return '$name is an AI support tool, not a doctor. Your messages are processed by Google Gemini. In crisis? Call or text 988 (US & Canada), any time.';
   }
 
   @override
@@ -3023,6 +3030,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTermsOfUse => 'Terms of use';
+
+  @override
+  String get settingsEula => 'License agreement (EULA)';
 
   @override
   String get settingsSupport => 'Contact support';

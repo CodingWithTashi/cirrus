@@ -738,6 +738,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                           label: l10n.authPrivacy,
                           url: LpLinks.privacy,
                         ),
+                        // App Store 3.1.2 — the surface with the purchase
+                        // button links the EULA too, on Apple platforms.
+                        if (LpLinks.appleEulaApplies)
+                          LpLegalLink(
+                            label: l10n.legalEula,
+                            url: LpLinks.appleEula,
+                          ),
                         restoreLink(),
                       ],
                     ),

@@ -4479,3 +4479,81 @@ and the option dropped from it. Resolution checked on the built output:
 
 functions `verify` **322/322** (+9). The app is untouched — the client sends
 its token exactly as before, and the debug-token discipline of §7 stands.
+
+## 34. THE LINK THAT WAS THERE AND STILL WAS NOT (Sep 7) — Apple's EULA is a specific document
+
+App Store review bounced the first Cirrus submission with an automated
+message: the app offers auto-renewable subscriptions and "does not include a
+functional link to the Terms of Use (EULA) in the app metadata". The app had
+linked `cirrusquit.com/terms` from the sign-in footer, the paywall and
+Settings since S5-11, and the listing carried a privacy-policy URL. Neither is
+what the check looks for. Guideline 3.1.2 wants the *EULA* — Apple's own
+standard Licensed Application End User License Agreement, unless a custom one
+is filed in App Store Connect — linked from the product page (the description,
+or the License Agreement field) AND from inside the binary. A custom EULA has
+to reproduce Apple's minimum terms verbatim, so the standard one is the safer
+answer, and the two documents are not in competition: ours governs the
+service, Apple's governs the licence to the binary.
+
+Three changes, one per surface:
+
+- **Listing.** The description now ends with the Privacy Policy, Terms of Use
+  and standard-EULA URLs. With no custom EULA filed, the description is the
+  only field the automated check reads.
+- **App.** `LpLinks.appleEula` and `LpLinks.appleEulaApplies` — iOS and macOS
+  only, because Google has no equivalent document and a Play reviewer sent to
+  a page that names the App Store has been sent to the wrong store. The link
+  sits beside Terms on the sign-in footer and the paywall, and is a Settings
+  row. `paywall_test` pins it present on all three on iOS and absent on
+  Android; `lp_links_test` pins the URL and the platform rule.
+- **Terms.** `/terms` says Apple's EULA also applies to App Store installs
+  (`LEGAL_LAST_UPDATED` bumped; deploys with the site).
+
+Same pass, the rest of the common-rejection list checked against the repo
+rather than assumed: block, mute and report exist per post; account deletion
+is in-app and immediate; the 18+ gate is an onboarding step; the plist carries
+`ITSAppUsesNonExemptEncryption`; no IPv4 literal anywhere in `lib/` or
+`functions/src`; the paywall states price, period, auto-renewal and the cancel
+path above the button with Restore beside the links; `/`, `/privacy`,
+`/terms` and `/delete-account` all answer 200 (there is no `/support` page —
+the support URL in App Store Connect must be the apex or the mailto). The one
+real gap was guideline 5.1.2(i) (2025): personal data handed to a third-party
+AI has to be disclosed before it is sent, and nothing in the app said the
+coach was a language model or that Google Gemini reads the messages — the
+privacy policy did, the app did not. `obCoachNameAiNote` now says it on the
+step that introduces the coach, and `coachSafetyNote` repeats it under the
+composer, in all five locales. The stricter reading of 5.1.2(i) is an
+explicit consent tap before the first message; the disclosure sits on the two
+screens that precede one, which is the proportionate answer until a reviewer
+asks for more.
+
+The listing had a second problem the rejection did not name. **App Privacy**
+declared exactly two data types — Name and Email — and marked Email *used
+for tracking*. Apple's "tracking" means joining the data with third-party
+data for advertising or handing it to a data broker; Cirrus does neither, and
+the app requests no IDFA and shows no App Tracking Transparency prompt, so a
+label that claims tracking is a 5.1.2 rejection waiting for the next reviewer.
+The label was also plainly incomplete for an app with Firebase Analytics,
+Amplitude, Crashlytics, RevenueCat, a community feed and a coach transcript.
+The privacy-policy URL there still pointed at the retired Firebase host (which
+today answers 200 rather than the 301 §18 intended — worth checking the
+`hosting` block). Repointed, and the missing types selected; the per-type
+answers, which end in a **Publish** click the founder should make:
+
+| Data type | Purposes | Linked to identity | Tracking |
+|---|---|---|---|
+| Name, Email Address | App Functionality | yes | **no** |
+| Health (puffs, nicotine mg, mood) | App Functionality, Product Personalization | yes | no |
+| Other User Content (posts, coach messages) | App Functionality | yes | no |
+| User ID | App Functionality, Analytics | yes | no |
+| Device ID (Amplitude/Firebase instance ids) | Analytics | yes | no |
+| Purchases (RevenueCat) | App Functionality | yes | no |
+| Product Interaction | Analytics | yes | no |
+| Crash Data (Crashlytics) | App Functionality | no | no |
+
+Not declared, deliberately: location (the IANA timezone the callables read is
+a device setting, not a location), payment details (Apple's), contacts,
+photos, advertising data. The age rating there reads **16+** while the app,
+its terms and its description all say 18+ — the questionnaire answers decide
+that number, so it is a founder call whether the tobacco-reference answer
+should move it.

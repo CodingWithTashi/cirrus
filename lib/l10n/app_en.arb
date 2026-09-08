@@ -36,6 +36,7 @@
   "authWhyAccountCard": "Your streak, plan, and coach memory sync across devices. 🔒 We never sell your data. No ad trackers. Ever.",
   "authTerms": "Terms",
   "authPrivacy": "Privacy",
+  "legalEula": "EULA",
   "authRegisterTitle": "Create your account",
   "authEmailLabel": "EMAIL",
   "authPasswordLabel": "PASSWORD",
@@ -483,6 +484,7 @@
   },
   "obCoachNameCta": "That's the one",
   "obCoachNameLater": "You can change it any time in Settings.",
+  "obCoachNameAiNote": "Your coach is an AI. What you write to it is processed by Google Gemini to reply — never sold, never used for ads.",
   "obCoachNameErrorEmpty": "Give them something to be called.",
   "obCoachNameErrorLong": "Keep it to 20 characters or fewer.",
   "obCoachNameErrorChars": "Letters, numbers, spaces and - ' only.",
@@ -1378,7 +1380,7 @@
       }
     }
   },
-  "coachSafetyNote": "{name} is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.",
+  "coachSafetyNote": "{name} is an AI support tool, not a doctor. Your messages are processed by Google Gemini. In crisis? Call or text 988 (US & Canada), any time.",
   "@coachSafetyNote": {
     "placeholders": {
       "name": {
@@ -2147,6 +2149,7 @@
   "settingsWebsite": "Website",
   "settingsPrivacyPolicy": "Privacy policy",
   "settingsTermsOfUse": "Terms of use",
+  "settingsEula": "License agreement (EULA)",
   "settingsSupport": "Contact support",
   "settingsDeleteEverything": "Delete everything",
   "settingsDeleteConfirmTitle": "Delete everything?",

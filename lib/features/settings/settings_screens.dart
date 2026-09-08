@@ -380,6 +380,15 @@ class SettingsScreen extends ConsumerWidget {
               value: '',
               onTap: () => LpLinks.open(LpLinks.terms).ignore(),
             ),
+            // Apple's standard EULA, on Apple platforms only — see
+            // `LpLinks.appleEula` for the review rejection behind it.
+            if (LpLinks.appleEulaApplies)
+              row(
+                icon: Icons.article_outlined,
+                label: l10n.settingsEula,
+                value: '',
+                onTap: () => LpLinks.open(LpLinks.appleEula).ignore(),
+              ),
             row(
               icon: Icons.mail_outline_rounded,
               label: l10n.settingsSupport,
