@@ -1,0 +1,9 @@
+# Cold start with no session: lands on the sign-in screen.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible: 'Continue with email'
+    timeout: 30000

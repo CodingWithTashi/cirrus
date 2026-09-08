@@ -149,15 +149,22 @@ class BackChevron extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
-    return PressScale(
-      onTap: onTap ?? () => Navigator.of(context).maybePop(),
-      child: SizedBox(
-        width: 40,
-        height: 40,
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: lp.textSecondary,
+    // A bare icon has no name. Every pushed screen in the app leans on this
+    // one control to leave, and a screen reader could not find it (Sep 8
+    // 2026, found by Maestro's tree inspection — see .maestro/README.md).
+    return Semantics(
+      button: true,
+      label: context.l10n.commonBack,
+      child: PressScale(
+        onTap: onTap ?? () => Navigator.of(context).maybePop(),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: lp.textSecondary,
+          ),
         ),
       ),
     );

@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get commonClose;
 
+  /// No description provided for @commonBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get commonBack;
+
   /// No description provided for @commonNotNow.
   ///
   /// In en, this message translates to:
@@ -3085,6 +3091,12 @@ abstract class AppLocalizations {
   /// **'Message your coach…'**
   String get coachInputHint;
 
+  /// No description provided for @coachSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get coachSend;
+
   /// No description provided for @coachTyping.
   ///
   /// In en, this message translates to:
@@ -3708,6 +3720,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Report'**
   String get communityReport;
+
+  /// No description provided for @communityPostMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Post options'**
+  String get communityPostMenu;
 
   /// No description provided for @communityMute.
   ///

@@ -1,0 +1,114 @@
+# The coach tab on the fake backend: the greeting under the coach's name,
+# the four static chips, a chip and a typed message each getting a canned
+# reply, the progress reply with its week card, the memories screen, the
+# rename showing up in the thread, and the panic flow's hand-off.
+#
+# The fake coach answers from templates chosen by keyword and rotated per
+# chip, so replies are matched against every template a message can draw.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Coach thread, replies, memories, rename and the panic hand-off'
+tags:
+  - coach
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+- tapOn: 'Coach'
+
+# The thread opens on the greeting, under the coach's name and status
+- extendedWaitUntil:
+    visible: '(?s).*Hey. I''m Ember — I quit two years ago.*'
+    timeout: 15000
+- assertVisible: '(?s).*knows your plan · day \d+.*'
+- assertVisible: 'I''m craving'
+- assertVisible: 'Rough day'
+- assertVisible: 'I slipped'
+- assertVisible: 'Show my progress'
+- assertVisible: 'Send'
+
+# A chip prefills the composer; Send is a separate, deliberate tap
+- tapOn: 'I''m craving'
+- tapOn: 'Send'
+- extendedWaitUntil:
+    visible: '(?s)(That wave is brutal, I know.*|Okay. Breathe with me for one round.*|Heard. Don''t argue with the craving.*)'
+    timeout: 15000
+
+# A typed message: "party" always draws the party playbook
+- tapOn: 'Message your coach…'
+- inputText: 'party tonight and everyone vapes'
+# The composer's return key is "send" (TextInputAction.send), so the keyboard
+# submits a typed message; the on-screen Send button is for the chips.
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: '(?s)Party playbook: hold a cold drink all night.*'
+    timeout: 15000
+
+# Progress draws the numbers, and the week card comes with it
+- tapOn: 'Show my progress'
+- tapOn: 'Send'
+- extendedWaitUntil:
+    visible: '(?s)(Look at the actual numbers: day \d+.*|\d+ puffs today against a line of \d+.*)'
+    timeout: 15000
+- assertVisible: '(?s).*YOUR WEEK.*'
+
+# What the coach remembers, from Settings
+- tapOn: 'Home'
+- tapOn: '🦊'
+- tapOn: 'Settings'
+- tapOn: '(?s)What Ember remembers\n.*'
+- extendedWaitUntil:
+    visible: 'What Ember remembers'
+    timeout: 10000
+- assertVisible: 'What Ember always knows'
+# The facts card is one label; these are the same numbers Home shows
+- assertVisible: '(?s)PLAN\nTaper · \d+ days\n.*BASELINE\n\d+ puffs a day\n.*WHERE YOU ARE\nDay \d+ of \d+\n.*TODAY\n\d+ of \d+ puffs\n.*STREAK\n🔥 \d+ days\n.*MONEY SAVED\n\$\d+.*'
+- scrollUntilVisible:
+    element:
+      text: 'Things you''ve told Ember'
+    direction: DOWN
+    timeout: 10000
+- runFlow: ../shared/go_back.yaml
+- assertVisible: 'Settings'
+
+# Rename the coach; the thread re-reads its own greeting under the new name
+- tapOn: '(?s)Your coach''s name\n.*'
+- tapOn:
+    below:
+      text: 'COACH''S NAME'
+    index: 0
+- inputText: 'Wren'
+- runFlow: ../shared/dismiss_keyboard.yaml
+- tapOn: 'Save'
+- assertVisible: 'Alright — Wren from now on.'
+- runFlow: ../shared/go_back.yaml
+- runFlow: ../shared/go_back.yaml
+- tapOn: 'Coach'
+- extendedWaitUntil:
+    visible: 'Wren'
+    timeout: 10000
+- assertVisible: '(?s)Wren is an AI support tool, not a doctor.*'
+# The thread sits at its end; the greeting is at the top, re-read under the new name
+- scrollUntilVisible:
+    element:
+      text: '(?s).*Hey. I''m Wren — I quit two years ago.*'
+    direction: UP
+    timeout: 15000
+
+# The panic flow hands off to the coach from its loop breakers
+- tapOn: 'Home'
+- tapOn: 'SOS'
+- assertVisible: 'PANIC MODE · 1 OF 3'
+- tapOn: 'Skip to my why →'
+- tapOn: 'Still craving — next'
+- assertVisible: 'PANIC MODE · 3 OF 3'
+- tapOn: '(?s).*Talk to coach.*'
+- extendedWaitUntil:
+    visible: 'Message your coach…'
+    timeout: 10000
+- tapOn: 'I slipped'
+- tapOn: 'Send'
+- extendedWaitUntil:
+    visible: '(?s)(A slip is data, not defeat.*|Zero shame here.*)'
+    timeout: 15000

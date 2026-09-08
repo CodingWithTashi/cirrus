@@ -556,20 +556,28 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      PressScale(
-                        onTap: _send,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: lp.volt,
-                          ),
-                          child: Icon(
-                            Icons.arrow_upward_rounded,
-                            size: 18,
-                            color: lp.onVolt,
+                      // Named for screen readers: the arrow alone said
+                      // nothing, so the one way to send a message by touch
+                      // did not exist for VoiceOver or TalkBack (the
+                      // keyboard's send action was the only route).
+                      Semantics(
+                        button: true,
+                        label: l10n.coachSend,
+                        child: PressScale(
+                          onTap: _send,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: lp.volt,
+                            ),
+                            child: Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 18,
+                              color: lp.onVolt,
+                            ),
                           ),
                         ),
                       ),

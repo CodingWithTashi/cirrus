@@ -41,6 +41,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonClose => 'Cerrar';
 
   @override
+  String get commonBack => 'Atrás';
+
+  @override
   String get commonNotNow => 'Ahora no';
 
   @override
@@ -1854,6 +1857,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get coachInputHint => 'Escribe a tu coach…';
 
   @override
+  String get coachSend => 'Enviar';
+
+  @override
   String coachTyping(String name) {
     return '$name está escribiendo…';
   }
@@ -2267,6 +2273,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get communityReport => 'Denunciar';
+
+  @override
+  String get communityPostMenu => 'Opciones del post';
 
   @override
   String get communityMute => 'Silenciar';

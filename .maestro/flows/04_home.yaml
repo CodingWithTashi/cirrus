@@ -1,0 +1,42 @@
+# Home after sign-in: every number the engines compute is on screen, the
+# quick links exist, and the four shell tabs switch.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Home renders the journey'
+tags:
+  - home
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+
+# Header: date · day line merged with the "Today" title, streak chip, bell
+- assertVisible: '(?s).*Day \d+ of \d+.*Today'
+- assertVisible: '🔥 \d+ days?'
+- assertVisible: 'Notifications'
+
+# Ring: puffs today against the curve's limit, with the line left
+- assertVisible: '(?s)\d+\nof \d+\npuffs today\n.*'
+
+# Money and cravings cards
+- assertVisible: '(?s)\$[\d,]+\nsaved so far'
+- assertVisible: '(?s)\d+\ncravings beaten'
+
+# Quick links and the two big CTAs
+- assertVisible: 'Your plan'
+- assertVisible: 'Your body, healing'
+- assertVisible: 'Money back'
+- assertVisible: 'Milestones'
+- assertVisible: 'Weekly report'
+- assertVisible: 'SOS'
+- assertVisible: 'LOG PUFF'
+
+# Shell tabs switch without a route push
+- tapOn: 'Stats'
+- assertNotVisible: 'LOG PUFF'
+- tapOn: 'Community'
+- tapOn: 'Coach'
+- tapOn: 'Home'
+- assertVisible: 'LOG PUFF'

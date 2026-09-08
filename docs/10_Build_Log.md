@@ -4557,3 +4557,153 @@ photos, advertising data. The age rating there reads **16+** while the app,
 its terms and its description all say 18+ — the questionnaire answers decide
 that number, so it is a founder call whether the tobacco-reference answer
 should move it.
+
+## 35. THE APP DRIVEN FROM OUTSIDE (Sep 8) — a Maestro suite for sign-in, register and onboarding
+
+The first black-box UI tests: `.maestro/` holds three flows that drive the
+installed app through its accessibility tree, written and run through the
+Maestro MCP against the iPhone 16 Pro simulator on the fake backend.
+`01_sign_in` takes the email path, tries a wrong password (the field shakes,
+the copy stays kind) and lands on the day-12 Home; `02_register` refuses a
+short password in place and creates a fresh account per run; `03_onboarding`
+answers all twelve questions, names the coach, holds the commit ring, declines
+the rating and the push prompt, and ends on the paywall. 101 commands, all
+green in one directory run. `.maestro/README.md` carries the build recipe and
+the selector rules.
+
+What the first runs taught, each one a failed assertion first: option cards
+merge title and subtitle into one label with a newline, so `2–5` matches
+nothing and `(?s)2–5.*` does; Home merges its date line with "Today" the same
+way; a Flutter text field carries no label of its own and is reached `below`
+the caption above it; the register screen's autofocused keyboard pushes the
+"Log in" link out of the tree entirely, so the flow taps the keyboard's
+"done" key first; and a keypad digit collides with the number it just typed,
+so the birth year is 1985 (no digit repeats) and the puffs keypad is anchored
+below the estimator link because the rolling counter passes through every
+value on its way up.
+
+Two things outside the flows. Under Xcode 26, `flutter run` forces a `clean`
+whenever the engine's public headers changed since the last build of that
+shape — 31 minutes of pod recompilation on a build that looked incremental —
+and records a fingerprint so the next one is not. And `inspect_screen` shows
+the offline pill's label, "offline — logs still count, we'll sync later",
+present in the accessibility tree on every screen while the pill is hidden;
+a VoiceOver user hears it, a sighted one never sees it. Not fixed here.
+
+The same three flows then ran on the founder's Pixel 8 over wireless adb,
+unchanged except for two platform seams. The Play internal-testing build had
+to come off first — Play's signing key means no local build can install over
+it — and the fake-backend debug APK went on in its place (still there; Play
+reinstalls in one tap). The bundle id differs per platform, and a flow's own
+`env:` block wins over `-e`, so the header is now
+`appId: "${maestro.platform == 'android' ? … : …}"` and nothing platform-
+specific lives in `env`. The iOS-only wait for the keyboard's "done" key
+(Android exposes no such element) became a platform-conditional subflow.
+Green on both: 101 commands each.
+
+The second round, the same afternoon, added five flows past the paywall:
+Home (every engine number, the quick links, the four tabs), puff logging
+(one tap is one puff, Undo takes back exactly that, three taps are three,
+press-and-hold ticks more), panic (SOS → breathe → why → loop breakers →
+it passed → survived, cravings beaten +1), settings (rename the coach,
+appearance, Tide, French and back) and sign-out (a puff logged before
+leaving is still there after signing back in). They read the numbers off
+the screen with `copyTextFrom` and compare in JS, so they hold on any day's
+seed. Four passed on iOS at the first attempt; panic did not, and the reason
+is the finding of the round.
+
+**Flutter's iOS accessibility frames go wrong inside the panic flow.** Step
+1 reports correct frames. The moment `AnimatedSwitcher` swaps to step 2,
+every frame on the step — and on the Survived screen pushed after it — is
+reported at one third of its real position: exactly 1/devicePixelRatio on a
+3× device, so the subtree has lost the root's scale. The screen draws
+correctly; only the accessibility geometry is wrong, which is what VoiceOver
+uses to draw focus and what Maestro uses to tap. Dragging the intensity
+slider then empties the tree for the rest of the process — nothing on any
+later screen is reported until a restart. Nothing in the app scales
+anything (the route is a plain fade, the switcher is stock), so this sits in
+the framework or engine; at that point the flow tapped those two CTAs by
+position on iOS and never touched the slider there (both undone once the
+cause was found — see below). Two smaller ones from the same inspection:
+`BackChevron` is an unlabeled icon, so no screen reader can name it and no
+flow can tap it by text; and the offline pill's label is readable on every
+screen because `AnimatedSlide` hides it visually only. All four are in
+`.maestro/README.md`, none fixed here.
+
+On the Pixel all five passed too, once the puff flow stopped asserting the
+burst snack's plural: Android's slower taps can each fall outside the burst
+window and read "Logged 1 puff" three times, and the count — one tap, one
+puff — is the assertion that matters. Eight flows, both platforms, green.
+
+Third round: community. `09_community_feed` reads the seeded feed (a card
+is one label: avatar, alias · day · age, tag, text, footer), checks the
+22-minute-old SOS sits on top with "I got you" and its reply count, filters
+to SOS and back, toggles a 💪 reaction 47 → 48 → 47, opens the SOS thread,
+replies, declines the "Want to know when someone replies?" sheet that the
+first reply raises, and finds the count at 5 on the way back.
+`10_community_post` drives the composer through every rule the fake
+enforces — "A few more words", where-to-buy, tag required — then posts a
+Win, an SOS that pins above it, a second SOS that is refused while the
+first is up ("Your SOS is still at the top of the feed"), a Vent, and the
+Premium cap on the fourth regular post. One expectation was mine, not the
+app's: SOS carries its own allowance, so three regular posts plus an SOS
+is not the cap. Two more unlabeled controls surfaced: the composer FAB
+(tapped by position) and every post's `…` menu — which means Report, Mute
+and Block are unreachable for VoiceOver, and 1.2 asks for exactly those.
+
+Both community flows passed on the Pixel unchanged, first attempt — the
+position taps for the FAB and the app-bar corner hold on both screens. Ten
+flows, both platforms, green.
+
+**Fixed the same afternoon, all four of the app-side findings.** `BackChevron`
+is a labelled button ("Back", `commonBack`, five locales); the composer FAB
+carries "New post"; each post's `…` menu carries "Post options"
+(`communityPostMenu`), so Report, Mute and Block exist for a screen reader
+again; and `OfflineBanner` wraps its pill in `ExcludeSemantics(excluding:
+online)`, so hidden means hidden. `test/widgets/chrome_semantics_test.dart`
+pins all four through the real tree with a live `SemanticsHandle` — which
+flutter_test checks for BEFORE tearDowns run, so the handle is disposed in
+the test body, never in `addTearDown`. `go_back.yaml`, `open_composer.yaml`
+and the post menu can now be driven by text; the flows kept the position
+taps for one more run and switched in the fourth round.
+
+The fifth finding resisted a standalone repro — four rebuilds of a scratch
+app, each closer to the real screen, all clean — so the bisect ran on the
+app itself, one rebuild and one tree inspection per cycle. Gutting the
+why-step fixed it; restoring the first card kept it fixed; the intensity
+card alone brought it back, yet `LpCard` around a bare slider was clean and
+the text rows around a slider without the card were clean. An explicit
+`Semantics(container: true)` around the card fixed the initial frames and
+the drag, but the step after a drag was scaled again; `explicitChildNodes`
+brought the tree death back; an unfocusable Material slider fixed step 2
+only; holding the new step out of the tree until the old one had left — by
+timer, then by a one-frame two-phase switch — changed nothing. Then the one
+swap that changed everything: `CupertinoSlider` in place of `Slider`, on the
+otherwise untouched screen, is clean through the drag, step 3, Survived and
+Home, by text taps, twice. The culprit is the Material slider's own
+semantics on iOS; what about them, the engine will have to say. The app's
+one other Material slider — the onboarding estimator, inside a modal sheet —
+was checked the same way and is fine, so it stays. `06_panic.yaml` taps
+every CTA by text on both platforms now and is the regression check;
+`test/widgets/panic_slider_test.dart` pins the widget. The scratch app was
+discarded — a repro that does not reproduce is not one; an upstream report
+would start from the app's own steps. The Cupertino build passed the same
+flow on the Pixel too, so the swap costs Android nothing.
+
+Fourth round, the same evening: coach. `11_coach` reads the greeting under
+the coach's name and status, taps a chip and sends it, types a message
+("party" always draws the party playbook), asks for progress and finds the
+week card, opens What Ember remembers from Settings and checks the facts
+card carries Home's own numbers, renames the coach and finds the thread's
+greeting re-read as Wren, then walks the panic flow to "Talk to coach" and
+sends from there. The coach's send arrow turned out to be one more
+unlabeled icon — the keyboard's send action was the only route for a screen
+reader — and is "Send" now (`coachSend`, five locales, pinned in
+`chrome_semantics_test`). With every icon labelled, `go_back.yaml` and
+`open_composer.yaml` tap "Back" and "New post" by text instead of by
+position, verified through the two community flows. Eleven flows on iOS.
+
+Not covered yet, deliberately: the report/mute/block menu (labelled now, so
+a flow can follow), the panic games arena, the coach's free-message cap
+(the demo account is Premium), Sign in with Apple/Google, and the two OS
+sheets (rating, push) the flows decline.

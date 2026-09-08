@@ -1,0 +1,7 @@
+# The feed's composer FAB, labelled "New post" since Sep 8 2026.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- tapOn: 'New post'
+- extendedWaitUntil:
+    visible: 'Cancel'
+    timeout: 10000

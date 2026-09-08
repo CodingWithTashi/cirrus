@@ -1,0 +1,20 @@
+# Put the keyboard away so the controls beneath it come back into the tree.
+# iOS: every field here uses the default "done" return key. Android: the
+# driver can hide the IME directly.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: 'Done'
+      - extendedWaitUntil:
+          notVisible:
+            id: 'Done'
+          timeout: 5000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard

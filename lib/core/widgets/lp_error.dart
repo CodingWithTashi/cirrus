@@ -169,35 +169,48 @@ class OfflineBanner extends ConsumerWidget {
         offset: online ? const Offset(0, -1.2) : Offset.zero,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
-        child: Material(
-          color: Colors.transparent,
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: lp.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: lp.caution.withValues(alpha: 0.55),
-                  width: 1.5,
+        // The slide hides the pill visually and nothing else: off-screen, it
+        // stayed in the accessibility tree, so a screen reader could land on
+        // "offline" on every screen while online.
+        child: ExcludeSemantics(
+          excluding: online,
+          child: Material(
+            color: Colors.transparent,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.wifi_off_rounded, size: 14, color: lp.cautionText),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      context.l10n.errorOfflineBanner,
-                      overflow: TextOverflow.ellipsis,
-                      style: LpType.caption(lp.cautionText),
-                    ),
+                decoration: BoxDecoration(
+                  color: lp.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: lp.caution.withValues(alpha: 0.55),
+                    width: 1.5,
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.wifi_off_rounded,
+                      size: 14,
+                      color: lp.cautionText,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        context.l10n.errorOfflineBanner,
+                        overflow: TextOverflow.ellipsis,
+                        style: LpType.caption(lp.cautionText),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

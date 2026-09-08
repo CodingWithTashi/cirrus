@@ -185,18 +185,24 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           ],
         ),
       ),
-      floatingActionButton: PressScale(
-        onTap: () => context.push(Routes.compose),
-        child: Container(
-          width: 56,
-          height: 56,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: lp.volt,
-            boxShadow: lp.voltGlow(blur: 24, opacity: 0.35),
+      // Named for screen readers: the pencil alone said nothing, so the one
+      // way to start a post did not exist for VoiceOver or TalkBack.
+      floatingActionButton: Semantics(
+        button: true,
+        label: l10n.communityComposerTitle,
+        child: PressScale(
+          onTap: () => context.push(Routes.compose),
+          child: Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: lp.volt,
+              boxShadow: lp.voltGlow(blur: 24, opacity: 0.35),
+            ),
+            child: Icon(Icons.edit_rounded, color: lp.onVolt, size: 22),
           ),
-          child: Icon(Icons.edit_rounded, color: lp.onVolt, size: 22),
         ),
       ),
     );
@@ -412,66 +418,72 @@ class _PostMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final l10n = context.l10n;
-    return PressScale(
-      onTap: () {
-        showModalBottomSheet<void>(
-          context: context,
-          builder: (sheetContext) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(Icons.flag_outlined, color: lp.textSecondary),
-                  title: Text(
-                    l10n.communityReport,
-                    style: LpType.body14(lp.textPrimary),
+    // The three controls App Store 1.2 asks for on user content live behind
+    // this one icon. Unlabeled, it did not exist for a screen reader at all.
+    return Semantics(
+      button: true,
+      label: l10n.communityPostMenu,
+      child: PressScale(
+        onTap: () {
+          showModalBottomSheet<void>(
+            context: context,
+            builder: (sheetContext) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.flag_outlined, color: lp.textSecondary),
+                    title: Text(
+                      l10n.communityReport,
+                      style: LpType.body14(lp.textPrimary),
+                    ),
+                    onTap: () {
+                      ref
+                          .read(communityStoreProvider.notifier)
+                          .reportPost(post.id);
+                      Navigator.of(sheetContext).pop();
+                      showLpSnack(context, l10n.communityReported);
+                    },
                   ),
-                  onTap: () {
-                    ref
-                        .read(communityStoreProvider.notifier)
-                        .reportPost(post.id);
-                    Navigator.of(sheetContext).pop();
-                    showLpSnack(context, l10n.communityReported);
-                  },
-                ),
-                ListTile(
-                  leading: Icon(
-                    Icons.visibility_off_outlined,
-                    color: lp.textSecondary,
+                  ListTile(
+                    leading: Icon(
+                      Icons.visibility_off_outlined,
+                      color: lp.textSecondary,
+                    ),
+                    title: Text(
+                      l10n.communityMute,
+                      style: LpType.body14(lp.textPrimary),
+                    ),
+                    onTap: () {
+                      ref
+                          .read(communityStoreProvider.notifier)
+                          .muteAuthor(post.id);
+                      Navigator.of(sheetContext).pop();
+                      showLpSnack(context, l10n.communityMuted);
+                    },
                   ),
-                  title: Text(
-                    l10n.communityMute,
-                    style: LpType.body14(lp.textPrimary),
+                  ListTile(
+                    leading: Icon(Icons.block_rounded, color: lp.dangerText),
+                    title: Text(
+                      l10n.communityBlock,
+                      style: LpType.body14(lp.dangerText),
+                    ),
+                    onTap: () {
+                      ref
+                          .read(communityStoreProvider.notifier)
+                          .blockAuthor(post.id);
+                      Navigator.of(sheetContext).pop();
+                      showLpSnack(context, l10n.communityBlocked);
+                    },
                   ),
-                  onTap: () {
-                    ref
-                        .read(communityStoreProvider.notifier)
-                        .muteAuthor(post.id);
-                    Navigator.of(sheetContext).pop();
-                    showLpSnack(context, l10n.communityMuted);
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.block_rounded, color: lp.dangerText),
-                  title: Text(
-                    l10n.communityBlock,
-                    style: LpType.body14(lp.dangerText),
-                  ),
-                  onTap: () {
-                    ref
-                        .read(communityStoreProvider.notifier)
-                        .blockAuthor(post.id);
-                    Navigator.of(sheetContext).pop();
-                    showLpSnack(context, l10n.communityBlocked);
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-      child: Icon(Icons.more_horiz_rounded, color: lp.textFaint, size: 18),
+          );
+        },
+        child: Icon(Icons.more_horiz_rounded, color: lp.textFaint, size: 18),
+      ),
     );
   }
 }

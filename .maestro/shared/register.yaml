@@ -1,0 +1,41 @@
+# From the sign-in screen: create a fresh account and land on onboarding.
+# EMAIL is minted per run so the flow never collides with an earlier account
+# (the fake backend forgets everything on restart; Firebase would not).
+# The email field autofocuses, so the keyboard is already up when we type.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- tapOn: 'Continue with email'
+- assertVisible: 'Create your account'
+# Wait for the autofocus keyboard before typing. iOS exposes its return key
+# as an element; Android does not, so a settle is the best signal there.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: 'Done'
+          timeout: 5000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 2000
+- evalScript: ${output.email = 'maestro-' + Date.now() + '@cirrus-test.app'}
+- inputText: ${output.email}
+- tapOn:
+    below:
+      text: 'PASSWORD'
+    index: 0
+# Too short first: the screen must refuse it in place, not call the backend.
+- inputText: 'abc'
+- tapOn: 'Create account'
+- assertVisible: 'passwords need at least 6 characters.*'
+- eraseText
+- inputText: ${PASSWORD}
+- assertVisible: '(decent|strong) password'
+- tapOn: 'Create account'
+- extendedWaitUntil:
+    visible: 'How dependent are you, really\?'
+    timeout: 30000

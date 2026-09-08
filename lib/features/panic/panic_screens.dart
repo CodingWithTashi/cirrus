@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart' show CupertinoSlider;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -602,11 +603,22 @@ class _WhyStep extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Slider(
+                // Cupertino, not Material — load-bearing on iOS. With `Slider`
+                // here, every accessibility frame on this step (and on the
+                // Survived screen after it) was reported at 1/devicePixelRatio
+                // once the flow switched out of the breathing step, and a drag
+                // then emptied the accessibility tree until restart. The pixels
+                // were never wrong; what VoiceOver read was. Bisected on Sep 8
+                // 2026 to the Material slider itself (docs/10 §35). Pinned by
+                // `test/widgets/panic_slider_test.dart`; `06_panic.yaml` taps
+                // this step by text and fails if the frames go wrong again.
+                CupertinoSlider(
                   value: session.intensity.toDouble(),
                   min: 1,
                   max: 10,
                   divisions: 9,
+                  activeColor: lp.oxygen,
+                  thumbColor: lp.oxygen,
                   onChanged: (v) {
                     LpHaptics.tick();
                     vm.setIntensity(v.round());

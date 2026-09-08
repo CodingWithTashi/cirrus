@@ -17,6 +17,7 @@
   "commonUndo": "Undo",
   "commonEdit": "Edit",
   "commonClose": "Close",
+  "commonBack": "Back",
   "commonNotNow": "Not now",
   "commonMaybeLater": "Maybe later",
   "commonDayN": "day {day}",
@@ -1203,6 +1204,7 @@
   "coachChipSlipped": "I slipped",
   "coachChipProgress": "Show my progress",
   "coachInputHint": "Message your coach…",
+  "coachSend": "Send",
   "coachTyping": "{name} is typing…",
   "@coachTyping": {
     "placeholders": {
@@ -1584,6 +1586,7 @@
     }
   },
   "communityReport": "Report",
+  "communityPostMenu": "Post options",
   "communityMute": "Mute",
   "communityBlock": "Block user",
   "communityReported": "Reported. We review within 24h — 3 reports auto-hide a post.",

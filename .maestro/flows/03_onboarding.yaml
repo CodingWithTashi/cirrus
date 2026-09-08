@@ -1,0 +1,138 @@
+# Register, then answer all onboarding questions through to the paywall.
+# Answers: woman, born 1985, tried 2–5 times, always in hand, 200 puffs/day,
+# 50 mg, $25/week, first puff within 5 min, why health+money, worries
+# cravings+failing, taper over 30 days, coach named Koda, why-words skipped,
+# hold to commit, skip the rating and the push prompt.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  PASSWORD: cirrus-demo
+name: 'Onboarding questions through to the paywall'
+tags:
+  - onboarding
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/register.yaml
+
+# A1 welcome
+- tapOn: 'Start my check-up'
+
+# A2 gender (1/12)
+- assertVisible: 'How do you identify\?'
+- assertVisible: '1/12'
+- tapOn: 'Woman'
+- tapOn: 'Continue'
+
+# A3 birth year (2/12) — digits are chosen so no typed digit is already on screen
+- assertVisible: 'What year were you born\?'
+- tapOn: '1'
+- tapOn: '9'
+- tapOn: '8'
+- tapOn: '5'
+- assertVisible: 'You''re \d+\.'
+- tapOn: 'Continue'
+
+# A4 tried before (3/12)
+- assertVisible: 'Tried quitting before\?'
+# Option cards merge title and subtitle into one label ("2–5\na few rounds")
+- tapOn: '(?s)2–5.*'
+- assertVisible: '(?s).*Most people need a few tries.*'
+- tapOn: 'Continue'
+
+# B1 frequency (4/12)
+- assertVisible: 'How often is it in your hand\?'
+- tapOn: '(?s)ALWAYS.*'
+- tapOn: 'Continue'
+
+# B2 puffs per day (5/12) — the keypad sits below the estimator link
+- assertVisible: 'Puffs on a normal day\?'
+- tapOn:
+    text: '2'
+    below:
+      text: 'Not sure\? Estimate.*'
+- tapOn:
+    text: '0'
+    below:
+      text: 'Not sure\? Estimate.*'
+- tapOn:
+    text: '0'
+    below:
+      text: 'Not sure\? Estimate.*'
+- assertVisible: 'Heavy dependence'
+- tapOn: 'Continue'
+
+# B3 strength (6/12)
+- assertVisible: 'How strong is your usual\?'
+- tapOn: '(?s)50 ?mg.*'
+- tapOn: 'Continue'
+
+# B4 weekly spend (7/12) — the hero is one "$0" node, so bare digits are unique
+- assertVisible: 'What''s it costing you a week\?'
+- tapOn: '2'
+- tapOn: '5'
+- assertVisible: '\$25'
+- assertVisible: 'your math, not ours'
+- tapOn: 'Continue'
+
+# B5 first puff (8/12)
+- assertVisible: 'First puff after waking up\?'
+- tapOn: '(?s)Within 5 minutes.*'
+- tapOn: 'Continue'
+
+# C1 whys (9/12)
+- assertVisible: 'Why do you want out\?'
+- tapOn: 'Health'
+- tapOn: 'Money'
+- assertVisible: '(?s).*YOUR WHY.*'
+- tapOn: 'Continue'
+
+# C2 worries (10/12)
+- assertVisible: 'What worries you most\?'
+- tapOn: 'Cravings'
+- tapOn: 'Fear of failing'
+- tapOn: 'Continue'
+
+# C3 method (11/12)
+- assertVisible: 'How do you want to do this\?'
+- tapOn: '(?s)Taper down.*'
+- tapOn: 'Continue'
+
+# C4 pace (12/12)
+- assertVisible: 'Pick your pace.'
+- assertVisible: '12/12'
+- tapOn: '30'
+- tapOn: 'Lock my pace'
+
+# C5 building → D1 reveal (auto-advances after ~3s)
+- extendedWaitUntil:
+    visible: 'I''m ready'
+    timeout: 15000
+- assertVisible: 'Your 30-day breakup plan.'
+- tapOn: 'I''m ready'
+
+# D1b coach name
+- assertVisible: 'Meet your coach.'
+- tapOn: 'Koda'
+- tapOn: 'That''s the one'
+
+# D1c why, in their own words — skipped
+- assertVisible: 'Tell Koda one thing.'
+- tapOn: 'Skip this'
+
+# D2 hold to commit (1.8s hold, then a 1.4s celebration before advancing)
+- assertVisible: 'Make it real.'
+- longPressOn: 'Hold to commit'
+- extendedWaitUntil:
+    visible: 'One quitter''s review helps the next one find us.'
+    timeout: 15000
+
+# D3 rating — declined
+- tapOn: 'Not now'
+
+# D4 notifications — declined, so no OS sheet is involved
+- assertVisible: 'Backup, exactly when you cave.'
+- tapOn: 'Maybe later'
+
+# D5 paywall: the end of the questions
+- extendedWaitUntil:
+    visible: 'Your plan is ready.'
+    timeout: 30000

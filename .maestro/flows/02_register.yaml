@@ -1,0 +1,12 @@
+# Create a new account → onboarding welcome screen.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  PASSWORD: cirrus-demo
+name: 'Register creates an account and opens onboarding'
+tags:
+  - auth
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/register.yaml
+- assertVisible: 'Start my check-up'
