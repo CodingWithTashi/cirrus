@@ -4744,7 +4744,11 @@ would have been told "0" and the tap left queued until the next resume, which
 on a phone that stays open is never. `drain()` now coalesces: one follow-up,
 shared by every caller in the window, that starts after the running drain has
 written its cursor and reads the outbox fresh. Nothing counted twice, nothing
-waiting on a lifecycle event.
+waiting on a lifecycle event. And it runs whether the drain it waited on
+succeeded or threw, forgetting itself either way — a follow-up parked behind a
+failed future would have answered every later mid-drain caller with that same
+stale failure and switched real-time draining off for the rest of the session,
+which is the shape of bug this section exists to end.
 
 **Pinned.** `widget_drain_test` gates the first outbox read, appends a tap
 underneath it and proves the follow-up applies exactly that tap (and that three
