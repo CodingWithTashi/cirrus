@@ -41,10 +41,12 @@ abstract interface class WidgetStore {
   ///
   /// Emits how many events the native side has just appended to the outbox —
   /// AFTER they are in the container, so a listener can drain immediately.
-  /// Resume and launch are the only other moments the outbox is read, and a
-  /// wrist is the one surface that can hand the phone a tap between them: a
-  /// phone app sitting open on Home used to keep saying zero while the watch
-  /// said one, until it was closed and reopened (Sep 8 2026, docs/10 §36).
+  /// Resume and launch are the only other moments the outbox is read — enough
+  /// for a launcher widget, whose tap takes the app off screen first so a
+  /// resume always follows — but a wrist can hand the phone a tap with the
+  /// app still open: a phone sitting on Home used to keep saying zero while
+  /// the watch said one, until it was closed and reopened (Sep 8 2026,
+  /// docs/10 §36).
   ///
   /// Never emits anywhere but iOS.
   Stream<int> get watchTaps;

@@ -74,11 +74,53 @@ struct CirrusMirror {
     var copyOverLimit = ""
     var copyEmptyTitle = ""
     var copyEmptyBody = ""
+
+    // --- The wrist's week card ---------------------------------------------
+    //
+    // Raw counts and the phone's own denominator. The wrist turns them into
+    // bar heights, which is layout; it does NOT decide which day was hard or
+    // best, because those carry real rules (a day with no puffs is not the
+    // hard day; today is never the best day) and arrive already decided.
+    var weekPuffs: [Int] = []
+    var weekMax = 1
+    var weekHardest = -1
+    var weekBest = -1
+
+    /// The one field in this struct that is a genuine Optional rather than a
+    /// `?? default`, and it must stay that way: every default is a lie here.
+    /// `0` already means "flat", which the card paints volt as good news — so
+    /// a defaulted zero would claim an improvement the account has not made.
+    /// Absent means there is no honest comparison to draw, and the line is
+    /// simply not drawn.
+    var weekVsLast: Int?
+    var weekVsLastLabel = ""
+
+    /// Pre-formatted on the phone. The raw figure deliberately does not travel
+    /// — the rule behind it (an unconfirmed day is unknown, never a saving)
+    /// is a domain rule and may have exactly one implementation.
+    var savedText = ""
+    var cravingsBeaten = 0
     /// The watch app's empty-card body. `copyEmptyBody` says "Tap to open
     /// Cirrus", which watchOS cannot do — it has no way to launch its companion
     /// iPhone app. Unused by the widget, and carried in the same document so
     /// the wrist needs no ARB file of its own.
     var copyWatchOpenPhone = ""
+
+    /// The week card's four labels and the breathing screen's six, all of them
+    /// strings the app already ships in five languages — Stats' own copy and
+    /// the panic flow's. `copyVsLast`, `copyCravingTimer` and
+    /// `copyCravingTimerLate` are native `%1$@` templates, filled here with
+    /// `String(format:)` so word order stays per-locale.
+    var copyWeekTitle = ""
+    var copyVsLast = ""
+    var copySavedLabel = ""
+    var copyCravingsLabel = ""
+    var copyBreatheIn = ""
+    var copyBreatheHold = ""
+    var copyBreatheOut = ""
+    var copyBreathePattern = ""
+    var copyCravingTimer = ""
+    var copyCravingTimerLate = ""
 
     /// Never throws. An unreadable mirror renders as "no journey yet", which is
     /// the honest empty state rather than a blank rectangle.
@@ -127,6 +169,28 @@ struct CirrusMirror {
         mirror.copyLeftAhead = copy["leftAhead"] as? String ?? ""
         mirror.copyLeftTight = copy["leftTight"] as? String ?? ""
         mirror.copyOverLimit = copy["overLimit"] as? String ?? ""
+
+        mirror.weekPuffs = json["weekPuffs"] as? [Int] ?? []
+        // Never 0: it is a divisor, and an all-zero week would divide by it.
+        mirror.weekMax = max(1, json["weekMax"] as? Int ?? 1)
+        mirror.weekHardest = json["weekHardest"] as? Int ?? -1
+        mirror.weekBest = json["weekBest"] as? Int ?? -1
+        // No `?? 0`. See the field's comment: absent and flat are different
+        // answers and only one of them is good news.
+        mirror.weekVsLast = json["weekVsLast"] as? Int
+        mirror.weekVsLastLabel = json["weekVsLastLabel"] as? String ?? ""
+        mirror.savedText = json["savedText"] as? String ?? ""
+        mirror.cravingsBeaten = json["cravingsBeaten"] as? Int ?? 0
+        mirror.copyWeekTitle = copy["weekTitle"] as? String ?? ""
+        mirror.copyVsLast = copy["vsLast"] as? String ?? ""
+        mirror.copySavedLabel = copy["savedLabel"] as? String ?? ""
+        mirror.copyCravingsLabel = copy["cravingsLabel"] as? String ?? ""
+        mirror.copyBreatheIn = copy["breatheIn"] as? String ?? ""
+        mirror.copyBreatheHold = copy["breatheHold"] as? String ?? ""
+        mirror.copyBreatheOut = copy["breatheOut"] as? String ?? ""
+        mirror.copyBreathePattern = copy["breathePattern"] as? String ?? ""
+        mirror.copyCravingTimer = copy["cravingTimer"] as? String ?? ""
+        mirror.copyCravingTimerLate = copy["cravingTimerLate"] as? String ?? ""
         return mirror
     }
 }
@@ -258,4 +322,66 @@ func cirrusToday(_ mirror: CirrusMirror, pending: Int) -> CirrusToday {
         over: over,
         knowsLimit: knowsLimit
     )
+}
+
+/// Which of the week's bars carries a verdict.
+///
+/// Deliberately not a colour: this file is Foundation-only so `swiftc` can
+/// compile it for `test/ios_watch_contract_test.dart`, and the palette lives
+/// on the other side of that line.
+enum CirrusWeekTone {
+    case hardest
+    case best
+    case plain
+}
+
+/// One column of the wrist's week card.
+struct CirrusWeekBar {
+    let puffs: Int
+    /// 0.04 … 1.0 of the tallest bar. The floor is what keeps a day with
+    /// nothing on it a visible sliver rather than an absence — the same
+    /// `clamp(0.04, 1.0)` the Stats bars use.
+    let height: Double
+    let tone: CirrusWeekTone
+}
+
+/// Folds the mirror's week and the taps the phone has not taken yet into the
+/// bars the wrist draws.
+///
+/// **Why today's bar is replaced rather than trusted.** The day card draws
+/// `today.count`, which already includes anything still sitting in this
+/// watch's outbox, and a wrist can hold taps for hours — the phone only drains
+/// when it comes forward. Left alone, the two screens on the same watch would
+/// disagree by exactly the number of un-handed-over taps, which is the bug
+/// shape §36 exists to end.
+///
+/// The fold is gated on the mirror being about TODAY. `DayWindow.trailing`
+/// ends on the day it was built for, so the last bar is only today's while the
+/// mirror is fresh; on a stale one `today.count` is pending-only and painting
+/// it onto yesterday would be an invented number.
+///
+/// The verdicts are never recomputed. Today's growing bar may briefly out-top
+/// the ember one without the ember moving — correct, because today is not a
+/// confirmed hard day yet, and the next push settles it.
+func cirrusWeek(_ mirror: CirrusMirror, today: CirrusToday) -> [CirrusWeekBar] {
+    guard !mirror.weekPuffs.isEmpty else { return [] }
+
+    var counts = mirror.weekPuffs
+    if mirror.dayKey == cirrusTodayKey() {
+        counts[counts.count - 1] = today.count
+    }
+
+    // Renormalize against the fold: a tap that pushes today past the phone's
+    // denominator makes today the tallest bar, rather than one clipped flat.
+    let denominator = max(1, max(mirror.weekMax, counts.max() ?? 1))
+
+    return counts.enumerated().map { index, puffs in
+        CirrusWeekBar(
+            puffs: puffs,
+            height: min(1.0, max(0.04, Double(puffs) / Double(denominator))),
+            tone: index == mirror.weekHardest
+                ? .hardest
+                : index == mirror.weekBest ? .best : .plain
+        )
+    }
 }

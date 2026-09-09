@@ -41,8 +41,8 @@ final class CirrusWatchLink: NSObject {
     /// Native → Dart: taps from the wrist have just landed in `lp.outbox`.
     ///
     /// Dart folds the outbox into the journey on resume and on launch, and a
-    /// home-screen widget never needs more — nobody can tap a launcher widget
-    /// while the app is on screen. A wrist can. Without this, a tap relayed
+    /// home-screen widget never needs more — its tap takes the app off screen
+    /// first, so a resume always follows. A wrist tap does not. Without this, a tap relayed
     /// into a phone app already in the foreground sat in the outbox: Home said
     /// zero, the watch said one, and closing and reopening the app was what
     /// "fixed" it (Sep 8 2026). Carries the number that landed.
@@ -110,12 +110,32 @@ final class CirrusWatchLink: NSObject {
         // `channel` is written on the main thread in `attach` and read here on
         // the main thread too, so the hop is also what makes the read safe.
         DispatchQueue.main.async {
+            // Only an app that is actually on screen is told. Both delivery
+            // paths can wake a backgrounded app with a live engine, and a
+            // background drain would sit on the Firestore ack (up to 3 s) where
+            // iOS routinely suspends the process before the cursor lands — the
+            // "counted twice" window the coordinator tolerates only on the
+            // launch path — while every repaint it triggers spends WidgetKit's
+            // daily budget. The resume drain has always covered that case.
+            guard UIApplication.shared.applicationState == .active else {
+                Self.log.info("queued — \(landed) tap(s), app not active; the resume drain has it")
+                return
+            }
             guard let channel = self.channel else {
                 Self.log.info("queued — \(landed) tap(s), no engine to tell")
                 return
             }
             Self.log.info("queued — \(landed) tap(s), telling Dart")
-            channel.invokeMethod(Self.methodQueued, arguments: landed)
+            channel.invokeMethod(Self.methodQueued, arguments: landed) { result in
+                // Dart registers its handler from `_WidgetSync`, after the
+                // splash has started; a tap relayed before that is answered
+                // not-implemented. Nothing is lost — the session-transition
+                // drain reads the outbox — but the log must not claim a
+                // delivery that did not happen.
+                if let sentinel = result as? NSObject, sentinel === FlutterMethodNotImplemented {
+                    Self.log.info("queued — Dart not listening yet; the launch drain has it")
+                }
+            }
         }
     }
 

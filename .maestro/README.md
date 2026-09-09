@@ -20,6 +20,7 @@ replace, `flutter test integration_test` (which runs inside the app).
 | `flows/09_community_feed.yaml` | Seeded posts, pinned SOS, tag filters, a reaction toggling, a reply in a thread | Feed |
 | `flows/10_community_post.yaml` | Composer rules (too short, where-to-buy, tag required), a Win, an SOS, SOS cooldown, the 3-a-day cap | Feed |
 | `flows/11_coach.yaml` | Greeting, chips, a chip reply, a typed reply, progress with the week card, memories, rename in the thread, the panic hand-off | Coach |
+| `flows/12_stats.yaml` | Week card, the `-N% vs last` pill (absent-vs-zero, through the real UI), the hard-day caption, the records row, and the Day/Week/Month ranges | Stats |
 
 `shared/` holds the subflows they reuse (`launch`, `register`, `sign_in`,
 `dismiss_keyboard`, `dismiss_push_ask`, `go_back`, `open_composer`);

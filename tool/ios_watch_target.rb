@@ -9,11 +9,16 @@
 #
 #     /usr/bin/ruby tool/ios_watch_target.rb
 #
-# Idempotent, the same way `tool/ios_widget_target.rb` is: a project that
-# already has the watch app is left untouched, so it is safe to re-run after
-# `git checkout ios/Runner.xcodeproj/project.pbxproj` (the recovery
-# `pubspec.yaml` prescribes after `dart run flutter_launcher_icons` rewrites
-# that file). `test/ios_watch_test.dart` pins everything below.
+# Idempotent: safe to re-run after `git checkout
+# ios/Runner.xcodeproj/project.pbxproj` (the recovery `pubspec.yaml` prescribes
+# after `dart run flutter_launcher_icons` rewrites that file).
+# `test/ios_watch_test.dart` pins everything below.
+#
+# Re-running on a project that ALREADY has the targets syncs their sources: any
+# `.swift` since added to `ios/CirrusWatch/` or `ios/CirrusWatchComplication/`
+# is given its target membership. **Run it after adding a file to either
+# folder** — a source with no membership does not compile, says nothing, and
+# surfaces only as a red `ios_watch_test.dart`.
 #
 # Two targets, because a complication is a WidgetKit extension and extensions
 # ship inside an app:
@@ -87,10 +92,63 @@ SHARED = ['CirrusWidget/CirrusShared.swift', 'CirrusWidget/CirrusOutbox.swift'].
 # Spoken by BOTH devices, so it is a member of the watch app and of Runner.
 WIRE = 'CirrusWatch/WatchWire.swift'
 
+# --- File references --------------------------------------------------------
+# Declared up here rather than beside the rest of the source wiring because the
+# SYNC below needs them: Ruby binds a top-level `def` when its line executes, so
+# a helper called from an early-return path has to be defined above that path.
+def group_for(project, folder)
+  group = project.main_group.find_subpath(folder, true)
+  group.set_source_tree('<group>')
+  group.set_path(folder)
+  group
+end
+
+# A file reference is created once and added to as many targets as need it —
+# which is the whole point: one copy of the contract, three readers of it.
+def reference(project, path)
+  existing = project.files.find { |f| f.real_path.to_s == File.join(project.project_dir.to_s, path) }
+  return existing if existing
+
+  dir, base = File.split(path)
+  group_for(project, dir).new_file(base)
+end
+
 project = Xcodeproj::Project.open(PROJECT_PATH)
 
+# Already generated? Then SYNC THE SOURCES rather than doing nothing.
+#
+# This used to `exit 0` here, which made the header's promise of idempotency
+# true of the TARGET and false of its FILES: a `.swift` added to
+# `ios/CirrusWatch/` afterwards never got a target membership, so it silently
+# did not compile. `test/ios_watch_test.dart` fails on exactly that — it globs
+# both folders and demands every file appear in the pbxproj — and the failure
+# reads as a broken project rather than as a script that was never re-run.
+#
+# Only ADDs. A file deleted from disk keeps its (now dangling) reference, which
+# is the safe direction: pruning is what would silently drop a source from the
+# build, and Xcode surfaces a missing file loudly.
 if project.targets.any? { |t| t.name == APP_NAME }
-  puts "#{APP_NAME}: target already present, nothing to do"
+  added = []
+  [APP_NAME, EXT_NAME].each do |folder|
+    target = project.targets.find { |t| t.name == folder } or next
+
+    phase = target.source_build_phase
+    present = phase.files.map { |f| f.file_ref && f.file_ref.real_path.to_s }.compact
+    Dir[File.join(ROOT, 'ios', folder, '*.swift')].sort.each do |path|
+      base = File.basename(path)
+      next if present.include?(File.join(ROOT, 'ios', folder, base))
+
+      phase.add_file_reference(reference(project, "#{folder}/#{base}"), true)
+      added << "#{folder}/#{base}"
+    end
+  end
+
+  if added.empty?
+    puts "#{APP_NAME}: target present, sources in sync, nothing to do"
+  else
+    project.save
+    puts "#{APP_NAME}: added #{added.join(', ')}"
+  end
   exit 0
 end
 
@@ -153,23 +211,8 @@ ext.build_configurations.each do |config|
 end
 
 # --- Sources ----------------------------------------------------------------
-def group_for(project, folder)
-  group = project.main_group.find_subpath(folder, true)
-  group.set_source_tree('<group>')
-  group.set_path(folder)
-  group
-end
-
-# A file reference is created once and added to as many targets as need it —
-# which is the whole point: one copy of the contract, three readers of it.
-def reference(project, path)
-  existing = project.files.find { |f| f.real_path.to_s == File.join(project.project_dir.to_s, path) }
-  return existing if existing
-
-  dir, base = File.split(path)
-  group_for(project, dir).new_file(base)
-end
-
+# `group_for` and `reference` are defined near the top of this file, above the
+# already-generated sync that also calls them.
 app_group = group_for(project, APP_NAME)
 ext_group = group_for(project, EXT_NAME)
 

@@ -23,4 +23,17 @@ extension Color {
     static let cwOnVolt = Color(red: 0.039, green: 0.047, blue: 0.063) // #0A0C10
     static let cwEmber = Color(red: 1.0, green: 0.541, blue: 0.0) // #FF8A00
     static let cwDanger = Color(red: 1.0, green: 0.361, blue: 0.361) // #FF5C5C
+
+    /// The breathing screen. `oxygen` is the app's one cold accent and the
+    /// colour the phone's panic orb already wears; `panicBackground` is the
+    /// darker ground the panic route uses, and it is the single visual tell
+    /// that this screen is not the ordinary card.
+    ///
+    /// Only ONE oxygen token is needed here: in Midnight Ember `oxygen` and
+    /// `oxygenText` are the same hex, so the phone's orb and ring collapse to
+    /// one colour on the wrist. `test/ios_watch_test.dart` pins that they are
+    /// still equal, so a palette change that splits them fails there rather
+    /// than mis-tinting a wrist nobody is looking at in a test.
+    static let cwOxygen = Color(red: 0.431, green: 0.906, blue: 1.0) // #6EE7FF
+    static let cwPanicVoid = Color(red: 0.020, green: 0.027, blue: 0.043) // #05070B
 }

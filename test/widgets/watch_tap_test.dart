@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -24,8 +25,11 @@ import '../helpers.dart';
 void main() {
   final now = DateTime(2026, 9, 8, 14, 0);
 
-  Future<(ProviderContainer, MemoryWidgetStore)> open(WidgetTester tester) async {
-    final store = MemoryWidgetStore();
+  Future<(ProviderContainer, MemoryWidgetStore)> open(
+    WidgetTester tester, {
+    MemoryWidgetStore? store,
+  }) async {
+    store ??= MemoryWidgetStore();
     final container = ProviderContainer(
       overrides: [
         ...fastBackendOverrides(now: now),
@@ -101,22 +105,34 @@ void main() {
     expect(store.values[PendingPuffs.cursorKey], '1');
   });
 
-  testWidgets('taps landing back to back each count exactly once', (
+  testWidgets('taps landing while a drain is in flight are not left behind', (
     tester,
   ) async {
-    final (c, store) = await open(tester);
+    // The first drain has already taken its snapshot of the outbox when the
+    // second and third taps are relayed in — the window the coalescing
+    // follow-up exists for. The store is gated so that this test really puts
+    // them there, rather than letting one drain quietly see all three.
+    final store = _GatedStore();
+    final (c, _) = await open(tester, store: store);
     final before = puffs(c);
 
-    // Three relays with no pump between them: the second and third arrive
-    // while the first drain is in flight, which is exactly the window the
-    // coalescing follow-up exists for.
     relay(store, seq: 1, delta: 1);
+    await tester.pump();
+    expect(
+      store.outboxRead.isCompleted,
+      isTrue,
+      reason: 'the first drain is parked on the outbox it has already read',
+    );
     relay(store, seq: 2, delta: 1);
     relay(store, seq: 3, delta: 1);
+    store.release.complete();
     await tester.pumpAndSettle();
 
     expect(puffs(c), before + 3);
     expect(store.values[PendingPuffs.cursorKey], '3');
+    // And exactly one mirror went to the wrist per drain, after its cursor —
+    // never one carrying a count the cursor did not yet cover.
+    expect(mirrorIn(store)['puffs'], before + 3);
   });
 
   testWidgets('the signal is what does it — withheld, the tap waits for resume', (
@@ -150,4 +166,22 @@ void main() {
 
     expect(puffs(c), before + 1, reason: 'the resume drain still picks it up');
   });
+}
+
+/// Holds the first read of the outbox until the test lets it go, so taps can
+/// land AFTER a drain has taken its snapshot — the window a wrist tap lands in.
+class _GatedStore extends MemoryWidgetStore {
+  final Completer<void> outboxRead = Completer<void>();
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<String?> read(String key) async {
+    if (key == PendingPuffs.outboxKey && !outboxRead.isCompleted) {
+      final snapshot = values[key];
+      outboxRead.complete();
+      await release.future;
+      return snapshot;
+    }
+    return values[key];
+  }
 }

@@ -629,8 +629,6 @@ class _BlockingJourneys implements JourneyRepository {
 
 
 
-/// Counts the write-behind saves so "one drain is one document write" is a
-/// test rather than a claim.
 /// Holds the first read of the outbox until the test lets it go, so a tap can
 /// be appended AFTER a drain has taken its snapshot — the exact window a wrist
 /// tap lands in.
@@ -655,6 +653,8 @@ class _GatedStore extends MemoryWidgetStore {
   }
 }
 
+/// Counts the write-behind saves so "one drain is one document write" is a
+/// test rather than a claim.
 class _CountingJourneys implements JourneyRepository {
   _CountingJourneys(this._inner);
 

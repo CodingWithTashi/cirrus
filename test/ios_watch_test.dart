@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,9 @@ void main() {
   final view = read('$app/WatchHomeView.swift');
   final palette = read('$app/WatchPalette.swift');
   final entry = read('$app/CirrusWatchApp.swift');
+  final week = read('$app/WatchWeekView.swift');
+  final breathe = read('$app/WatchBreatheView.swift');
+  final pacer = read('$app/BreathPacer.swift');
   final face = read('$complication/CirrusComplication.swift');
   final phoneLink = read('ios/Runner/CirrusWatchLink.swift');
   final shared = read('ios/CirrusWidget/CirrusShared.swift');
@@ -55,7 +59,13 @@ void main() {
     test('the phone and the watch name the same envelope fields', () {
       // Both halves of the link read these off `WatchKeys`, so the only way
       // they can disagree is if one of them stops doing that.
-      for (final field in ['fieldVersion', 'fieldMirror', 'fieldEvents', 'fieldSid']) {
+      for (final field in [
+        'fieldVersion',
+        'fieldMirror',
+        'fieldEvents',
+        'fieldSid',
+        'fieldReflected',
+      ]) {
         expect(code(wire), contains('static let $field ='));
       }
       // Neither link builds an envelope by hand: both go through `WatchWire`,
@@ -91,7 +101,8 @@ void main() {
       // exactly one writer.
       expect(code(wire), contains('static let sid = "lp.watchSid"'));
       expect(code(wire), contains('static let seen = "lp.watchSeen"'));
-      for (final key in ['lp.watchSid', 'lp.watchSeen']) {
+      expect(code(wire), contains('static let relayed = "lp.watchRelayed"'));
+      for (final key in ['lp.watchSid', 'lp.watchSeen', 'lp.watchRelayed']) {
         expect(dartMirror.contains(key), isFalse);
         expect(code(shared).contains(key), isFalse);
       }
@@ -128,6 +139,35 @@ void main() {
       expect(code(phoneLink), contains('DispatchQueue.main.async'));
       // And Dart listens on the same channel it sends on.
       expect(dartStore, contains('setMethodCallHandler'));
+    });
+
+    test('a background delivery is left to the resume drain', () {
+      // Both WCSession paths can wake a backgrounded app that still has an
+      // engine. Announcing there would run the Firestore write and its 3 s ack
+      // wait in the background — where iOS suspends the process before the
+      // cursor lands, replaying the tap on the next launch — and spend
+      // WidgetKit's daily reload budget on every wrist tap.
+      expect(code(phoneLink), contains('applicationState == .active'));
+      // And a `queued` nobody was listening for is logged as such, not as a
+      // delivery.
+      expect(code(phoneLink), contains('FlutterMethodNotImplemented'));
+    });
+
+    test('the mirror names the wrist seq it reflects, and the ledger is phone-only', () {
+      // The wrist used to infer "the phone has drained my taps" from a mark
+      // taken at hand-over. Draining within the second broke that guess both
+      // ways (docs/10 §36), so the phone now says which seq the mirror already
+      // counts. `ios_watch_contract_test.dart` plays every case; this pins the
+      // shape: the phone computes it from its own cursor, the watch clamps it
+      // to its own seq, and the mark survives only as the fallback for a phone
+      // built before the field existed.
+      expect(code(wire), contains('static func reflected(in defaults: UserDefaults'));
+      expect(code(wire), contains('WatchKeys.fieldReflected] = reflected'));
+      expect(code(wire), contains('min(reflected, defaults.integer(forKey: CirrusKeys.seq))'));
+      expect(code(wire), contains('forKey: WatchKeys.relayed'));
+      // Nothing on the watch writes the ledger — one writer per key.
+      expect(code(link).contains('WatchKeys.relayed'), isFalse);
+      expect(code(view).contains('WatchKeys.relayed'), isFalse);
     });
 
     test('the mirror field the watch adds is one Dart writes', () {
@@ -183,9 +223,12 @@ void main() {
       // The ack records the hand-over and takes a mark — it does not move the
       // cursor.
       expect(wireCode, contains('defaults.set(seq, forKey: WatchKeys.sent)'));
-      // Exactly two mentions, and they are the only two there may be: the mark
-      // check that advances it, and `forget` clearing it. Nothing else on the
-      // wrist may move the cursor.
+      // Exactly three mentions, and they are the only three there may be: the
+      // phone naming the seq its mirror reflects (the rule since Sep 8 2026),
+      // the mark check that advances it for a phone built before that field,
+      // and `forget` clearing it. Nothing else on the wrist may move the
+      // cursor — and the receipt in particular never does.
+      expect(wireCode, contains('defaults.set(String(target), forKey: CirrusKeys.cursor)'));
       expect(
         wireCode,
         contains(
@@ -195,7 +238,7 @@ void main() {
       expect(wireCode, contains('removeObject(forKey: CirrusKeys.cursor)'));
       expect(
         RegExp(r'forKey: CirrusKeys\.cursor').allMatches(wireCode).length,
-        2,
+        3,
         reason: 'the cursor has exactly one writer on the wrist',
       );
       // And the send floor follows the hand-over, so nothing is re-sent while
@@ -205,7 +248,7 @@ void main() {
         contains('let floor = retrying ? cursor : max(cursor, defaults.integer(forKey: WatchKeys.sent))'),
       );
       // A no-journey mirror carries no count, so it may not move the cursor.
-      expect(wireCode, contains('if !changed, incoming.hasJourney,'));
+      expect(wireCode, contains('if !changed, incoming.hasJourney {'));
     });
 
     test('a hand-over the mirror never confirmed is asked again', () {
@@ -344,7 +387,7 @@ void main() {
       expect(code(view), contains('link.today.dayLabel(link.mirror)'));
       expect(code(face), contains('entry.today.dayLabel(entry.mirror)'));
       // Neither recomputes it.
-      for (final source in [code(view), code(face)]) {
+      for (final source in [code(view), code(face), code(week), code(breathe)]) {
         expect(source.contains('totalDays'), isFalse);
       }
     });
@@ -632,7 +675,7 @@ void main() {
     });
 
     test('no raw hex anywhere but the palette', () {
-      for (final source in [view, entry, link, face]) {
+      for (final source in [view, entry, link, face, week, breathe]) {
         expect(
           RegExp(r'Color\(red:').hasMatch(code(source)),
           isFalse,
@@ -643,6 +686,261 @@ void main() {
       // complications, and the person chose that tint.
       expect(face.contains('import SwiftUI'), isTrue);
       expect(code(face).contains('.cw'), isFalse);
+    });
+  });
+
+  group('the two new screens draw, and never compute', () {
+    test('the week card reads verdicts it was given', () {
+      // The bars are counts; which day was HARD and which was BEST are
+      // `WeekTrend` answers with real rules, and they arrive decided.
+      // The verdicts are applied in `cirrusWeek` — shared, Foundation-only,
+      // and executed against Dart by `ios_watch_contract_test`. The VIEW just
+      // asks for bars, which is the layering this pins.
+      expect(code(shared), contains('mirror.weekHardest'));
+      expect(code(shared), contains('mirror.weekBest'));
+      expect(code(week), contains('cirrusWeek(link.mirror, today: link.today)'));
+      // Money is quoted, never derived: the rule behind it (an unconfirmed day
+      // is unknown, never a saving) may have exactly one implementation.
+      expect(code(week), contains('mirror.savedText'));
+      for (final forbidden in ['isConfirmed', 'savedLifetime', 'DateFormatter']) {
+        expect(
+          code(week).contains(forbidden),
+          isFalse,
+          reason: '$forbidden is the phone\'s job',
+        );
+      }
+      // The percent is a template filled with the phone's own signed text.
+      expect(code(week), contains('String(format: link.mirror.copyVsLast'));
+    });
+
+    test('an absent comparison draws nothing, and 0 still draws', () {
+      // `weekVsLast` is the one Optional in the mirror, and the view has to
+      // unwrap it rather than default it: 0 means "flat", which is good news
+      // and volt, while absent means there is nothing honest to say.
+      expect(code(week), contains('if let vsLast = link.mirror.weekVsLast'));
+      expect(code(week), contains('vsLast <= 0 ? Color.cwVolt : Color.cwEmber'));
+      expect(
+        RegExp(r'weekVsLast\s*\?\?').hasMatch(code(week)),
+        isFalse,
+        reason: 'defaulting it would claim an improvement nobody made',
+      );
+      // And the decoder must not default it either.
+      expect(
+        RegExp(r'weekVsLast = json\["weekVsLast"\] as\? Int\s*\?\?')
+            .hasMatch(code(shared)),
+        isFalse,
+      );
+    });
+
+    test('the breathing screen is a pacer, and touches nothing else', () {
+      // The founder's decision, made executable: it logs nothing, queues
+      // nothing and tells no server. Without this the next contributor who
+      // thinks a survived breath should count turns `CirrusOutbox` — a puff
+      // delta clamped to ±1 — into a general command queue, which is the one
+      // thing this design set out to avoid.
+      for (final forbidden in ['CirrusOutbox', 'log(delta:', 'WatchWire.tapPayload']) {
+        expect(
+          code(breathe).contains(forbidden),
+          isFalse,
+          reason: 'the wrist breathe screen records nothing',
+        );
+      }
+      // And it asserts no journey number — which is what lets it own a clock
+      // without inventing anything.
+      for (final forbidden in ['today.count', 'today.limit', 'mirror.puffs', 'mirror.streak']) {
+        expect(code(breathe).contains(forbidden), isFalse, reason: forbidden);
+      }
+    });
+
+    test('every new surface inherits the no-journey rule', () {
+      for (final source in [code(week), code(breathe)]) {
+        expect(source, contains('link.mirror.hasJourney'));
+        expect(source, contains('EmptyCard(mirror: link.mirror)'));
+        expect(source, contains('WaitingCard()'));
+      }
+    });
+
+    test('the craving clock counts UP, and its key never leaves the wrist', () {
+      // The mock counted DOWN to a peak. Nothing on either device can know
+      // when a particular craving peaks, so the app's own elapsed line ships.
+      expect(code(breathe), contains('copyCravingTimerLate'));
+      expect(code(breathe), contains('cirrusTimerText(elapsed)'));
+      // Watch-only, like the other native keys: never in the shared contract
+      // and never in Dart.
+      expect(code(wire), contains('lp.watchBreatheStart'));
+      for (final source in [code(shared), dartMirror, dartStore]) {
+        expect(source.contains('lp.watchBreatheStart'), isFalse);
+      }
+    });
+
+    test('the pacer is Flutter\'s cubic, and stays compilable by the harness', () {
+      // Foundation only — that absence is what lets `swiftc` compile it into
+      // the parity harness with no simulator.
+      expect(pacer, contains('import Foundation'));
+      for (final forbidden in ['import SwiftUI', 'import WatchKit']) {
+        expect(pacer.contains(forbidden), isFalse, reason: forbidden);
+      }
+      // The constants ARE the contract; `ios_watch_contract_test` proves them
+      // against Dart on a Mac, and these pin them on Linux CI too.
+      for (final constant in ['0.445', '0.05', '0.55', '0.95', '0.001', '0.4']) {
+        expect(code(pacer), contains(constant), reason: constant);
+      }
+      // `t % 1` in Dart is non-negative; Swift's remainder keeps the sign.
+      expect(code(pacer), contains('t - floor(t)'));
+      expect(
+        code(pacer).contains('truncatingRemainder'),
+        isFalse,
+        reason: 'it would put a backwards clock mid-exhale',
+      );
+    });
+
+    test('the second and third pages keep the first one\'s lifecycle', () {
+      expect(code(entry), contains('TabView'));
+      expect(code(entry), contains('WatchWeekView(link: link)'));
+      expect(code(entry), contains('WatchBreatheView(link: link)'));
+      // Gated: a signed-out wrist is one card you cannot page away from.
+      expect(code(entry), contains('link.mirror.hasJourney'));
+      // Exactly one of each, on the container. A hook on a lazily-built page
+      // re-fires on every swipe back, and `awake()` pulls and flushes.
+      expect(RegExp(r'\.onAppear').allMatches(code(entry)).length, 1);
+      expect(RegExp(r'\.onChange\(of: phase\)').allMatches(code(entry)).length, 1);
+      expect(code(entry), contains('link.start()'));
+      expect(code(entry), contains('link.awake()'));
+    });
+
+    test('one oxygen token is enough, and the palette says why', () {
+      // The phone's orb and ring are `oxygen` and `oxygenText`, which are the
+      // same hex in Midnight Ember — so they collapse to one on the wrist. If
+      // a palette change ever splits them, fail HERE rather than mis-tinting a
+      // wrist nobody is looking at in a test.
+      final colors = read('lib/app/theme/lp_colors.dart');
+      final midnight = RegExp(
+        r'LpColors\.midnight\(\)[\s\S]*?\n  \)',
+      ).firstMatch(colors)?.group(0) ?? colors;
+      expect(midnight, contains('oxygen: const Color(0xFF6EE7FF)'));
+      expect(midnight, contains('oxygenText: const Color(0xFF6EE7FF)'));
+      expect(code(palette), contains('cwOxygen'));
+    });
+  });
+
+  group('the brand mark is on the wrist, and is the shipped one', () {
+    test('both no-journey cards carry it', () {
+      // The founder caught this missing: a signed-out wrist showed words with
+      // no mark at all, where the store frame shows the ring above them.
+      expect(code(view), contains('struct CirrusMark'));
+      final cards = RegExp(
+        r'struct (EmptyCard|WaitingCard): View \{[\s\S]*?\n\}',
+      ).allMatches(code(view)).map((m) => m.group(0)!).toList();
+      expect(cards, hasLength(2));
+      for (final card in cards) {
+        expect(card, contains('CirrusMark()'));
+      }
+    });
+
+    test('it is the real artwork, byte for byte, at every scale', () {
+      // Two earlier attempts were wrong: an arc traced off these measurements
+      // was not the logo, and the full monochrome mark was the logo but not
+      // this treatment — it carries the vapour wisp the store frame drops.
+      // These are the shipped `ic_stat_cirrus` densities, pinned by content so
+      // the watch's copy can never drift from the brand's.
+      const pairs = {
+        'ic_stat_cirrus.png': 'drawable-xhdpi',
+        'ic_stat_cirrus@2x.png': 'drawable-xxhdpi',
+        'ic_stat_cirrus@3x.png': 'drawable-xxxhdpi',
+      };
+      pairs.forEach((bundled, density) {
+        expect(
+          File('$app/Assets.xcassets/CirrusMark.imageset/$bundled').readAsBytesSync(),
+          equals(
+            File('android/app/src/main/res/$density/ic_stat_cirrus.png')
+                .readAsBytesSync(),
+          ),
+          reason: '$bundled must be the shipped mark',
+        );
+      });
+      // The wisp-carrying launcher mark is NOT what this surface wears.
+      expect(
+        File('$app/Assets.xcassets/CirrusMark.imageset/cirrus_monochrome.png')
+            .existsSync(),
+        isFalse,
+      );
+      final contents = read('$app/Assets.xcassets/CirrusMark.imageset/Contents.json');
+      expect(contents, contains('"template-rendering-intent" : "template"'));
+      expect(code(view), contains('.renderingMode(.template)'));
+      expect(code(view), contains('.foregroundStyle(Color.cwVolt)'));
+    });
+
+    test('the no-mirror card says the same thing, never the app name', () {
+      // It used to read "Cirrus" over "…to sync your plan." — the app
+      // introducing itself, where the store frame gives an instruction. A
+      // wrist cannot tell "no journey" from "no mirror yet" and should not
+      // have to: the answer is the same either way.
+      final waiting = RegExp(
+        r'struct WaitingCard: View \{[\s\S]*?\n\}',
+      ).firstMatch(code(view))!.group(0)!;
+      expect(waiting, contains('Text("Start your plan")'));
+      expect(waiting, contains('Text("Open Cirrus on your iPhone")'));
+      expect(waiting.contains('Text("Cirrus")'), isFalse);
+      // And it matches the English the ARB ships for the same two lines, so
+      // the fallback cannot drift from the copy it stands in for.
+      final arb = jsonDecode(read('lib/l10n/app_en.arb')) as Map<String, dynamic>;
+      expect(waiting, contains('Text("${arb['widgetEmptyTitle']}")'));
+      expect(waiting, contains('Text("${arb['widgetWatchOpenPhone']}")'));
+    });
+
+    test('nothing redraws the mark by hand', () {
+      // The approximation that shipped once and was wrong.
+      expect(code(view).contains('struct MarkArc'), isFalse);
+      expect(code(view).contains('gapStart'), isFalse);
+    });
+  });
+
+  group('the three defects the review found stay fixed', () {
+    test('an older mirror does not draw a bare 0 as the reader\'s own', () {
+      // A phone build older than these screens writes a valid
+      // `hasJourney: true` document with none of their fields, and the watch
+      // keeps its last mirror across an app update — so this is the ordinary
+      // first launch after updating, not an edge case. It drew a blank title,
+      // no bars and `0` under a blank label at somebody with forty cravings
+      // beaten. Gated in BOTH places.
+      expect(code(entry), contains('!link.mirror.weekPuffs.isEmpty'));
+      expect(code(entry), contains('!link.mirror.copyBreatheIn.isEmpty'));
+      expect(code(week), contains('!link.mirror.weekPuffs.isEmpty'));
+    });
+
+    test('the craving clock is on the sign-out forget list', () {
+      // Device-scoped `UserDefaults` holding account-shaped state — the same
+      // trap `celebratedMilestones` set on the phone. Left behind, the next
+      // person to open the page is told they are ten minutes into a craving
+      // they never had.
+      final forget = RegExp(
+        r'static func forget\(_ defaults: UserDefaults\) \{[\s\S]*?\n    \}',
+      ).firstMatch(code(wire))!.group(0)!;
+      expect(forget, contains('WatchKeys.breatheStartedAt'));
+      // And every other key it already forgot.
+      for (final key in ['outbox', 'cursor', 'seq', 'sid', 'sent', 'mark']) {
+        expect(forget, contains(key), reason: key);
+      }
+    });
+
+    test('the breath starts at an inhale, whatever the craving clock says', () {
+      // `startedAt` is persisted and resumes (a wrist lowered mid-hold must
+      // still read 0:40). The BREATH must not: sharing one anchor opened a
+      // second craving two-thirds through an inhale, or partway down an
+      // exhale — telling somebody to breathe out as they arrived.
+      expect(code(breathe), contains('cycleAnchor = Date()'));
+      expect(
+        code(breathe),
+        contains('date.timeIntervalSince(cycleAnchor)'),
+        reason: 'the cycle must not be anchored on the craving clock',
+      );
+      expect(
+        RegExp(r'cycleFraction[\s\S]{0,120}timeIntervalSince\(startedAt\)')
+            .hasMatch(code(breathe)),
+        isFalse,
+      );
+      // The craving line still reads the persisted clock.
+      expect(code(breathe), contains('date.timeIntervalSince(startedAt)'));
     });
   });
 }

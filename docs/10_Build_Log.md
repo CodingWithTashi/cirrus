@@ -4761,3 +4761,205 @@ channel needs.
 
 Verified on the paired iPhone 17 Pro / Watch Series 11 simulators against
 production Firebase the same evening.
+
+**The review round, same evening.** A high-effort review of the diff found the
+first version had opened four holes while closing one, each pinned now:
+
+1. *The coalesced drain could run beside a discard.* `_inFlight` was cleared by
+   an unconditional `whenComplete`, which clobbered a `discardQueued()` chained
+   on the running drain — so the follow-up saw nothing in flight, read the OLD
+   cursor and the previous account's outbox, and could hand those taps to
+   whoever signed in meanwhile. Pre-existing, but the follow-up was the first
+   caller to land in that window by construction. `_track` clears `_inFlight`
+   only when it is still the task that set it.
+2. *A background delivery ran the whole drain in the background.* Both
+   WCSession paths can wake a backgrounded app with a live engine, and a drain
+   there sits on the Firestore ack where iOS suspends the process before the
+   cursor lands — the "counted twice" window the coordinator accepts only on
+   the launch path — while spending WidgetKit's daily reload budget. `announce`
+   is gated on `applicationState == .active`; the resume drain has always
+   covered the rest. And a `queued` nobody is listening for yet (a tap relayed
+   while Dart is still in `main()`) is logged as such, not as a delivery.
+3. *The wrist's mark heuristic was wrong both ways once the phone drained
+   within the second.* Two hand-overs bracketing one mirror retired the second
+   tap early (the count dropped by one until the next mirror — the regression
+   `WatchKeys.sent` exists to prevent); a mirror that beat its own receipt left
+   the mark pointing at the drained count, so the tap was never retired at all.
+   The phone now keeps a per-account ledger of what each wrist seq became
+   (`lp.watchRelayed`) and the context carries `r`, the highest wrist seq the
+   mirror already counts; the watch's cursor follows it exactly, clamped to its
+   own seq so a ledger from a previous install of the watch app cannot retire
+   taps it has not minted, and the phone resets the ledger on an unseen seq at
+   or below its top (a reinstalled watch) or on another account. The mark
+   survives only as the fallback for a phone without the field.
+   `ios_watch_contract_test` plays all of it on the real Swift: bracketing,
+   mirror-before-receipt, a refused `−`, a reinstalled watch, a legacy phone,
+   a second account.
+4. *A mirror pushed mid-drain rendered one too high.* The optimistic commit
+   rebuilds and pushes while the cursor is still old, so the launcher drew
+   `count + pending` with the same events on both sides, and the wrist would
+   have done the same against a stale `r`. `push` now parks a mirror while a
+   drain or discard is in flight and `_settle` flushes the latest one after the
+   cursor — one repaint per drain, and the follow-up runs on the latest
+   caller's clock so a tap across local midnight is filed on the right day.
+
+Plus the smaller ones: the wrist listener drains without `invalidate()`, the
+widget test that claimed to exercise the mid-drain window now gates the store
+so it actually does, and the architecture note names both seam members.
+
+## 37. TWO MORE SCREENS ON THE WRIST (Sep 8) — the week, and a breath
+
+Founder ask, off four store mockups: two of the four already shipped (the
+no-journey card and the day counter); **frame 02 (PANIC · BREATHE) and frame 03
+(THIS WEEK) did not exist at all.** The read that they were "already in the app,
+just not on the watch" was right, and cheaper than expected — **no backend
+change, no Firestore rule, no callable, no ARB key, and no schema bump.**
+
+**Why the panic screen cost nothing on the server.** The whole panic flow is
+already local: `PanicRepository.begin()` and `.survived()` are fire-and-forget
+`.ignore()`d calls, `begin()`'s answer changes exactly one subtitle string, and
+`NoopPanicRepository` already runs the entire flow against no server. So the
+wrist's version is a **breathing aid only** — founder decision. It logs nothing
+and queues nothing, which is the point: `CirrusOutbox` carries a puff delta
+clamped to ±1, and counting a survived craving from the wrist would turn it into
+a general command queue, touching the seq minting, the id dedupe and the two
+cursors that the contract test exists to protect. `ios_watch_test` pins the
+absence — no `CirrusOutbox`, no `log(delta:` — so the decision survives the next
+contributor who thinks a survived breath should count.
+
+**Three of frame 03's four numbers were already in scope.** `TodaySnapshot` —
+already handed to `buildMirror` — carries `savedLifetime`, `puffsNotTaken` and
+`cravingsSurvivedTotal`. What was missing was the week series and the
+comparison, so `WeekTrend.vsPrevious` was lifted out of a build method on
+`stats_screen.dart` (where it was inline) into the engine both surfaces now
+read. `stats_numbers_test` stayed green untouched, which is the proof the
+extraction changed nothing.
+
+**`weekVsLast` is ABSENT, never 0, and that is the whole design of the field.**
+`0` already means "flat", which the card paints volt as good news — so a
+defaulted zero would claim an improvement the account has not made. Four ways to
+have no honest answer (no previous window, nothing confirmed in it, nothing
+confirmed now, a previous window averaging zero). It is the one genuine
+`Int?` in `CirrusMirror` against a file whose every other field is `?? default`,
+and both the comment and a regex test defend it, because either alone gets
+argued away. Verified live: a day-1 account's mirror carries no `weekVsLast` key
+at all and the wrist simply draws no percent line.
+
+**The one piece of arithmetic the wrist now duplicates is the pacer, so it is
+the one that gets executed rather than pinned.** `Curves.easeInOutSine` is **not
+a sine** — it is `Cubic(0.445, 0.05, 0.55, 0.95)` solved by Flutter's bisection
+with a `0.001` error bound. A `cos`-based port looks entirely plausible and is
+visibly out of step. `ios_watch_contract_test` compiles `BreathPacer.swift` with
+`swiftc` and compares **every frame of a 60fps 19-second cycle** plus the phase
+boundaries ±1e-9/±1e-12, every whole second, and wraps at 1.5, 2.25 and −0.25 —
+that last one pinning `t - floor(t)`, because Dart's `%` is non-negative while
+Swift's remainder keeps the dividend's sign and would drop a backwards clock
+mid-exhale. `phase` and `remaining` compare exactly; the rest to 1e-12. A fourth
+test asserts the curve differs from the analytic sine by >0.005 somewhere, so
+the "simplification" fails loudly rather than shifting the orb.
+
+**Today's bar is replaced, not trusted.** The day card already folds in taps the
+phone has not drained; a week chart that ignored them would disagree with the
+screen beside it by exactly the un-handed-over count — §36's bug shape, one
+swipe apart. `cirrusWeek` overwrites the last bar with `today.count`, gated on
+the mirror being about today so a stale one never paints pending taps onto
+yesterday, and renormalizes so a tap past the phone's denominator makes today
+the tallest bar rather than a clipped one. The verdicts are never recomputed:
+today's growing bar may briefly out-top the ember one without the ember moving,
+which is correct because today is not a confirmed hard day yet.
+
+**The build trap that had to be closed first.** `tool/ios_watch_target.rb` exited
+early whenever the target already existed, so a new `.swift` file was never given
+a target membership — while `ios_watch_test` globs both watch folders and demands
+every file appear in the pbxproj. The script's header promised idempotency and
+delivered it for the *target* and not its *files*; it now syncs sources on a
+re-run (adds only, never prunes) and reports what it added. All three new files
+were registered by running it.
+
+**Verified on the paired simulators** (iPhone 17 Pro / Watch Series 11, watchOS
+26.2) against production `alastpuff`, throwaway account deleted with
+`E2E_STEP=teardown`: three pages with a journey and one without; the week card
+drawing `$4 saved` and an ember bar off `weekHardest: 0` while `weekBest` stayed
+`-1` (today is never the best day) and no percent line appeared; **three taps on
+the wrist relayed to the phone, became journey puffs, and came back as
+`weekPuffs: [3]` with the count unchanged across the hand-off and the queued dot
+cleared**; and the breathing orb advancing In→Hold→Out on the 4-7-8 beat with
+the honest elapsed line, `craving timer · 0:03 · peaks ~15 min`.
+
+**What the mock asked for and did not get.** "peaks in 2:41" counts *down* to a
+precise peak moment. Nothing on either device can know when a particular craving
+peaks, so the app's own count-up line ships instead. The mock's `$47` is likewise
+not reproducible under docs/03 §4 — the wrist renders what `MoneyEngine`
+produces, and the store screenshot is taken from a running build.
+
+**The mark, and two wrong swings at it (same evening).** The founder caught that
+the signed-out wrist had no logo on it at all — the store frame shows the ring
+above "Start your plan" and the card shipped with bare text, because §37's plan
+carried the glyph as a small final step that was simply never done. The two
+attempts that followed are worth recording, because both looked right in
+isolation. First a SwiftUI arc traced off `ic_stat_cirrus`'s measured geometry —
+a 26° gap at 20°–45°, stroke 0.146 of the box — which is close to the mark and
+is not it: the terminals taper and no circular arc reproduces that. Then the
+real artwork, but the wrong one: `assets/images/cirrus_monochrome.png` is the
+launcher's monochrome layer and carries the vapour wisp the store frame drops.
+What ships is the shipped `ic_stat_cirrus` densities at 1x/2x/3x in the watch's
+asset catalogue, template-rendered so the mark takes `cwVolt` rather than a
+colour of its own, and pinned by digest against the three Android sources — the
+watch bundle needs its own copy because it cannot read Flutter's asset bundle,
+and a pin is what stops that copy drifting from the brand.
+
+**And the no-mirror card stopped introducing the app.** It read "Cirrus" over
+"…to sync your plan.", which is a splash screen where an instruction belongs. A
+wrist cannot tell "signed out" from "no mirror has ever arrived" and should not
+have to — the answer is the same either way — so the one hardcoded fallback in
+the feature is now the English of `widgetEmptyTitle`/`widgetWatchOpenPhone`
+verbatim, pinned equal to the ARB so the two cannot drift.
+
+**Verified end to end on the paired simulators, all four frames:** the empty
+card with the mark; the day counter reaching `3 / 190` from three taps on the
+wrist with the queued dot lit; the week card folding those three into today's
+bar *before* the phone had them; and the breathing orb on the 4-7-8 beat. Then
+the phone drained — `puffs: 3`, `weekPuffs: [3]`, `weekHardest: 0`,
+`weekBest: -1` (today is never the best day), `savedText: "$4"` — the wrist's
+count unchanged across the hand-off, the dot cleared and the bar turned ember.
+Deleting the account collapsed the `TabView` from three pages to one: no page
+dots, and a swipe goes nowhere. Throwaway account removed with
+`E2E_STEP=teardown`.
+
+**One trap for the next person running this loop.** `j_widget_session_test`'s
+`setup` calls `createUserWithEmailAndPassword`, which throws
+`email-already-in-use` if the account survived a previous pass — and `flutter
+run --no-resident` swallows that into a test failure the console barely shows,
+leaving the phone signed out and the wrist on the empty card while everything
+looks like it ran. **Run `E2E_STEP=teardown` first, then setup.**
+
+**The review round on §37 (same evening).** A high-effort review of the diff
+confirmed the extraction and the port — `WeekTrend.vsPrevious` is behaviour-
+identical to the inline code it replaced (same filters, same `prevAvg > 0`
+guard, same rounding), `cirrusWeek` is index-safe (the verdict indices are only
+ever *compared* to the loop index, never used to subscript), and `BreathPacer`
+matches the Dart original term for term including the `(a,c)`/`(b,d)` split.
+It found three real defects, all now fixed and pinned:
+
+1. *An older mirror drew a bare `0` as the reader's own number.* A phone build
+   predating these screens writes a perfectly valid `hasJourney: true` document
+   with none of their fields — and the watch keeps its last mirror across an app
+   update, so this is the ordinary first launch after updating, not an edge
+   case. The week page rendered a blank title, no bars, and `0` under a blank
+   label at somebody who had beaten forty cravings. Both new pages are now gated
+   on their own DATA (`weekPuffs` / `copyBreatheIn`) rather than on `hasJourney`
+   alone, in `CirrusWatchApp` and again inside `WatchWeekView`.
+2. *The craving clock was not on the wrist's forget list.* `lp.watchBreatheStart`
+   is device-scoped state that is account-SHAPED — the same trap
+   `celebratedMilestones` set on the phone. Person A opens the breathing page,
+   the phone changes hands, and B is told they are ten minutes into a craving
+   they never started. One `removeObject` in `WatchWire.forget`.
+3. *The breath cycle was anchored on the craving clock.* `startedAt` did double
+   duty, so a second craving twenty minutes inside the 30-minute resume window
+   opened two-thirds through an inhale — or partway down an exhale, telling
+   somebody to breathe out as they arrived. The two anchors are separate now:
+   the craving clock persists and resumes (the wrist-down case it exists for),
+   `cycleAnchor` is re-taken every time the page appears, and the 1Hz text
+   timeline follows the cycle so the countdown turns over on the pacer's own
+   seconds. Confirmed on the simulator: `craving timer · 0:04` beside `Hold 7`
+   — second four of the cycle, which is the top of an inhale four seconds ago.

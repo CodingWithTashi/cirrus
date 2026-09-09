@@ -42,13 +42,42 @@ class WidgetCoordinator {
   Future<void>? _inFlight;
 
   /// The single follow-up drain owed to everyone who asked while one was
-  /// running. See [drain].
+  /// running, and the clock of the LATEST of them. See [drain].
   Future<int>? _followUp;
+  DateTime? _followUpNow;
+
+  /// A mirror that arrived while a drain (or a discard) was between reading
+  /// the outbox and writing its cursor, held until the cursor lands. See
+  /// [push].
+  (Map<String, dynamic>, DateTime)? _parked;
+
+  /// Set by a drain that moved the cursor, so [_settle] repaints even when no
+  /// mirror was parked meanwhile.
+  bool _repaintOwed = false;
 
   /// The day the midnight repaints were last armed for.
   String? _armedFor;
 
   Future<void> push(
+    Map<String, dynamic> mirror, {
+    required DateTime now,
+  }) async {
+    if (_inFlight != null) {
+      // Parked, not pushed. A drain is between reading the outbox and writing
+      // its cursor — for as long as the Firestore ack takes, up to 3 s — and a
+      // mirror sent now carries the drained count while the same events still
+      // sit above the cursor, so the launcher renders `count + pending` one
+      // too high and the wrist keeps counting taps the mirror already
+      // includes. The drain flushes the LATEST parked mirror the moment its
+      // cursor lands: exactly one repaint, after the cursor, carrying the
+      // wrist seq it may now retire (`WatchWire.reflected`).
+      _parked = (mirror, now);
+      return;
+    }
+    await _push(mirror, now: now);
+  }
+
+  Future<void> _push(
     Map<String, dynamic> mirror, {
     required DateTime now,
   }) async {
@@ -109,18 +138,90 @@ class WidgetCoordinator {
       // reads the outbox fresh, and applies only what is above that cursor, so
       // nothing is counted twice and nothing waits for a lifecycle event.
       //
+      // It runs against the LATEST caller's clock, not the first's. Every
+      // event's stamp is clamped to the drain's `now`, and a tap made after the
+      // first caller asked — across local midnight, say — would otherwise be
+      // clamped back onto yesterday. Each wrist tap calls in with a fresh
+      // clock, so the last one is at or after every stamp it will apply.
+      //
       // Runs whether the drain in flight succeeded or not, and forgets itself
       // either way: a follow-up that stayed parked behind a failed future would
       // answer every later mid-drain caller with that same failure and
       // silently switch real-time draining off for the rest of the session.
+      _followUpNow = now;
       return _followUp ??= running
           .then<void>((_) {}, onError: (Object _) {})
           .whenComplete(() => _followUp = null)
-          .then((_) => drain(journeys, now: now));
+          .then((_) => drain(journeys, now: _followUpNow ?? now));
     }
-    final task = _drain(journeys, now);
-    _inFlight = task.whenComplete(() => _inFlight = null);
-    return task;
+    return _track(_drainAndSettle(journeys, now));
+  }
+
+  /// Registers [task] as the one thing in flight, and forgets it when it ends
+  /// — but only if it is STILL the thing in flight.
+  ///
+  /// An unconditional `_inFlight = null` used to clobber whatever
+  /// [discardQueued] had chained on top of a running drain, so the next drain
+  /// saw nothing running and ran alongside the discard: it read the OLD
+  /// cursor and the previous account's outbox, and could apply those taps to
+  /// whoever had signed in meanwhile — the exact leak the discard exists to
+  /// prevent. With a follow-up drain now queued behind every wrist tap, that
+  /// window is entered by construction rather than by accident.
+  Future<T> _track<T>(Future<T> task) {
+    late final Future<T> tracked;
+    tracked = task.whenComplete(() {
+      if (identical(_inFlight, tracked)) _inFlight = null;
+    });
+    _inFlight = tracked;
+    return tracked;
+  }
+
+  Future<int> _drainAndSettle(JourneyStore journeys, DateTime now) async {
+    try {
+      return await _drain(journeys, now);
+    } finally {
+      await _settle();
+    }
+  }
+
+  Future<void> _discardAndSettle() async {
+    try {
+      await _discardQueued();
+    } finally {
+      await _settle();
+    }
+  }
+
+  /// The one repaint at the end of every drain and every discard, AFTER the
+  /// cursor.
+  ///
+  /// A mirror parked by [push] while this was running goes out now — the
+  /// latest one, and only once. Failing that, a drain that moved the cursor
+  /// still forces a render of the mirror already on disk: applying the events
+  /// commits the journey, whose rebuild pushed (and parked) a mirror in the
+  /// ordinary case, but the fingerprint would otherwise let a mirror whose
+  /// bytes did not change skip its repaint while the cursor underneath it did.
+  ///
+  /// Loops, because `_push` awaits the store and a rebuild can park another
+  /// mirror in that window; one left behind would sit unflushed until the
+  /// next drain, which is what parking exists to rule out.
+  Future<void> _settle() async {
+    var repaint = _repaintOwed;
+    _repaintOwed = false;
+    while (_parked != null) {
+      final (mirror, now) = _parked!;
+      _parked = null;
+      _pushed = null;
+      await _push(mirror, now: now);
+      repaint = false;
+    }
+    if (!repaint) return;
+    _pushed = null;
+    await _store.refresh();
+    // Same reason, for the wrist: the watch adds its own un-handed-over queue
+    // on top of the mirror, so a drain that has just absorbed those taps leaves
+    // it counting them twice until the next push.
+    await _store.syncWatch();
   }
 
   Future<int> _drain(JourneyStore journeys, DateTime now) async {
@@ -160,24 +261,16 @@ class WidgetCoordinator {
     // it happening.
     await _writeCursor(highest);
 
-    // Repaint AFTER the cursor lands, always.
+    // Repaint AFTER the cursor lands, always — in [_settle], which runs once
+    // this returns.
     //
     // Applying the events commits the journey, which rebuilds the app's mirror
-    // push — and that push runs while the cursor is still at its old value, so
-    // the widget renders `newCount + theSameEventsStillPending` and reads one
-    // too high. Moving the cursor then silently makes that number wrong, and
-    // because the mirror content has not changed since, the fingerprint would
-    // skip every later push and leave it wrong indefinitely.
-    //
-    // The mirror on disk is already correct at this point; only the pixels are
-    // behind. So this forces the render rather than rewriting anything, and
-    // clears the fingerprint so a genuine later push is not skipped either.
-    _pushed = null;
-    await _store.refresh();
-    // Same reason, for the wrist: the watch adds its own un-handed-over queue on
-    // top of the mirror, so a drain that has just absorbed those taps leaves it
-    // counting them twice until the next push.
-    await _store.syncWatch();
+    // push. While this drain is in flight that push is PARKED rather than
+    // sent: sent now, it would run while the cursor is still at its old value,
+    // so the widget renders `newCount + theSameEventsStillPending` and reads
+    // one too high, and moving the cursor afterwards would silently make that
+    // number wrong with a fingerprint that then skips every later push.
+    _repaintOwed = true;
     return events.length;
   }
 
@@ -205,11 +298,14 @@ class WidgetCoordinator {
   /// the next account exactly the taps this method exists to throw away.
   Future<void> discardQueued() {
     final running = _inFlight;
-    final task = running == null
-        ? _discardQueued()
-        : running.then((_) => _discardQueued());
-    _inFlight = task.whenComplete(() => _inFlight = null);
-    return task;
+    return _track(
+      running == null
+          ? _discardAndSettle()
+          : running.then(
+              (_) => _discardAndSettle(),
+              onError: (Object _) => _discardAndSettle(),
+            ),
+    );
   }
 
   Future<void> _discardQueued() async {

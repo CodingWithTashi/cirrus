@@ -88,11 +88,13 @@ struct WatchHomeView: View {
 /// The rule every widget surface inherits — no journey means a message, never a
 /// count, a day number or a working `+`. A watch is on a wrist all day in front
 /// of whoever glances at it, and those digits would belong to nobody signed in.
-private struct EmptyCard: View {
+struct EmptyCard: View {
     let mirror: CirrusMirror
 
     var body: some View {
         VStack(spacing: 5) {
+            CirrusMark()
+            Spacer().frame(height: 3)
             Text(mirror.copyEmptyTitle)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(Color.cwVolt)
@@ -112,18 +114,55 @@ private struct EmptyCard: View {
 /// mirror* has nothing to read. Same sanctioned exception as `LpCrashScreen`,
 /// which may render in a tree too broken to hold `Localizations`, and the
 /// widget's own English fallbacks.
-private struct WaitingCard: View {
+struct WaitingCard: View {
     var body: some View {
         VStack(spacing: 5) {
-            Text("Cirrus")
+            CirrusMark()
+            Spacer().frame(height: 3)
+            // The SAME words the mirror's copy carries, hardcoded. This card
+            // is shown precisely because no mirror has arrived to read them
+            // from — and a wrist should not be able to tell the two states
+            // apart, because the answer is identical either way: open the app
+            // on the phone. It never shows the app's name at somebody: that is
+            // a splash screen, not an instruction.
+            Text("Start your plan")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(Color.cwVolt)
-            Text("Open Cirrus on your iPhone to sync your plan.")
+            Text("Open Cirrus on your iPhone")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.cwTextDim)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 6)
+    }
+}
+
+/// The Cirrus mark, as the store frame draws it: the ring, no wisp.
+///
+/// The REAL artwork at three scales, copied byte-for-byte from the
+/// `ic_stat_cirrus` densities — the brand's own small-size treatment, which
+/// drops the vapour wisp because below about 48pt it is a two-pixel scratch
+/// that leaves the whole mark undersized. `test/ios_watch_test.dart` pins the
+/// three files equal to their Android sources by digest, so the copy the watch
+/// bundle needs (it cannot read Flutter's asset bundle) cannot drift.
+///
+/// Two earlier attempts were wrong and are worth naming: an arc traced off
+/// these measurements was not the logo, and the full monochrome mark was the
+/// logo but not this treatment — it carries the wisp. Do not "restore" it.
+///
+/// Alpha-only and template-rendered, so the mark takes `cwVolt` rather than
+/// carrying a colour of its own.
+struct CirrusMark: View {
+    var side: CGFloat = 44
+
+    var body: some View {
+        Image("CirrusMark")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(Color.cwVolt)
+            .frame(width: side, height: side)
+            .shadow(color: Color.cwVolt.opacity(0.35), radius: 9)
     }
 }
 
@@ -238,6 +277,9 @@ private struct LogButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(Color.cwVolt, in: Capsule())
+                // The bloom the mock carries under the primary action. Static,
+                // so it costs one cached shadow rather than a per-frame pass.
+                .shadow(color: Color.cwVolt.opacity(0.35), radius: 12)
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
