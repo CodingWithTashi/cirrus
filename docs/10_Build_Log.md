@@ -4707,3 +4707,53 @@ Not covered yet, deliberately: the report/mute/block menu (labelled now, so
 a flow can follow), the panic games arena, the coach's free-message cap
 (the demo account is Premium), Sign in with Apple/Google, and the two OS
 sheets (rating, push) the flows decline.
+
+## 36. THE TAP THE PHONE HEARD AND IGNORED (Sep 8) — a wrist can tap into an app that is already open
+
+**Found by the founder on the paired simulators**, first session with both
+running: `+` on the wrist, Home stayed at zero. Close the phone app, reopen it,
+and the puff was there. Not a simulator defect — a real gap, and it would have
+shipped.
+
+**Why.** The watch reuses the home-screen widget's outbox, deliberately: the
+relay in `CirrusWatchLink` writes each tap into `lp.outbox` and `WidgetCoordinator`
+drains it through the one `logPuff(at:)` path. The outbox was drained at exactly
+two moments — app resume, and the session transition on launch — because that is
+all a launcher widget can ever need: nobody taps a launcher widget while the app
+is on screen. A wrist is the first surface that can deliver a tap *into a
+foregrounded app*, and nothing woke the drain for it. The relay reloaded the
+widget timeline and stopped. The watch, meanwhile, draws its un-handed-over queue
+on top of the mirror, so the two devices disagreed until the next resume.
+
+**The fix, in one direction only.** The relay now announces every landed batch
+back over the channel it already had (`cirrus/watch`, method `queued`, argument =
+count) from BOTH delivery paths — `didReceiveMessage` for a reachable phone,
+`didReceiveUserInfo` for a transfer that arrives while the app happens to be
+open. `WidgetStore.watchTaps` surfaces it as a stream (`HomeWidgetStore`
+registers one handler per process; `MemoryWidgetStore` exposes a controller so
+a widget test can play the relay), and `_WidgetSync` drains on it exactly as it
+drains on resume. A background delivery with no engine announces to nobody and
+loses nothing: the outbox is already written and the launch drain reads it, as
+before.
+
+**The second half, which the first would have hidden.** `drain()` serialised
+itself by answering any caller that arrived mid-drain with the *running* drain's
+result. Correct for two resumes racing — but a tap relayed in while the resume
+drain has already read the outbox is the ordinary case now, and that caller
+would have been told "0" and the tap left queued until the next resume, which
+on a phone that stays open is never. `drain()` now coalesces: one follow-up,
+shared by every caller in the window, that starts after the running drain has
+written its cursor and reads the outbox fresh. Nothing counted twice, nothing
+waiting on a lifecycle event.
+
+**Pinned.** `widget_drain_test` gates the first outbox read, appends a tap
+underneath it and proves the follow-up applies exactly that tap (and that three
+callers in the window share one follow-up). `watch_tap_test` pumps the real app,
+plays the relay — outbox first, signal second — and asserts Home moved with no
+lifecycle event of any kind, then that the resume path still works when the
+signal is withheld. `ios_watch_test` pins the method name on both sides, the
+`announce` on both Swift delivery paths, and the main-thread hop a platform
+channel needs.
+
+Verified on the paired iPhone 17 Pro / Watch Series 11 simulators against
+production Firebase the same evening.

@@ -229,6 +229,7 @@ class _WidgetSync extends ConsumerStatefulWidget {
 class _WidgetSyncState extends ConsumerState<_WidgetSync> {
   AppLifecycleListener? _listener;
   ProviderSubscription<JourneyState?>? _session;
+  StreamSubscription<int>? _taps;
 
   @override
   void initState() {
@@ -239,6 +240,14 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
     // Constructed here rather than lazily: the listener registers itself with
     // the binding on construction.
     _listener = AppLifecycleListener(onResume: _drain);
+
+    // A tap from the wrist while the app is already open. Resume above and
+    // the session transition below are the only other drains, and neither
+    // fires for a phone that never left the foreground — so the puff sat in
+    // the outbox, Home said zero and the watch said one, until the app was
+    // closed and reopened (Sep 8 2026, docs/10 §36). The relay has already
+    // written the outbox when this fires; the drain reads it like any other.
+    _taps = coordinator.watchTaps.listen((_) => _drain());
 
     // Cold launch. `restoreSession` resolves inside the splash, roughly a
     // second and a half in, and every other session-establishing path
@@ -281,6 +290,7 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
 
   @override
   void dispose() {
+    _taps?.cancel();
     _session?.close();
     _listener?.dispose();
     super.dispose();

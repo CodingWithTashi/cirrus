@@ -38,6 +38,22 @@ final class CirrusWatchLink: NSObject {
     /// writes the mirror, so the wrist is as fresh as the widget.
     private static let methodSync = "sync"
 
+    /// Native → Dart: taps from the wrist have just landed in `lp.outbox`.
+    ///
+    /// Dart folds the outbox into the journey on resume and on launch, and a
+    /// home-screen widget never needs more — nobody can tap a launcher widget
+    /// while the app is on screen. A wrist can. Without this, a tap relayed
+    /// into a phone app already in the foreground sat in the outbox: Home said
+    /// zero, the watch said one, and closing and reopening the app was what
+    /// "fixed" it (Sep 8 2026). Carries the number that landed.
+    private static let methodQueued = "queued"
+
+    /// The Dart-facing channel, held so a relayed tap can be announced upward.
+    /// Nil until the engine exists: a background launch to take delivery of a
+    /// `transferUserInfo` has no engine, and there the launch drain does the
+    /// job exactly as it always did.
+    private var channel: FlutterMethodChannel?
+
     private var session: WCSession? {
         WCSession.isSupported() ? .default : nil
     }
@@ -64,15 +80,43 @@ final class CirrusWatchLink: NSObject {
     /// implicit engine exists.
     func attach(messenger: FlutterBinaryMessenger?) {
         guard let messenger else { return }
-        FlutterMethodChannel(name: Self.channelName, binaryMessenger: messenger)
-            .setMethodCallHandler { [weak self] call, result in
-                guard call.method == Self.methodSync else {
-                    result(FlutterMethodNotImplemented)
-                    return
-                }
-                self?.push()
-                result(nil)
+        let channel = FlutterMethodChannel(name: Self.channelName, binaryMessenger: messenger)
+        channel.setMethodCallHandler { [weak self] call, result in
+            guard call.method == Self.methodSync else {
+                result(FlutterMethodNotImplemented)
+                return
             }
+            self?.push()
+            result(nil)
+        }
+        self.channel = channel
+    }
+
+    /// Tells Dart that `landed` taps from the wrist are now in `lp.outbox`, so
+    /// it drains at once rather than on the next resume.
+    ///
+    /// Called from BOTH delivery paths, because both land taps: the reachable
+    /// one (`didReceiveMessage`) is the ordinary case for a phone in the
+    /// foreground, and the background one (`didReceiveUserInfo`) can still
+    /// arrive while the app is open. Main thread, because a platform channel is
+    /// main-thread only and WatchConnectivity calls back on its own queue.
+    ///
+    /// Best-effort by design: with no engine there is nobody to tell and
+    /// nothing is lost — the outbox is already written, and the next
+    /// foreground drains it. Dart's drain coalesces, so a tap that lands while
+    /// a drain is running is picked up by the follow-up, never dropped.
+    private func announce(landed: Int) {
+        guard landed > 0 else { return }
+        // `channel` is written on the main thread in `attach` and read here on
+        // the main thread too, so the hop is also what makes the read safe.
+        DispatchQueue.main.async {
+            guard let channel = self.channel else {
+                Self.log.info("queued — \(landed) tap(s), no engine to tell")
+                return
+            }
+            Self.log.info("queued — \(landed) tap(s), telling Dart")
+            channel.invokeMethod(Self.methodQueued, arguments: landed)
+        }
     }
 
     /// Hands the current mirror document to the watch.
@@ -135,6 +179,7 @@ extension CirrusWatchLink: WCSessionDelegate {
         // The home-screen widget adds the still-pending queue on top of the
         // mirror, so it is stale the moment this lands.
         WidgetCenter.shared.reloadTimelines(ofKind: CirrusKeys.kind)
+        announce(landed: landed)
     }
 
     /// The watch asking for a fresh mirror, when it happens to be reachable.
@@ -153,7 +198,10 @@ extension CirrusWatchLink: WCSessionDelegate {
         }
         let landed = WatchWire.relay(message)
         Self.log.info("message — \(landed) tap(s) landed")
-        if landed > 0 { WidgetCenter.shared.reloadTimelines(ofKind: CirrusKeys.kind) }
+        if landed > 0 {
+            WidgetCenter.shared.reloadTimelines(ofKind: CirrusKeys.kind)
+            announce(landed: landed)
+        }
         // The receipt goes back even when nothing landed — a `−` at zero or a
         // batch from another account has still been consumed, and asking again
         // would never change the answer. `receipt` returns nil only for an

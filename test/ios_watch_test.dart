@@ -106,6 +106,30 @@ void main() {
       expect(dartStore, contains("watchChannel = '${HomeWidgetStore.watchChannel}'"));
     });
 
+    test('a landed tap is announced to Dart on BOTH delivery paths', () {
+      // The phone folds the outbox into the journey on resume and on launch,
+      // and a wrist is the one surface that can hand it a tap between those.
+      // A relayed tap that is not announced sits in the outbox with Home
+      // saying zero until the app is closed and reopened (Sep 8 2026,
+      // docs/10 §36). Both the reachable path (`didReceiveMessage`) and the
+      // background one (`didReceiveUserInfo`) land taps, so both must say so.
+      expect(code(phoneLink), contains('"${HomeWidgetStore.watchQueuedMethod}"'));
+      expect(
+        dartStore,
+        contains("watchQueuedMethod = '${HomeWidgetStore.watchQueuedMethod}'"),
+      );
+      final announced = RegExp(
+        r'announce\(landed: landed\)',
+      ).allMatches(code(phoneLink)).length;
+      expect(announced, 2, reason: 'one per WCSession delivery path');
+      // A platform channel is main-thread only; WatchConnectivity calls back
+      // on its own queue.
+      expect(code(phoneLink), contains('invokeMethod(Self.methodQueued'));
+      expect(code(phoneLink), contains('DispatchQueue.main.async'));
+      // And Dart listens on the same channel it sends on.
+      expect(dartStore, contains('setMethodCallHandler'));
+    });
+
     test('the mirror field the watch adds is one Dart writes', () {
       // The same one-directional rule `ios_widget_test.dart` applies: anything
       // Swift reads out of the document has to be something `buildMirror`

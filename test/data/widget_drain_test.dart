@@ -198,6 +198,84 @@ void main() {
     });
   });
 
+  group('a tap landing mid-drain', () {
+    test('is applied by a follow-up drain, not left for the next resume', () async {
+      // The resume drain has already read the outbox when the wrist's tap is
+      // relayed in. `drain` used to answer the second caller with the running
+      // drain's result — nothing for the new tap — and the tap sat queued
+      // until the app was next backgrounded, which on a phone that stays open
+      // on Home is never (Sep 8 2026, docs/10 §36).
+      final s = seed();
+      final gated = _GatedStore();
+      final co = WidgetCoordinator(gated);
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([puff(1)]);
+
+      final first = co.drain(s, now: now);
+      await gated.outboxRead.future;
+      // The wrist's tap lands while the first drain holds what it read.
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([
+        puff(1),
+        puff(2),
+      ]);
+      final second = co.drain(s, now: now);
+      gated.release.complete();
+
+      expect(await first, 1);
+      expect(await second, 1, reason: 'the follow-up applied the late tap');
+      expect(puffsOn(today), 4, reason: '2 seeded + 2 from the wrist, once each');
+      expect(gated.values[PendingPuffs.cursorKey], '2');
+    });
+
+    test('a failed drain in flight does not park the follow-up for ever', () async {
+      // The follow-up must run and forget itself even when the drain it waited
+      // on threw — otherwise every later mid-drain caller gets that same stale
+      // failure back, and real-time draining is silently off for the session.
+      final s = seed();
+      final gated = _GatedStore()..failFirstRead = true;
+      final co = WidgetCoordinator(gated);
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([puff(1)]);
+
+      final first = co.drain(s, now: now);
+      await gated.outboxRead.future;
+      final second = co.drain(s, now: now);
+      gated.release.complete();
+
+      await expectLater(first, throwsA(isA<StateError>()));
+      expect(await second, 1, reason: 'the follow-up still ran');
+      expect(puffsOn(today), 3);
+      expect(gated.values[PendingPuffs.cursorKey], '1');
+
+      // And the coordinator is healthy afterwards: a plain drain works, and a
+      // later mid-drain caller gets a fresh follow-up rather than the old one.
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([puff(1), puff(2)]);
+      expect(await co.drain(s, now: now), 1);
+      expect(puffsOn(today), 4);
+    });
+
+    test('many callers in the window share ONE follow-up', () async {
+      final s = seed();
+      final gated = _GatedStore();
+      final co = WidgetCoordinator(gated);
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([puff(1)]);
+
+      final first = co.drain(s, now: now);
+      await gated.outboxRead.future;
+      gated.values[PendingPuffs.outboxKey] = PendingPuffs.encode([
+        puff(1),
+        puff(2),
+      ]);
+      final later = [for (var i = 0; i < 3; i++) co.drain(s, now: now)];
+      gated.release.complete();
+
+      expect(await first, 1);
+      // Every caller in the window is answered by the SAME follow-up, and the
+      // journey shows it ran once: one extra puff, not three.
+      expect(await Future.wait(later), [1, 1, 1]);
+      expect(puffsOn(today), 4);
+      expect(gated.values[PendingPuffs.cursorKey], '2');
+    });
+  });
+
   group('refusing to act', () {
     test('no journey means nothing is applied and the cursor holds', () async {
       final s = c.read(quitStoreProvider.notifier);
@@ -553,6 +631,30 @@ class _BlockingJourneys implements JourneyRepository {
 
 /// Counts the write-behind saves so "one drain is one document write" is a
 /// test rather than a claim.
+/// Holds the first read of the outbox until the test lets it go, so a tap can
+/// be appended AFTER a drain has taken its snapshot — the exact window a wrist
+/// tap lands in.
+class _GatedStore extends MemoryWidgetStore {
+  final Completer<void> outboxRead = Completer<void>();
+  final Completer<void> release = Completer<void>();
+
+  /// Makes the gated read throw on release instead of answering, to play a
+  /// drain that dies mid-flight.
+  bool failFirstRead = false;
+
+  @override
+  Future<String?> read(String key) async {
+    if (key == PendingPuffs.outboxKey && !outboxRead.isCompleted) {
+      final snapshot = values[key];
+      outboxRead.complete();
+      await release.future;
+      if (failFirstRead) throw StateError('store died mid-drain');
+      return snapshot;
+    }
+    return values[key];
+  }
+}
+
 class _CountingJourneys implements JourneyRepository {
   _CountingJourneys(this._inner);
 

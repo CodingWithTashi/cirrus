@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
@@ -36,6 +37,18 @@ abstract interface class WidgetStore {
   /// A no-op everywhere but iOS.
   Future<void> syncWatch();
 
+  /// Taps relayed from a paired Apple Watch, the moment they land.
+  ///
+  /// Emits how many events the native side has just appended to the outbox —
+  /// AFTER they are in the container, so a listener can drain immediately.
+  /// Resume and launch are the only other moments the outbox is read, and a
+  /// wrist is the one surface that can hand the phone a tap between them: a
+  /// phone app sitting open on Home used to keep saying zero while the watch
+  /// said one, until it was closed and reopened (Sep 8 2026, docs/10 §36).
+  ///
+  /// Never emits anywhere but iOS.
+  Stream<int> get watchTaps;
+
   /// Arms a repaint at each of [times].
   ///
   /// This is what makes the day number turn over at midnight for a widget
@@ -71,6 +84,34 @@ class HomeWidgetStore implements WidgetStore {
   /// updating, which is the same silence a wrong `androidProvider` buys.
   static const String watchChannel = 'cirrus/watch';
   static const String watchSyncMethod = 'sync';
+
+  /// Native → Dart on the same channel: "taps from the wrist just landed in
+  /// the outbox", with the count as the argument. Pinned against the Swift by
+  /// `test/ios_watch_test.dart` on both delivery paths.
+  static const String watchQueuedMethod = 'queued';
+
+  /// One handler per process, whichever instance registered it: the binary
+  /// messenger keys handlers by channel NAME, and every `const HomeWidgetStore()`
+  /// is the same channel.
+  static StreamController<int>? _watchTaps;
+
+  static Stream<int> _listenWatch() {
+    final existing = _watchTaps;
+    if (existing != null) return existing.stream;
+    final controller = StreamController<int>.broadcast();
+    _watchTaps = controller;
+    if (Platform.isIOS) {
+      const MethodChannel(watchChannel).setMethodCallHandler((call) async {
+        if (call.method != watchQueuedMethod) throw MissingPluginException();
+        controller.add(switch (call.arguments) {
+          final int landed => landed,
+          _ => 1,
+        });
+        return null;
+      });
+    }
+    return controller.stream;
+  }
 
   /// Declares the shared container, once per process.
   ///
@@ -141,6 +182,9 @@ class HomeWidgetStore implements WidgetStore {
   }
 
   @override
+  Stream<int> get watchTaps => _listenWatch();
+
+  @override
   Future<void> refresh() async {
     try {
       await _ensureGroup();
@@ -184,6 +228,14 @@ class MemoryWidgetStore implements WidgetStore {
 
   @override
   Future<void> syncWatch() async => watchSyncs++;
+
+  /// Drives [watchTaps]. A test writes the outbox first and adds the count
+  /// here second — the order the native relay does it in.
+  final StreamController<int> watchTapsController =
+      StreamController<int>.broadcast();
+
+  @override
+  Stream<int> get watchTaps => watchTapsController.stream;
 
   @override
   Future<void> scheduleRepaints(List<DateTime> times) async =>

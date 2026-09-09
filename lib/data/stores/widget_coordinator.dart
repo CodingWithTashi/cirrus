@@ -26,6 +26,12 @@ class WidgetCoordinator {
 
   final WidgetStore _store;
 
+  /// Taps from the wrist, as the native relay lands them in the outbox.
+  ///
+  /// `_WidgetSync` drains on every emission, the same way it drains on
+  /// resume. See [WidgetStore.watchTaps] for why resume alone was not enough.
+  Stream<int> get watchTaps => _store.watchTaps;
+
   /// The last mirror actually pushed. Unchanged ⇒ no channel call, no redraw.
   String? _pushed;
 
@@ -34,6 +40,10 @@ class WidgetCoordinator {
   /// cursor before either had written it — which is precisely how a puff gets
   /// counted twice.
   Future<void>? _inFlight;
+
+  /// The single follow-up drain owed to everyone who asked while one was
+  /// running. See [drain].
+  Future<int>? _followUp;
 
   /// The day the midnight repaints were last armed for.
   String? _armedFor;
@@ -88,7 +98,26 @@ class WidgetCoordinator {
   /// is now stale and worth re-pushing.
   Future<int> drain(JourneyStore journeys, {required DateTime now}) {
     final running = _inFlight;
-    if (running != null) return running.then((_) => 0);
+    if (running != null) {
+      // Coalesce, never drop. The drain in flight may have read the outbox
+      // BEFORE the event that prompted this call was appended — a wrist tap
+      // relayed in during the resume drain is the ordinary case — and it used
+      // to answer such a caller with the running drain's result, which left
+      // that tap queued until the next resume. On a phone that stays open,
+      // that is never. One follow-up is shared by every caller that arrives in
+      // the window: it starts after the running drain has written its cursor,
+      // reads the outbox fresh, and applies only what is above that cursor, so
+      // nothing is counted twice and nothing waits for a lifecycle event.
+      //
+      // Runs whether the drain in flight succeeded or not, and forgets itself
+      // either way: a follow-up that stayed parked behind a failed future would
+      // answer every later mid-drain caller with that same failure and
+      // silently switch real-time draining off for the rest of the session.
+      return _followUp ??= running
+          .then<void>((_) {}, onError: (Object _) {})
+          .whenComplete(() => _followUp = null)
+          .then((_) => drain(journeys, now: now));
+    }
     final task = _drain(journeys, now);
     _inFlight = task.whenComplete(() => _inFlight = null);
     return task;
