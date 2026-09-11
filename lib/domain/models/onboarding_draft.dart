@@ -33,7 +33,12 @@ enum ObStep {
   coachName,
   whyWords,
   commit,
-  rating,
+  // There is deliberately no rating step. It was D3 — one screen after
+  // hold-to-commit, one before the paywall — and the Sep 11 2026 App Store
+  // rejection (Guideline 5.6.3) named it: no rating ask on first launch or
+  // during onboarding. The ask lives on the Survived screen now, behind
+  // `ReviewAskPolicy`. A draft saved on the old step decodes to
+  // `notifications` (`OnboardingDraftPersistence`).
   notifications,
 }
 
@@ -76,8 +81,6 @@ class OnboardingState {
     this.whyWordsInput = '',
     this.committed = false,
     this.resumable,
-    this.testimonials = const [],
-    this.reviewAvailable = false,
   });
 
   final ObStep step;
@@ -113,21 +116,10 @@ class OnboardingState {
   /// state, which is why it carries the draft's own answer count.
   final ResumableDraft? resumable;
 
-  /// Tailored quotes for D3, fetched four screens early so the swap lands
-  /// off-screen. TRANSIENT — never encoded; empty means "use the bundled two".
-  final List<Testimonial> testimonials;
-
-  /// Whether the OS will actually show its review sheet. TRANSIENT.
-  ///
-  /// False on desktop, in tests, and on any sideloaded Android build, so the
-  /// CTA is hidden rather than shipped as a button that does nothing.
-  final bool reviewAvailable;
-
   /// How many of the twelve quiz questions carry an answer. Drives the
   /// "you were 8 of 12 in" line on the resume card.
-  int get answeredCount => _progressSteps
-      .where((step) => copyWith(step: step).canContinue)
-      .length;
+  int get answeredCount =>
+      _progressSteps.where((step) => copyWith(step: step).canContinue).length;
 
   /// How the keypad buffer reads right now — a year, an age, a typo, or
   /// nothing yet. The screen's caption and its CTA both switch on this.
@@ -135,8 +127,10 @@ class OnboardingState {
   /// Reads the wall-clock year on every rebuild, which is also what keeps the
   /// resolved age correct if the year ticks over while the app is open. The
   /// engine itself takes `currentYear` as a parameter and is tested that way.
-  BirthEntry get birthEntry =>
-      AgeEntryEngine.interpret(birthYearInput, currentYear: DateTime.now().year);
+  BirthEntry get birthEntry => AgeEntryEngine.interpret(
+    birthYearInput,
+    currentYear: DateTime.now().year,
+  );
 
   /// The resolved birth year, or null when the buffer does not name one.
   /// A future year resolves to null, which is what keeps a typo out of the
@@ -177,7 +171,7 @@ class OnboardingState {
   /// on-screen chevron IS back, so it has to exist on every step that has a
   /// previous one — not only on the twelve that carry a progress bar, which is
   /// what left the Phase D screens (reveal, coach name, why-words, commit,
-  /// rating, notifications) forward-only on every iPhone.
+  /// notifications) forward-only on every iPhone.
   ///
   /// The three exceptions each have a reason: welcome is the entry (leaving it
   /// means leaving the funnel, which is the sign-in screen's business),
@@ -223,8 +217,6 @@ class OnboardingState {
     bool? committed,
     ResumableDraft? resumable,
     bool clearResumable = false,
-    List<Testimonial>? testimonials,
-    bool? reviewAvailable,
   }) => OnboardingState(
     step: step ?? this.step,
     email: email ?? this.email,
@@ -244,7 +236,5 @@ class OnboardingState {
     whyWordsInput: whyWordsInput ?? this.whyWordsInput,
     committed: committed ?? this.committed,
     resumable: clearResumable ? null : (resumable ?? this.resumable),
-    testimonials: testimonials ?? this.testimonials,
-    reviewAvailable: reviewAvailable ?? this.reviewAvailable,
   );
 }

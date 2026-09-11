@@ -31,6 +31,8 @@ class SettingsState {
     this.armedMilestone,
     this.armedMilestoneAt,
     this.milestonesAdopted = false,
+    this.reviewAskedAt,
+    this.reviewAskedCount = 0,
     this.hydrated = true,
   });
 
@@ -146,6 +148,19 @@ class SettingsState {
   /// first badge — and suppressing that one is the bug in the other direction.
   final bool milestonesAdopted;
 
+  /// When this device was last asked for a store rating, and how many times it
+  /// ever has been (`ReviewAskPolicy`). Null / 0 until the first ask.
+  ///
+  /// Deliberately NOT on the sign-out forget list beside `celebratedMilestones`
+  /// and the push flags. Those are account-shaped state in a device-scoped
+  /// store; this one is genuinely the DEVICE's. A store rating belongs to the
+  /// Apple ID or Google account the phone is signed into, not to the Cirrus
+  /// account, so on a shared phone "asked already" stays true whoever signs in
+  /// next — and iOS enforces the same thing itself, capping its sheet per
+  /// device per year regardless of who is using the app.
+  final DateTime? reviewAskedAt;
+  final int reviewAskedCount;
+
   /// Whether this state is the one on disk (or a change made on top of it),
   /// as opposed to the defaults the store shows while disk is still answering.
   ///
@@ -180,6 +195,8 @@ class SettingsState {
     String? Function()? armedMilestone,
     DateTime? Function()? armedMilestoneAt,
     bool? milestonesAdopted,
+    DateTime? reviewAskedAt,
+    int? reviewAskedCount,
     bool? hydrated,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
@@ -208,6 +225,8 @@ class SettingsState {
         ? armedMilestoneAt()
         : this.armedMilestoneAt,
     milestonesAdopted: milestonesAdopted ?? this.milestonesAdopted,
+    reviewAskedAt: reviewAskedAt ?? this.reviewAskedAt,
+    reviewAskedCount: reviewAskedCount ?? this.reviewAskedCount,
     hydrated: hydrated ?? this.hydrated,
   );
 }
@@ -317,8 +336,7 @@ class SettingsStore extends Notifier<SettingsState> {
   /// Marked BEFORE the sheet opens, not after: a swipe-away is an answer, and
   /// a prompt that only counts itself once accepted comes back on every post
   /// until somebody says yes.
-  void markPushPromptShown() =>
-      _commit(state.copyWith(pushPromptShown: true));
+  void markPushPromptShown() => _commit(state.copyWith(pushPromptShown: true));
 
   void setPushWeekly(bool on) {
     _commit(state.copyWith(pushWeeklyOn: on));
@@ -467,6 +485,16 @@ class SettingsStore extends Notifier<SettingsState> {
     state.copyWith(
       launchPaywallShownDay: dayKey,
       launchPaywallShownCount: state.launchPaywallShownCount + 1,
+    ),
+  );
+
+  /// Records that the store-rating ask was shown and answered — "Rate Cirrus"
+  /// and "Not now" both count, because both are the person's answer to being
+  /// asked. `ReviewAskPolicy` reads these to space the asks and cap them.
+  void markReviewAsked(DateTime at) => _commit(
+    state.copyWith(
+      reviewAskedAt: at,
+      reviewAskedCount: state.reviewAskedCount + 1,
     ),
   );
 }

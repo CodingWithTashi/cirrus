@@ -459,10 +459,12 @@
     }
   },
   "obCommitPrivacy": "🔒 We never sell your data. No ad trackers. Ever.",
-  "obRatingTitle": "One quitter's review helps the next one find us.",
-  "obRatingSubtitle": "30 seconds. Skippable. No hard feelings.",
-  "obRatingQuoteBadge": "REAL REVIEW",
-  "obRatingCta": "Rate Cirrus",
+  "reviewAskTitle": "One quitter's review helps the next one find us.",
+  "@reviewAskTitle": {
+    "description": "Title of the store-rating ask on the Survived screen (never in onboarding — App Store Guideline 5.6.3). Also the Settings row that opens the store's review page."
+  },
+  "reviewAskSubtitle": "30 seconds. Skippable. No hard feelings.",
+  "reviewAskCta": "Rate Cirrus",
   "obCoachNameTitle": "Meet your coach.",
   "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
   "obCoachNameAsk": "We call it {name}. It answers to anything — pick the name you'd text at 2am.",

@@ -11,7 +11,7 @@ replace, `flutter test integration_test` (which runs inside the app).
 | --- | --- | --- |
 | `flows/01_sign_in.yaml` | Continue with email → Log in link → wrong password shakes → right password | Home (day line, SOS, LOG PUFF) |
 | `flows/02_register.yaml` | Fresh email, short password refused in place, account created | Onboarding welcome |
-| `flows/03_onboarding.yaml` | Register, then all 12 questions, coach name, hold-to-commit, rating and push declined | Paywall (“Your plan is ready.”) |
+| `flows/03_onboarding.yaml` | Register, then all 12 questions, coach name, hold-to-commit, push declined (no rating step: App Store 5.6.3) | Paywall (“Your plan is ready.”) |
 | `flows/04_home.yaml` | Header, ring, money and cravings cards, quick links, the four shell tabs | Home |
 | `flows/05_puff_logging.yaml` | One tap = one puff, Undo, three taps = three puffs, press-and-hold ticks | Home |
 | `flows/06_panic.yaml` | SOS → breathe → why → loop breakers → it passed → survived, count +1 | Home |
@@ -72,8 +72,9 @@ From Claude Code the same flows run through the Maestro MCP (`list_devices`
   through every value; the spend hero is one “$0” node so bare digits are safe.
 - **Hold to commit** is a real press: `longPressOn: 'Hold to commit'` (the
   ring's semantics label; the 1.8 s hold is shorter than Maestro's long press).
-- The rating step taps **Not now** and the push step **Maybe later** so no OS
-  sheet is involved. Turning either on is a separate flow to write.
+- The push step taps **Maybe later** so no OS sheet is involved. Turning it
+  on is a separate flow to write. There is no rating step to decline: the ask
+  moved to the Survived screen on Sep 11 2026 (App Store Guideline 5.6.3).
 
 ## Accessibility issues found by these flows — all fixed on Sep 8 2026
 
@@ -104,5 +105,5 @@ reach every one of these by its label now (`shared/go_back.yaml`,
 Report, Mute and Block (the menu is labelled now, so a flow can follow).
 The panic games arena. The coach's free-message cap (the demo account is
 Premium). Sign in with Apple / Google (native sheets). The OS sheets for
-rating and push. The in-app inbox: on the fake backend only another alias's
+rating (Survived screen, day 3+, three cravings) and push. The in-app inbox: on the fake backend only another alias's
 reply can fill it, and every flow here is one person.

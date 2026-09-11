@@ -2,7 +2,8 @@
 # Answers: woman, born 1985, tried 2–5 times, always in hand, 200 puffs/day,
 # 50 mg, $25/week, first puff within 5 min, why health+money, worries
 # cravings+failing, taper over 30 days, coach named Koda, why-words skipped,
-# hold to commit, skip the rating and the push prompt.
+# hold to commit, skip the push prompt. (There is no rating step: App Store
+# Guideline 5.6.3 forbids a rating ask during onboarding — Sep 11 2026.)
 appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
 env:
   PASSWORD: cirrus-demo
@@ -122,14 +123,10 @@ tags:
 - assertVisible: 'Make it real.'
 - longPressOn: 'Hold to commit'
 - extendedWaitUntil:
-    visible: 'One quitter''s review helps the next one find us.'
+    visible: 'Backup, exactly when you cave.'
     timeout: 15000
 
-# D3 rating — declined
-- tapOn: 'Not now'
-
 # D4 notifications — declined, so no OS sheet is involved
-- assertVisible: 'Backup, exactly when you cave.'
 - tapOn: 'Maybe later'
 
 # D5 paywall: the end of the questions

@@ -759,17 +759,14 @@ class AppLocalizationsEn extends AppLocalizations {
       '🔒 We never sell your data. No ad trackers. Ever.';
 
   @override
-  String get obRatingTitle =>
+  String get reviewAskTitle =>
       'One quitter\'s review helps the next one find us.';
 
   @override
-  String get obRatingSubtitle => '30 seconds. Skippable. No hard feelings.';
+  String get reviewAskSubtitle => '30 seconds. Skippable. No hard feelings.';
 
   @override
-  String get obRatingQuoteBadge => 'REAL REVIEW';
-
-  @override
-  String get obRatingCta => 'Rate Cirrus';
+  String get reviewAskCta => 'Rate Cirrus';
 
   @override
   String get obCoachNameTitle => 'Meet your coach.';

@@ -4963,3 +4963,140 @@ It found three real defects, all now fixed and pinned:
    timeline follows the cycle so the countdown turns over on the pacer's own
    seconds. Confirmed on the simulator: `craving timer · 0:04` beside `Hold 7`
    — second four of the cycle, which is the top of an inhale four seconds ago.
+
+---
+
+## 38. THE ASK THAT CAME TOO EARLY (Sep 11) — App Store rejection 1.0.16, three issues
+
+Submission `e83fc9bd-9ed2-4b6e-836c-46bd53f04f9a`, reviewed Sep 11 2026 on an
+iPhone 17 Pro Max, build 1.0.16 (17). Three findings, each with a different
+kind of fix: one in the binary, one in App Store Connect, one a question to
+answer. Read in App Store Connect end to end (the founder's paste was the
+whole message — nothing was hidden behind "See More").
+
+### 5.6.3 — "requests users to rate the app on first launch or during onboarding"
+
+**What was wrong.** D3. The funnel ran commit → *"One quitter's review helps
+the next one find us"* → notifications → paywall, and docs/02 §3 called the
+slot "their genius placement, our honest copy". The copy was honest — no star
+picker, no gating, no "thanks for rating" (docs/10 §25) — and the *placement*
+was the violation. Guideline 5.6.3 does not weigh the copy: an account that is
+minutes old has not "had enough time to gain a clear understanding of the
+app's value", full stop. The reviewer's screenshot even shows the StoreKit
+sheet landing over the notifications step, a screen late, which is the OS's
+own timing and would have looked the same to any user.
+
+**What changed in the binary.**
+
+- `ObStep.rating` is gone, and so is `RatingStep`. Onboarding is commit →
+  notifications → paywall. `OnboardingState` lost `testimonials` and
+  `reviewAvailable`, the view model lost `_prefetchRatingStep`, and
+  `OnboardingDraftPersistence` decodes a draft parked on `rating` to
+  `notifications` rather than restarting the funnel.
+- The strings survived the move: `obRatingTitle/Subtitle/Cta` are
+  `reviewAskTitle/Subtitle/Cta` in all five locales (JSON round-trip, per the
+  ARB gotcha), so no new translation was needed; `obRatingQuoteBadge` is
+  deleted with the quote cards.
+- **`ReviewAskPolicy`** (`domain/logic/`, pure): plan day ≥ 3, ≥ 3 cravings
+  survived in total, at most 2 asks ever, at least 14 *calendar* days apart
+  (`LpDate.daysBetween`, not `inDays`). The thresholds are pinned so that
+  "let's ask a bit earlier" is a deliberate edit with the guideline in view.
+- **`_ReviewAsk`** on the Survived screen (Frame 35) — a card under the stat
+  card: title, "30 seconds. Skippable. No hard feelings.", **Rate Cirrus** and
+  *Not now*. Both answers `markReviewAsked`, because both are the person's
+  answer and re-asking on the next craving after a "not now" is the pestering
+  the guideline is about. Hidden until `reviewRouteProvider` (new, a
+  `FutureProvider` over `LpReview.route()`) says a tap would go somewhere, and
+  gated on `settings.hydrated` like every automatic reader of settings — on
+  the defaults a device already asked twice reads as never asked.
+- **Settings → Rate Cirrus**, the person's own way in. It calls the new
+  `LpReview.openListing()` — the App Store write-review URL with
+  `appStoreId` 6806871144, the Play listing on Android — and deliberately not
+  `requestReview`: StoreKit shows its sheet three times a year at most and
+  decides for itself, so a settings row wired to it would be a dead button
+  most of the time.
+- The ledger is `SettingsState.reviewAskedAt` / `reviewAskedCount`,
+  persisted, and **deliberately not on the sign-out forget list**: a store
+  rating belongs to the Apple ID or Google account the phone is signed into,
+  not to the Cirrus account, so "asked already" is the device's fact.
+- The Survived screen scrolls now. Its column was bare; with the ask card on
+  it (and a game's result lines beside) it overflowed by 80 px in the test
+  window. Same shape as `StepScrollView` — min-height + `IntrinsicHeight`, so
+  the two `Spacer`s still centre the celebration on a tall phone.
+
+**Pinned.** `test/domain/review_ask_policy_test.dart` (the thresholds, day 1
+and day 2 with any number of cravings, the fortnight, the cap, calendar-day
+spacing); `test/widgets/survived_review_ask_test.dart` (an engaged user sees
+one honest card and no stars; the reviewer's day-1 account sees nothing;
+"Not now" holds across the next craving; "Rate Cirrus" claims nothing after
+the tap; a device asked twice is never asked again; no card when a tap would
+go nowhere; the Settings row present and absent); and
+`test/review_ask_placement_test.dart`, which reads the sources — no `rating`
+in `ObStep`, nothing under `features/onboarding/`, `auth/` or `day1/` reaches
+`lp_review.dart` / `InAppReview` / `reviewRouteProvider`, and the Survived
+screen is the only unprompted caller of `LpReview.request`. The back-nav
+pairs, the layout list, the persistence round trip and Maestro flow 03 were
+updated to match. Full suite: 1854 green.
+
+**Deliberately absent.** No analytics event for the ask — docs/02 §7's
+registry has none, and the registry is added to first. The testimonials
+pipeline (`matchedTestimonials`, `testimonials`, `TestimonialCodec`,
+`FirebaseTestimonialsRepository`) stays intact server-side with no client
+surface; it returns when real consented quotes exist and a home for them is
+chosen, which is not a decision to take inside a rejection fix.
+
+### 2.3.2 — "duplicate or identical promotional images"
+
+**Finding, from App Store Connect.** One 1024×1024 shield PNG was uploaded
+as the *Image* on all three of `weekly_299`, `monthly_799` and `yearly_3999`
+(checked on each product page, not inferred). The "Promote on the App Store"
+sheet lists weekly and monthly as *Prepare for Submission*, neither
+displayed — and it opens with a warning that they **cannot be promoted at
+all**, because the approved binary does not implement the StoreKit
+`PurchaseIntent` API. So today the image serves only
+win-back offers and offer codes, and there are none of either (the $3.99
+win-back is gated off until the tagged offer exists — docs/12). Apple's rule
+(developer.apple.com/app-store/promoting-in-app-purchases): "each promoted
+in-app purchase requires a unique promotional image", no text overlay, not a
+screenshot, not the icon.
+
+**Backup first.** The original is at `~/Downloads/cirrus_promo_original_1024.png`,
+pulled from Apple's CDN before anything was touched.
+
+**Blocked in the current state.** Founder's call was to keep the image on
+yearly and drop it from weekly + monthly. It cannot be done yet: the image is
+`WAITING_FOR_REVIEW`, attached to the rejected-but-still-open submission, so
+the iris `DELETE /subscriptionImages/{id}` returns `409
+ENTITY_ERROR.ATTRIBUTE.INVALID.UNMODIFIABLE`, and the tile shows only the
+file-replace "+" overlay — the page's only "Remove" control is "Remove from
+Sale" for the whole subscription. The metadata unlocks when the submission is
+cancelled or when the version is edited for the resubmission; the image is
+removed from weekly + monthly then. It changes nothing in the meantime: the
+"Set Up App Store Promotion" sheet says these products cannot be promoted at
+all until a build ships the StoreKit `PurchaseIntent` API, so the promotional
+image is not on the product page today. **Open (founder), one ASC step.**
+
+### 2.1 — "Does your app send user's information and text to the third party AI services?"
+
+A question, not a finding, and the answer is yes — said plainly, with what and
+what not. Ember runs on Google Gemini through our own Cloud Functions
+(`aiCoachChat`; `weeklyInsight`; the `moderatePost`/`moderateReply`
+classifier in `ai/moderation.ts`; the memory embeddings). What reaches the
+model: the message the user typed, the deterministic user card built from
+their journey (`ai/memoryCard.ts`: plan day, puffs, streak, savings, alias,
+coach name, their why-words, mood notes), recent turns, remembered facts, and
+— for moderation — the text of a community post or reply. What never does:
+email, uid, payment or purchase data, device identifiers, contacts, location.
+The API key is server-side only (Secret Manager) and App Check gates every
+callable, so the app itself never talks to Google's model endpoint. Disclosed
+in three places before this question was asked: the coach-name step
+(`obCoachNameAiNote`), under the coach composer (`coachSafetyNote`, visible in
+the reviewer's own screenshot), and `cirrusquit.com/privacy` § "Who else sees
+it" — and the App Privacy label since docs/10 §34. **The reply was sent** (App Store Connect → the submission's App Review
+thread, Sep 11, 11:06 PM), in a plain first-person voice signed by the
+founder: it answers the AI question in full, notes 5.6.3 is fixed in the next
+build, and says the duplicate promotional image is being corrected — without
+claiming it is already removed, since it is review-locked. What is left is the
+founder's: `flutter build ipa` and upload the build carrying the 5.6.3 fix,
+drop the promo image from weekly + monthly once the metadata unlocks, and
+*Resubmit to App Review*.

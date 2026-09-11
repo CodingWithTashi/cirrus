@@ -40,6 +40,8 @@ abstract final class SettingsPersistence {
   static const _armedMilestone = 'settings.armedMilestone';
   static const _armedMilestoneAt = 'settings.armedMilestoneAt';
   static const _milestonesAdopted = 'settings.milestonesAdopted';
+  static const _reviewAskedAt = 'settings.reviewAskedAt';
+  static const _reviewAskedCount = 'settings.reviewAskedCount';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -56,8 +58,7 @@ abstract final class SettingsPersistence {
         locale: tag == null || tag == _systemLocale ? null : Locale(tag),
         notificationsOn:
             prefs.getBool(_notificationsOn) ?? defaults.notificationsOn,
-        dangerStartHour:
-            prefs.getInt(_dangerStart) ?? defaults.dangerStartHour,
+        dangerStartHour: prefs.getInt(_dangerStart) ?? defaults.dangerStartHour,
         dangerEndHour: prefs.getInt(_dangerEnd) ?? defaults.dangerEndHour,
         dangerHoursCustom:
             prefs.getBool(_dangerCustom) ?? defaults.dangerHoursCustom,
@@ -66,8 +67,7 @@ abstract final class SettingsPersistence {
         pushRepliesOn: prefs.getBool(_pushReplies) ?? defaults.pushRepliesOn,
         pushMentionsOn: prefs.getBool(_pushMentions) ?? defaults.pushMentionsOn,
         pushWeeklyOn: prefs.getBool(_pushWeekly) ?? defaults.pushWeeklyOn,
-        pushPromptShown:
-            prefs.getBool(_pushPrompt) ?? defaults.pushPromptShown,
+        pushPromptShown: prefs.getBool(_pushPrompt) ?? defaults.pushPromptShown,
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
@@ -84,6 +84,9 @@ abstract final class SettingsPersistence {
         ),
         milestonesAdopted:
             prefs.getBool(_milestonesAdopted) ?? defaults.milestonesAdopted,
+        reviewAskedAt: DateTime.tryParse(prefs.getString(_reviewAskedAt) ?? ''),
+        reviewAskedCount:
+            prefs.getInt(_reviewAskedCount) ?? defaults.reviewAskedCount,
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -135,6 +138,13 @@ abstract final class SettingsPersistence {
         await prefs.remove(_launchPaywallDay);
       } else {
         await prefs.setString(_launchPaywallDay, day);
+      }
+      await prefs.setInt(_reviewAskedCount, state.reviewAskedCount);
+      final askedAt = state.reviewAskedAt;
+      if (askedAt == null) {
+        await prefs.remove(_reviewAskedAt);
+      } else {
+        await prefs.setString(_reviewAskedAt, askedAt.toIso8601String());
       }
     } on Object {
       // Write-behind, like every other optimistic save in the app: the user

@@ -764,17 +764,14 @@ class AppLocalizationsEs extends AppLocalizations {
       '🔒 Nunca vendemos tus datos. Sin rastreadores. Jamás.';
 
   @override
-  String get obRatingTitle =>
+  String get reviewAskTitle =>
       'La reseña de un exvapeador ayuda al siguiente a encontrarnos.';
 
   @override
-  String get obRatingSubtitle => '30 segundos. Se puede saltar. Sin rencores.';
+  String get reviewAskSubtitle => '30 segundos. Se puede saltar. Sin rencores.';
 
   @override
-  String get obRatingQuoteBadge => 'RESEÑA REAL';
-
-  @override
-  String get obRatingCta => 'Valorar Cirrus';
+  String get reviewAskCta => 'Valorar Cirrus';
 
   @override
   String get obCoachNameTitle => 'Conoce a tu coach.';

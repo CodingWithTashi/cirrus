@@ -1412,29 +1412,23 @@ abstract class AppLocalizations {
   /// **'🔒 We never sell your data. No ad trackers. Ever.'**
   String get obCommitPrivacy;
 
-  /// No description provided for @obRatingTitle.
+  /// Title of the store-rating ask on the Survived screen (never in onboarding — App Store Guideline 5.6.3). Also the Settings row that opens the store's review page.
   ///
   /// In en, this message translates to:
   /// **'One quitter\'s review helps the next one find us.'**
-  String get obRatingTitle;
+  String get reviewAskTitle;
 
-  /// No description provided for @obRatingSubtitle.
+  /// No description provided for @reviewAskSubtitle.
   ///
   /// In en, this message translates to:
   /// **'30 seconds. Skippable. No hard feelings.'**
-  String get obRatingSubtitle;
+  String get reviewAskSubtitle;
 
-  /// No description provided for @obRatingQuoteBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'REAL REVIEW'**
-  String get obRatingQuoteBadge;
-
-  /// No description provided for @obRatingCta.
+  /// No description provided for @reviewAskCta.
   ///
   /// In en, this message translates to:
   /// **'Rate Cirrus'**
-  String get obRatingCta;
+  String get reviewAskCta;
 
   /// No description provided for @obCoachNameTitle.
   ///

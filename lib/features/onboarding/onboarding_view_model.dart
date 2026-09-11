@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/utils/lp_review.dart';
 import '../../data/stores/onboarding_draft_persistence.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
@@ -37,10 +36,9 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// A draft read from disk, held until the user accepts or rejects it.
   OnboardingDraft? _pending;
 
-  /// Riverpod 2's `Ref` has no `mounted`, and both of the async warm-ups here
-  /// outlive a fast user: a draft read and a testimonial fetch can both land
-  /// after the notifier is gone (`complete` invalidates it), and
-  /// writing state then throws.
+  /// Riverpod 2's `Ref` has no `mounted`, and the async draft read here can
+  /// outlive a fast user: it can land after the notifier is gone (`complete`
+  /// invalidates it), and writing state then throws.
   bool _disposed = false;
 
   @override
@@ -205,8 +203,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     return name.isEmpty ? null : name;
   }
 
-  void typeCoachName(String raw) =>
-      state = state.copyWith(coachNameInput: raw);
+  void typeCoachName(String raw) => state = state.copyWith(coachNameInput: raw);
 
   /// Why they are doing this, in their own words, or null when they skipped.
   ///
@@ -215,8 +212,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// blank line into Ember's user card as though something had been said.
   String? get chosenWhyWords => WhyWords.stored(state.whyWordsInput);
 
-  void typeWhyWords(String raw) =>
-      state = state.copyWith(whyWordsInput: raw);
+  void typeWhyWords(String raw) => state = state.copyWith(whyWordsInput: raw);
 
   void markCommitted() {
     // The hold gesture itself, not the screen advance — someone can complete
@@ -299,56 +295,16 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       case ObStep.frequency:
       case ObStep.strength:
       case ObStep.firstPuff:
-      // Leaving the worries screen is the first moment every tag exists, and
-      // it is four screens before D3 — so the tailored quotes almost always
-      // land while the user is somewhere else, and the card never blinks.
       case ObStep.worries:
-        _prefetchRatingStep();
       case ObStep.why:
       case ObStep.building:
       case ObStep.coachName:
       case ObStep.whyWords:
       case ObStep.commit:
-      case ObStep.rating:
       case ObStep.notifications:
         break;
     }
     _stepEnteredAt = DateTime.now();
-  }
-
-  /// Warms D3: the tailored quotes, and whether the rating CTA has anywhere
-  /// to go (the OS sheet, or the store listing on a non-Play install).
-  ///
-  /// Both are best-effort and both fail to the same place — bundled quotes and
-  /// a hidden CTA — so neither is awaited and neither can block the funnel.
-  Future<void> _prefetchRatingStep() async {
-    final answers = state;
-    final available = await LpReview.isAvailable();
-    var quotes = const <Testimonial>[];
-    try {
-      quotes = await ref
-          .read(testimonialsRepositoryProvider)
-          .matched(
-            whys: answers.whys,
-            worries: answers.worries,
-            attempts: answers.attempts,
-            gender: answers.gender,
-            dependence: answers.dependence,
-          );
-    } on Object {
-      // Offline, or a backend that refused. The bundled quotes are honest and
-      // already on screen, so there is nothing to report and nothing to retry.
-      quotes = const [];
-    }
-    if (_disposed) return;
-    // All-or-nothing: one tailored quote beside one generic one reads as a
-    // bug rather than as social proof.
-    _persistSuppressed = true;
-    super.state = state.copyWith(
-      testimonials: quotes.length >= 2 ? quotes : const [],
-      reviewAvailable: available,
-    );
-    _persistSuppressed = false;
   }
 
   void next() {

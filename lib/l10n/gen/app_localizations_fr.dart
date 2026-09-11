@@ -761,17 +761,14 @@ class AppLocalizationsFr extends AppLocalizations {
       '🔒 On ne vend jamais tes données. Zéro traqueur. Jamais.';
 
   @override
-  String get obRatingTitle =>
+  String get reviewAskTitle =>
       'L\'avis d\'un ancien vapoteur aide le suivant à nous trouver.';
 
   @override
-  String get obRatingSubtitle => '30 secondes. Passable. Sans rancune.';
+  String get reviewAskSubtitle => '30 secondes. Passable. Sans rancune.';
 
   @override
-  String get obRatingQuoteBadge => 'AVIS RÉEL';
-
-  @override
-  String get obRatingCta => 'Noter Cirrus';
+  String get reviewAskCta => 'Noter Cirrus';
 
   @override
   String get obCoachNameTitle => 'Voici ton coach.';

@@ -14,7 +14,6 @@ import '../../../data/stores/providers.dart';
 import '../../../domain/analytics/lp_events.dart';
 import '../../../core/utils/lp_format.dart';
 import '../../../core/utils/lp_haptics.dart';
-import '../../../core/utils/lp_review.dart';
 import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/lp_buttons.dart';
 import '../../../core/widgets/lp_card.dart';
@@ -471,136 +470,12 @@ class _CommitStepState extends ConsumerState<CommitStep>
   }
 }
 
-/// D3 — the honest rating ask at peak motivation.
-class RatingStep extends ConsumerWidget {
-  const RatingStep({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final lp = context.lp;
-    final l10n = context.l10n;
-    final state = ref.watch(onboardingProvider);
-    final vm = ref.read(onboardingProvider.notifier);
-
-    // Warmed on leaving the worries screen, four steps back. Empty means the
-    // fetch found nothing, came back short, or never landed — and then this
-    // screen shows NO quote cards at all.
-    //
-    // It used to fall back to two quotes bundled in the ARB files, which was
-    // honest only for as long as real ones were coming. The beta cohort that
-    // was to supply them was descoped on Sep 3 2026 (docs/08 §7 #29), so the
-    // `testimonials` collection is empty until somebody consents to a quote —
-    // and the fallback stopped being a safety net and became the content: two
-    // five-star reviews nobody said, on the screen before the paywall. That is
-    // the exact thing docs/02 §7 forbids, and the same rule that killed the
-    // invented "Tokyo flight" goal and the buddy named Sam.
-    //
-    // The title and the ask stand on their own without them. When real quotes
-    // exist, they appear here with no further change.
-    final quotes = state.testimonials.map((t) => t.text).toList();
-
-    Widget quote(String text) => LpCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // The stars belong to the QUOTE — they are what this person
-              // rated us, not a control. See the CTA below for why there is no
-              // star picker anywhere near the store prompt.
-              Text(
-                '★★★★★',
-                style: TextStyle(
-                  color: lp.volt,
-                  fontSize: 14,
-                  letterSpacing: 2,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: lp.surfaceInset,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: lp.border),
-                ),
-                child: Text(
-                  l10n.obRatingQuoteBadge,
-                  style: LpType.micro(
-                    lp.textSecondary,
-                    weight: FontWeight.w700,
-                  ).copyWith(letterSpacing: 1),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            text,
-            style: LpType.body13(lp.textPrimary),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-
-    return StepBody(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-      children: [
-        // Balances the Spacer above the CTA when there are no quote cards to
-        // fill the middle. Without it the ask sits jammed against the status
-        // bar over an empty half-screen, which reads as a screen that failed
-        // to load rather than one with nothing to show.
-        if (quotes.isEmpty) const Spacer(),
-        Text(l10n.obRatingTitle, style: LpType.title(lp.textPrimary, size: 28)),
-        const SizedBox(height: 8),
-        Text(l10n.obRatingSubtitle, style: LpType.body14(lp.textSecondary)),
-        // Indexed nowhere — the list is whatever the server had, including
-        // none and including one.
-        for (final text in quotes) ...[
-          const SizedBox(height: 12),
-          quote(text),
-        ],
-        const Spacer(),
-        // This used to be a five-star row inside a card pastiching the StoreKit
-        // sheet, and tapping it did nothing but advance. It cannot come back:
-        // asking for a rating ahead of the system prompt, or routing by
-        // sentiment, is review gating — Apple Guideline 1.1.7, and Google Play
-        // forbids asking the user's opinion at all before presenting the
-        // rating card, including a picker that routes every value identically.
-        // Android is the launch platform.
-        //
-        // So: one honest button, and no claim about what happened afterwards.
-        // Neither OS reports whether its sheet appeared or what the user did,
-        // so a "thanks for rating!" here would be a control that only shows a
-        // success snack — about something we could not have observed.
-        //
-        // The same button opens the Play listing on a build that did not come
-        // from Play: Play's sheet is silent for those, which is what the Sep 1
-        // field test saw as "Rate Cirrus does nothing" (docs/09 issue 3).
-        // `LpReview.request` picks the route; this widget does not know it.
-        if (state.reviewAvailable)
-          LpButton(
-            l10n.obRatingCta,
-            onTap: () async {
-              LpHaptics.medium();
-              await LpReview.request();
-              vm.next();
-            },
-          )
-        else
-          // Nowhere for a tap to go — no Play Store on the device, or a
-          // desktop. A dead button is worse than none, so it is simply not here.
-          LpButton(l10n.commonContinue, onTap: vm.next),
-        const SizedBox(height: 6),
-        LpTextButton(l10n.commonNotNow, size: 15, onTap: vm.next),
-      ],
-    );
-  }
-}
-
+/// There is no D3 here. The rating ask sat between commit and the push
+/// pre-permission until the Sep 11 2026 App Store rejection (Guideline 5.6.3:
+/// no rating request on first launch or during onboarding). It now lives on
+/// the Survived screen — `features/panic/panic_screens.dart`, behind
+/// `ReviewAskPolicy` — where the person has just used the feature the review
+/// would be about.
 /// D4 — notification pre-permission with a real push preview.
 class NotificationsStep extends ConsumerWidget {
   const NotificationsStep({super.key});

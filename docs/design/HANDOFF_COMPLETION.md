@@ -28,7 +28,7 @@
 | 15 | C5 Building | 3.2s ring, step ticks land with haptics | ✅ |
 | 16 | D1 Plan reveal | curve draws in 800ms, **staggered** rolling stat counters, milestone dots, honest-proof block | ✅ |
 | 17 | D2 Commitment | hold-to-commit 3s Ember ring, haptic ramp, release rewinds, confetti burst, date card, static specks decor | ✅ |
-| 18 | D3 Rating ask | beta-tester quotes (labeled), rate card, "Not now" | ✅ |
+| 18 | D3 Rating ask | beta-tester quotes (labeled), rate card, "Not now" | ❌ **removed Sep 11 2026** — App Store Guideline 5.6.3 rejected the placement outright (no rating ask during onboarding). The ask is on the Survived screen behind `ReviewAskPolicy`; the quote cards went with the step (docs/10 §38) |
 | 19 | D4 Notifications | pre-permission with push preview + 3 promise bullets | ✅ |
 | 20 | D5 Paywall | yearly pre-selected + BEST VALUE ribbon, founding weekly, trial-reminder toggle ships ON, visible Free path | ✅ |
 | 21 | D5b Free plan | positive-only framing, no guilt copy | ✅ |

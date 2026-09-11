@@ -18,7 +18,7 @@ import '../helpers.dart';
 /// has no system back — no hardware key, and no edge swipe either, since the
 /// whole funnel is one route whose steps swap in place — so on an iPhone the
 /// chevron IS back, and six screens (reveal, coach name, why-words, commit,
-/// rating, notifications) had none.
+/// notifications) had none.
 void main() {
   late AppLocalizations l10n;
   setUpAll(() async {
@@ -59,8 +59,9 @@ void main() {
       (ObStep.coachName, ObStep.reveal),
       (ObStep.whyWords, ObStep.coachName),
       (ObStep.commit, ObStep.whyWords),
-      (ObStep.rating, ObStep.commit),
-      (ObStep.notifications, ObStep.rating),
+      // No rating step between these two since Sep 11 2026 (App Store
+      // Guideline 5.6.3) — the ask lives on the Survived screen now.
+      (ObStep.notifications, ObStep.commit),
     ];
     for (final (step, previous) in pairs) {
       testWidgets('${step.name} → ${previous.name}', (tester) async {

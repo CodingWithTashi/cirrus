@@ -62,7 +62,7 @@
 | 17 | **Coach name** | Names your coach; defaults to Ember, CTA reads *Keep Ember* until you type. | Type `Koda` → every later screen says Koda, including the Day-1 tour and chat header. |
 | 18 | **Why words** | One line in your own words. The placeholder is tailored to a *why* you actually picked (Family > Fitness > Health > Freedom > Money > Appearance). | Pick only Money → the money hint. A hint is never stored as your words. |
 | 19 | **Commit** | Press-and-hold commitment beat. | Release early → it does not advance. |
-| 20 | **Rating** | Opens the real store review sheet. Does **not** gate on your opinion and never claims a rating was submitted. | On device the OS sheet may or may not appear; the app must claim nothing either way. |
+| 20 | **~~Rating~~ — removed from onboarding Sep 11 2026** | App Store review rejected 1.0.16 under Guideline 5.6.3 for asking here. The ask is row 98b now: the Survived screen, day 3+, three cravings beaten. Onboarding goes commit → notifications. | There is no rating screen between hold-to-commit and the push pre-permission. `test/review_ask_placement_test.dart` reads the sources to keep it that way. |
 | 21 | **Notifications permission** | The one place the OS permission is asked for. Copy names danger-hour nudges, the trial reminder and milestone celebrations — all three exist. | Deny → the app continues; the Settings toggle reflects reality. |
 | 22 | **→ Paywall → Day 1** | Onboarding ends on the paywall (`source=onboarding`), then the Day-1 checklist. | — |
 
@@ -219,6 +219,7 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
+| 98b | **Rating ask** (Survived screen) | A card under the stat card — "One quitter's review helps the next one find us." / **Rate Cirrus** / *Not now* — shown only when `ReviewAskPolicy` says so: plan day ≥ 3, ≥ 3 cravings survived in total, at most twice ever, at least 14 days apart. Both answers count as an ask. Opens the real store review sheet (or the Play listing on a non-Play install), gates on nothing, and claims nothing afterwards. Hidden until `reviewRouteProvider` says a tap would go somewhere. | Fake backend: sign in as the demo account (day 12, 23 cravings) → SOS → "It passed" → the card is under the counter. Day-1 account → no card. Tap *Not now* → gone, and not back on the next craving. Settings → **Rate Cirrus** row opens the store's review page directly, any day. |
 | 97 | **Slip recovery** (`/slip`) | Pick what triggered it (party · stress · boredom · drinking · friends · just happened), then land on Home or the coach. Teammate-reviewing-film tone; **no streak-zero moment is ever shown**. | Home slip card → walk it. |
 | 98 | **Profile** (`/profile`) | Countdown hero, Your Why, lifetime stats, links to Milestones / Insight / Settings / panic. | — |
 | 99 | **Edit profile** | Your alias and avatar emoji. | Change both → the Home avatar and every post byline follow. |
@@ -303,7 +304,9 @@ you. The two halves obey different rules and are configured in different places.
 | **Export my data** | Removed. It showed a success snack and exported nothing; it returns when it writes a real file (`docs/08` S5). |
 | **Frame Map** | Deleted Sep 3 2026 — debug-gated in Settings, but its routes shipped in every release binary. |
 | **Founding-offer / winback card** | Gated off until the tagged $3.99 store offer exists. |
-| **Star-rating gate** | Neither store permits asking for an opinion before the system prompt. The five-star row on D3 belongs to the testimonial, not to the user. |
+| **Star-rating gate** | Neither store permits asking for an opinion before the system prompt. There is no star row anywhere the ask appears. |
+| **A rating ask in onboarding** | App Store Guideline 5.6.3 (rejection of 1.0.16, Sep 11 2026): never on first launch or during onboarding. The ask lives on the Survived screen behind `ReviewAskPolicy` (row 98b). |
+| **Testimonial quotes on the ask** | The D3 quote cards went with the step. `matchedTestimonials` and the `testimonials` collection stay (server, repository, codec, tests), with no client surface until real consented quotes exist and a home for them is chosen. |
 | **A standalone Apple Watch app** | Every number on the wrist comes from the phone's mirror, so an install without the iPhone app could only ever show the empty card. `WKRunsIndependentlyOfCompanionApp` is deliberately absent — offering it would advertise a surface that cannot work. |
 | **Coach or community on the wrist** | `docs/01 §7` defined the watch as a fourth **one-tap logging** surface. Superseded in part on Sep 8 2026 (docs/10 §37): the week card and a breathing pacer landed, because both were already computed on the phone and needed no backend. Coach and community are not — both need a live server round trip the watch has no way to make, and it has no keyboard to answer with. |
 | **A craving RECORDED from the wrist** | The breathing page (114b-iii) paces a breath and counts nothing. `CirrusOutbox` carries a puff delta clamped to ±1; making it carry "I survived one" turns it into a general command queue and touches the seq minting, the id dedupe and both cursors. `ios_watch_test` pins the absence. Log the craving on the phone. |

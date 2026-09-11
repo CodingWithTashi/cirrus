@@ -15,6 +15,7 @@ import '../../core/utils/enum_labels.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/utils/lp_review.dart';
 import '../../core/widgets/confetti_burst.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
@@ -25,6 +26,7 @@ import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/games/games.dart';
+import '../../domain/logic/review_ask_policy.dart';
 import '../../domain/models/models.dart';
 import 'breath_pacer.dart';
 import 'breath_ring.dart';
@@ -817,8 +819,9 @@ class _BreakLoopStep extends ConsumerWidget {
                     // directive PANIC MODE voice when it is present, and until now no
                     // client ever sent it — so Ember answered a 9/10 craving in the
                     // same open-question register it uses for a quiet Tuesday.
-                    onTap: () =>
-                        context.go('${Routes.coach}?panic=${session.intensity}'),
+                    onTap: () => context.go(
+                      '${Routes.coach}?panic=${session.intensity}',
+                    ),
                   ),
                 ],
               ),
@@ -888,121 +891,253 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 16, 28, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-                  const Center(
-                    child: Text('🎉', style: TextStyle(fontSize: 60)),
-                  ),
-                  const SizedBox(height: 18),
-                  Center(
-                    child: Text(
-                      l10n.survivedPlusOne,
-                      style: LpType.title(lp.textPrimary, size: 36),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(line, style: LpType.body15(lp.textSecondary)),
-                  ),
-                  const SizedBox(height: 34),
-                  Center(
-                    child: LpCard(
-                      radius: LpDimens.rCardLg,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
-                        vertical: 20,
-                      ),
+            // Scrolls only when it must. The column used to be bare, which
+            // was fine for as long as it held a title, one card and a button;
+            // the rating ask (`_ReviewAsk`) and a game's result lines can
+            // both be on it at once now, and a bare `Column` overflows the
+            // moment the viewport shrinks (the same shape `StepScrollView`
+            // and the auth forms take: a min-height + `IntrinsicHeight`, so
+            // the two `Spacer`s keep centring the celebration on a tall
+            // phone and give way on a short one).
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 16, 28, 40),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Frame 35: the counter rolls 22 → 23.
-                          RollingNumber(
-                            total,
-                            from: total > 0 ? total - 1 : 0,
-                            style: LpType.numberHero(lp.voltText, size: 52)
-                                .copyWith(
-                                  shadows: [
-                                    Shadow(
-                                      color: lp.volt.withValues(alpha: 0.45),
-                                      blurRadius: 36,
-                                    ),
-                                  ],
-                                ),
+                          const Spacer(),
+                          const Center(
+                            child: Text('🎉', style: TextStyle(fontSize: 60)),
+                          ),
+                          const SizedBox(height: 18),
+                          Center(
+                            child: Text(
+                              l10n.survivedPlusOne,
+                              style: LpType.title(lp.textPrimary, size: 36),
+                            ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            l10n.survivedTotalLabel,
-                            style: LpType.body13(lp.textSecondary),
+                          Center(
+                            child: Text(
+                              line,
+                              style: LpType.body15(lp.textSecondary),
+                            ),
                           ),
-                          if (game != null) ...[
-                            const SizedBox(height: 14),
-                            GameResultLine(outcome: game, best: best),
-                            // Their two numbers, only when the second is
-                            // lower — never the app disputing "it passed".
-                            if (game.intensityBefore case final before?)
-                              if (game.intensityAfter case final after?
-                                  when after < before) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  l10n.survivedIntensityDrop(before, after),
-                                  textAlign: TextAlign.center,
-                                  style: LpType.caption(lp.textSecondary),
+                          const SizedBox(height: 34),
+                          Center(
+                            child: LpCard(
+                              radius: LpDimens.rCardLg,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 20,
+                              ),
+                              child: Column(
+                                children: [
+                                  // Frame 35: the counter rolls 22 → 23.
+                                  RollingNumber(
+                                    total,
+                                    from: total > 0 ? total - 1 : 0,
+                                    style:
+                                        LpType.numberHero(
+                                          lp.voltText,
+                                          size: 52,
+                                        ).copyWith(
+                                          shadows: [
+                                            Shadow(
+                                              color: lp.volt.withValues(
+                                                alpha: 0.45,
+                                              ),
+                                              blurRadius: 36,
+                                            ),
+                                          ],
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    l10n.survivedTotalLabel,
+                                    style: LpType.body13(lp.textSecondary),
+                                  ),
+                                  if (game != null) ...[
+                                    const SizedBox(height: 14),
+                                    GameResultLine(outcome: game, best: best),
+                                    // Their two numbers, only when the second is
+                                    // lower — never the app disputing "it passed".
+                                    if (game.intensityBefore case final before?)
+                                      if (game.intensityAfter case final after?
+                                          when after < before) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          l10n.survivedIntensityDrop(
+                                            before,
+                                            after,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          style: LpType.caption(
+                                            lp.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          Center(
+                            child: PressScale(
+                              onTap: () async {
+                                // Anonymous stat card as text — no personal data.
+                                await Clipboard.setData(
+                                  ClipboardData(
+                                    text:
+                                        '🎉 ${l10n.survivedPlusOne} · $total ${l10n.survivedTotalLabel} · ${l10n.appName}',
+                                  ),
+                                );
+                                if (context.mounted) {
+                                  showLpSnack(
+                                    context,
+                                    l10n.survivedShareCopied,
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
                                 ),
-                              ],
-                          ],
+                                decoration: BoxDecoration(
+                                  color: lp.surface,
+                                  borderRadius: BorderRadius.circular(
+                                    LpDimens.rChip,
+                                  ),
+                                  border: Border.all(
+                                    color: lp.border,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  l10n.survivedShare,
+                                  style: LpType.body13(
+                                    lp.textPrimary,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const _ReviewAsk(),
+                          const Spacer(),
+                          LpButton(
+                            l10n.survivedBack,
+                            onTap: () => context.go(Routes.home),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 26),
-                  Center(
-                    child: PressScale(
-                      onTap: () async {
-                        // Anonymous stat card as text — no personal data.
-                        await Clipboard.setData(
-                          ClipboardData(
-                            text:
-                                '🎉 ${l10n.survivedPlusOne} · $total ${l10n.survivedTotalLabel} · ${l10n.appName}',
-                          ),
-                        );
-                        if (context.mounted) {
-                          showLpSnack(context, l10n.survivedShareCopied);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: lp.surface,
-                          borderRadius: BorderRadius.circular(LpDimens.rChip),
-                          border: Border.all(color: lp.border, width: 1.5),
-                        ),
-                        child: Text(
-                          l10n.survivedShare,
-                          style: LpType.body13(
-                            lp.textPrimary,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  LpButton(
-                    l10n.survivedBack,
-                    onTap: () => context.go(Routes.home),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
           const Positioned.fill(child: ConfettiBurst()),
         ],
+      ),
+    );
+  }
+}
+
+/// The store-rating ask, on the one screen where it has been earned.
+///
+/// This used to be onboarding step D3 — one screen after hold-to-commit, one
+/// before the paywall, on an account minutes old — and the Sep 11 2026 App
+/// Store rejection named it (Guideline 5.6.3: no rating request on first
+/// launch or during onboarding). It sits here now because a beaten craving is
+/// the app's value in the app's own terms, and `ReviewAskPolicy` only lets it
+/// through once that has happened a few times over a few days. `Widget`, not
+/// a sheet: the celebration stays the celebration, and the ask is a card the
+/// person can read past.
+///
+/// Three things it deliberately does not do, each a store rule:
+/// - no star picker and no "enjoying Cirrus?" — review gating is prohibited
+///   on both stores, so the first question the person is asked is the OS's;
+/// - nothing after the tap — neither OS reports whether its sheet appeared,
+///   so there is no "thanks for rating" to show and none is shown;
+/// - no dead button — hidden until `reviewRouteProvider` says a tap would go
+///   somewhere, and on a build that will not show the sheet the tap opens the
+///   listing instead (`LpReview.request`).
+///
+/// "Rate Cirrus" and "Not now" both record an ask: both are the person's
+/// answer, and re-asking on the next craving after a "not now" is the pestering
+/// the guideline is about. Waits for `settings.hydrated` like every automatic
+/// reader of settings — on the defaults, a device already asked twice reads as
+/// never asked.
+class _ReviewAsk extends ConsumerWidget {
+  const _ReviewAsk();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final snap = ref.watch(todayProvider);
+    final settings = ref.watch(settingsStoreProvider);
+    final route =
+        ref.watch(reviewRouteProvider).valueOrNull ?? ReviewRoute.none;
+    if (snap == null || !settings.hydrated || route == ReviewRoute.none) {
+      return const SizedBox.shrink();
+    }
+    final now = snap.now;
+    final ask = ReviewAskPolicy.shouldAsk(
+      planDay: snap.dayNumber,
+      cravingsSurvived: snap.cravingsSurvivedTotal,
+      askedCount: settings.reviewAskedCount,
+      lastAskedAt: settings.reviewAskedAt,
+      now: now,
+    );
+    if (!ask) return const SizedBox.shrink();
+
+    void answered() =>
+        ref.read(settingsStoreProvider.notifier).markReviewAsked(now);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: LpCard(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.reviewAskTitle,
+              style: LpType.heading(lp.textPrimary, size: 15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.reviewAskSubtitle,
+              style: LpType.caption(lp.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: LpButton(
+                    l10n.reviewAskCta,
+                    height: 44,
+                    onTap: () async {
+                      LpHaptics.medium();
+                      answered();
+                      await LpReview.request();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 6),
+                LpTextButton(l10n.commonNotNow, size: 14, onTap: answered),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

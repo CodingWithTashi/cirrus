@@ -56,7 +56,6 @@ class OnboardingFlow extends ConsumerWidget {
       ObStep.coachName => const CoachNameStep(),
       ObStep.whyWords => const WhyWordsStep(),
       ObStep.commit => const CommitStep(),
-      ObStep.rating => const RatingStep(),
       ObStep.notifications => const NotificationsStep(),
     };
 

@@ -132,68 +132,11 @@ void main() {
     });
   });
 
-  group('the rating ask is honest and tailored', () {
-    testWidgets('shows NO quote at all when the server has none', (
-      tester,
-    ) async {
-      // There used to be two bundled quotes here. They were five-star reviews
-      // no human had said, on the screen immediately before the paywall —
-      // written as a fallback for a beta cohort that was then descoped
-      // (docs/08 §7 #29), which left the fallback as the shipping content.
-      // An honest empty state is always the right answer.
-      await pump(tester, (vm) => vm.previewStep(ObStep.rating));
-
-      expect(find.text(l10n.obRatingQuoteBadge), findsNothing);
-      expect(find.textContaining('★'), findsNothing);
-      // The ask itself still stands on its own.
-      expect(find.text(l10n.obRatingTitle), findsOneWidget);
-    });
-
-    testWidgets('shows the tailored pair when the server answered', (
-      tester,
-    ) async {
-      await pump(tester, (vm) {
-        vm.previewStep(ObStep.rating);
-        vm.state = vm.state.copyWith(
-          testimonials: const [
-            Testimonial(id: 'a', text: 'Day 4 and the fog lifted.'),
-            Testimonial(id: 'b', text: 'I stopped counting hours.'),
-          ],
-        );
-      });
-
-      expect(find.text('Day 4 and the fog lifted.'), findsOneWidget);
-      expect(find.text('I stopped counting hours.'), findsOneWidget);
-      expect(find.text(l10n.obRatingQuoteBadge), findsNWidgets(2));
-    });
-
-    testWidgets('offers no rating control when no sheet is coming', (
-      tester,
-    ) async {
-      // No Play Store on the device, desktop, or a test. (A sideloaded build
-      // is no longer this case: it gets the listing instead of the sheet.)
-      // A dead button is worse than none.
-      await pump(tester, (vm) => vm.previewStep(ObStep.rating));
-
-      expect(find.text(l10n.obRatingCta), findsNothing);
-      expect(find.text(l10n.commonContinue), findsOneWidget);
-    });
-
-    testWidgets('asks once, plainly, when the OS will show its sheet', (
-      tester,
-    ) async {
-      await pump(tester, (vm) {
-        vm.previewStep(ObStep.rating);
-        vm.state = vm.state.copyWith(reviewAvailable: true);
-      });
-
-      expect(find.text(l10n.obRatingCta), findsOneWidget);
-      // Review gating is prohibited on both stores, so there is no star
-      // picker: the only stars on this screen belong to the quotes, and the
-      // retired card copy must not come back with one.
-      expect(find.text(l10n.commonNotNow), findsOneWidget);
-    });
-  });
+  // There is no rating step to test here any more. The honest-ask rules that
+  // used to be pinned in this file — no bundled quotes, no star picker, no
+  // dead button — moved with the ask to the Survived screen:
+  // `survived_review_ask_test.dart`. That onboarding never asks at all is
+  // `review_ask_placement_test.dart` (App Store Guideline 5.6.3, Sep 11 2026).
 
   group('naming the coach', () {
     testWidgets('offers the default without forcing a choice', (tester) async {
