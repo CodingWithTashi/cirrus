@@ -59,34 +59,51 @@ class CoachMemoriesScreen extends ConsumerWidget {
             retryLabel: l10n.moderationRetry,
             onRetry: () => ref.invalidate(coachMemoriesProvider),
           ),
-          data: (items) => ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            children: [
-              Text(l10n.memoriesIntro(coach), style: LpType.body13(lp.textSecondary)),
-              const SizedBox(height: 18),
-              if (journey != null) ...[
-                _SectionHeader(label: l10n.memoriesSectionKnows(coach)),
-                const SizedBox(height: 10),
-                _FactsCard(facts: _facts(context, journey, snap, locale)),
-                const SizedBox(height: 24),
-              ],
-              _SectionHeader(label: l10n.memoriesSectionTold(coach)),
-              const SizedBox(height: 10),
-              if (items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    l10n.memoriesEmpty(coach),
-                    textAlign: TextAlign.center,
-                    style: LpType.body14(lp.textSecondary),
-                  ),
+          data: (items) {
+            // The one sentence that must never carry a Forget button: the
+            // user's own "why", in their words. It is a permanent FACT above —
+            // `ai/memoryCard.ts` prints it into every coach turn from the
+            // journey, unconditionally — so deleting the stored copy changes
+            // nothing about what the coach is handed next turn. Offering the
+            // button anyway, and then saying "Forgotten. {name} won't bring it
+            // up again", is a promise the product cannot keep.
+            final whyWords = journey?.profile.whyWords;
+            final told = [
+              for (final m in items)
+                if (m.text != whyWords) m,
+            ];
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                Text(
+                  l10n.memoriesIntro(coach),
+                  style: LpType.body13(lp.textSecondary),
                 ),
-              for (final memory in items) ...[
-                _MemoryCard(memory: memory),
+                const SizedBox(height: 18),
+                if (journey != null) ...[
+                  _SectionHeader(label: l10n.memoriesSectionKnows(coach)),
+                  const SizedBox(height: 10),
+                  _FactsCard(facts: _facts(context, journey, snap, locale)),
+                  const SizedBox(height: 24),
+                ],
+                _SectionHeader(label: l10n.memoriesSectionTold(coach)),
                 const SizedBox(height: 10),
+                if (told.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      l10n.memoriesEmpty(coach),
+                      textAlign: TextAlign.center,
+                      style: LpType.body14(lp.textSecondary),
+                    ),
+                  ),
+                for (final memory in told) ...[
+                  _MemoryCard(memory: memory),
+                  const SizedBox(height: 10),
+                ],
               ],
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -240,9 +257,7 @@ class _MemoryCardState extends ConsumerState<_MemoryCard> {
     final l10n = context.l10n;
     setState(() => _busy = true);
     try {
-      await ref
-          .read(coachRepositoryProvider)
-          .forgetMemory(widget.memory.id);
+      await ref.read(coachRepositoryProvider).forgetMemory(widget.memory.id);
     } on Object {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -254,9 +269,7 @@ class _MemoryCardState extends ConsumerState<_MemoryCard> {
     if (!mounted) return;
     showLpSnack(
       context,
-      l10n.memoriesForgotten(
-        ref.read(coachNameProvider) ?? l10n.coachName,
-      ),
+      l10n.memoriesForgotten(ref.read(coachNameProvider) ?? l10n.coachName),
     );
     ref.invalidate(coachMemoriesProvider);
   }

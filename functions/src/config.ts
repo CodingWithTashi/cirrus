@@ -79,6 +79,20 @@ export const COACH_MIN_INSTANCES = defineInt('COACH_MIN_INSTANCES', {
 export const ALLOWANCE_DEFAULTS = {
   freeCoachMessages: 5,
   premiumCoachMessages: 100,
+  /**
+   * docs/04 §7: "Free: 5 coach msgs/day + 1 panic session/day." The panic
+   * session is an allowance ON TOP of the five, for the one moment the product
+   * exists for — and it was counted (`panicUsage`) and then read by nothing, so
+   * every panic-mode turn spent an ordinary coach message instead. Someone at
+   * 9/10 intensity who had used their five that day was told to come back
+   * tomorrow.
+   *
+   * Expressed in MESSAGES because that is the unit the coach meters in. One is
+   * the spec's own number read literally; a craving runs 15-20 minutes, so if
+   * the founder wants a session to buy more than a single exchange, this param
+   * is the one line to change.
+   */
+  freePanicMessages: 1,
   freePosts: 1,
   premiumPosts: 3,
   sosPosts: 3,
@@ -116,6 +130,9 @@ export const PREMIUM_DAILY_COACH_MESSAGES = defineInt(
   'PREMIUM_DAILY_COACH_MESSAGES',
   {default: ALLOWANCE_DEFAULTS.premiumCoachMessages},
 );
+export const FREE_DAILY_PANIC_MESSAGES = defineInt('FREE_DAILY_PANIC_MESSAGES', {
+  default: ALLOWANCE_DEFAULTS.freePanicMessages,
+});
 
 /**
  * Community posting (docs/12 §4.1). Posting used to be refused outright for a
@@ -176,6 +193,8 @@ export const readAllowance = {
       PREMIUM_DAILY_COACH_MESSAGES,
       ALLOWANCE_DEFAULTS.premiumCoachMessages,
     ),
+  freePanicMessages: (): number =>
+    allowance(FREE_DAILY_PANIC_MESSAGES, ALLOWANCE_DEFAULTS.freePanicMessages),
   freePosts: (): number =>
     allowance(FREE_DAILY_POSTS, ALLOWANCE_DEFAULTS.freePosts),
   premiumPosts: (): number =>

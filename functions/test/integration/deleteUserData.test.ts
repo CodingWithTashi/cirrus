@@ -235,6 +235,51 @@ describe('deleteUserData — the reader trail', () => {
     expect((await postsCol().doc(postId).get()).get('reportCount')).toBe(2);
   });
 
+  it('sweeps past a single page — reactions are uncapped', async () => {
+    // Posts are capped at three a day, so the authorship sweeps were always
+    // bounded in practice. Reactions and replies are not: a heavy reader
+    // accumulates them without limit. An unpaged `.get()` would materialise
+    // the lot inside a 512MiB function, and a sweep that stopped at one page
+    // would leave the rest of the trail behind — which is the failure that
+    // looks like success, because the first 200 really do disappear.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'the post everyone reacted to', tag: 'win'}, 'bob'),
+    );
+    const reactors = postsCol().doc(postId).collection('reactors');
+
+    // One post cannot hold two reactions from the same person, so the volume
+    // is spread across sibling posts' subcollections — which is also what
+    // makes this a genuine collection-GROUP sweep.
+    const TOTAL = 250;
+    for (let i = 0; i < TOTAL; i += 100) {
+      const batch = db.batch();
+      for (let j = i; j < Math.min(i + 100, TOTAL); j += 1) {
+        batch.set(
+          postsCol().doc(`seeded-${j}`).collection('reactors').doc('alice'),
+          {uid: 'alice', emoji: '\u{1F525}'},
+        );
+      }
+      await batch.commit();
+    }
+    await reactors.doc('alice').set({uid: 'alice', emoji: '\u{1F4AA}'});
+
+    const before = await db
+      .collectionGroup('reactors')
+      .where('uid', '==', 'alice')
+      .get();
+    expect(before.size).toBe(TOTAL + 1);
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    const after = await db
+      .collectionGroup('reactors')
+      .where('uid', '==', 'alice')
+      .get();
+    expect(after.empty, 'the sweep stopped before the end').toBe(true);
+  }, 120_000);
+
   it('leaves no document anywhere still carrying the uid', async () => {
     // The catch-all. Anything new that files a row under `posts` keyed by the
     // reader rather than the author has to be added to the erasure path, and

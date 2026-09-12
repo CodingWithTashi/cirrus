@@ -64,6 +64,12 @@ describe('allowance', () => {
     expect(ALLOWANCE_DEFAULTS).toEqual({
       freeCoachMessages: 5,
       premiumCoachMessages: 100,
+      // docs/04 §7: "5 coach msgs/day + 1 panic session/day". The panic half
+      // was specified, counted in `panicUsage` and then read by nothing, so
+      // every panic turn came out of the five — somebody at 9/10 intensity
+      // who had spent them was told to come back tomorrow, on the screen that
+      // had just offered them Ember.
+      freePanicMessages: 1,
       freePosts: 1,
       premiumPosts: 3,
       sosPosts: 3,

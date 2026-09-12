@@ -333,7 +333,7 @@ class PostCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (post.replies.isNotEmpty) ...[
+                  if (post.replyTotal > 0) ...[
                     const SizedBox(width: 10),
                     // The real count. `replyingNow` used to live here: a
                     // fabricated 3 on your own SOS post and 12 in the demo
@@ -342,17 +342,24 @@ class PostCard extends ConsumerWidget {
                     // have. A number that is only ever invented is worse than
                     // no number, especially one claiming people are with you.
                     Text(
-                      l10n.communityRepliedCount(post.replies.length),
+                      l10n.communityRepliedCount(post.replyTotal),
                       style: LpType.caption11(lp.textSecondary),
                     ),
                   ],
                 ],
               )
             else
+              // The PALETTE, not the keys on the document. Drawing a pill per
+              // key meant a post created on the real backend — where
+              // `reactions` starts empty — showed no pills at all, so there
+              // was nothing to tap and reactions were unreachable in
+              // production. `_ReactionPill` already renders a zero count (a
+              // key is decremented to 0, never removed, when someone takes
+              // their reaction back), so this introduces no new state.
               Row(
                 children: [
-                  for (final entry in post.reactions.entries) ...[
-                    _ReactionPill(post: post, emoji: entry.key),
+                  for (final emoji in CommunityReactions.palette) ...[
+                    _ReactionPill(post: post, emoji: emoji),
                     const SizedBox(width: 8),
                   ],
                 ],
@@ -878,7 +885,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
 /// banner would look busy, on a screen whose entire value is that someone
 /// really is there. Zero means zero, and the banner does not render.
 int _backupCount(Post post) =>
-    post.replies.length + post.reactions.values.fold(0, (sum, n) => sum + n);
+    post.replyTotal + post.reactions.values.fold(0, (sum, n) => sum + n);
 
 /// Frame 45 — SOS rally: live backup banner, replies, poster's update.
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -1127,8 +1134,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           // end. No counter: 300 is far past a normal reply,
                           // so the limit should be invisible until it is hit.
                           maxLength: PostQuality.maxReplyChars,
-                          buildCounter: (_, {required currentLength,
-                              required isFocused, required maxLength}) => null,
+                          buildCounter:
+                              (
+                                _, {
+                                required currentLength,
+                                required isFocused,
+                                required maxLength,
+                              }) => null,
                           onSubmitted: (_) => _send(post),
                           decoration: InputDecoration(
                             border: InputBorder.none,

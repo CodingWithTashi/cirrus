@@ -248,3 +248,73 @@ describe('ENTITLEMENT_MODE — the pre-monetization switch', () => {
     // here is what removes the 5-a-day cap.
   });
 });
+
+/**
+ * The allowance window, and why it only moves forward.
+ *
+ * Every day key here is derived from the timezone the CLIENT declares on the
+ * request, and any real IANA zone is accepted — so "today" is a 26-hour range
+ * the caller picks. A usage row remembers one day, so flipping zones used to
+ * reset the counter in BOTH directions, which made every daily cap in the
+ * product unbounded rather than merely doubled. The coach cap is the expensive
+ * one: a claimed message can cost several model calls.
+ *
+ * YESTERDAY is what a caller in Pacific/Niue (UTC-11) sees while a caller in
+ * Pacific/Kiritimati (UTC+14) is already on TODAY — both real zones, both
+ * accepted, at the same instant.
+ */
+describe('the allowance window only moves forward', () => {
+  const YESTERDAY = '2026-08-28';
+
+  it('a spent coach allowance cannot be reset by declaring another zone', async () => {
+    for (let i = 0; i < 3; i++) {
+      expect((await claimCoachMessage('alice', TODAY, 3)).allowed).toBe(true);
+    }
+    expect((await claimCoachMessage('alice', TODAY, 3)).allowed).toBe(false);
+
+    // Flip "west": an earlier key must not open a second allowance.
+    expect((await claimCoachMessage('alice', YESTERDAY, 3)).allowed).toBe(false);
+    // …and flipping back must not either. This was the unbounded half: the
+    // row had been rewritten to the earlier day, so the original key looked
+    // fresh again on the way back.
+    expect((await claimCoachMessage('alice', TODAY, 3)).allowed).toBe(false);
+    expect((await claimCoachMessage('alice', YESTERDAY, 3)).allowed).toBe(false);
+
+    expect((await userDoc('alice').get()).get('aiUsage')).toMatchObject({
+      day: TODAY,
+      msgCount: 3,
+    });
+  });
+
+  it('a real midnight still resets it', async () => {
+    for (let i = 0; i < 3; i++) await claimCoachMessage('alice', TODAY, 3);
+    expect((await claimCoachMessage('alice', TOMORROW, 3)).allowed).toBe(true);
+    expect((await userDoc('alice').get()).get('aiUsage')).toMatchObject({
+      day: TOMORROW,
+      msgCount: 1,
+    });
+  });
+
+  it('leaves the refund rule alone — it spends from its own window', async () => {
+    // `refundCoachMessage` deliberately keeps the STRICT key compare. It is
+    // not client-callable (only `aiCoachChat`, on its own model failure, with
+    // the key it claimed under), so it needs no defence here — and widening it
+    // would re-open the free message the strict compare exists to refuse,
+    // pinned by "ignores a refund aimed at a day that is no longer current".
+    await claimCoachMessage('alice', TODAY, 3);
+    await refundCoachMessage('alice', YESTERDAY);
+    expect((await userDoc('alice').get()).get('aiUsage')).toMatchObject({
+      day: TODAY,
+      msgCount: 1,
+    });
+  });
+
+  it('holds for the panic counter too', async () => {
+    // This one narrows the AI option for the rest of the day, so a flip would
+    // widen it back again.
+    expect(await countPanicSession('alice', TODAY)).toBe(1);
+    expect(await countPanicSession('alice', YESTERDAY)).toBe(2);
+    expect(await countPanicSession('alice', TODAY)).toBe(3);
+    expect(await countPanicSession('alice', TOMORROW)).toBe(1);
+  });
+});

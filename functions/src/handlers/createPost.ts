@@ -20,7 +20,7 @@ import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
 import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeDayN, sanitizeEmoji} from '../lib/guards';
 import {claimDailyPost, tierFor} from '../lib/usage';
-import {POST_TAGS, type PostTag} from '../domain/types';
+import {POST_TAGS, REACTION_EMOJI, type PostTag} from '../domain/types';
 
 /**
  * docs/03 §9: text <= 500 chars, one tag required. The per-day allowance is
@@ -161,8 +161,15 @@ export const createPost = onCall(
       dayN,
       tag,
       text,
-      reactions: {},
+      // Seeded at zero rather than left empty. The feed draws one pill per
+      // key on the post, so an empty map offered nothing to tap and reactions
+      // were unreachable on the real backend entirely — they only ever looked
+      // alive because the demo fixtures ship with counts already on them.
+      reactions: Object.fromEntries(REACTION_EMOJI.map((e) => [e, 0])),
       reportCount: 0,
+      // Seeded so the feed reads a number rather than a missing field on a
+      // post nobody has replied to yet. `onReplyStatus` owns it thereafter.
+      replyCount: 0,
       status: 'pending', // invisible until moderatePost clears it
       createdAt: FieldValue.serverTimestamp(),
     });

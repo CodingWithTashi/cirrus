@@ -199,6 +199,25 @@ describe('sendToUser', () => {
     expect(sendEachForMulticast).not.toHaveBeenCalled();
   });
 
+  it('stays silent when it cannot read whether the user wants this', async () => {
+    // The gate answers three unrelated questions, and a read failure used to
+    // answer all three with maximum permission — `allowed: true`, `quiet:
+    // false` — so a transient Firestore error on `users/{uid}` (a document
+    // four other writers touch) sent a push to somebody who had switched the
+    // category off, loudly, inside their quiet hours. Consent is not a
+    // courtesy, and the inbox row is written independently of all this, so a
+    // suppressed push loses nothing durable.
+    await registerDevice('alice', {token: 'device-1'});
+    const boom = vi
+      .spyOn(db, 'runTransaction')
+      .mockRejectedValueOnce(new Error('14 UNAVAILABLE'));
+
+    await sendToUser('alice', {title: 'hi', body: 'there'}, KIND);
+
+    expect(sendEachForMulticast).not.toHaveBeenCalled();
+    boom.mockRestore();
+  });
+
   it('prunes a dead token from the subcollection', async () => {
     await registerDevice('alice', {token: 'live'});
     await registerDevice('alice', {token: 'dead'});

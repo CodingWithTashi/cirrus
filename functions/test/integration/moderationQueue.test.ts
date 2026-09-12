@@ -194,6 +194,38 @@ describe('resolveModeration', () => {
     );
   });
 
+  it('clears the report counter, so one more tap cannot re-hide it', async () => {
+    // `reportCount` is LIFETIME and the auto-hide tests `>= 3`, so a post that
+    // had ever been hidden and then cleared sat at 3 while live — and the very
+    // next single report re-satisfied the threshold. The founder clears it
+    // again; the next lone tap hides it again. After one review cycle the
+    // effective threshold was permanently ONE, which inverts the rule it
+    // encodes: three, "high enough that one angry reader cannot silence
+    // somebody alone".
+    await seedFlag('p1');
+    await db.collection('posts').doc('p1').update({reportCount: 3});
+    await resolveModeration.run(admin({flagId: 'p1', action: 'allow'}));
+
+    const post = await db.collection('posts').doc('p1').get();
+    expect(post.get('status')).toBe('live');
+    expect(post.get('reportCount')).toBe(0);
+  });
+
+  it('keeps the reporters, so it takes three NEW readers to hide it again', async () => {
+    // The per-reporter dedupe is what makes resetting the count safe: the same
+    // three people cannot simply report again.
+    await seedFlag('p1');
+    await db.collection('posts').doc('p1').update({reportCount: 3});
+    await db.collection('posts').doc('p1')
+      .collection('reporters').doc('carol').set({uid: 'carol', reportedAt: new Date()});
+
+    await resolveModeration.run(admin({flagId: 'p1', action: 'allow'}));
+
+    const reporter = await db.collection('posts').doc('p1')
+      .collection('reporters').doc('carol').get();
+    expect(reporter.exists).toBe(true);
+  });
+
   it("a decision on a post reaches its author's mirror row", async () => {
     // The founder's Allow on a held post is the moment it goes live for
     // everyone — and the moment the author's "in review" chip should go.
@@ -274,6 +306,39 @@ describe('resolveModeration', () => {
     });
     await db.collection('moderation').doc('r9').set({
       postId: 'p1', replyId: 'r9', kind: 'reply', action: 'hold',
+      reason: 'hostile', reviewed: false, createdAt: new Date(),
+    });
+
+    await resolveModeration.run(admin({flagId: 'r9', action: 'allow'}));
+
+    const reply = await db
+      .collection('posts').doc('p1')
+      .collection('replies').doc('r9').get();
+    expect(reply.get('status')).toBe('live');
+    expect(vi.mocked(sendLocalized)).toHaveBeenCalledWith(
+      'author1',
+      'sosReply',
+      '/community/post/p1',
+      expect.objectContaining({tag: 'thread:p1'}),
+      expect.any(Number),
+    );
+  });
+
+  it('publishing a BLOCKED reply notifies too — the model can be wrong', async () => {
+    // The gate used to be `status === 'pending'`, but a reply the classifier
+    // blocked is `blocked`. So the one case where a human overrules the model
+    // in the user's favour published in total silence: somebody mid-craving
+    // posted an SOS, a stranger answered, the classifier misread it, the
+    // founder restored it, and the person it existed for was never told.
+    await db.collection('posts').doc('p1').set({
+      alias: 'a', text: 'sitting outside a gas station', status: 'live', tag: 'sos',
+    });
+    await db.collection('postAuthors').doc('p1').set({uid: 'author1'});
+    await db.collection('posts').doc('p1').collection('replies').doc('r9').set({
+      alias: 'nightbee', text: 'hang in there, drink water', status: 'blocked',
+    });
+    await db.collection('moderation').doc('r9').set({
+      postId: 'p1', replyId: 'r9', kind: 'reply', action: 'block',
       reason: 'hostile', reviewed: false, createdAt: new Date(),
     });
 

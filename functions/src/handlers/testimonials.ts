@@ -74,11 +74,20 @@ function toTestimonial(
   };
 }
 
-async function poolFor(language: string): Promise<Testimonial[]> {
-  const snap = await testimonialsCol()
-    .where('status', '==', 'live')
-    .where('locale', '==', language)
-    .get();
+/**
+ * Every live testimonial, whatever language it is in.
+ *
+ * Deliberately NOT filtered by locale (founder decision, Sep 12 2026). The
+ * quotes are real beta-tester reviews and there are only ever a handful, so
+ * the rows themselves are the whole pool: showing them is worth more than
+ * matching them to the reader's language, and a locale filter with no
+ * translated rows behind it simply hid them from four of the five shipped
+ * languages. `locale` stays on the documents, and `sourceLocale` /
+ * `translationOf` stay in the schema, so per-language selection can come back
+ * the day there are rows to select from.
+ */
+async function livePool(): Promise<Testimonial[]> {
+  const snap = await testimonialsCol().where('status', '==', 'live').get();
   return snap.docs
     .map((d) => toTestimonial(d.id, d.data()))
     .filter((t): t is Testimonial => t !== null);
@@ -89,22 +98,17 @@ export const matchedTestimonials = onCall(
   async (
     request,
   ): Promise<{testimonials: {id: string; text: string}[]}> => {
-    const caller = requireCaller(request);
+    // Auth only. Nothing about the answer depends on WHO is asking — the
+    // tailoring comes from the payload below — but this collection is not
+    // open to an unauthenticated caller.
+    requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
 
-    // 'pt-BR' and 'pt' draw on the same rows; region does not change the quote.
-    const language = caller.locale.split('-')[0] ?? 'en';
-
-    let pool = await poolFor(language);
-    // Fewer than two in their language reads as a bug on screen — one tailored
-    // card beside one generic one looks broken — so fall back wholesale.
-    if (pool.length < LIMIT && language !== 'en') {
-      pool = await poolFor('en');
-    }
+    const pool = await livePool();
+    // Still all-or-nothing: one card beside an empty one reads as a bug, and
+    // the screen is built to stand on its own with no quotes at all.
     if (pool.length < LIMIT) {
-      // The client keeps its bundled quotes. Better two honest generic ones
-      // than a half-filled screen.
-      log.info('testimonials.pool_too_small', {size: pool.length, language});
+      log.info('testimonials.pool_too_small', {size: pool.length});
       return {testimonials: []};
     }
 

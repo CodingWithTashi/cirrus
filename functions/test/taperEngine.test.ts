@@ -135,6 +135,70 @@ describe('adaptive layer (docs/03 §3.3)', () => {
     expect(advice.limitTomorrow).toBe(limitFor(p, 6));
   });
 
+  it('will not overrule the curve off fewer than three days', () => {
+    // docs/03 §3.3 computes adherence over the TRAILING THREE DAYS. It used to
+    // fire on one — and day 1 is a PARTIAL day for every user, because
+    // onboarding sets startDate to whenever they happened to finish. Somebody
+    // who onboarded at 9pm and logged two puffs before bed was advised a
+    // day-2 limit of 2, on day 2 of thirty.
+    const p = plan();
+    for (const window of [
+      [{puffs: 2, limit: 190}],
+      [{puffs: 2, limit: 190}, {puffs: 3, limit: 180}],
+    ]) {
+      const advice = adviseTomorrow(p, 2, window);
+      expect(advice.adherence).toBe('crushing');
+      expect(advice.limitTomorrow).toBe(limitFor(p, 3));
+    }
+  });
+
+  it('never walks the limit into the endgame before its time', () => {
+    // The other half of the same hard rule: "limit never < the fixed 3-day
+    // floor sequence until its time". The tail is [..., <=3, <=1, 0], so 4 is
+    // the first value that is not part of it.
+    const p = plan();
+    const quiet = [
+      {puffs: 0, limit: 140},
+      {puffs: 1, limit: 138},
+      {puffs: 0, limit: 136},
+    ];
+    const advice = adviseTomorrow(p, 7, quiet);
+    expect(advice.adherence).toBe('crushing');
+    expect(advice.limitTomorrow).toBeGreaterThanOrEqual(4);
+    expect(advice.limitTomorrow).toBeLessThanOrEqual(limitFor(p, 8));
+  });
+
+  it('lets the endgame itself go below the floor, on schedule', () => {
+    // The floor is "until its time" — at P-2 onward the fixed tail IS the
+    // plan, and the curve is what caps it.
+    const p = plan();
+    const quiet = [
+      {puffs: 0, limit: 5},
+      {puffs: 0, limit: 3},
+      {puffs: 0, limit: 3},
+    ];
+    for (const d of [28, 29]) {
+      expect(adviseTomorrow(p, d, quiet).limitTomorrow).toBeLessThanOrEqual(
+        limitFor(p, d + 1),
+      );
+    }
+  });
+
+  it('never lifts the limit ABOVE the curve to satisfy the floor', () => {
+    // A small baseline puts the whole curve under 4 early on. "Never above
+    // curve" is the other half of the paragraph and outranks the floor.
+    const small = plan({baselinePuffsPerDay: 12});
+    const quiet = [
+      {puffs: 0, limit: 4},
+      {puffs: 0, limit: 4},
+      {puffs: 0, limit: 3},
+    ];
+    for (let d = 2; d < 29; d++) {
+      const advice = adviseTomorrow(small, d, quiet);
+      expect(advice.limitTomorrow).toBeLessThanOrEqual(limitFor(small, d + 1));
+    }
+  });
+
   it('never advises a limit above today (except when struggling)', () => {
     const p = plan();
     for (let d = 1; d < 29; d++) {

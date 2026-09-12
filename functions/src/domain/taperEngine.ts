@@ -14,6 +14,30 @@
  */
 import {totalDays, type QuitPlan} from './types';
 
+/**
+ * How many days the adaptive override needs before it may overrule the curve.
+ *
+ * docs/03 §3.3 computes adherence over the TRAILING THREE DAYS, and the mean
+ * is only meaningful over that many. It used to fire on `recent.length > 0`,
+ * so ONE day set the whole of tomorrow — and day 1 is a partial day for every
+ * user by construction, because onboarding sets `startDate` to whenever they
+ * happened to finish. Somebody who onboarded at 9pm and logged two puffs
+ * before bed was told their day-2 limit was 2.
+ *
+ * Below this the curve stands, which is the correct answer for a plan nobody
+ * has enough evidence about yet.
+ */
+const MIN_ADAPTIVE_WINDOW = 3;
+
+/**
+ * The lowest limit the adaptive layer may advise before the plan's own endgame.
+ *
+ * The fixed tail is `[…, <=3, <=1, 0]` at days P-2, P-1 and P, so 4 is the
+ * first value that is not part of it — "until its time", in the words of the
+ * spec's hard rule.
+ */
+const TAIL_FLOOR = 4;
+
 /** Daily limit for 1-based day [d] of a plan. */
 export function limitFor(plan: QuitPlan, d: number): number {
   if (plan.method === 'coldTurkey') return 0;
@@ -112,11 +136,25 @@ export function adviseTomorrow(
   let limitTomorrow = curveTomorrow;
   let stretchDelta = 0;
 
-  if (adherence === 'crushing' && recent.length > 0) {
+  if (adherence === 'crushing' && recent.length >= MIN_ADAPTIVE_WINDOW) {
     // Ride the momentum, but never below the curve's own pace.
     const meanActual =
       recent.reduce((acc, d) => acc + d.puffs, 0) / recent.length;
     limitTomorrow = Math.min(curveTomorrow, Math.round(meanActual * 0.95));
+
+    // docs/03 §3.3, the hard rule that had no implementation: "limit never <
+    // the fixed 3-day floor sequence until its time". Without it the mean of
+    // a quiet stretch walked the limit straight into the endgame — a day-2
+    // user who logged two puffs before bed was advised a limit of 2, on day 2
+    // of thirty. Capped by the curve as well, because "never above curve" is
+    // the other half of the same paragraph and outranks this floor whenever a
+    // small baseline puts the curve underneath it.
+    if (todayDayNumber + 1 < totalDays(plan) - 2) {
+      limitTomorrow = Math.max(
+        limitTomorrow,
+        Math.min(curveTomorrow, TAIL_FLOOR),
+      );
+    }
   } else if (adherence === 'struggling' && strugglingTwoDays) {
     const yesterday = window.at(-1);
     if (yesterday) {

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
+import 'package:last_puff/domain/repositories/repositories.dart';
 
 import '../helpers.dart';
 
@@ -86,11 +87,7 @@ void main() {
         vm.state = vm.state.copyWith(step: ObStep.birthYear);
         typeYear(vm, DateTime.now().year - age);
         vm.next();
-        expect(
-          c.read(onboardingProvider).step,
-          expected,
-          reason: 'age $age',
-        );
+        expect(c.read(onboardingProvider).step, expected, reason: 'age $age');
       }
     });
 
@@ -126,7 +123,9 @@ void main() {
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
       // "28", not "1998" — the thing people actually do on this screen.
-      vm..typeBirthDigit(2)..typeBirthDigit(8);
+      vm
+        ..typeBirthDigit(2)
+        ..typeBirthDigit(8);
 
       expect(c.read(onboardingProvider).canContinue, isTrue);
       expect(c.read(onboardingProvider).birthYear, DateTime.now().year - 28);
@@ -141,7 +140,9 @@ void main() {
       final c = container();
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
-      vm..typeBirthDigit(1)..typeBirthDigit(9);
+      vm
+        ..typeBirthDigit(1)
+        ..typeBirthDigit(9);
 
       expect(c.read(onboardingProvider).canContinue, isFalse);
 
@@ -159,7 +160,9 @@ void main() {
       final c = container();
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
-      vm..typeBirthDigit(1)..typeBirthDigit(5);
+      vm
+        ..typeBirthDigit(1)
+        ..typeBirthDigit(5);
 
       vm.next();
 
@@ -255,9 +258,7 @@ void main() {
       // card, so anything dropped here is a fact the coach can never know.
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.profile.gender, Gender.woman);
@@ -280,9 +281,7 @@ void main() {
     test('the journey starts today, on day one', () async {
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.plan.dayNumber(DateTime.now()), 1);
@@ -306,9 +305,7 @@ void main() {
       // progress toward a stranger's holiday.
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.goals, isEmpty);
@@ -320,12 +317,69 @@ void main() {
     test('the draft is cleared so a second run starts clean', () async {
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       expect(c.read(onboardingProvider).step, ObStep.welcome);
       expect(c.read(onboardingProvider).gender, isNull);
     });
   });
+
+  group('the D3 prefetch', () {
+    test('fires once, on leaving worries — not on every quiz step', () async {
+      // Seven of these cases used to be EMPTY, and an empty case falls through
+      // to the next non-empty one — which was `worries: _prefetchRatingStep()`.
+      // So the callable ran seven times per onboarding, six of them before
+      // `why` or `worries` had been answered (the two heaviest tailoring
+      // signals), and the responses race, so an early untailored answer could
+      // land last and overwrite the tailored one.
+      final repo = _CountingTestimonials();
+      final c = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(premium: false),
+          testimonialsRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(c.dispose);
+      final vm = c.read(onboardingProvider.notifier);
+
+      for (final (step, answer) in <(ObStep, void Function())>[
+        (ObStep.gender, () => vm.selectGender(Gender.man)),
+        (ObStep.tried, () => vm.selectAttempts(QuitAttempts.never)),
+        (ObStep.frequency, () => vm.selectFrequency(VapeFrequency.daily)),
+        (ObStep.strength, () => vm.selectStrength(NicStrength.mg20)),
+        (ObStep.firstPuff, () => vm.selectFirstPuff(FirstPuffWindow.hourPlus)),
+        (ObStep.why, () => vm.toggleWhy(WhyChip.money)),
+      ]) {
+        vm.state = vm.state.copyWith(step: step);
+        answer();
+        vm.next();
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(repo.calls, 0, reason: 'nothing before the tags exist');
+
+      vm.state = vm.state.copyWith(step: ObStep.worries);
+      vm.toggleWorry(WorryChip.stress);
+      vm.next();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.calls, 1);
+    });
+  });
+}
+
+/// Counts how many times the D3 prefetch reached the backend.
+class _CountingTestimonials implements TestimonialsRepository {
+  int calls = 0;
+
+  @override
+  Future<List<Testimonial>> matched({
+    required Set<WhyChip> whys,
+    required Set<WorryChip> worries,
+    QuitAttempts? attempts,
+    Gender? gender,
+    required DependenceLevel dependence,
+  }) async {
+    calls++;
+    return const [];
+  }
 }

@@ -25,6 +25,7 @@
     "test:all": "npm run test && npm run test:rules && npm run test:integration",
     "test:integration": "firebase emulators:exec --only firestore,auth --project demo-cirrus \"vitest run --config vitest.integration.config.ts\"",
     "seed:testimonials": "npm run build && node lib/tools/seedTestimonials.js",
+    "backfill:replyCounts": "npm run build && node lib/tools/backfillReplyCounts.js",
     "eval:coach": "npm run build && node lib/tools/coachEval.js",
     "eval:moderation": "npm run build && node lib/tools/moderationEval.js"
   },

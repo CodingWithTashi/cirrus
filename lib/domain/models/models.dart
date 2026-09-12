@@ -135,7 +135,6 @@ class QuitPlan {
     strength: strength ?? this.strength,
     stretchDays: stretchDays ?? this.stretchDays,
   );
-
 }
 
 class DayLog {
@@ -266,6 +265,7 @@ class Post {
     this.reactions = const {},
     this.myReactions = const {},
     this.replies = const [],
+    this.replyCount,
     this.isMine = false,
     this.hidden = false,
     this.status = PostStatus.live,
@@ -287,7 +287,19 @@ class Post {
   /// emoji → count ("💪" → 214).
   final Map<String, int> reactions;
   final Set<String> myReactions;
+
+  /// The replies actually loaded. Populated for a thread; EMPTY in the feed,
+  /// which needs only a number — see [replyCount].
   final List<Reply> replies;
+
+  /// Live replies as the SERVER counts them (`posts/{id}.replyCount`, kept by
+  /// the `onReplyStatus` trigger).
+  ///
+  /// Null when nobody has told us: a post written before the field existed, or
+  /// the fake backend, where the loaded list IS the whole truth. [replyTotal]
+  /// is what callers should read.
+  final int? replyCount;
+
   final bool isMine;
 
   /// Hidden by report threshold or block (moderation UX).
@@ -300,11 +312,21 @@ class Post {
   /// their feed, wearing its state, so it can never silently disappear.
   bool get isLive => status == PostStatus.live;
 
+  /// How many replies to SHOW — the server's count when there is one, else the
+  /// replies we hold.
+  ///
+  /// The feed reads this and never touches [replies]. It used to read
+  /// `replies.length`, which meant `fetchPosts` had to download every live
+  /// reply in the app on every open to render a number; see
+  /// `functions/src/lib/replyCount.ts` for what that cost.
+  int get replyTotal => replyCount ?? replies.length;
+
   Post copyWith({
     String? id,
     Map<String, int>? reactions,
     Set<String>? myReactions,
     List<Reply>? replies,
+    int? replyCount,
     bool? hidden,
     PostStatus? status,
   }) => Post(
@@ -319,6 +341,7 @@ class Post {
     reactions: reactions ?? this.reactions,
     myReactions: myReactions ?? this.myReactions,
     replies: replies ?? this.replies,
+    replyCount: replyCount ?? this.replyCount,
     isMine: isMine,
     hidden: hidden ?? this.hidden,
     status: status ?? this.status,
@@ -664,11 +687,7 @@ enum MemoryKind { person, trigger, motivation, milestone, preference, context }
 /// floats, and a memory the user cannot read is not one they can meaningfully
 /// consent to.
 class CoachMemory {
-  const CoachMemory({
-    required this.id,
-    required this.text,
-    required this.kind,
-  });
+  const CoachMemory({required this.id, required this.text, required this.kind});
 
   final String id;
 

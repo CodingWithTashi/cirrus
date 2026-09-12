@@ -43,6 +43,17 @@ async function clearFirestore(): Promise<void> {
   if (!res.ok) throw new Error(`emulator clear failed: ${res.status}`);
 }
 
+/**
+ * The `recalcHourUtc` of a user whose report hour is NOW, at [SUNDAY].
+ *
+ * That field marks the UTC hour of the user's local 01:00 — right for
+ * `taperRecalc`, wrong for anything that ends in a notification, because quiet
+ * hours default to 23:00-08:00 and 01:00 is inside them for everybody. The
+ * report fans out over local 09:00-11:00 instead, so a user due now is one
+ * whose local 01:00 was eight hours ago.
+ */
+const REPORT_SLOT = (SUNDAY.getUTCHours() - 9 + 1 + 24) % 24;
+
 const day = (puffs: number) => ({
   puffs,
   limit: 150,
@@ -90,7 +101,7 @@ async function seedUser(
   await userDoc(uid).set({
     tz: 'UTC',
     locale: 'en',
-    recalcHourUtc: SUNDAY.getUTCHours(),
+    recalcHourUtc: REPORT_SLOT,
     entitlement: {tier: 'premium'},
     ...over,
   });
@@ -173,6 +184,62 @@ describe('who gets a report', () => {
     expect(await reports('alice')).toBe(0);
   });
 
+  it('reports in a WAKING hour, never at the 01:00 recalc slot', async () => {
+    // The push that announces the report is the whole reason it is worth
+    // sending, and quiet hours default to 23:00-08:00 — so fanning out at the
+    // user's local 01:00 meant `insightReady` was silenced 100% of the time,
+    // by construction. A paying subscriber's flagship weekly feature announced
+    // itself with a notification they would essentially never see.
+    await seedUser('one-am', {recalcHourUtc: SUNDAY.getUTCHours()});
+    await run();
+    expect(await reports('one-am')).toBe(0);
+  });
+
+  it('covers three local hours, so a long run is finished by the next', async () => {
+    // 09:00, 10:00 and 11:00 local. One pass cannot outlive `timeoutSeconds`,
+    // and being killed mid-page always lost the SAME lexicographic tail.
+    for (const [uid, local] of [['at9', 9], ['at10', 10], ['at11', 11]] as const) {
+      await seedUser(uid, {
+        recalcHourUtc: (SUNDAY.getUTCHours() - local + 1 + 24) % 24,
+      });
+    }
+    await run();
+    expect(await reports('at9')).toBe(1);
+    expect(await reports('at10')).toBe(1);
+    expect(await reports('at11')).toBe(1);
+  });
+
+  it('does the work once, however many of those hours run', async () => {
+    // What makes the three passes affordable: anyone already holding this
+    // week's report is skipped before the journey read, so a later hour costs
+    // one read rather than a read plus a premium model call.
+    await seedUser('alice');
+    await run();
+    expect(generate).toHaveBeenCalledTimes(1);
+
+    await run();
+    await run();
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(await reports('alice')).toBe(1);
+  });
+
+  it('writes the report in the reader language, not in English', async () => {
+    // The prompt carried no language directive and its only other input is
+    // numbers and English enum names, so every report came back in English —
+    // in an app shipping es/fr/de/pt that has been recording `locale` all
+    // along for exactly this. The push is worse: it deliberately uses the
+    // report's OWN headline as its copy, on the stated grounds that the report
+    // is "generated in the user's own language".
+    await seedUser('sofia', {locale: 'es-ES'});
+    await run();
+
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemInstruction: expect.stringContaining('es-ES'),
+      }),
+    );
+  });
+
   it('skips a user for whom it is not Sunday yet', async () => {
     // Their Sunday, not UTC's. Kiritimati is +14: still Saturday there when
     // it is Sunday noon in UTC.
@@ -203,6 +270,49 @@ describe('when it cannot say anything true', () => {
 
     expect(await reports('alice')).toBe(0);
     expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('does not count days the user never logged toward the signal gate', async () => {
+    // An unlogged day carries `puffs: 0`, so seven of them looked like a
+    // flawless week. The gate passed and the model, told to report "the
+    // week's best moment with real numbers", wrote exactly what it saw — on
+    // the very screen that was rebuilt to delete authored findings because
+    // invented statistics wearing the user's name break the brand rule.
+    await seedUser('alice');
+    const days: Record<string, unknown> = {};
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(SUNDAY.getTime() - i * 86_400_000);
+      days[d.toISOString().slice(0, 10)] = {
+        ...day(0),
+        puffs: 0,
+        vapeFreeConfirmed: false, // opened the app, never logged
+      };
+    }
+    await journeyDoc('alice').update({days});
+    await run();
+
+    expect(await reports('alice')).toBe(0);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('still reports on a week of CONFIRMED vape-free days', async () => {
+    // The other side of the rule: zero puffs the user confirmed is the best
+    // week there is, and must absolutely still earn a report.
+    await seedUser('alice');
+    const days: Record<string, unknown> = {};
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(SUNDAY.getTime() - i * 86_400_000);
+      days[d.toISOString().slice(0, 10)] = {
+        ...day(0),
+        puffs: 0,
+        vapeFreeConfirmed: true,
+      };
+    }
+    await journeyDoc('alice').update({days});
+    await run();
+
+    expect(generate).toHaveBeenCalled();
+    expect(await reports('alice')).toBe(1);
   });
 
   it('skips silently when the model returns something unparseable', async () => {

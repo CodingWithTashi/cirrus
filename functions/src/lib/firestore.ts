@@ -18,6 +18,7 @@
  */
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {
+  FieldPath,
   FieldValue,
   Timestamp,
   getFirestore,
@@ -34,7 +35,7 @@ if (getApps().length === 0) {
 
 export const db = getFirestore();
 
-export {FieldValue, Timestamp};
+export {FieldPath, FieldValue, Timestamp};
 
 // --- Client-owned ----------------------------------------------------------
 
@@ -265,6 +266,13 @@ export interface UserDoc {
     readonly updatedAt?: Timestamp;
   };
   readonly panicUsage?: DailyCounter;
+  /**
+   * Panic-mode coach messages today — the free tier's allowance ON TOP of its
+   * five ordinary ones (docs/04 §7). Its own key so it can neither be drained
+   * by ordinary chat nor drain it; [panicUsage] above counts SESSIONS and is
+   * what decides whether the AI option is offered at all.
+   */
+  readonly panicMsgUsage?: DailyCounter;
   /** docs/03 §9 community post cap. Same shape, same rollover rule. */
   readonly postUsage?: DailyCounter;
   /**

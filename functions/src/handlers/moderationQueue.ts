@@ -159,6 +159,9 @@ export const resolveModeration = onCall(
         : postsCol().doc(postId);
     const targetSnap = await target.get();
     const wasPending = targetSnap.exists && targetSnap.get('status') === 'pending';
+    // Whether it was VISIBLE, which is the question the reply notification
+    // below actually turns on — `pending` is not the only invisible state.
+    const wasLive = targetSnap.exists && targetSnap.get('status') === 'live';
 
     // Held content cannot be shrugged at. Dismiss only marks the row
     // reviewed, and on a `pending` target that strands it invisible with
@@ -176,15 +179,35 @@ export const resolveModeration = onCall(
     // dropped the row from the queue with the content's status unchanged.
     if (action !== null && targetSnap.exists) {
       const status = action === 'block' ? 'blocked' : 'live';
-      await target.update({status});
+      // The counter goes back to zero with the decision. `reportCount` is
+      // LIFETIME and the auto-hide tests `>= 3`, so a post that had ever been
+      // hidden and then cleared sat at 3 while live — and the very next single
+      // report re-satisfied the threshold, flipped it back to `pending`, and
+      // re-opened this row. The founder clears it again; the next lone tap
+      // hides it again. After one review cycle the effective threshold was
+      // permanently ONE, which is the opposite of the rule it encodes: three,
+      // "high enough that one angry reader cannot silence somebody alone".
+      //
+      // The `reporters` subcollection is deliberately NOT cleared. That
+      // per-reporter dedupe is what makes this reset safe: the same three
+      // people cannot simply report again, so hiding it once more takes three
+      // genuinely NEW readers disagreeing with the founder.
+      await target.update({status, reportCount: 0});
       // A post's author learns the founder's decision the same way they
       // learned the classifier's: through their own mirror row.
       if (kind !== 'reply') await mirrorPostStatus(postId, status);
-      // A held reply the founder just published: the SOS author is owed the
+      // A reply the founder just published: the SOS author is owed the
       // "someone answered" push the trigger rightly skipped while the reply
-      // was invisible. Only on a pending→live transition — a `flag` reply
-      // was already live and already pushed.
-      if (action === 'allow' && kind === 'reply' && wasPending && replyId !== null) {
+      // was invisible.
+      //
+      // Gated on "was not visible", not on "was pending". A reply the model
+      // BLOCKED is `blocked`, not `pending`, so the founder overturning that
+      // call published it in total silence — somebody mid-craving posted an
+      // SOS, a stranger answered, the classifier misread it, a human restored
+      // it, and the one person the reply existed for was never told. The
+      // exclusion this guard is really for is a `flag` reply, which was live
+      // all along and already pushed.
+      if (action === 'allow' && kind === 'reply' && !wasLive && replyId !== null) {
         await notifyReply(postId, replyId);
       }
     }

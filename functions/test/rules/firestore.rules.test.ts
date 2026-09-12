@@ -289,7 +289,49 @@ describe('posts/{id}/reactors — one document per person', () => {
   it('lets someone write their own reaction', async () => {
     await assertSucceeds(
       setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
-        emoji: 'fire',
+        emoji: '\u{1F525}',
+        uid: BOB,
+      }),
+    );
+  });
+
+  it('refuses any emoji outside the palette', async () => {
+    // This document is written CLIENT-DIRECT — the one piece of text a reader
+    // puts on somebody else's post without passing `createPost`, the
+    // prefilter, the classifier or the slur check. Unconstrained it rendered
+    // verbatim as a pill in every reader's feed, with no report path and no
+    // way for the author to remove it.
+    for (const emoji of [
+      'fire', // not an emoji at all
+      'BUY 50MG PODS t.me/xyz', // the advert case
+      '\u{1F600}', // a real emoji, but not one of ours
+      '',
+    ]) {
+      await assertFails(
+        setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
+          emoji,
+          uid: BOB,
+        }),
+      );
+    }
+  });
+
+  it('refuses an emoji containing a dot, which would nest the map', async () => {
+    // `update()` reads a string key as a dot-separated field path, so this
+    // turned `reactions` into `{a: {b: 1}}` and every client then threw
+    // casting it to Map<String,int> — the community tab dead for everyone.
+    await assertFails(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
+        emoji: 'a.b',
+        uid: BOB,
+      }),
+    );
+  });
+
+  it('refuses a non-string emoji', async () => {
+    await assertFails(
+      setDoc(doc(bob(), 'posts', 'livePost', 'reactors', BOB), {
+        emoji: 42,
         uid: BOB,
       }),
     );

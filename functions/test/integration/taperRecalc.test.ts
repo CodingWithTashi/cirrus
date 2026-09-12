@@ -165,6 +165,84 @@ describe('taperRecalc.recalcOne', () => {
     expect(advice.stretchDelta).toBe(0);
   });
 
+  it('does not read silence as a flawless day', async () => {
+    // An unlogged day carries `puffs: 0` and used to arrive here at face
+    // value: a ratio of 0 classifies as "crushing" and a mean of 0 sets
+    // tomorrow, so a brand-new user who never tapped LOG PUFF was advised a
+    // limit of 0. Those rows are minted routinely — `InitialJourney` gives
+    // every account one on day 1, and a mood check-in or a survived craving
+    // mints one too.
+    const days: Record<string, unknown> = {};
+    for (let back = 3; back >= 1; back--) {
+      days[dayKey(-back)] = {
+        puffs: 0,
+        limit: limitFor(PLAN, TODAY_DAY_NUMBER - back),
+        hourBuckets: {},
+        cravingsSurvived: 0,
+        vapeFreeConfirmed: false, // never logged, never confirmed
+        repairTokenUsed: false,
+      };
+    }
+    await journeyDoc('alice').set({
+      profile: {alias: 'SteadyFalcon42', avatarEmoji: '🦊', tier: 'free'},
+      plan: PLAN,
+      days,
+      cravingsSurvivedTotal: 0,
+      repairTokens: 0,
+      longestStreak: 0,
+      goals: [],
+      earnedBadges: [],
+      day1TasksDone: [],
+      moodCheckIns: 0,
+    });
+
+    await recalcOne('alice', 'UTC');
+
+    const advice = (await userDoc('alice').get()).get('planAdvice') as
+      | {limit: number}
+      | undefined;
+    // Nothing is known about those days, so the curve stands.
+    expect(advice?.limit).toBe(limitFor(PLAN, TODAY_DAY_NUMBER));
+  });
+
+  it('counts a confirmed vape-free day, which is a real achievement', async () => {
+    // The other side of the same rule: zero puffs the user CONFIRMED is the
+    // best day there is, and must still feed the adaptive layer.
+    const days: Record<string, unknown> = {};
+    for (let back = 3; back >= 1; back--) {
+      days[dayKey(-back)] = {
+        puffs: 0,
+        limit: limitFor(PLAN, TODAY_DAY_NUMBER - back),
+        hourBuckets: {},
+        cravingsSurvived: 0,
+        vapeFreeConfirmed: true,
+        repairTokenUsed: false,
+      };
+    }
+    await journeyDoc('alice').set({
+      profile: {alias: 'SteadyFalcon42', avatarEmoji: '🦊', tier: 'free'},
+      plan: PLAN,
+      days,
+      cravingsSurvivedTotal: 0,
+      repairTokens: 0,
+      longestStreak: 0,
+      goals: [],
+      earnedBadges: [],
+      day1TasksDone: [],
+      moodCheckIns: 0,
+    });
+
+    await recalcOne('alice', 'UTC');
+
+    const advice = (await userDoc('alice').get()).get('planAdvice') as
+      | {limit: number; adherence: string}
+      | undefined;
+    expect(advice?.adherence).toBe('crushing');
+    // Rides down, but never past the endgame floor before its time.
+    expect(advice?.limit).toBeGreaterThanOrEqual(4);
+    expect(advice?.limit).toBeLessThanOrEqual(limitFor(PLAN, TODAY_DAY_NUMBER));
+  });
+
   it('writes nothing on day 1 — there is no completed day to read', async () => {
     await journeyDoc('dev').set({
       profile: {alias: 'New', avatarEmoji: '🔥', tier: 'free'},

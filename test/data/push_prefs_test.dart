@@ -53,25 +53,51 @@ void main() {
     final container = open(context);
     container.read(settingsStoreProvider.notifier).setPushReplies(false);
 
-    expect(context.prefs.last.keys, containsAll(<String>[
-      'all',
-      'communityReply',
-      'communityMention',
-      'insightReady',
-      'quietStart',
-      'quietEnd',
-    ]));
+    expect(
+      context.prefs.last.keys,
+      containsAll(<String>[
+        'all',
+        'communityReply',
+        'communityMention',
+        'insightReady',
+        'quietStart',
+        'quietEnd',
+      ]),
+    );
   });
 
-  test('the quiet window travels with the preferences', () {
+  test('choosing a quiet window tells the server BY ITSELF', () {
+    // This used to call `setPushReplies` straight after, which meant it only
+    // proved the window RIDES ALONG with somebody else's sync — and concealed
+    // the fact that `setQuietHours` was the one push-affecting setter that
+    // never synced at all. The local reminders honoured the new window while
+    // the server kept the old one (23–8 by default, since a user who has
+    // never touched a toggle has no `pushPrefs` map), so every community
+    // reply, mention and weekly report arrived loud inside the window the
+    // user had explicitly closed.
     final context = _RecordingContext();
     final container = open(context);
     final store = container.read(settingsStoreProvider.notifier);
-    store.setQuietHours(22, 7);
-    store.setPushReplies(true);
 
+    store.setQuietHours(22, 7);
+
+    expect(
+      context.prefs,
+      isNotEmpty,
+      reason: 'the server is the half that sends; it has to be told',
+    );
     expect(context.prefs.last['quietStart'], 22);
     expect(context.prefs.last['quietEnd'], 7);
+  });
+
+  test('a window it refuses to store is not announced either', () {
+    // start == end means "no quiet hours" to the planner and cannot be drawn
+    // on the rail, so it is refused rather than stored — and a refused value
+    // must not be broadcast as though it had been accepted.
+    final context = _RecordingContext();
+    final container = open(context);
+    container.read(settingsStoreProvider.notifier).setQuietHours(9, 9);
+    expect(context.prefs, isEmpty);
   });
 
   test('signing out forgets them, so a shared phone does not inherit', () {

@@ -18,7 +18,7 @@ import {log} from '../lib/logger';
 import {tierFor} from '../lib/usage';
 import {decodeJourney, JourneyDecodeError} from '../domain/journeyCodec';
 import {dayKeyIn, hourIn} from '../domain/dateKey';
-import {trailingDays} from '../domain/streakEngine';
+import {isConfirmed, trailingDays} from '../domain/streakEngine';
 import {adviseTomorrow, dayNumber} from '../domain/taperEngine';
 import {totalDays} from '../domain/types';
 
@@ -99,10 +99,17 @@ export async function recalcOne(uid: string, timeZone: string): Promise<void> {
   // `trailingDays` EXCLUDES todayKey, so this window is the three completed
   // days D-1..D-3 — which is the whole point of running just after the user's
   // local midnight.
-  const window = trailingDays(journey.days, todayKey, 3).map((d) => ({
-    puffs: d.puffs,
-    limit: d.limit,
-  }));
+  // Filtered by `isConfirmed`, exactly as every other aggregate over the same
+  // data is (`weekStats`, `MoneyEngine`, `DangerHours`, `WeekTrend`, the
+  // streak). An unlogged day carries `puffs: 0` and read here as a PERFECT
+  // day: a ratio of 0 classifies as "crushing" and a mean of 0 sets tomorrow.
+  // Those rows are minted routinely, not exceptionally — `InitialJourney`
+  // gives every account one on day 1, and a mood check-in or a survived
+  // craving mints one too — so a brand-new user who did not tap LOG PUFF was
+  // advised a day-2 limit of 0. "An unknown day is unknown, never a saving."
+  const window = trailingDays(journey.days, todayKey, 3)
+    .filter(isConfirmed)
+    .map((d) => ({puffs: d.puffs, limit: d.limit}));
   const lastTwo = window.slice(-2);
   const strugglingTwoDays =
     lastTwo.length === 2 &&

@@ -277,9 +277,33 @@ const DEAD_TOKEN_CODES: readonly string[] = [
  *
  * The budget spend is transactional because two replies on two different
  * threads land in two concurrent function instances; a read-then-write would
- * let both see the same count and both spend the last slot. Refusing on a
- * read failure is the wrong direction — a push is a courtesy and a Firestore
- * hiccup is not a reason to stay silent — so an error here allows the send.
+ * let both see the same count and both spend the last slot.
+ *
+ * ## What a failed read is allowed to assume
+ *
+ * The gate answers three unrelated questions, and a read failure used to
+ * answer all three with "maximum permission": `allowed: true`, `budgeted:
+ * true`, `quiet: false`. The reasoning was that a push is a courtesy and a
+ * Firestore hiccup is no reason to stay silent — which is correct for the
+ * BUDGET and wrong for the other two.
+ *
+ * The document being read is `users/{uid}` — the same one `syncUserContext`,
+ * `claimDailyPost`, `aiCoachChat` and `rcWebhook` all write — so contention is
+ * ordinary, not exotic. And the two wrong answers are not symmetrical with
+ * their alternatives:
+ *
+ * - `allowed` is CONSENT, not courtesy. Somebody who switched a category off
+ *   said no; discarding that because a read failed is us overruling them.
+ * - `quiet: false` picks the loud channel and `sound: 'default'`. A push that
+ *   is wrongly SILENT still arrives, still shows, still sits in the inbox. A
+ *   push that is wrongly LOUD wakes somebody at 3am, which is the single thing
+ *   quiet hours exist to prevent.
+ *
+ * So both now fail closed, and the cost of that is already covered by design:
+ * `recordNotification` writes the in-app inbox row BEFORE any of this and
+ * independently of its outcome, because the inbox is the record of what
+ * happened and the push is only the courtesy. A suppressed push loses nothing
+ * durable — "what did I miss" still answers.
  */
 async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gate> {
   const spec = specFor(kind);
@@ -326,9 +350,12 @@ async function openGate(uid: string, kind: PushKind, nowMs: number): Promise<Gat
   } catch (error) {
     log.warn('push.gate_failed', {uid, kind, error: String(error)});
     return {
-      allowed: true,
+      // Consent and quiet hours fail CLOSED; the budget is the only one of the
+      // three a hiccup may wave through, and it is moot while `allowed` is
+      // false. See the note above for why the two are not symmetrical.
+      allowed: false,
       budgeted: true,
-      quiet: false,
+      quiet: true,
       locale: undefined,
       legacy: NO_LEGACY,
     };

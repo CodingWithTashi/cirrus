@@ -35,6 +35,7 @@ export {reportPost} from './handlers/reportPost';
 export {reportReply} from './handlers/reportReply';
 export {moderateReply} from './handlers/moderateReply';
 export {onReaction} from './handlers/onReaction';
+export {onReplyStatus} from './handlers/onReplyStatus';
 export {moderationQueue, resolveModeration} from './handlers/moderationQueue';
 export {coachMemories, forgetCoachMemory} from './handlers/coachMemories';
 export {seedCoachMemories} from './handlers/seedCoachMemories';

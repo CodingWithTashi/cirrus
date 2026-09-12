@@ -176,9 +176,26 @@ const MENTIONABLE_ALIAS = /^@[a-z]{3,24}\d{1,3}$/i;
  */
 export function sanitizeAlias(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_ALIAS;
-  const cleaned = value.replace(ALIAS_ALLOWED, '').trim().slice(0, MAX_ALIAS_CHARS);
+  // Bounded BEFORE the regex. These fields are raw client text on a callable
+  // whose body may be megabytes, and neither of them goes through
+  // `requireText` — so running an allowlist regex across the whole value is
+  // CPU a caller chooses for us. A window many times the output is plenty:
+  // anything a real alias needs is in the first few characters.
+  const cleaned = value
+    .slice(0, SANITIZE_SCAN)
+    .replace(ALIAS_ALLOWED, '')
+    .trim()
+    .slice(0, MAX_ALIAS_CHARS);
   return cleaned.length > 0 ? cleaned : DEFAULT_ALIAS;
 }
+
+/**
+ * How much of an unbounded client string a sanitizer will look at.
+ *
+ * Eight times the longest output any of them produces, so the bound can never
+ * change a legitimate value, and small enough that a 10MB field costs nothing.
+ */
+const SANITIZE_SCAN = 256;
 
 /** Whether [alias] can be the target of an @mention. See [MENTIONABLE_ALIAS]. */
 export function isMentionableAlias(alias: string): boolean {
@@ -204,11 +221,22 @@ export function sanitizeEmoji(value: unknown): string {
   // Safe to be this strict: the avatar is not typed, it is drawn from the
   // fixed animal list in `_randomAlias()`, so it is always one plain emoji.
   // A variation selector rides along only when a pictograph is already there.
-  const kept = Array.from(value.trim()).filter(
-    (c) => PICTOGRAPHIC.test(c) || c === '️',
-  );
-  const glyphs = kept.slice(0, MAX_EMOJI_GLYPHS).join('');
-  return PICTOGRAPHIC.test(glyphs) ? glyphs : DEFAULT_EMOJI;
+  // Scanned within a bound and stopped at the first two pictographs, rather
+  // than materialising the whole value: see [SANITIZE_SCAN]. `Array.from` on
+  // an arbitrarily long field allocates one entry per code point.
+  let out = '';
+  let found = 0;
+  for (const ch of value.slice(0, SANITIZE_SCAN).trim()) {
+    if (found >= MAX_EMOJI_GLYPHS) break;
+    if (PICTOGRAPHIC.test(ch)) {
+      out += ch;
+      found += 1;
+    } else if (ch === '️' && out.length > 0) {
+      // A variation selector only ever rides a pictograph already kept.
+      out += ch;
+    }
+  }
+  return found > 0 ? out : DEFAULT_EMOJI;
 }
 
 /**

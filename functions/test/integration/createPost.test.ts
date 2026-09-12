@@ -502,6 +502,32 @@ describe('createPost — the decorative fields are still input', () => {
     }
   });
 
+  it('handles a megabyte of junk in a field nothing length-checks', async () => {
+    // Neither `alias` nor `avatarEmoji` goes through `requireText`, so both
+    // arrive as raw client text on a callable whose body may be megabytes.
+    // Running an allowlist regex — or `Array.from` — across the whole value is
+    // CPU and memory the caller gets to choose for us. Both sanitizers read a
+    // bounded window now; these assert the bound cannot change a real value.
+    const huge = 'x'.repeat(1_000_000);
+    const started = Date.now();
+
+    expect(await stored(await made({avatarEmoji: huge}), 'avatarEmoji')).toBe(
+      '\u{1F525}',
+    );
+    // A real emoji inside the window still survives the bound.
+    expect(
+      await stored(await made({avatarEmoji: `  \u{1F98A}${huge}`}), 'avatarEmoji'),
+    ).toBe('\u{1F98A}');
+    expect(await stored(await made({alias: huge}), 'alias')).toBe('x'.repeat(32));
+    expect(
+      await stored(await made({alias: `Wren${'!'.repeat(1_000_000)}`}), 'alias'),
+    ).toBe('Wren');
+
+    // Not a benchmark — a smoke alarm. Unbounded scanning of four megabytes
+    // takes orders of magnitude longer than this.
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+
   it('strips an alias down to the characters it allows', async () => {
     // The alias has had an allowlist all along — this pins it beside the
     // avatar so the pair cannot drift apart again.

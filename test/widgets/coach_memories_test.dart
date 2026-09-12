@@ -62,6 +62,39 @@ void main() {
     expect(find.text(l10n.memoriesKindPerson.toUpperCase()), findsOneWidget);
   });
 
+  testWidgets('never offers to forget what it cannot forget', (tester) async {
+    // `profile.whyWords` is printed into EVERY coach turn by the user card, so
+    // deleting the stored copy changes nothing about what Ember is handed next
+    // turn. It used to render twice — once as a permanent fact, once as a
+    // memory with a "Forget this" button that then said "Forgotten. Ember
+    // won't bring it up again". A promise the product cannot keep is worse
+    // than no button.
+    // Tall enough that the whole list builds, so "appears exactly once" is an
+    // exact count rather than a question about what happens to be on screen.
+    tester.view.physicalSize = const Size(1200, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    const why = 'I want to be there for my daughter.';
+    coach.stored = const [
+      CoachMemory(id: 'seeded', text: why, kind: MemoryKind.motivation),
+      remembered,
+    ];
+    final c = await pump(tester);
+    final store = c.read(quitStoreProvider.notifier)..seedDemoJourney();
+    final journey = store.state!;
+    store.state = journey.copyWith(
+      profile: journey.profile.copyWith(whyWords: why),
+    );
+    await tester.pumpAndSettle();
+
+    // Exactly once — as the permanent fact it is, never again below as a
+    // memory with a Forget button. A real remembered thing is untouched, so
+    // the list itself still works.
+    expect(find.text(why), findsOneWidget);
+    expect(find.text(remembered.text), findsOneWidget);
+  });
+
   testWidgets('an empty store says so plainly', (tester) async {
     await pump(tester);
 

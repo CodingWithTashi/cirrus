@@ -43,6 +43,9 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// writing state then throws.
   bool _disposed = false;
 
+  /// Issue number of the newest D3 prefetch; see [_prefetchRatingStep].
+  int _prefetchSeq = 0;
+
   @override
   OnboardingState build() {
     _disposed = false;
@@ -205,8 +208,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     return name.isEmpty ? null : name;
   }
 
-  void typeCoachName(String raw) =>
-      state = state.copyWith(coachNameInput: raw);
+  void typeCoachName(String raw) => state = state.copyWith(coachNameInput: raw);
 
   /// Why they are doing this, in their own words, or null when they skipped.
   ///
@@ -215,8 +217,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// blank line into Ember's user card as though something had been said.
   String? get chosenWhyWords => WhyWords.stored(state.whyWordsInput);
 
-  void typeWhyWords(String raw) =>
-      state = state.copyWith(whyWordsInput: raw);
+  void typeWhyWords(String raw) => state = state.copyWith(whyWordsInput: raw);
 
   void markCommitted() {
     // The hold gesture itself, not the screen advance — someone can complete
@@ -292,6 +293,18 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
         analytics.planRevealed();
       // `commit_held` rides the hold gesture (markCommitted) and `notif_prompt`
       // needs the OS answer, so both fire from where that fact exists.
+      // Leaving the worries screen is the first moment every tag exists, and
+      // it is four screens before D3 — so the tailored quotes almost always
+      // land while the user is somewhere else, and the card never blinks.
+      //
+      // ONLY this step. An empty case falls through to the next non-empty one,
+      // so the seven steps below used to land here too: seven calls per
+      // onboarding, six of them fired before `why` or `worries` had been
+      // answered — i.e. with the two heaviest tailoring signals empty — and
+      // the responses race, so an early untailored answer could overwrite the
+      // tailored one.
+      case ObStep.worries:
+        _prefetchRatingStep();
       case ObStep.gender:
       case ObStep.birthYear:
       case ObStep.under18:
@@ -299,11 +312,6 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       case ObStep.frequency:
       case ObStep.strength:
       case ObStep.firstPuff:
-      // Leaving the worries screen is the first moment every tag exists, and
-      // it is four screens before D3 — so the tailored quotes almost always
-      // land while the user is somewhere else, and the card never blinks.
-      case ObStep.worries:
-        _prefetchRatingStep();
       case ObStep.why:
       case ObStep.building:
       case ObStep.coachName:
@@ -322,6 +330,11 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// Both are best-effort and both fail to the same place — bundled quotes and
   /// a hidden CTA — so neither is awaited and neither can block the funnel.
   Future<void> _prefetchRatingStep() async {
+    // Ordering guard. These are not awaited, so two in flight can land in
+    // either order and the LAST one wins — which, with the fallthrough above,
+    // meant an early untailored prefetch could overwrite the tailored one.
+    // Only the newest issue is allowed to write.
+    final seq = ++_prefetchSeq;
     final answers = state;
     final available = await LpReview.isAvailable();
     var quotes = const <Testimonial>[];
@@ -340,7 +353,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       // already on screen, so there is nothing to report and nothing to retry.
       quotes = const [];
     }
-    if (_disposed) return;
+    if (_disposed || seq != _prefetchSeq) return;
     // All-or-nothing: one tailored quote beside one generic one reads as a
     // bug rather than as social proof.
     _persistSuppressed = true;
