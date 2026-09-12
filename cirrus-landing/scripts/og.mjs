@@ -260,6 +260,20 @@ const POSTS = [
       { n: '4', label: 'A free tier that works', color: VOLT },
     ],
   },
+  {
+    slug: 'quit-vaping-anxiety',
+    eyebrow: 'WITHDRAWAL · THE MENTAL HALF',
+    headline: 'Quit vaping anxiety and brain fog',
+    // The arc the article argues, in four numbers: when the anxiety lands, what
+    // the dopamine system is actually short of, how long the mood runs, and when
+    // the measurement says it is back. Ember for the cost, volt for the recovery.
+    blocks: [
+      { n: 'Day 3', label: 'when anxiety peaks', color: EMBER },
+      { n: '15–20%', label: 'lower dopamine output', color: EMBER },
+      { n: '2–4 wks', label: 'mood symptoms last', color: EMBER },
+      { n: '3 mths', label: 'dopamine normalises', color: VOLT },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line
