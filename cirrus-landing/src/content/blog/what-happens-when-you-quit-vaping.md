@@ -338,7 +338,7 @@ what you actually did rather than what you remember doing.
 
 <figure>
 
-[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get?c=blog-what-happens-when-you-quit-vaping)
 
 <figcaption>Illustration only. The curve is the whole idea: the drop spread across weeks rather than taken at once.</figcaption>
 </figure>

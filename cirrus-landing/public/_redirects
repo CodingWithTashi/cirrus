@@ -2,7 +2,27 @@
 # source is a full URL is parsed and silently ignored, which is why the
 # www->apex redirect is a zone-level Redirect Rule in the dashboard instead.
 #
-# /get is the short URL printed on the app promo card used across the blog.
-# The card is a rendered image, so the URL on it cannot be edited after the
-# fact the way a link in copy can — this redirect is what keeps it true.
-/get  /download  301
+# /get IS NOT HERE ANY MORE — it is `functions/get.ts`, and that is the point.
+#
+# It used to be `/get  /download  301`, a blanket forward that could not do the
+# one thing a short link is for: send a person to the store for the phone they
+# are actually holding. Platform is a request HEADER, and path-only matching
+# cannot see it, so every Android visitor — the only ones who can install the
+# app today — had to read a page and find a button to reach a store they were
+# already heading for.
+#
+# A Function does win over a matching rule here (verified against
+# `wrangler pages dev`, for both /get and /get/), so this file could have kept
+# a dead rule without breaking anything. It does not, because two owners of one
+# path is a thing the next person would have to test to understand.
+#
+# WHAT WAS ACTUALLY LIVE, checked rather than assumed: nothing. The rule was
+# committed in 4964d7b and never deployed, so https://cirrusquit.com/get has
+# been answering 404 for as long as four published posts have pointed their
+# promo card at it. The card has been dead on arrival for every reader who
+# tapped it.
+#
+# That is worth knowing for two reasons. It is why this change is a fix and not
+# only an improvement — and it means no 301 was ever served, so there are no
+# permanently-cached redirects in anyone's browser to work around. The
+# destination is whatever we deploy next.

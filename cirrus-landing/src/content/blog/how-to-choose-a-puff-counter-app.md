@@ -68,7 +68,7 @@ the app is measuring your optimism rather than your habit. Most people
 
 <figure>
 
-[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get?c=blog-how-to-choose-a-puff-counter-app)
 
 <figcaption>Illustration only. The number at the top should be one you counted, not one you set as a target on day one.</figcaption>
 </figure>

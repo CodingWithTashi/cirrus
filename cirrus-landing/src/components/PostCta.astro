@@ -13,7 +13,7 @@
 // table. Astro 7 takes no rehype plugins anyway, so a mid-body card would mean
 // rewriting the Markdown pipeline to break a rule we chose on purpose.
 import { SITE_TITLE } from '../consts';
-import { STORE_LIVE, playUrl, DOWNLOAD_URL } from '../lib/store';
+import { STORE_LIVE, IOS_LIVE, playUrl, DOWNLOAD_URL, GET_URL } from '../lib/store';
 
 interface Props {
   /** Post slug — becomes the campaign tag on the store link. */
@@ -34,7 +34,22 @@ const line =
   <p class="post-cta__line">{line}</p>
 
   {
-    STORE_LIVE ? (
+    /* Once BOTH stores are open this is one button pointing at /get, which reads
+       the reader's User-Agent and sends them to their own store. A sidebar card
+       is roughly one button wide, so two badges would wrap into a stack that
+       makes the reader choose a platform they are already holding — and a blog
+       page is the one place we genuinely cannot know which that is.
+
+       Until then the Play link stays DIRECT rather than going through /get: we
+       know the only store that can serve anyone today, and a redirect hop buys
+       nothing when the answer is already certain. The iPhone half of the
+       audience — roughly half of this site's readers — gets told the truth in
+       place instead of being sent to a button they cannot use. */
+    IOS_LIVE ? (
+      <a class="btn btn-primary post-cta__btn" href={`${GET_URL}?c=blog-${slug}`}>
+        Get {SITE_TITLE} free
+      </a>
+    ) : STORE_LIVE ? (
       <>
         <a
           class="btn btn-primary post-cta__btn"
@@ -43,9 +58,6 @@ const line =
         >
           Get it free on Google Play
         </a>
-        {/* iOS is months out and roughly half of this site's readers are on
-            it. Sending them to an Android-only button with no alternative
-            wastes the exact audience the writing just earned. */}
         <p class="post-cta__alt">
           On iPhone? <a href={DOWNLOAD_URL}>Join the list</a> and we'll email you once, when it lands.
         </p>

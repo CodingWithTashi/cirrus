@@ -256,7 +256,7 @@ something keeping count for you.
 
 <figure>
 
-[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get?c=blog-most-dangerous-vapes-ranked-2026)
 
 <figcaption>Illustration only. Whatever you vape, the daily count is the part you can actually change.</figcaption>
 </figure>

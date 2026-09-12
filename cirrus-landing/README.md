@@ -217,6 +217,54 @@ About half of this site's readers are on iOS and that build is months away.
 `/download` shows the Play button *and* an iOS signup; the home hero
 deliberately still leads with the waitlist.
 
+## /get — the platform-aware download link
+
+`/get` is the short URL to hand out: a bio, a QR code, a printed card, a reply to
+someone asking what the app is called. It reads the `User-Agent` and sends
+Android to Play and iPhone to the App Store, and lands everyone else on
+`/download`. It is `functions/get.ts`, a Cloudflare Pages Function — **not** a
+`_redirects` rule, because `_redirects` matches on path only and platform is a
+header.
+
+It was a `/get  /download  301` rule until 2026-09-12. That rule was committed in
+`4964d7b` and never deployed, so `/get` answered **404 in production** for as
+long as four published posts pointed their promo card at it.
+
+- **The decision lives in `src/lib/platform.ts`, not in the Function.** The Astro
+  dev middleware runs the same module, so there is one implementation and two
+  adapters. Two copies of this would drift, exactly as two copies of the streak
+  engine did in the app.
+- **`astro dev` cannot do the real thing.** The site is `output: 'static'`, so
+  Astro hands middleware an empty `Headers` — there is no User-Agent to read. The
+  dev shim therefore redirects to `/download` for everyone and says so once in
+  the terminal. **Test the real redirect with `npm run preview:edge`**, which
+  builds and serves it under the Cloudflare runtime.
+- **302, never 301.** The destination is one flag away from changing, and a 301
+  is cached by the browser effectively forever — every iPhone that tapped `/get`
+  before the App Store opened would keep going to `/download` afterwards, with
+  nothing on the server able to reach it.
+- **Bots are checked before devices.** Googlebot Smartphone identifies as a Nexus
+  5X and bingbot's legacy variant as an iPhone, so a naive test redirects your
+  primary indexing crawler into the Play Store. Link unfurlers are caught for the
+  opposite reason: `/get` is the link under the promo card, and a bot followed to
+  a store unfurls the store's card instead of ours.
+- **Windows Phone is eliminated first.** Its UA spoofed *both* platforms at once
+  ("Windows Phone 8.1; Android 4.0 ... like iPhone OS 7_0_3"), so excluding it
+  from only one test silently makes it the other.
+- **iPad Safari and desktop-mode Android tablets are undecidable** from headers —
+  both report a desktop UA and Safari sends no client hints. They fall through to
+  `/download`, which is why that page must always carry every open store's button
+  and must never become a stub that forwards back to `/get`.
+- **`public/_headers` does not apply to Function responses.** Cloudflare is
+  explicit about this, so the `/*` block's HSTS and `nosniff` are restated inside
+  `redirectTo()`. Without that, `/get` would be the one URL on the site served
+  without them.
+- **`?c=<slug>`** tags the Play referrer, same `blog-<slug>` vocabulary the post
+  CTAs use. Validated against an allow-list; anything else falls back to `get`.
+- Each redirect logs one `get_redirect` line (platform, campaign, destination
+  host, country, referer host) — same no-vendor, no-cookie story as
+  `waitlist_submit`.
+
 ## App Links
 
 `public/.well-known/assetlinks.json` is what lets `cirrusquit.com` links open the

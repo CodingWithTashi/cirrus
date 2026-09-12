@@ -263,7 +263,7 @@ get withdrawal, but in doses you can absorb rather than one three-day cliff.
 
 <figure>
 
-[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get?c=blog-quit-vaping-anxiety)
 
 <figcaption>Illustration only. A taper is the same drop, taken in pieces instead of all on a Monday.</figcaption>
 </figure>

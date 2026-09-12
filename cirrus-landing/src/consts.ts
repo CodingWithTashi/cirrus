@@ -44,6 +44,38 @@ export const WAITLIST_COUNT = 103;
 export const PLAY_STORE_URL: string =
   'https://play.google.com/store/apps/details?id=com.quitvape.last_puff';
 
+// The live iOS listing. App Store Connect assigns the app id when the RECORD is
+// created, not when the app is approved — so this URL is already correct and
+// already permanent. It simply 404s until the first version is released
+// (verified 404 on 2026-09-12, with 1.0.17 build 18 in Waiting for Review).
+//
+// Written out in full rather than left empty the way PLAY_STORE_URL once was,
+// because the two unknowns are different: back then we did not know the URL,
+// and here we do not know the DATE. Approval can land overnight, so the person
+// flipping the switch should not also have to go and find this string.
+export const APP_STORE_URL: string = 'https://apps.apple.com/app/id6806871144';
+
+// THE ONE WORD THAT SHIPS iOS. Flip to `true` when App Review approves and the
+// version is actually released — "Ready for Sale", not "Pending Developer
+// Release", because the URL above stays a 404 until the release is out.
+//
+// Everything iOS keys off this: /get stops sending iPhones to the waitlist and
+// starts sending them to the App Store, /download grows a second button, and
+// the blog CTA stops saying iPhone isn't built yet. Nothing else has to change.
+//
+// It is a boolean rather than the empty-string trick PLAY_STORE_URL uses
+// because a URL that exists but is not open yet cannot be represented by
+// absence — and a store button that 404s is worse than an honest "not yet":
+// it reads as a broken app rather than a pending one.
+//
+// Annotated `boolean` for exactly the reason PLAY_STORE_URL is annotated
+// `string`, and the consequence here is worse. Left bare, TypeScript narrows
+// this to the literal type `false`, every `IOS_LIVE ?` in store.ts becomes a
+// constant, and the App Store branches compile as dead code — so flipping the
+// word would change nothing until somebody noticed why. The declaration has to
+// keep meaning "a boolean that is currently false", not "the value false".
+export const IOS_STORE_LIVE: boolean = false;
+
 // Official profiles, emitted as Organization.sameAs. This is how Google ties
 // the domain to a known entity rather than treating it as an anonymous site,
 // so fill it in the moment the accounts exist. Deliberately empty for now: a
