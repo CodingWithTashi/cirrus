@@ -1,0 +1,8 @@
+# Cloudflare Pages reads this at the edge. Path-only matching: a rule whose
+# source is a full URL is parsed and silently ignored, which is why the
+# www->apex redirect is a zone-level Redirect Rule in the dashboard instead.
+#
+# /get is the short URL printed on the app promo card used across the blog.
+# The card is a rendered image, so the URL on it cannot be edited after the
+# fact the way a link in copy can — this redirect is what keeps it true.
+/get  /download  301

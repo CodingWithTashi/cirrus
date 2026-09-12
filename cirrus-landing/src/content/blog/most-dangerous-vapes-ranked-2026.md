@@ -254,11 +254,11 @@ who quit vaping didn't switch to smoking instead.
 The useful bit is the pattern. The stack beats any single piece: medication, plus support, plus
 something keeping count for you.
 
-<figure class="figure--phone">
+<figure>
 
-![The Cirrus home screen showing today's puff count against a daily limit, with a log button.](../../assets/screens/home.jpg)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
 
-<figcaption>The third layer: what you did today, not what you think you did.</figcaption>
+<figcaption>Illustration only. Whatever you vape, the daily count is the part you can actually change.</figcaption>
 </figure>
 
 That last layer is Cirrus, a [quit vaping app that counts your puffs and tapers them down](/)

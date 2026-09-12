@@ -336,11 +336,11 @@ than not quit at all.
 The third layer in that stack is something that keeps count for you, so the plan runs on
 what you actually did rather than what you remember doing.
 
-<figure class="figure--phone">
+<figure>
 
-![A Cirrus screen showing a taper curve falling from 150 puffs a day to zero, with pace options of 14, 21, 30, 60 and 90 days and a dated Freedom Day at the end.](../../assets/screens/pace.jpg)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
 
-<figcaption>A taper spreads the drop instead of taking it all on Monday. Real dates, and a starting number you counted.</figcaption>
+<figcaption>Illustration only. The curve is the whole idea: the drop spread across weeks rather than taken at once.</figcaption>
 </figure>
 
 That's what [Cirrus](/) does. It counts your real puffs, finds the hours you reach hardest

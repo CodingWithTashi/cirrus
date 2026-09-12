@@ -733,6 +733,22 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 }
 .prose p a:hover, .prose li a:hover { text-decoration-color: var(--volt); }
 
+/* A figure image that is itself a link. Markdown emits it as
+   <figure><p><a><img></a></p>, so the body underline rule above matches and
+   draws a stray rule beside the picture; the anchor also keeps an inline
+   baseline gap under the image until it is made a block. The image is the
+   affordance, so the hover and focus states go on the image rather than on
+   text that is not there. */
+.prose figure p a {
+  display: block;
+  text-decoration: none;
+}
+.prose figure p a:hover img,
+.prose figure p a:focus-visible img {
+  outline: 2px solid var(--volt);
+  outline-offset: 3px;
+}
+
 .prose hr {
   border: 0;
   border-top: 1px solid var(--border);

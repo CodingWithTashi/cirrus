@@ -66,11 +66,11 @@ What you want is a few days of honest counting first, then a plan built on that.
 the app is measuring your optimism rather than your habit. Most people
 [guess their daily count low, often by half](/blog/how-many-puffs-a-day-is-a-lot).
 
-<figure class="figure--phone">
+<figure>
 
-![A Cirrus onboarding screen asking how many puffs you take on a normal day, with a keypad to enter your own number.](../../assets/screens/dependence.jpg)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
 
-<figcaption>Start from a number you counted, not one you set as a target on day one.</figcaption>
+<figcaption>Illustration only. The number at the top should be one you counted, not one you set as a target on day one.</figcaption>
 </figure>
 
 ## 2. Does it cite anything?

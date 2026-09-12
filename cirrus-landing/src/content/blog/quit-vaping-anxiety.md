@@ -40,9 +40,9 @@ faq:
   - q: Is nicotine brain fog real?
     a: >-
       Yes. Difficulty concentrating is one of the seven diagnostic symptoms of nicotine
-      withdrawal, and it is measurable in a lab within hours of the last dose rather than
-      days. It is worst in the first week and eases over the first month. Plan week one to
-      need less of your concentration rather than trying to push through it.
+      withdrawal, and it can appear within 24 hours of your last puff rather than days later.
+      It is worst in the first week and eases over the first month. Plan week one to need
+      less of your concentration rather than trying to push through it.
   - q: How long does anxiety last after quitting vaping?
     a: >-
       It builds over roughly the first three days and can persist for several weeks, easing
@@ -88,36 +88,6 @@ All of it reverses, and the research says people who quit end up *less* anxious 
 carry on. The reason this stretch sends so many people back is that it reads as evidence, when it
 is closer to the receipt.
 
-## The seven symptoms that are actually withdrawal
-
-Nicotine withdrawal has a formal clinical definition: seven symptoms, appearing within 24 hours
-of stopping **or cutting down**, four of which are enough for a diagnosis.
-
-Six of the seven are mental. You brace yourself to feel ill and get handed a mood disorder with a
-three-week expiry date. Find yours here.
-
-<div class="table-wrap" tabindex="0">
-<table>
-<thead>
-<tr><th>Symptom</th><th>When it starts</th><th>How long it runs</th></tr>
-</thead>
-<tbody>
-<tr><td>Cravings</td><td>An hour or two after your last puff</td><td>15 to 20 minutes each, recurring for months</td></tr>
-<tr><td>Anger, frustration, irritability</td><td>Early, peaking in week one</td><td>2 to 4 weeks</td></tr>
-<tr><td>Anxiety</td><td>Builds over the first three days</td><td>Several weeks</td></tr>
-<tr><td>Depressed mood</td><td>Within the first day</td><td>Usually gone within a month</td></tr>
-<tr><td>Concentration, insomnia, restlessness, appetite</td><td>First few days</td><td>Worst in week one, easing over the month</td></tr>
-</tbody>
-</table>
-</div>
-
-Those timings are the National Cancer Institute's, and they are for tobacco rather than vaping.
-Most research here is, and this site would rather say so than borrow quietly. The syndrome
-belongs to nicotine, so it transfers. Anything depending on smoke does not, and one of those
-catches vapers out below.
-
-Hold on to **or cutting down**. It turns out to be the whole argument for tapering.
-
 ## Why quitting vaping makes you anxious
 
 Almost everyone has this backwards. You believe vaping calmed you down, because every time you
@@ -126,6 +96,9 @@ did it you felt calmer afterwards. The experience is real. The conclusion is not
 **Nicotine raises your baseline anxiety between doses and brings it back down when you take one.**
 It returns you to roughly where a non-user sits all day for nothing. You were not being calmed.
 You were being returned.
+
+Every hour you were not vaping, you were slightly more wound up than if you had never started.
+The fix was the cause.
 
 So quitting does not create anxiety. It removes the top-up and leaves you holding the raised
 baseline for a few weeks.
@@ -154,12 +127,46 @@ Anxiety also builds rather than lands, which is why day three reads as the decis
 instead of as a stage. It arrives with no subject attached, so your brain supplies one: your job,
 your relationship, a thing you said in 2019. The feeling came first and picked its topic second.
 
-The same gap explains why you cannot think straight.
+That gap is where every other symptom lives too.
+
+## The seven symptoms that are actually withdrawal
+
+Nicotine withdrawal has a formal clinical definition: seven symptoms, appearing within 24 hours
+of stopping **or cutting down**, four of which are enough for a diagnosis.
+
+Six of the seven are mental. You brace yourself to feel ill and get handed a mood disorder with a
+three-week expiry date. Find yours here.
+
+<div class="table-wrap" tabindex="0">
+<table>
+<thead>
+<tr><th>Symptom</th><th>When it starts</th><th>How long it runs</th></tr>
+</thead>
+<tbody>
+<tr><td>Cravings</td><td>An hour or two after your last puff</td><td>Recurring for months, weaker and further apart</td></tr>
+<tr><td>Anger, frustration, irritability</td><td>Early, peaking in week one</td><td>2 to 4 weeks</td></tr>
+<tr><td>Anxiety</td><td>Builds over the first three days</td><td>Several weeks</td></tr>
+<tr><td>Depressed mood</td><td>Within the first day</td><td>Usually gone within a month</td></tr>
+<tr><td>Concentration, insomnia, restlessness, appetite</td><td>First few days</td><td>Worst in week one, easing over the month</td></tr>
+</tbody>
+</table>
+</div>
+
+Cravings are the eighth thing everyone gets, and the one the manual does not count.
+
+Those timings are the National Cancer Institute's, and they are for tobacco rather than vaping.
+Most research here is, and this site would rather say so than borrow quietly. The syndrome
+belongs to nicotine, so it transfers. Anything depending on smoke does not, and one of those
+catches vapers out below.
+
+Hold on to **or cutting down**. It turns out to be the whole argument for tapering.
+
+Now what those rows actually feel like, starting with the one that stops you thinking.
 
 ## Nicotine brain fog: why you cannot hold a thought
 
-Difficulty concentrating is one of the seven, and it is not subtle. In lab settings the dip in
-attention and working memory shows up within **hours** of the last dose, not days.
+**Nicotine brain fog is real.** Difficulty concentrating is one of the seven diagnostic symptoms,
+and the window is **hours rather than days**: it can be there inside 24 hours of your last puff.
 
 Reading without absorbing. Losing the thread mid-sentence. Opening an app and forgetting why.
 Worst in week one, easing over the month.
@@ -168,16 +175,17 @@ Worst in week one, easing over the month.
 Write more down than feels necessary. And refuse the conclusion your brain will offer, that you
 are worse at your job without nicotine. Week one measures withdrawal.
 
-Fog gets sharply worse when you are not sleeping, which is next.
+The fog gets sharply worse when you are not sleeping, which is next.
 
 ## Why can't I sleep after quitting vaping?
 
-Insomnia is on the list too, and it drags the others down with it.
+**Because nicotine is a stimulant with a half-life of roughly two hours, so an all-day vaper has
+been dosing their own evening for years and sleep adapted around it.** Insomnia is also one of the
+seven, which means withdrawal disrupts sleep directly on top of that. Expect trouble falling
+asleep, small-hours waking and vivid dreams. The dreams are harmless.
 
-Nicotine is a stimulant that clears in about two hours, so an all-day vaper has been dosing a
-stimulant into their own evening for years, and sleep adapted around it. **Withdrawal then
-disrupts sleep directly**, which is why insomnia is diagnostic rather than a side effect. Expect
-trouble falling asleep, small-hours waking and vivid dreams. The dreams are harmless.
+It is the symptom most likely to drag the others down with it, so it is the one worth protecting
+first.
 
 ### Ignore the coffee advice
 
@@ -189,6 +197,8 @@ five.
 **Vaping burns no tobacco and produces none of them, so that interaction is not yours.** Cut back
 late in the day while sleep is unsettled, but the jitters are not coming from there. If you are
 quitting both, it applies.
+
+Headaches are the other thing people search at 2am. That one needs a caveat.
 
 ## Vape withdrawal headaches: the honest version
 
@@ -223,10 +233,10 @@ If nicotine were managing your anxiety, quitting would leave you more anxious. T
 happens.
 
 A meta-analysis pooling **26 studies** compared people who quit smoking with people who kept
-going. Anxiety fell in the quitters (standardised mean difference **0.37**), along with
-depression (0.25) and stress (0.27), while positive affect (0.40) and quality of life (0.22)
-rose. The authors put that at **equal to or larger than antidepressant treatment**, and it held
-for people who started with a psychiatric diagnosis.
+going. Anxiety fell in the quitters, with a standardised mean difference of **−0.37**. Depression
+fell (−0.25) and stress fell (−0.27). Positive affect rose (+0.40), and so did psychological
+quality of life (+0.22). The authors put that at **equal to or larger than antidepressant
+treatment**, and it held for people who started with a psychiatric diagnosis.
 
 The honest limit: those were **observational** studies, not randomised trials, so not pure cause
 and effect.
@@ -244,17 +254,18 @@ Knowing it reverses does not get you through week one, though.
 
 ## What actually helps
 
-**Do not quit on your worst week.** Concentration is impaired for a fortnight and mood is
-unreliable for about a month. Free, and the most effective thing here.
+**Pick a start date that is not your worst week.** Concentration is impaired for a fortnight and
+mood is unreliable for a month, so not the deadline, the move or the wedding. Free, and the most
+effective thing here.
 
-**Meet the drop in pieces.** Remember *or cutting down*. A taper does not dodge withdrawal, it
-spreads it, so each step is small enough to absorb before the next.
+**Meet the drop in pieces.** That phrase *or cutting down* is why a taper works at all. You still
+get withdrawal, but in doses you can absorb rather than one three-day cliff.
 
-<figure class="figure--phone">
+<figure>
 
-![The Cirrus home screen showing today's puff count against a daily limit, with a log button.](../../assets/screens/home.jpg)
+[![Illustration only. A dark Cirrus promo card headed "Quit on a curve, not a cliff", showing a falling bar chart of a 30-day taper beside five feature cards: puff counter, panic button, AI coach, money back and community. Free to start at cirrusquit.com.](../../assets/promo/cirrus-app-promo.png)](/get)
 
-<figcaption>A limit that moves down on a schedule, instead of a cliff on Monday morning.</figcaption>
+<figcaption>Illustration only. A taper is the same drop, taken in pieces instead of all on a Monday.</figcaption>
 </figure>
 
 That is what [Cirrus](/) is built on. It counts your real puffs, walks the number down at a pace
@@ -264,22 +275,31 @@ you pick, and finds the hours you reach hardest. Start by counting, because most
 **Protect sleep first.** It is the lever that moves every other symptom. Fixed wake time, dark
 room, and no negotiating with the 3am loop, which is withdrawal talking.
 
-**Wait out the twenty minutes.** That is how long a craving lasts. It feels open-ended from the
-inside and is not.
+**Wait out the twenty minutes.**
+
+> Individual cravings last 15 to 20 minutes.
+>
+> <cite>Nicotine craving literature</cite>
+
+A craving feels open-ended from the inside and is not. You only have to let this one pass.
 
 **Ask about medication.** Prescription options exist and deserve a doctor rather than a blog.
 Free support does too, including This is Quitting and quitSTART. Stacking beats picking one,
 which we went through in
 [the ten-step guide to quitting vaping](/blog/easiest-way-to-quit-vaping).
 
+One boundary is worth knowing before you start.
+
 ## When it is not withdrawal
 
-Withdrawal has a direction, and it is down. Bad week, better fortnight, mostly recognisable by
-the end of the month. Anything that does not fit belongs with a doctor rather than patience. Low mood still deepening
-after a month, when quitting-related low mood usually clears inside one. Panic attacks. Anxiety
-that stops you working or leaving the house. A headache that is sudden, severe, the worst of your
-life, or arrives with fever, stiff neck, confusion, weakness or vision changes. Any thought of
-harming yourself, which is not a stage of quitting and not something to sit with alone.
+Withdrawal goes one way. Bad week, better fortnight, mostly recognisable by the end of the month.
+**Anything moving the other way is a doctor's question, not a patience question.**
+
+Low mood still deepening after a month, when quitting-related low mood usually clears inside one.
+Panic attacks. Anxiety that stops you working or leaving the house. A headache that is sudden,
+severe, the worst of your life, or arrives with fever, stiff neck, confusion, weakness or vision
+changes. Any thought of harming yourself, which is not a stage of quitting and not something to
+sit with alone.
 
 Quitting can also uncover something the nicotine was covering. That is a reason to treat the
 actual thing, not to go back.
