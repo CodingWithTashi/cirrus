@@ -41,8 +41,16 @@ class _RecordingCommunity implements CommunityRepository {
   @override
   Future<void> setReaction(String postId, String emoji, {required bool on}) async {}
 
+  /// Makes `addReply` answer the way `createReply` does for a slur or an
+  /// over-long reply: a final refusal, not a dropped connection.
+  bool refuseReplies = false;
+
   @override
-  Future<void> addReply(String postId, Reply reply) async {}
+  Future<void> addReply(String postId, Reply reply) async {
+    if (refuseReplies) {
+      throw const ContentRefusedException(ContentRefusal.rules);
+    }
+  }
 
   @override
   Future<void> reportPost(String postId) async {}
@@ -205,4 +213,90 @@ void main() {
       );
     });
   });
+
+  group('a reply that was refused stops claiming it was sent', () {
+    Future<(ProviderContainer, _RecordingCommunity)> opened({
+      required bool refuse,
+    }) async {
+      final repo = _RecordingCommunity([sosPost()])..refuseReplies = refuse;
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          communityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await container.read(communityStoreProvider.notifier).retryFeed();
+      return (container, repo);
+    }
+
+    List<Reply> repliesIn(ProviderContainer c) =>
+        c.read(communityStoreProvider).posts.firstWhere((p) => p.id == 'p1').replies;
+
+    test('a refusal takes it back out of the thread and says so', () async {
+      // Every outcome used to go through `.ignore()`, so a reply the callable
+      // refused — a slur, or anything over its 300-character limit — sat in
+      // the author's own thread looking sent, forever, while nobody else
+      // could ever see it.
+      final (container, _) = await opened(refuse: true);
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'a reply the server will refuse');
+
+      expect(sent, isFalse, reason: 'the caller has to be able to say so');
+      expect(
+        repliesIn(container).length,
+        before,
+        reason: 'a refused reply must not keep rendering as sent',
+      );
+    });
+
+    test('an accepted reply stays, and answers true', () async {
+      final (container, _) = await opened(refuse: false);
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'you have got this');
+
+      expect(sent, isTrue);
+      expect(repliesIn(container).length, before + 1);
+    });
+
+    test('offline KEEPS the reply — that is the local-first stance', () async {
+      // A dropped connection is not a verdict on the reply. The offline
+      // banner is already telling that story, and a reply that vanishes
+      // because the radio was waking would be the worse outcome.
+      final repo = _OfflineReplies([sosPost()]);
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          communityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await container.read(communityStoreProvider.notifier).retryFeed();
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'sent from a tunnel');
+
+      expect(sent, isTrue);
+      expect(repliesIn(container).length, before + 1);
+    });
+  });
+}
+
+/// Answers `addReply` the way a dead connection does.
+class _OfflineReplies extends _RecordingCommunity {
+  _OfflineReplies(super.posts);
+
+  @override
+  Future<void> addReply(String postId, Reply reply) async =>
+      throw const NoConnectionException();
 }

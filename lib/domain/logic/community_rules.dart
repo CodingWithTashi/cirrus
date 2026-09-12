@@ -243,6 +243,26 @@ abstract final class PostQuality {
   /// A reply is allowed to be "thanks". It only has to be *words*.
   static const int minReplyChars = 6;
 
+  /// The CEILINGS, mirroring `MAX_POST_CHARS` in `createPost.ts` and
+  /// `MAX_REPLY_CHARS` in `createReply.ts`. Pinned across the two languages by
+  /// `test/domain/post_quality_test.dart`, exactly as the floors are.
+  ///
+  /// The floors were mirrored here long ago for a reason worth restating: the
+  /// composer's note says that without a client-side check "the callable
+  /// refuses 'ok' server-side, `addReply` ignores the failure, and the reply
+  /// sits in the author's own thread forever while nobody else can see it —
+  /// the worst shape a refusal can take". That is the same failure at the
+  /// other end. The reply composer had no maximum at all, so three sentences
+  /// — the length of a real answer to somebody in crisis — were accepted,
+  /// rendered as sent, and discarded.
+  ///
+  /// Counted in grapheme clusters, because that is what `maxLength` counts
+  /// and what the person typing counts. `requireText` counts the same way
+  /// now; it used to count UTF-16 code units, which made a full post
+  /// containing emoji unpostable.
+  static const int maxPostChars = 500;
+  static const int maxReplyChars = 300;
+
   static const int minPostWords = 3;
 
   /// Kills a wall of one word repeated. Two, not three, so "i cant i cant"

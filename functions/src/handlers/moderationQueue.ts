@@ -16,7 +16,7 @@
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {db, FieldValue, mirrorPostStatus, postsCol} from '../lib/firestore';
-import {asEnum, requireCaller, requireText} from '../lib/guards';
+import {asEnum, requireCaller, requireDocId} from '../lib/guards';
 import {log} from '../lib/logger';
 import {notifyReply} from '../lib/notifyReply';
 
@@ -143,7 +143,7 @@ export const resolveModeration = onCall(
     const data = (request.data ?? {}) as Record<string, unknown>;
     // The flag's own id. `postId` was accepted here, which for a reply flag
     // named the wrong document in both directions — see QueueItem.flagId.
-    const flagId = requireText(data['flagId'], 'flagId', 200);
+    const flagId = requireDocId(data['flagId'], 'flagId');
     const action = asEnum<Resolution>(data['action'], RESOLUTIONS);
 
     const flagRef = db.collection('moderation').doc(flagId);

@@ -18,7 +18,7 @@ import {readAllowance, REGION} from '../config';
 import {postQuality, prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
-import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
+import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeDayN, sanitizeEmoji} from '../lib/guards';
 import {claimDailyPost, tierFor} from '../lib/usage';
 import {POST_TAGS, type PostTag} from '../domain/types';
 
@@ -150,6 +150,7 @@ export const createPost = onCall(
 
     const alias = sanitizeAlias(data['alias']);
     const avatarEmoji = sanitizeEmoji(data['avatarEmoji']);
+    const dayN = sanitizeDayN(data['dayN']);
 
     // A batch, not a transaction: there is nothing to read first, and both
     // writes must still land together or neither does.
@@ -157,7 +158,7 @@ export const createPost = onCall(
     batch.set(post, {
       alias,
       avatarEmoji,
-      dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
+      dayN,
       tag,
       text,
       reactions: {},
@@ -177,7 +178,7 @@ export const createPost = onCall(
     batch.set(myPostsCol(caller.uid).doc(post.id), {
       alias,
       avatarEmoji,
-      dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
+      dayN,
       tag,
       text,
       status: 'pending',

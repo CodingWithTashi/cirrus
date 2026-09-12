@@ -155,3 +155,55 @@ describe('createReply — refuses rule-breaking text at the door', () => {
     ).toBe(true);
   });
 });
+
+describe('createReply — the postId is a path, not a label', () => {
+  it('refuses every id Firestore reserves, cleanly', async () => {
+    // This went straight into `postsCol().doc(postId)` unguarded. A slash
+    // addresses a different path outright; `.`, `..` and `__like_this__` make
+    // the SDK throw a plain Error, which escapes the callable as `internal` —
+    // a 500 for a bad argument. Five of the six client-supplied ids in the
+    // codebase had no guard at all; `requireDocId` is now the one door.
+    for (const bad of ['a/b', '/etc', '.', '..', '__proto__', '__name__']) {
+      await expect(
+        createReply.run(request({...reply(), postId: bad})),
+      ).rejects.toMatchObject({
+        code: 'invalid-argument',
+        message: 'Bad postId.',
+      });
+    }
+  });
+});
+
+describe('createReply — length is counted the way a person counts', () => {
+  it('accepts 300 characters that happen to contain emoji', async () => {
+    // `requireText` counted UTF-16 code units while every composer counts
+    // grapheme clusters, so the server was always the meanest of the three
+    // layers. A reply of 300 characters containing emoji is well over 300
+    // code units and was refused — and `addReply` drops the refusal on the
+    // floor, so it rendered as sent and reached nobody.
+    const text = 'you have got this, keep going, '.repeat(8) + '\u{1F525}'.repeat(52);
+    expect([...text].length).toBe(300);
+    expect(text.length).toBeGreaterThan(300); // more code units than characters
+    await expect(
+      createReply.run(request({...reply(), text})),
+    ).resolves.toHaveProperty('replyId');
+  });
+
+  it('still refuses 301 characters', async () => {
+    const text = 'you have got this, keep going, '.repeat(8) + '\u{1F525}'.repeat(53);
+    expect([...text].length).toBe(301);
+    await expect(
+      createReply.run(request({...reply(), text})),
+    ).rejects.toMatchObject({code: 'invalid-argument'});
+  });
+
+  it('refuses a payload that is small in characters but huge on the wire', async () => {
+    // A grapheme is unbounded in code units — one family emoji is eleven — so
+    // the character count alone is not a size limit. The wire backstop is.
+    const family = '\u{1F469}‍\u{1F469}‍\u{1F467}‍\u{1F466}';
+    const text = family.repeat(200);
+    await expect(
+      createReply.run(request({...reply(), text})),
+    ).rejects.toMatchObject({code: 'invalid-argument'});
+  });
+});

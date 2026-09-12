@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -754,7 +756,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                         child: TextField(
                           controller: _text,
                           maxLines: null,
-                          maxLength: 500,
+                          maxLength: PostQuality.maxPostChars,
                           autofocus: true,
                           onChanged: (_) => setState(() {}),
                           style: LpType.body15(lp.textPrimary),
@@ -1117,6 +1119,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           focusNode: _replyFocus,
                           style: LpType.body14(lp.textPrimary),
                           textInputAction: TextInputAction.send,
+                          // The ceiling `createReply` enforces. Without it a
+                          // three-sentence reply was accepted here, rendered
+                          // as sent, refused by the callable and dropped by
+                          // `addReply`'s `.ignore()` — the same failure the
+                          // floor below was added to prevent, at the other
+                          // end. No counter: 300 is far past a normal reply,
+                          // so the limit should be invisible until it is hit.
+                          maxLength: PostQuality.maxReplyChars,
+                          buildCounter: (_, {required currentLength,
+                              required isFocused, required maxLength}) => null,
                           onSubmitted: (_) => _send(post),
                           decoration: InputDecoration(
                             border: InputBorder.none,
@@ -1169,8 +1181,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (text.isEmpty || PostQuality.checkReply(text) != null) return;
     _reply.clear();
     LpHaptics.light();
-    ref.read(communityStoreProvider.notifier).addReply(post.id, text);
+    final sent = ref
+        .read(communityStoreProvider.notifier)
+        .addReply(post.id, text);
     maybeAskPushPermission(context, ref);
+    // The slur list is server-side only, so a reply can still come back
+    // refused. Say so — it has just been taken back out of the thread, and a
+    // reply that silently disappears is worse than one that never sent.
+    unawaited(
+      sent.then((ok) {
+        if (ok || !mounted) return;
+        showLpSnack(context, context.l10n.communityStatusBlocked);
+      }),
+    );
   }
 }
 

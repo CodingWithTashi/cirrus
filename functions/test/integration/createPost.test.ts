@@ -426,3 +426,91 @@ describe('createPost — idempotent on the client id', () => {
     expect(a.postId).not.toBe(b.postId);
   });
 });
+
+/**
+ * The two fields nothing validated. Both are decoration rather than claims —
+ * which is exactly why they were waved through — and both are rendered on a
+ * public post to every reader, which is why that was the wrong call.
+ */
+describe('createPost — the decorative fields are still input', () => {
+  // These cases walk a table of values, so they need more than the three
+  // posts a subscriber gets. The cap has its own describe above.
+  beforeEach(() => {
+    vi.spyOn(PREMIUM_DAILY_POSTS, 'value').mockReturnValue(200);
+  });
+
+  const stored = async (postId: string, field: string): Promise<unknown> =>
+    (await postsCol().doc(postId).get()).get(field);
+
+  const made = async (over: Record<string, unknown>): Promise<string> =>
+    (await createPost.run(request({...post(), ...over}))).postId;
+
+  it('clamps dayN to something that can be read as a day', async () => {
+    // `typeof x === 'number' ? x : 0` let a caller post as day -5, day 3.7 or
+    // day 1000000000000000, beside everyone else's honest count.
+    for (const [sent, kept] of [
+      [12, 12],
+      [0, 0],
+      [-5, 0],
+      [3.7, 3],
+      [1e15, 9999],
+    ] as [number, number][]) {
+      expect(await stored(await made({dayN: sent}), 'dayN')).toBe(kept);
+    }
+  });
+
+  it('treats NaN and Infinity as no day at all', async () => {
+    // Both are `typeof 'number'`, and Firestore stores each as null — so the
+    // field was typed a number and read back as one thing the decoder never
+    // expected.
+    for (const sent of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(await stored(await made({dayN: sent}), 'dayN')).toBe(0);
+    }
+  });
+
+  it('falls back for a dayN that is not a number', async () => {
+    for (const sent of ['99', null, undefined, {}, []]) {
+      expect(await stored(await made({dayN: sent}), 'dayN')).toBe(0);
+    }
+  });
+
+  it('keeps a real avatar emoji', async () => {
+    expect(await stored(await made({avatarEmoji: '\u{1F98A}'}), 'avatarEmoji')).toBe(
+      '\u{1F98A}',
+    );
+  });
+
+  it('refuses anything that is not a picture as an avatar', async () => {
+    // This kept the first two code points of ANY string, so each of these was
+    // somebody's avatar on every post they wrote. The last one is the reason
+    // it matters: a right-to-left override reorders what renders around it.
+    for (const sent of [
+      'ab',
+      '<s',
+      '99',
+      'ABCDEFGHIJ',
+      '‮‮', // right-to-left override
+      '​​', // zero-width space
+      '️', // a lone variation selector, no pictograph
+      '   ',
+      42,
+      null,
+    ]) {
+      expect(await stored(await made({avatarEmoji: sent}), 'avatarEmoji')).toBe(
+        '\u{1F525}',
+      );
+    }
+  });
+
+  it('strips an alias down to the characters it allows', async () => {
+    // The alias has had an allowlist all along — this pins it beside the
+    // avatar so the pair cannot drift apart again.
+    expect(await stored(await made({alias: 'Ste‮ady'}), 'alias')).toBe('Steady');
+    expect(await stored(await made({alias: '<script>x</script>'}), 'alias')).toBe(
+      'scriptxscript',
+    );
+    expect(await stored(await made({alias: 'A'.repeat(40)}), 'alias')).toBe(
+      'A'.repeat(32),
+    );
+  });
+});

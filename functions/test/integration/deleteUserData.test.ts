@@ -175,3 +175,83 @@ describe('deleteUserData — what stays', () => {
     await expect(getAuth().getUser('bob')).resolves.toBeDefined();
   });
 });
+
+/**
+ * The trail a reader leaves without ever writing a word.
+ *
+ * Both of these live UNDER `posts`, keyed by the uid, so neither
+ * `recursiveDelete(users/{uid})` nor the two anonymize passes reached them.
+ * A full erasure used to leave the departed account's uid written on every
+ * post it had reacted to or reported — a durable record of what that person
+ * read and how they felt about it, outliving the one operation whose whole
+ * promise is that nothing does.
+ */
+describe('deleteUserData — the reader trail', () => {
+  const reactorRef = (postId: string, uid: string) =>
+    postsCol().doc(postId).collection('reactors').doc(uid);
+  const reporterRef = (postId: string, uid: string) =>
+    postsCol().doc(postId).collection('reporters').doc(uid);
+
+  it('removes every reaction the departing account left', async () => {
+    await makeUser('alice');
+    await makeUser('bob');
+    const a = await createPost.run(
+      request({text: 'a post worth reacting to', tag: 'win'}, 'bob'),
+    );
+    const b = await createPost.run(
+      request({text: 'another one worth reacting to', tag: 'win'}, 'bob'),
+    );
+    // The client writes its OWN reactor document; the uid is both the id and
+    // a field, which is what makes it findable at erasure time.
+    await reactorRef(a.postId, 'alice').set({uid: 'alice', emoji: '\u{1F525}'});
+    await reactorRef(b.postId, 'alice').set({uid: 'alice', emoji: '\u{1F4AA}'});
+    await reactorRef(a.postId, 'bob').set({uid: 'bob', emoji: '\u{1F525}'});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    expect((await reactorRef(a.postId, 'alice').get()).exists).toBe(false);
+    expect((await reactorRef(b.postId, 'alice').get()).exists).toBe(false);
+    // Somebody else's reaction is none of this operation's business.
+    expect((await reactorRef(a.postId, 'bob').get()).exists).toBe(true);
+  });
+
+  it('removes every report they filed, but never the count', async () => {
+    // Deliberately not symmetrical with reactions. `reportCount` is what
+    // auto-hides a post at three; undoing a real reader's judgement because
+    // they later closed their account would quietly un-hide flagged content.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'a post somebody flagged', tag: 'win'}, 'bob'),
+    );
+    await postsCol().doc(postId).update({reportCount: 2});
+    await reporterRef(postId, 'alice').set({uid: 'alice', reportedAt: new Date()});
+    await reporterRef(postId, 'bob').set({uid: 'bob', reportedAt: new Date()});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    expect((await reporterRef(postId, 'alice').get()).exists).toBe(false);
+    expect((await reporterRef(postId, 'bob').get()).exists).toBe(true);
+    expect((await postsCol().doc(postId).get()).get('reportCount')).toBe(2);
+  });
+
+  it('leaves no document anywhere still carrying the uid', async () => {
+    // The catch-all. Anything new that files a row under `posts` keyed by the
+    // reader rather than the author has to be added to the erasure path, and
+    // this is what fails when it is not.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'the post everything hangs off', tag: 'win'}, 'bob'),
+    );
+    await reactorRef(postId, 'alice').set({uid: 'alice', emoji: '\u{1F525}'});
+    await reporterRef(postId, 'alice').set({uid: 'alice', reportedAt: new Date()});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    for (const group of ['reactors', 'reporters', 'postAuthors', 'replyAuthors']) {
+      const left = await db.collectionGroup(group).where('uid', '==', 'alice').get();
+      expect(left.empty, `${group} still names the departed account`).toBe(true);
+    }
+  });
+});

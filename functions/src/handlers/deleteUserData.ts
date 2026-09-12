@@ -43,6 +43,8 @@ export const deleteUserData = onCall(
     await deleteSubscriber(uid);
     await anonymizePosts(uid);
     await anonymizeReplies(uid);
+    await deleteReactions(uid);
+    await deleteReports(uid);
     await db.recursiveDelete(userDoc(uid));
     await journeyDoc(uid).delete();
     await getAuth().deleteUser(uid);
@@ -70,6 +72,58 @@ async function anonymizePosts(uid: string): Promise<void> {
       });
       batch.delete(author.ref);
     }
+    await batch.commit();
+  }
+}
+
+/**
+ * A reaction is nothing BUT an identity — there are no words to keep — so it
+ * is deleted outright rather than anonymized.
+ *
+ * These were missed entirely. `posts/{id}/reactors/{uid}` is keyed by the uid
+ * *and* carries it as a field, and it sits under `posts`, so neither
+ * `recursiveDelete(users/{uid})` nor the two anonymize passes above ever
+ * reached it. After a full erasure the departed account's uid was still
+ * written on every post it had ever reacted to — a permanent record of what
+ * that person read and how they felt about it, surviving the one operation
+ * whose entire promise is that it does not.
+ *
+ * `onReaction` fires on each delete and decrements the post's aggregate, so
+ * the count follows the person out. The field already has the COLLECTION_GROUP
+ * index this query needs (the app runs the same one for its own reactions).
+ */
+async function deleteReactions(uid: string): Promise<void> {
+  const snap = await db
+    .collectionGroup('reactors')
+    .where('uid', '==', uid)
+    .get();
+  await deleteAll(snap.docs.map((d) => d.ref));
+}
+
+/**
+ * Reports: the identity goes, the COUNT stays.
+ *
+ * Deliberately not symmetrical with reactions. `reportCount` is what auto-hides
+ * a post at three, and a report was a real judgement by a real reader — undoing
+ * it because the reporter later deleted their account would quietly un-hide
+ * content the community had flagged. Nothing decrements on this delete (there
+ * is no trigger on `reporters`), which is exactly what we want.
+ */
+async function deleteReports(uid: string): Promise<void> {
+  const snap = await db
+    .collectionGroup('reporters')
+    .where('uid', '==', uid)
+    .get();
+  await deleteAll(snap.docs.map((d) => d.ref));
+}
+
+/** Batched deletes, under Firestore's 500-writes-per-batch cap. */
+async function deleteAll(
+  refs: FirebaseFirestore.DocumentReference[],
+): Promise<void> {
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = db.batch();
+    for (const ref of refs.slice(i, i + 400)) batch.delete(ref);
     await batch.commit();
   }
 }

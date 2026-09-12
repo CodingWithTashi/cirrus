@@ -228,4 +228,28 @@ void main() {
       server('minReplyDistinctLetters'),
     );
   });
+
+  test('the CEILINGS are the ones the server enforces', () {
+    // The floors above have been pinned across the two languages for a while;
+    // the maximums never were, and the reply composer had no maximum at all.
+    // So a three-sentence reply passed the composer, was refused by
+    // `createReply`, and was dropped by `addReply`'s `.ignore()` — rendered as
+    // sent, seen by nobody. Same drift the floors are pinned against, at the
+    // other end of the range.
+    int handlerConst(String file, String name) {
+      final source = File('functions/src/handlers/$file').readAsStringSync();
+      final match = RegExp('const $name = (\\d+);').firstMatch(source);
+      expect(match, isNotNull, reason: '$name missing from $file');
+      return int.parse(match!.group(1)!);
+    }
+
+    expect(
+      PostQuality.maxPostChars,
+      handlerConst('createPost.ts', 'MAX_POST_CHARS'),
+    );
+    expect(
+      PostQuality.maxReplyChars,
+      handlerConst('createReply.ts', 'MAX_REPLY_CHARS'),
+    );
+  });
 }

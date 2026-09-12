@@ -16,20 +16,44 @@ import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {FieldValue, userDoc} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
-import {isAllowedCoachName} from '../lib/nameGuard';
+import {
+  COACH_NAME_MAX,
+  coachNameLength,
+  hasAllowedShape,
+  isAllowedCoachName,
+  normalizeCoachName,
+} from '../lib/nameGuard';
 import {log} from '../lib/logger';
 
-/** Matches the 20 grapheme clusters `coach_name.dart` enforces client-side. */
-const MAX_CHARS = 20;
+/**
+ * The widest a valid name can be in UTF-16 code units: 20 code points, each at
+ * most a surrogate pair. `requireText` counts code units, so this is only a
+ * cheap upper bound to bring the string in safely — the real limit is
+ * [COACH_NAME_MAX], counted in code points below, which is what the client and
+ * the user both count. Bounding on code units alone refused an 11-letter name
+ * in Adlam, CJK Extension B, or the styled text people paste from a bio.
+ */
+const MAX_WIRE_CHARS = COACH_NAME_MAX * 2;
 
 export const setCoachName = onCall(
   {region: REGION, enforceAppCheck: true, memory: '256MiB'},
   async (request): Promise<{coachName: string}> => {
     const {uid} = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
-    const name = requireText(data['coachName'], 'coachName', MAX_CHARS);
+    const name = normalizeCoachName(
+      requireText(data['coachName'], 'coachName', MAX_WIRE_CHARS),
+    );
 
-    if (!isAllowedCoachName(name)) {
+    if (coachNameLength(name) > COACH_NAME_MAX) {
+      throw new HttpsError(
+        'invalid-argument',
+        `"coachName" must be ${COACH_NAME_MAX} characters or fewer.`,
+      );
+    }
+
+    // The shape rules the app enforces as they type. Re-checked here because
+    // the app is the untrusted side and this name goes into a system prompt.
+    if (!hasAllowedShape(name) || !isAllowedCoachName(name)) {
       // Deliberately says nothing about which rule it broke: a denylist that
       // explains itself is a denylist you can enumerate, and spelling out the
       // trigger to a seventeen-year-old is worse than a shrug.

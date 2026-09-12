@@ -17,10 +17,10 @@
  *   write under `users/{uid}`, and that denial is what stops a client from
  *   granting itself Premium.
  */
-import {HttpsError, onCall} from 'firebase-functions/v2/https';
+import {onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {forget, listMemories, type Memory} from '../lib/memories';
-import {requireCaller, requireText} from '../lib/guards';
+import {requireCaller, requireDocId} from '../lib/guards';
 import {log} from '../lib/logger';
 
 export const coachMemories = onCall(
@@ -36,13 +36,10 @@ export const forgetCoachMemory = onCall(
   async (request): Promise<{forgotten: true}> => {
     const {uid} = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
-    const memoryId = requireText(data['memoryId'], 'memoryId', 200);
-    // Firestore ids are opaque, but this one arrives from a client and is
-    // concatenated into a document path — a slash would address a different
-    // collection entirely.
-    if (memoryId.includes('/')) {
-      throw new HttpsError('invalid-argument', 'Bad memory id.');
-    }
+    // Opaque, but it arrives from a client and is concatenated into a
+    // document path — see `requireDocId` for the four shapes Firestore
+    // refuses and why an unguarded one becomes a 500.
+    const memoryId = requireDocId(data['memoryId'], 'memoryId');
 
     // Scoped to the caller's own subcollection, so there is no id a user can
     // send that reaches somebody else's memory.

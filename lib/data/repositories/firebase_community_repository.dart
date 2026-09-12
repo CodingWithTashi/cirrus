@@ -259,12 +259,24 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> addReply(String postId, Reply reply) async {
-    await _functions.call('createReply', {
-      'postId': postId,
-      'text': reply.text ?? '',
-      'alias': reply.alias,
-      'avatarEmoji': reply.avatarEmoji,
-    });
+    try {
+      await _functions.call('createReply', {
+        'postId': postId,
+        'text': reply.text ?? '',
+        'alias': reply.alias,
+        'avatarEmoji': reply.avatarEmoji,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      // Same shape as `addPost` above, and for the same reason: a refusal is
+      // FINAL, and telling it apart from a dropped connection is what lets
+      // the caller take the reply back out of the thread instead of leaving
+      // it there looking sent. `not-found` (the parent post is gone) is
+      // deliberately not folded in — the thread itself is already going away.
+      if (error.code == 'invalid-argument') {
+        throw const ContentRefusedException(ContentRefusal.rules);
+      }
+      rethrow;
+    }
   }
 
   @override

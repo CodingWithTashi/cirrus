@@ -16,7 +16,7 @@
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {db, FieldValue, mirrorPostStatus, moderationDoc, postsCol} from '../lib/firestore';
-import {requireCaller, requireText} from '../lib/guards';
+import {requireCaller, requireDocId} from '../lib/guards';
 import {log} from '../lib/logger';
 
 /**
@@ -30,7 +30,7 @@ export const reportPost = onCall(
   async (request): Promise<{ok: true}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
-    const postId = requireText(data['postId'], 'postId', 200);
+    const postId = requireDocId(data['postId'], 'postId');
 
     const ref = postsCol().doc(postId);
     const snap = await ref.get();
@@ -51,7 +51,16 @@ export const reportPost = onCall(
       const [fresh, rep] = await Promise.all([tx.get(ref), tx.get(reporter)]);
       if (!fresh.exists || rep.exists) return 'skipped' as const;
       const count = ((fresh.get('reportCount') as number | undefined) ?? 0) + 1;
-      tx.set(reporter, {reportedAt: FieldValue.serverTimestamp()});
+      // The uid is already the document ID; it is repeated as a FIELD so
+      // that `deleteUserData` can find every report a departing account
+      // made in one collection-group query. A collection-group filter on
+      // documentId() needs a full resource path, so the id alone is not
+      // queryable — without this field the rows were unreachable, and a
+      // full erasure left the uid written under every post they reported.
+      tx.set(reporter, {
+        uid: caller.uid,
+        reportedAt: FieldValue.serverTimestamp(),
+      });
       const hide = count >= AUTO_HIDE_AT;
       tx.update(ref, {
         reportCount: count,

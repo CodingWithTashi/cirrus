@@ -20,7 +20,7 @@ import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {REGION} from '../config';
 import {prefilter, replyQuality} from '../ai/prefilter';
 import {db, FieldValue, postsCol} from '../lib/firestore';
-import {requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
+import {requireCaller, requireDocId, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
 
 /** docs/03 §9 — replies are tighter than posts (500). */
 const MAX_REPLY_CHARS = 300;
@@ -31,7 +31,7 @@ export const createReply = onCall(
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;
 
-    const postId = requireText(data['postId'], 'postId', 200);
+    const postId = requireDocId(data['postId'], 'postId');
     const text = requireText(data['text'], 'text', MAX_REPLY_CHARS);
 
     // Same door as createPost: a slur is refused before anything is written.

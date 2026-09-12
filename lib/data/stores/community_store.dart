@@ -565,7 +565,20 @@ class CommunityStore extends Notifier<CommunityState> {
     _repo.setReaction(postId, emoji, on: on).ignore();
   }
 
-  void addReply(String postId, String text) {
+  /// Sends a reply, optimistically. False when the server refused it for good
+  /// — the reply is taken back out of the thread and the caller says so.
+  ///
+  /// The refusal had to be told apart from a wire failure, and was not. Every
+  /// outcome went through `.ignore()`, so a reply the callable refused — a
+  /// slur, or anything over its 300-character limit — stayed in the author's
+  /// own thread looking sent, forever, while nobody else could ever see it.
+  /// The composer's own note calls that "the worst shape a refusal can take";
+  /// it was describing the floor it had just added, and this is the same
+  /// failure everywhere else.
+  ///
+  /// A wire failure still keeps the reply and still says nothing: that is the
+  /// local-first stance, and the offline banner is already telling that story.
+  Future<bool> addReply(String postId, String text) async {
     final reply = Reply(
       // Local id until the feed reloads with the server's. Distinct enough to
       // key a list and to be recognised as not-yet-server-side.
@@ -581,11 +594,34 @@ class CommunityStore extends Notifier<CommunityState> {
           if (p.id != postId) p else p.copyWith(replies: [...p.replies, reply]),
       ],
     );
-    _repo.addReply(postId, reply).ignore();
+    try {
+      await _repo.addReply(postId, reply);
+    } on ContentRefusedException {
+      // Final. It never reached anyone and never will, so it must stop
+      // rendering as though it had.
+      state = state.copyWith(
+        posts: [
+          for (final p in state.posts)
+            if (p.id != postId)
+              p
+            else
+              p.copyWith(
+                replies: [
+                  for (final r in p.replies)
+                    if (r.id != reply.id) r,
+                ],
+              ),
+        ],
+      );
+      return false;
+    } on Exception {
+      // Offline, or a cold start that timed out. Not a verdict on the reply.
+    }
     final post = state.posts.firstWhere((p) => p.id == postId);
     if (post.tag == PostTag.sos && !post.isMine) {
       ref.read(quitStoreProvider.notifier).awardBadge('helpedSos');
     }
+    return true;
   }
 
   /// 3 reports on the SAME post auto-hide it pending review (the App Store
