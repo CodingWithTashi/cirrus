@@ -5096,7 +5096,13 @@ it" — and the App Privacy label since docs/10 §34. **The reply was sent** (Ap
 thread, Sep 11, 11:06 PM), in a plain first-person voice signed by the
 founder: it answers the AI question in full, notes 5.6.3 is fixed in the next
 build, and says the duplicate promotional image is being corrected — without
-claiming it is already removed, since it is review-locked. What is left is the
-founder's: `flutter build ipa` and upload the build carrying the 5.6.3 fix,
-drop the promo image from weekly + monthly once the metadata unlocks, and
-*Resubmit to App Review*.
+claiming it is already removed, since it is review-locked. **Resolved Sep 11.** The image stayed `WAITING_FOR_REVIEW` (409 UNMODIFIABLE)
+until the founder removed the three subscriptions from the draft submission —
+that flipped the image state to `PREPARE_FOR_SUBMISSION`, and the iris
+`DELETE /subscriptionImages/{id}` then returned 204 for both weekly
+(`03c65730…`) and monthly (`144ee60f…`). Yearly keeps its image
+(`68f89359…`), so no two products share one. The lock was the takeaway: a
+subscription image can only be edited while its subscription is out of an
+active review submission. What is left is the founder's: `flutter build ipa`
+and upload the build carrying the 5.6.3 fix, re-add the subscriptions to the
+draft, and *Resubmit to App Review*.
