@@ -80,8 +80,21 @@ service cloud.firestore {
         // Split from create/update because `request.resource` is null on a
         // delete, so the field check below would error rather than pass.
         allow delete: if isOwner(uid);
+        // `emoji` is constrained to the palette because this is the ONE piece
+        // of text a reader writes onto somebody else's post without passing
+        // `createPost`, the prefilter, the classifier or the slur check — it
+        // is written client-direct, right here. Unconstrained, a repackaged
+        // client rendered arbitrary text as a pill in every reader's feed,
+        // with no report path and no way for the author to remove it; a value
+        // containing a dot turned `reactions` into a nested map and took the
+        // community tab down for everyone. `onReaction` refuses the same list
+        // server-side (REACTION_EMOJI in functions/src/domain/types.ts,
+        // mirrored by CommunityReactions.palette in Dart) — either half alone
+        // is sufficient, and both are cheap.
         allow create, update: if isOwner(uid)
-                              && request.resource.data.uid == uid;
+                              && request.resource.data.uid == uid
+                              && request.resource.data.emoji is string
+                              && request.resource.data.emoji in ['💪', '🔥', '💬'];
       }
 
       // A reply is UGC too, so it gets the same moderation gate as a post:

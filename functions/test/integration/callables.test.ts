@@ -579,21 +579,29 @@ describe('matchedTestimonials', () => {
     expect(testimonials.map((t) => t.id).sort()).toEqual(['live-one', 'live-two']);
   });
 
-  it('falls back to English rather than half-filling the screen', async () => {
-    // One tailored card beside one generic one reads as a bug, so the fallback
-    // is wholesale.
-    await seed('fr-only', {locale: 'fr'});
-    await seed('en-one');
-    await seed('en-two');
-
-    const {testimonials} = await matchedTestimonials.run({
-      data: {timeZone: 'Europe/Paris', locale: 'fr-FR'},
+  const inLocale = (locale: string) =>
+    matchedTestimonials.run({
+      data: {timeZone: 'Europe/Paris', locale},
       auth: {uid: 'alice', token: {}},
       rawRequest: {},
       acceptsStreaming: false,
     } as unknown as CallableRequest<unknown>);
 
-    expect(testimonials.map((t) => t.id).sort()).toEqual(['en-one', 'en-two']);
+  it('serves the live rows whatever language the reader is in', async () => {
+    // Founder decision, Sep 12 2026: the quotes are real beta-tester reviews
+    // and there are only ever a handful, so the pool is the rows themselves.
+    // Filtering by locale with no translated rows behind it simply hid them
+    // from four of the five shipped languages.
+    await seed('one');
+    await seed('two');
+
+    for (const locale of ['en-GB', 'fr-FR', 'PT-BR', 'de-DE']) {
+      const {testimonials} = await inLocale(locale);
+      expect(
+        testimonials.map((t) => t.id).sort(),
+        `locale ${locale}`,
+      ).toEqual(['one', 'two']);
+    }
   });
 
   it('returns nothing rather than one card when the pool is short', async () => {

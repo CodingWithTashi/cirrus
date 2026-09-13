@@ -221,6 +221,25 @@ abstract final class CommunityRules {
 /// **Assumes a space-separated script.** All five shipped locales
 /// (en/es/fr/de/pt) are; the word rules would have to become script-aware
 /// before shipping Chinese, Japanese or Thai.
+/// The reactions a post can carry.
+///
+/// Mirrors `REACTION_EMOJI` in `functions/src/domain/types.ts` and the
+/// allow-list in `firestore.rules`; pinned across all three by
+/// `test/domain/post_quality_test.dart`.
+///
+/// The feed renders one pill per entry HERE rather than per key found on the
+/// post, which is what makes reacting possible at all: `createPost` wrote an
+/// empty `reactions` map, the feed drew a pill per key, so a real post offered
+/// nothing to tap and `setReaction` was never called by anything. It only
+/// looked alive because the demo fixtures ship with counts already on them.
+///
+/// Closed, not free text, because a reactor document is written CLIENT-DIRECT
+/// — the one piece of text a reader puts on somebody else's post without
+/// passing `createPost`, the prefilter, the classifier or the slur check.
+abstract final class CommunityReactions {
+  static const List<String> palette = ['💪', '🔥', '💬'];
+}
+
 abstract final class PostQuality {
   /// A post is a thing somebody is meant to answer, so it asks for a
   /// sentence.
@@ -242,6 +261,26 @@ abstract final class PostQuality {
 
   /// A reply is allowed to be "thanks". It only has to be *words*.
   static const int minReplyChars = 6;
+
+  /// The CEILINGS, mirroring `MAX_POST_CHARS` in `createPost.ts` and
+  /// `MAX_REPLY_CHARS` in `createReply.ts`. Pinned across the two languages by
+  /// `test/domain/post_quality_test.dart`, exactly as the floors are.
+  ///
+  /// The floors were mirrored here long ago for a reason worth restating: the
+  /// composer's note says that without a client-side check "the callable
+  /// refuses 'ok' server-side, `addReply` ignores the failure, and the reply
+  /// sits in the author's own thread forever while nobody else can see it —
+  /// the worst shape a refusal can take". That is the same failure at the
+  /// other end. The reply composer had no maximum at all, so three sentences
+  /// — the length of a real answer to somebody in crisis — were accepted,
+  /// rendered as sent, and discarded.
+  ///
+  /// Counted in grapheme clusters, because that is what `maxLength` counts
+  /// and what the person typing counts. `requireText` counts the same way
+  /// now; it used to count UTF-16 code units, which made a full post
+  /// containing emoji unpostable.
+  static const int maxPostChars = 500;
+  static const int maxReplyChars = 300;
 
   static const int minPostWords = 3;
 

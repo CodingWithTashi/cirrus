@@ -226,6 +226,94 @@ describe('the happy path', () => {
   });
 });
 
+/**
+ * docs/04 §7: "Free: 5 coach msgs/day + 1 panic session/day."
+ *
+ * The panic half was specified, counted in `panicUsage` and then read by
+ * nothing — `aiCoachChat` claimed an ordinary coach message for every turn,
+ * panic or not. So the one moment the product exists for answered "you've used
+ * your 5 messages for today", on the screen that had just offered Ember.
+ */
+describe('the panic allowance is on TOP of the five', () => {
+  // The suite's default alice is a subscriber; this allowance is the FREE
+  // tier's, because a subscriber's 100 is not a wall anyone meets mid-craving.
+  beforeEach(async () => {
+    await userDoc('alice').set({entitlement: {tier: 'free'}}, {merge: true});
+  });
+
+  const panicUsed = async (uid = 'alice'): Promise<number> => {
+    const usage = (await userDoc(uid).get()).get('panicMsgUsage') as
+      | {count?: number}
+      | undefined;
+    return typeof usage?.count === 'number' ? usage.count : 0;
+  };
+
+  it('spends the panic allowance, not one of the five', async () => {
+    await run(caller({panicIntensity: 8}));
+    expect(await panicUsed()).toBe(1);
+    expect(await usedToday()).toBe(0);
+  });
+
+  it('answers a craving even when the five are gone', async () => {
+    // The whole point. Five ordinary messages spent, then a craving at 8/10.
+    for (let i = 0; i < 5; i++) await run(caller());
+    expect(await usedToday()).toBe(5);
+
+    const reply = await run(caller({panicIntensity: 8}));
+    expect(reply.template).not.toBe('capReached');
+    expect(generate).toHaveBeenCalled();
+  });
+
+  it('falls through to the ordinary allowance once the panic one is spent', async () => {
+    // A second craving the same day is not refused while they still have
+    // messages left — nobody is turned away mid-craving with allowance in hand.
+    await run(caller({panicIntensity: 8}));
+    await run(caller({panicIntensity: 9}));
+    expect(await panicUsed()).toBe(1);
+    expect(await usedToday()).toBe(1);
+  });
+
+  it('still refuses once BOTH are spent', async () => {
+    vi.spyOn(FREE_DAILY_COACH_MESSAGES, 'value').mockReturnValue(1);
+    await run(caller({panicIntensity: 8})); // panic pot
+    await run(caller({panicIntensity: 8})); // the single ordinary message
+    const reply = await run(caller({panicIntensity: 8}));
+    expect(reply.template).toBe('capReached');
+  });
+
+  it('reports the COACH messages left, which a panic turn did not touch', async () => {
+    await run(caller()); // 1 of 5 ordinary
+    const reply = await run(caller({panicIntensity: 8}));
+    // Four ordinary left — not five, and not three.
+    expect(reply.messagesLeft).toBe(4);
+  });
+
+  it('refunds the panic message when the model fails, not a coach one', async () => {
+    await run(caller({panicIntensity: 8}));
+    expect(await panicUsed()).toBe(1);
+    generate.mockRejectedValueOnce(new ModelUnavailableError('down'));
+    // The panic pot is spent, so this turn is on the ordinary allowance.
+    await run(caller({panicIntensity: 8}));
+    expect(await usedToday()).toBe(0); // refunded
+    expect(await panicUsed()).toBe(1); // untouched
+  });
+
+  it('does not meter a subscriber twice', async () => {
+    await userDoc('paid').set({
+      entitlement: {
+        tier: 'premium',
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+    await journeyDoc('paid').set(
+      (await journeyDoc('alice').get()).data() as Record<string, unknown>,
+    );
+    await run(caller({panicIntensity: 8}, 'paid'));
+    expect(await panicUsed('paid')).toBe(0);
+    expect(await usedToday('paid')).toBe(1);
+  });
+});
+
 describe('greeting before there is anything to coach', () => {
   it('greets a caller with no journey instead of burning a model call', async () => {
     const reply = await run(caller({}, 'stranger'));

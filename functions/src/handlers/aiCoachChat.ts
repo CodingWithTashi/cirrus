@@ -49,7 +49,13 @@ import {
 import {coachMessages, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log, safeMeta} from '../lib/logger';
-import {claimCoachMessage, refundCoachMessage, tierFor} from '../lib/usage';
+import {
+  claimCoachMessage,
+  claimPanicMessage,
+  refundCoachMessage,
+  refundPanicMessage,
+  tierFor,
+} from '../lib/usage';
 import {COACH_CHIPS, type CoachChip, type CoachTemplate, type SubscriptionTier} from '../domain/types';
 
 const MAX_MESSAGE_CHARS = 1000;
@@ -139,7 +145,37 @@ export const aiCoachChat = onCall(
       tier === 'free'
         ? readAllowance.freeCoachMessages()
         : readAllowance.premiumCoachMessages();
-    const quota = await claimCoachMessage(caller.uid, card.todayKey, limit);
+
+    // A panic turn spends the PANIC allowance first — docs/04 §7's "5 coach
+    // msgs/day + 1 panic session/day". That second allowance was specified,
+    // counted (`panicUsage`) and then read by nothing, so every panic turn
+    // came out of the ordinary five and somebody at 9/10 intensity who had
+    // spent them was told to come back tomorrow. The loop screen had just
+    // offered them Ember.
+    //
+    // Free tier only: a subscriber's 100 is not a wall anyone reaches
+    // mid-craving, and metering them twice would only complicate the count
+    // they are shown. On exhaustion this falls THROUGH to the ordinary
+    // allowance rather than refusing — nobody is turned away while they still
+    // have a message left, whichever pot it comes from.
+    const panicTurn = panicIntensity !== null && tier === 'free';
+    const onPanicAllowance =
+      panicTurn &&
+      (await claimPanicMessage(
+        caller.uid,
+        card.todayKey,
+        readAllowance.freePanicMessages(),
+      ));
+
+    const quota = onPanicAllowance
+      ? {allowed: true as const, used: 0, limit}
+      : await claimCoachMessage(caller.uid, card.todayKey, limit);
+    // Refund whichever pot this turn actually spent from. Refunding a coach
+    // message for a panic turn would hand out a message nobody paid for.
+    const refundTurn = (): Promise<void> =>
+      onPanicAllowance
+        ? refundPanicMessage(caller.uid, card.todayKey)
+        : refundCoachMessage(caller.uid, card.todayKey);
     if (!quota.allowed) {
       // docs/04 §7 — kind cap copy, and zero model spend.
       return {
@@ -150,7 +186,19 @@ export const aiCoachChat = onCall(
         tier,
       };
     }
-    const messagesLeft = Math.max(0, limit - quota.used);
+    // A panic turn left the coach counter alone, so its remaining count comes
+    // from the snapshot already in hand rather than from this claim — reporting
+    // `limit` would tell someone who has spent four of five that they have five.
+    const coachUsedToday = (() => {
+      const usage = userSnap.get('aiUsage') as
+        | {day?: string; msgCount?: number}
+        | undefined;
+      return usage?.day === card.todayKey ? (usage.msgCount ?? 0) : 0;
+    })();
+    const messagesLeft = Math.max(
+      0,
+      limit - (onPanicAllowance ? coachUsedToday : quota.used),
+    );
 
     const history = await recentTurns(caller.uid);
     const userText = text ?? `[${chip ?? 'craving'}]`;
@@ -264,7 +312,7 @@ export const aiCoachChat = onCall(
         // docs/03: the coach fails IN-THREAD, never as a dialog. The client
         // already knows this template. The message was not delivered, so give
         // the quota unit back — nobody pays for our outage.
-        await refundCoachMessage(caller.uid, card.todayKey);
+        await refundTurn();
         // Refunded, so the allowance is one higher than the claim left it.
         return {
           template: 'connectionLost',
@@ -279,7 +327,7 @@ export const aiCoachChat = onCall(
 
     reply = reply.trim();
     if (reply.length === 0) {
-      await refundCoachMessage(caller.uid, card.todayKey);
+      await refundTurn();
       return {
         template: 'connectionLost',
         args: {},

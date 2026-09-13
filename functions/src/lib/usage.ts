@@ -74,6 +74,33 @@ export function tierOf(
  * rolls over at the USER's local midnight — `todayKey` is already computed in
  * their timezone by the caller.
  */
+/**
+ * The allowance window a claim belongs to, which only ever moves FORWARD.
+ *
+ * The day key is derived from the timezone the CLIENT declares on every
+ * request, and `normalizeTimeZone` accepts any real IANA zone — so a caller
+ * can move its own "today" across a 26-hour spread at will. A usage row
+ * remembers exactly one day, so flipping zones reset the counter in BOTH
+ * directions: exhaust the cap in Kiritimati (UTC+14), claim a fresh one in
+ * Niue (UTC-11), flip back, and get another. Not twice the allowance —
+ * unbounded, on the gates that cost real money per call.
+ *
+ * A key EARLIER than the stored one therefore keeps the stored window, so a
+ * flip buys nothing; a genuinely later key — a real midnight, anywhere —
+ * resets exactly as before. Someone who truly flies east to west waits at most
+ * one extra day for their reset and is never given less than they already had.
+ *
+ * The other half of this was already understood: [claimDailyPost] reads the SOS
+ * `lastAtMs` unconditionally precisely "because the day key also comes from the
+ * CLIENT's timezone, so a caller could have flipped it on demand". The counter
+ * needed the same suspicion.
+ *
+ * Keys are `yyyy-MM-dd`, so a string compare is a chronological one.
+ */
+function windowFor(storedDay: string | undefined, todayKey: string): string {
+  return storedDay !== undefined && todayKey < storedDay ? storedDay : todayKey;
+}
+
 export async function claimCoachMessage(
   uid: string,
   todayKey: string,
@@ -83,11 +110,12 @@ export async function claimCoachMessage(
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
     const usage = (snap.data() as UserDoc | undefined)?.aiUsage;
-    const used = usage && usage.day === todayKey ? usage.msgCount : 0;
+    const day = windowFor(usage?.day, todayKey);
+    const used = usage !== undefined && usage.day === day ? usage.msgCount : 0;
 
     if (used >= limit) return {allowed: false, used, limit};
 
-    tx.set(ref, {aiUsage: {day: todayKey, msgCount: used + 1}}, {merge: true});
+    tx.set(ref, {aiUsage: {day, msgCount: used + 1}}, {merge: true});
     return {allowed: true, used: used + 1, limit};
   });
 }
@@ -99,6 +127,67 @@ export async function claimCoachMessage(
  * The single implementation. `aiCoachChat` used to carry a private copy, so
  * the tested one never ran in production; that duplication is gone.
  */
+/**
+ * Spends one PANIC message — the free tier's allowance on top of its five.
+ *
+ * docs/04 §7 specifies "5 coach msgs/day + 1 panic session/day", and the panic
+ * half existed only as a number `panicSession` returned to the client and
+ * nothing ever enforced: `aiCoachChat` claimed an ordinary coach message for
+ * every turn, panic or not. So the one moment the product exists for — someone
+ * at 9/10 intensity tapping the option the loop screen had just told them was
+ * available — answered "you've used your 5 messages for today".
+ *
+ * Its own counter, on its own key, so it can neither be drained by ordinary
+ * chat nor drain it. Returns false when the panic allowance is spent, and the
+ * caller then falls back to the ordinary one rather than refusing outright —
+ * a paid-for message is still a message, and nobody is turned away mid-craving
+ * while they have any allowance left at all.
+ *
+ * Forward-only on the window, like every other claim here; see [windowFor].
+ */
+export async function claimPanicMessage(
+  uid: string,
+  todayKey: string,
+  limit: number,
+): Promise<boolean> {
+  if (limit <= 0) return false;
+  return db.runTransaction(async (tx) => {
+    const ref = userDoc(uid);
+    const snap = await tx.get(ref);
+    const usage = (snap.data() as UserDoc | undefined)?.panicMsgUsage;
+    const day = windowFor(usage?.day, todayKey);
+    const used = usage !== undefined && usage.day === day ? usage.count : 0;
+    if (used >= limit) return false;
+    tx.set(ref, {panicMsgUsage: {day, count: used + 1}}, {merge: true});
+    return true;
+  });
+}
+
+/**
+ * Gives a panic message back after a failed turn — the panic-allowance twin of
+ * [refundCoachMessage], and for the same reason: nobody pays for our outage.
+ *
+ * Strict key compare, like its sibling, and for the same reason: it is not
+ * client-callable, and widening it would hand out a free message to a window
+ * it never spent from.
+ */
+export async function refundPanicMessage(
+  uid: string,
+  todayKey: string,
+): Promise<void> {
+  await db.runTransaction(async (tx) => {
+    const ref = userDoc(uid);
+    const snap = await tx.get(ref);
+    const usage = (snap.data() as UserDoc | undefined)?.panicMsgUsage;
+    if (!usage || usage.day !== todayKey || usage.count <= 0) return;
+    tx.set(
+      ref,
+      {panicMsgUsage: {day: todayKey, count: usage.count - 1}},
+      {merge: true},
+    );
+  });
+}
+
 export async function refundCoachMessage(
   uid: string,
   todayKey: string,
@@ -107,6 +196,13 @@ export async function refundCoachMessage(
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
     const usage = (snap.data() as UserDoc | undefined)?.aiUsage;
+    // Deliberately the RAW key, and deliberately NOT [windowFor]: a refund
+    // must only ever touch the window it spent from. Widening it to match the
+    // stored window would let a refund arriving after local midnight decrement
+    // the new day's allowance, which is the free message the strict compare
+    // exists to refuse. Nothing client-callable reaches here — only
+    // `aiCoachChat`, on its own model failure, with the key it claimed under —
+    // so this needs no defence against a chosen timezone.
     if (!usage || usage.day !== todayKey || usage.msgCount <= 0) return;
     tx.set(
       ref,
@@ -136,9 +232,12 @@ export async function countPanicSession(
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
     const usage = (snap.data() as UserDoc | undefined)?.panicUsage;
-    const next = (usage && usage.day === todayKey ? usage.count : 0) + 1;
+    // Forward-only, like every other window here — this one narrows the AI
+    // option for the rest of the day, so a flip would widen it again.
+    const day = windowFor(usage?.day, todayKey);
+    const next = (usage !== undefined && usage.day === day ? usage.count : 0) + 1;
 
-    tx.set(ref, {panicUsage: {day: todayKey, count: next}}, {merge: true});
+    tx.set(ref, {panicUsage: {day, count: next}}, {merge: true});
     return next;
   });
 }
@@ -196,7 +295,10 @@ export async function claimDailyPost(
     const ref = userDoc(uid);
     const snap = await tx.get(ref);
     const usage = (snap.data() as UserDoc | undefined)?.[bucket];
-    const used = usage !== undefined && usage.day === todayKey ? usage.count : 0;
+    // Forward-only, for the reason spelled out on [windowFor]: the day key is
+    // the client's to choose, and one stored day made flipping zones a reset.
+    const day = windowFor(usage?.day, todayKey);
+    const used = usage !== undefined && usage.day === day ? usage.count : 0;
 
     if (used >= limit) return {allowed: false, used, limit};
 
@@ -223,7 +325,7 @@ export async function claimDailyPost(
       ref,
       {
         [bucket]: {
-          day: todayKey,
+          day,
           // A retry re-uses the slot it already spent rather than taking a
           // second one.
           count: isRetry ? used : used + 1,

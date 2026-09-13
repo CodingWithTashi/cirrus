@@ -39,7 +39,6 @@ class CommunityState {
   /// "still loading" from "gone", and rendered an empty Scaffold for both.
   final Map<String, FeedStatus> threads;
 
-
   /// Feed order: live SOS posts pinned first, then reverse-chron (docs/03 §9).
   List<Post> visible(DateTime now) {
     final list =
@@ -212,7 +211,7 @@ class CommunityStore extends Notifier<CommunityState> {
     await _load();
   }
 
-/// Opens one thread: renders whatever we already have, and **always
+  /// Opens one thread: renders whatever we already have, and **always
   /// re-reads it from the server**.
   ///
   /// The entry point for a deep link. `PostDetailScreen` used to read its post
@@ -302,9 +301,7 @@ class CommunityStore extends Notifier<CommunityState> {
 
   /// Re-attempts a single-post load after a failure.
   Future<void> retryPostFetch(String postId) async {
-    state = state.copyWith(
-      threads: {...state.threads}..remove(postId),
-    );
+    state = state.copyWith(threads: {...state.threads}..remove(postId));
     await ensurePost(postId);
   }
 
@@ -315,7 +312,10 @@ class CommunityStore extends Notifier<CommunityState> {
   /// missed one costs a slightly high number on one notification, which is
   /// not worth blocking a screen that has just opened.
   void markThreadRead(String postId) {
-    ref.read(userContextRepositoryProvider).sync(readThreads: [postId]).ignore();
+    ref
+        .read(userContextRepositoryProvider)
+        .sync(readThreads: [postId])
+        .ignore();
   }
 
   void _setThread(String postId, FeedStatus status) {
@@ -495,10 +495,9 @@ class CommunityStore extends Notifier<CommunityState> {
   void _watch(String id) {
     final stale = _statusSubs.remove(id);
     if (stale != null) unawaited(stale.cancel());
-    _statusSubs[id] = _repo.watchPostStatus(id).listen(
-      (status) => _setStatus(id, status),
-      onError: (Object _) {},
-    );
+    _statusSubs[id] = _repo
+        .watchPostStatus(id)
+        .listen((status) => _setStatus(id, status), onError: (Object _) {});
   }
 
   /// The author's own posts that came back from the feed still open — held
@@ -565,7 +564,20 @@ class CommunityStore extends Notifier<CommunityState> {
     _repo.setReaction(postId, emoji, on: on).ignore();
   }
 
-  void addReply(String postId, String text) {
+  /// Sends a reply, optimistically. False when the server refused it for good
+  /// — the reply is taken back out of the thread and the caller says so.
+  ///
+  /// The refusal had to be told apart from a wire failure, and was not. Every
+  /// outcome went through `.ignore()`, so a reply the callable refused — a
+  /// slur, or anything over its 300-character limit — stayed in the author's
+  /// own thread looking sent, forever, while nobody else could ever see it.
+  /// The composer's own note calls that "the worst shape a refusal can take";
+  /// it was describing the floor it had just added, and this is the same
+  /// failure everywhere else.
+  ///
+  /// A wire failure still keeps the reply and still says nothing: that is the
+  /// local-first stance, and the offline banner is already telling that story.
+  Future<bool> addReply(String postId, String text) async {
     final reply = Reply(
       // Local id until the feed reloads with the server's. Distinct enough to
       // key a list and to be recognised as not-yet-server-side.
@@ -578,14 +590,52 @@ class CommunityStore extends Notifier<CommunityState> {
     state = state.copyWith(
       posts: [
         for (final p in state.posts)
-          if (p.id != postId) p else p.copyWith(replies: [...p.replies, reply]),
+          if (p.id != postId)
+            p
+          else
+            p.copyWith(
+              replies: [...p.replies, reply],
+              // The feed renders `replyTotal`, so the optimistic reply has to
+              // move the COUNT too or the thread would show it while the card
+              // behind still said one fewer. Null stays null: that post has no
+              // server count, and `replyTotal` then reads the list we just grew.
+              replyCount: p.replyCount == null ? null : p.replyCount! + 1,
+            ),
       ],
     );
-    _repo.addReply(postId, reply).ignore();
+    try {
+      await _repo.addReply(postId, reply);
+    } on ContentRefusedException {
+      // Final. It never reached anyone and never will, so it must stop
+      // rendering as though it had.
+      state = state.copyWith(
+        posts: [
+          for (final p in state.posts)
+            if (p.id != postId)
+              p
+            else
+              p.copyWith(
+                replies: [
+                  for (final r in p.replies)
+                    if (r.id != reply.id) r,
+                ],
+                // Symmetrical with the optimistic bump above: taking the reply
+                // back out has to take its count with it.
+                replyCount: p.replyCount == null
+                    ? null
+                    : (p.replyCount! - 1).clamp(0, 1 << 30),
+              ),
+        ],
+      );
+      return false;
+    } on Exception {
+      // Offline, or a cold start that timed out. Not a verdict on the reply.
+    }
     final post = state.posts.firstWhere((p) => p.id == postId);
     if (post.tag == PostTag.sos && !post.isMine) {
       ref.read(quitStoreProvider.notifier).awardBadge('helpedSos');
     }
+    return true;
   }
 
   /// 3 reports on the SAME post auto-hide it pending review (the App Store
@@ -643,8 +693,6 @@ class CommunityStore extends Notifier<CommunityState> {
   }
 
   void _persist() {
-    unawaited(
-      CommunityPrefs.save(blocked: state.blocked, muted: state.muted),
-    );
+    unawaited(CommunityPrefs.save(blocked: state.blocked, muted: state.muted));
   }
 }

@@ -158,14 +158,36 @@ export async function remoderateOnce(limit: number): Promise<RemoderateResult> {
       continue;
     }
 
+    // Re-checked, because `classify` above is a live model call and the
+    // founder works the same queue through an in-app screen. The `status ===
+    // 'pending'` guard near the top runs one to three seconds earlier, and a
+    // human decision landing in that window used to be overwritten in
+    // silence: the founder BLOCKS a post, the sweeper's verdict comes back
+    // `allow`, and the post is republished, the author's mirror set live, and
+    // the row stamped `reviewedBy: 'remoderate'` over the founder's own name —
+    // so it leaves the queue and they never learn it was undone.
+    //
+    // A compare-and-set closes it. A person's verdict outranks the sweeper's,
+    // always, and losing the race simply drops the row: nothing is left to
+    // re-ask about content somebody has already decided.
+    //
     // Content fate FIRST, row second — the same order resolveModeration
     // keeps: if the second write fails, the row is still selected next run
-    // and the sweep is idempotent over an already-flipped status (it drops
-    // the row above).
-    await target.update({
-      status: VERDICT_STATUS[verdict.action],
-      moderatedAt: FieldValue.serverTimestamp(),
+    // and the sweep is idempotent over an already-flipped status.
+    const applied = await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(target);
+      if (!fresh.exists || fresh.get('status') !== 'pending') return false;
+      tx.update(target, {
+        status: VERDICT_STATUS[verdict.action],
+        moderatedAt: FieldValue.serverTimestamp(),
+      });
+      return true;
     });
+    if (!applied) {
+      await row.ref.set({retryable: false}, {merge: true});
+      result.dropped++;
+      continue;
+    }
     if (!isReply) await mirrorPostStatus(postId, MIRROR_STATUS[verdict.action]);
 
     if (verdict.action === 'allow') {

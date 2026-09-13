@@ -86,11 +86,7 @@ void main() {
         vm.state = vm.state.copyWith(step: ObStep.birthYear);
         typeYear(vm, DateTime.now().year - age);
         vm.next();
-        expect(
-          c.read(onboardingProvider).step,
-          expected,
-          reason: 'age $age',
-        );
+        expect(c.read(onboardingProvider).step, expected, reason: 'age $age');
       }
     });
 
@@ -126,7 +122,9 @@ void main() {
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
       // "28", not "1998" — the thing people actually do on this screen.
-      vm..typeBirthDigit(2)..typeBirthDigit(8);
+      vm
+        ..typeBirthDigit(2)
+        ..typeBirthDigit(8);
 
       expect(c.read(onboardingProvider).canContinue, isTrue);
       expect(c.read(onboardingProvider).birthYear, DateTime.now().year - 28);
@@ -141,7 +139,9 @@ void main() {
       final c = container();
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
-      vm..typeBirthDigit(1)..typeBirthDigit(9);
+      vm
+        ..typeBirthDigit(1)
+        ..typeBirthDigit(9);
 
       expect(c.read(onboardingProvider).canContinue, isFalse);
 
@@ -159,7 +159,9 @@ void main() {
       final c = container();
       final vm = c.read(onboardingProvider.notifier);
       vm.state = vm.state.copyWith(step: ObStep.birthYear);
-      vm..typeBirthDigit(1)..typeBirthDigit(5);
+      vm
+        ..typeBirthDigit(1)
+        ..typeBirthDigit(5);
 
       vm.next();
 
@@ -255,9 +257,7 @@ void main() {
       // card, so anything dropped here is a fact the coach can never know.
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.profile.gender, Gender.woman);
@@ -280,9 +280,7 @@ void main() {
     test('the journey starts today, on day one', () async {
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.plan.dayNumber(DateTime.now()), 1);
@@ -306,9 +304,7 @@ void main() {
       // progress toward a stranger's holiday.
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       final journey = c.read(quitStoreProvider)!;
       expect(journey.goals, isEmpty);
@@ -320,9 +316,7 @@ void main() {
     test('the draft is cleared so a second run starts clean', () async {
       final c = container();
       filled(c);
-      await c
-          .read(onboardingProvider.notifier)
-          .complete();
+      await c.read(onboardingProvider.notifier).complete();
 
       expect(c.read(onboardingProvider).step, ObStep.welcome);
       expect(c.read(onboardingProvider).gender, isNull);

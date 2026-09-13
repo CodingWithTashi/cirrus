@@ -316,6 +316,47 @@ describe('onReaction', () => {
     expect((await postsCol().doc('p1').get()).get('reactions')['💪']).toBe(0);
   });
 
+  it('ignores anything outside the palette', async () => {
+    // A reactor document is written CLIENT-DIRECT, so this is the one piece of
+    // text a reader puts on somebody else's post without passing `createPost`,
+    // the prefilter, the classifier or the slur check. It used to accept any
+    // non-empty string, which then rendered verbatim as a pill in every
+    // reader's feed — no report path, no way for the author to remove it, and
+    // no bound on how many distinct keys one person could add to the map.
+    for (const emoji of ['fire', 'BUY 50MG PODS t.me/xyz', '\u{1F600}', '  ']) {
+      await onReaction.run(written(undefined, {emoji}) as never);
+    }
+    expect((await postsCol().doc('p1').get()).get('reactions')).toEqual({});
+  });
+
+  it('never lets an emoji nest the reactions map', async () => {
+    // `update()` parses a STRING key as a dot-separated field path, so
+    // `emoji: 'a.b'` wrote `reactions: {a: {b: 1}}`. Every client then threw
+    // casting `reactions` to Map<String,int>, the feed load failed whole, and
+    // the community tab was dead for every user — unhealable by the server
+    // (deltas, no recount) and uneditable by the author (`allow update: if
+    // false`). Refused by the palette now, and keyed by FieldPath regardless.
+    await onReaction.run(written(undefined, {emoji: 'a.b'}) as never);
+    await onReaction.run(written(undefined, {emoji: '.'}) as never);
+    const reactions = (await postsCol().doc('p1').get()).get('reactions') as
+      Record<string, unknown>;
+    expect(reactions).toEqual({});
+    for (const value of Object.values(reactions)) {
+      expect(typeof value).toBe('number');
+    }
+  });
+
+  it('keys the map literally, so every palette entry stays a flat count', async () => {
+    for (const emoji of ['\u{1F4AA}', '\u{1F525}', '\u{1F4AC}']) {
+      await onReaction.run(written(undefined, {emoji}) as never);
+    }
+    expect((await postsCol().doc('p1').get()).get('reactions')).toEqual({
+      '\u{1F4AA}': 1,
+      '\u{1F525}': 1,
+      '\u{1F4AC}': 1,
+    });
+  });
+
   it('ignores a re-write of the same emoji', async () => {
     // A double tap or a retried write must not inflate the count — this is
     // the case the pure `reactionDelta` test exists for, verified here

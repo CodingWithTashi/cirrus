@@ -283,9 +283,27 @@ async function evictIfOverCap(uid: string): Promise<void> {
   log.info('memory.evicted', {uid, dropped: stale.size});
 }
 
-/** Everything Ember remembers, newest first. Powers the user-facing list. */
+/**
+ * Everything Ember remembers, newest first. Powers the user-facing list.
+ *
+ * The limit is [MAX_MEMORIES] — the store's own ceiling — and not a smaller
+ * page, because "everything" has to mean everything. It read 100 against a cap
+ * of 200, so a long-tenured user had up to a hundred memories that were kept,
+ * recalled and used by the coach while being invisible on the screen that
+ * exists to show them and impossible to delete from the UI that exists to
+ * delete them. The two orderings made it worse rather than self-correcting:
+ * eviction drops by `lastUsedAt` (least recently used) while this lists by
+ * `createdAt` (newest), so an old memory the coach leans on constantly is
+ * exactly the one that is never evicted AND never shown.
+ *
+ * The payload stays small — the embedding is not included, so this is 200
+ * short strings.
+ */
 export async function listMemories(uid: string): Promise<Memory[]> {
-  const snap = await memoriesCol(uid).orderBy('createdAt', 'desc').limit(100).get();
+  const snap = await memoriesCol(uid)
+    .orderBy('createdAt', 'desc')
+    .limit(MAX_MEMORIES)
+    .get();
   return snap.docs.map((doc) => ({
     id: doc.id,
     text: doc.get('text') as string,

@@ -18,9 +18,9 @@ import {enforceAppCheck, readAllowance, REGION} from '../config';
 import {postQuality, prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
-import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeEmoji} from '../lib/guards';
+import {asEnum, requireCaller, requireText, sanitizeAlias, sanitizeDayN, sanitizeEmoji} from '../lib/guards';
 import {claimDailyPost, tierFor} from '../lib/usage';
-import {POST_TAGS, type PostTag} from '../domain/types';
+import {POST_TAGS, REACTION_EMOJI, type PostTag} from '../domain/types';
 
 /**
  * docs/03 §9: text <= 500 chars, one tag required. The per-day allowance is
@@ -150,6 +150,7 @@ export const createPost = onCall(
 
     const alias = sanitizeAlias(data['alias']);
     const avatarEmoji = sanitizeEmoji(data['avatarEmoji']);
+    const dayN = sanitizeDayN(data['dayN']);
 
     // A batch, not a transaction: there is nothing to read first, and both
     // writes must still land together or neither does.
@@ -157,11 +158,18 @@ export const createPost = onCall(
     batch.set(post, {
       alias,
       avatarEmoji,
-      dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
+      dayN,
       tag,
       text,
-      reactions: {},
+      // Seeded at zero rather than left empty. The feed draws one pill per
+      // key on the post, so an empty map offered nothing to tap and reactions
+      // were unreachable on the real backend entirely — they only ever looked
+      // alive because the demo fixtures ship with counts already on them.
+      reactions: Object.fromEntries(REACTION_EMOJI.map((e) => [e, 0])),
       reportCount: 0,
+      // Seeded so the feed reads a number rather than a missing field on a
+      // post nobody has replied to yet. `onReplyStatus` owns it thereafter.
+      replyCount: 0,
       status: 'pending', // invisible until moderatePost clears it
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -177,7 +185,7 @@ export const createPost = onCall(
     batch.set(myPostsCol(caller.uid).doc(post.id), {
       alias,
       avatarEmoji,
-      dayN: typeof data['dayN'] === 'number' ? data['dayN'] : 0,
+      dayN,
       tag,
       text,
       status: 'pending',

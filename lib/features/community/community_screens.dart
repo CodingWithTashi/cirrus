@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -337,7 +339,7 @@ class PostCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (post.replies.isNotEmpty) ...[
+                  if (post.replyTotal > 0) ...[
                     const SizedBox(width: 10),
                     // The real count. `replyingNow` used to live here: a
                     // fabricated 3 on your own SOS post and 12 in the demo
@@ -346,17 +348,24 @@ class PostCard extends ConsumerWidget {
                     // have. A number that is only ever invented is worse than
                     // no number, especially one claiming people are with you.
                     Text(
-                      l10n.communityRepliedCount(post.replies.length),
+                      l10n.communityRepliedCount(post.replyTotal),
                       style: LpType.caption11(lp.textSecondary),
                     ),
                   ],
                 ],
               )
             else
+              // The PALETTE, not the keys on the document. Drawing a pill per
+              // key meant a post created on the real backend — where
+              // `reactions` starts empty — showed no pills at all, so there
+              // was nothing to tap and reactions were unreachable in
+              // production. `_ReactionPill` already renders a zero count (a
+              // key is decremented to 0, never removed, when someone takes
+              // their reaction back), so this introduces no new state.
               Row(
                 children: [
-                  for (final entry in post.reactions.entries) ...[
-                    _ReactionPill(post: post, emoji: entry.key),
+                  for (final emoji in CommunityReactions.palette) ...[
+                    _ReactionPill(post: post, emoji: emoji),
                     const SizedBox(width: 8),
                   ],
                 ],
@@ -766,7 +775,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                         child: TextField(
                           controller: _text,
                           maxLines: null,
-                          maxLength: 500,
+                          maxLength: PostQuality.maxPostChars,
                           autofocus: true,
                           onChanged: (_) => setState(() {}),
                           style: LpType.body15(lp.textPrimary),
@@ -888,7 +897,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
 /// banner would look busy, on a screen whose entire value is that someone
 /// really is there. Zero means zero, and the banner does not render.
 int _backupCount(Post post) =>
-    post.replies.length + post.reactions.values.fold(0, (sum, n) => sum + n);
+    post.replyTotal + post.reactions.values.fold(0, (sum, n) => sum + n);
 
 /// Frame 45 — SOS rally: live backup banner, replies, poster's update.
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -1129,6 +1138,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           focusNode: _replyFocus,
                           style: LpType.body14(lp.textPrimary),
                           textInputAction: TextInputAction.send,
+                          // The ceiling `createReply` enforces. Without it a
+                          // three-sentence reply was accepted here, rendered
+                          // as sent, refused by the callable and dropped by
+                          // `addReply`'s `.ignore()` — the same failure the
+                          // floor below was added to prevent, at the other
+                          // end. No counter: 300 is far past a normal reply,
+                          // so the limit should be invisible until it is hit.
+                          maxLength: PostQuality.maxReplyChars,
+                          buildCounter:
+                              (
+                                _, {
+                                required currentLength,
+                                required isFocused,
+                                required maxLength,
+                              }) => null,
                           onSubmitted: (_) => _send(post),
                           decoration: InputDecoration(
                             border: InputBorder.none,
@@ -1181,8 +1205,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (text.isEmpty || PostQuality.checkReply(text) != null) return;
     _reply.clear();
     LpHaptics.light();
-    ref.read(communityStoreProvider.notifier).addReply(post.id, text);
+    final sent = ref
+        .read(communityStoreProvider.notifier)
+        .addReply(post.id, text);
     maybeAskPushPermission(context, ref);
+    // The slur list is server-side only, so a reply can still come back
+    // refused. Say so — it has just been taken back out of the thread, and a
+    // reply that silently disappears is worse than one that never sent.
+    unawaited(
+      sent.then((ok) {
+        if (ok || !mounted) return;
+        showLpSnack(context, context.l10n.communityStatusBlocked);
+      }),
+    );
   }
 }
 

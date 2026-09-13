@@ -3,7 +3,7 @@ import { render } from 'astro:content';
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCta from '../../components/PostCta.astro';
-import WaitlistForm from '../../components/WaitlistForm.astro';
+import StoreBadges from '../../components/StoreBadges.astro';
 import { SITE_TITLE } from '../../consts';
 import { getPublishedPosts, formatDate, readingTime } from '../../lib/posts';
 
@@ -249,18 +249,16 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
     <button type="button" data-copy={url}>Copy link</button>
   </div>
 
-  {/* The post's own CTA. A real form rather than store buttons: the app is not
-      on a store yet, and a dead download button is worse than no button. The
-      source tag is what tells you the blog is converting. */}
+  {/* The post's own CTA: both store badges, tagged `blog-<slug>-end` so Play
+      Console can tell the end-of-post band from the sidebar card. */}
   <section class="post-cta post-cta--end" id="get-cirrus" aria-labelledby="get-cirrus-h">
-    <p class="micro micro--volt">{SITE_TITLE} · coming soon</p>
+    <p class="micro micro--volt">{SITE_TITLE} · free on iPhone and Android</p>
     <h2 id="get-cirrus-h">Start with the number you're avoiding</h2>
     <p>
       Most people have no idea what their daily puff count actually is. Cirrus counts it for you,
-      finds the hours you reach hardest, and tapers from there. Android first, iPhone right behind
-      it.
+      finds the hours you reach hardest, and tapers from there.
     </p>
-    <WaitlistForm source={`blog-${post.id}`} id="waitlist-post" cta="Join the waitlist" label="Get early access" showCount />
+    <StoreBadges campaign={`blog-${post.id}-end`} />
   </section>
 
   <nav class="post-footer-nav" aria-label="Post navigation">

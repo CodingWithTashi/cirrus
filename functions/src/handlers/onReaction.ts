@@ -14,7 +14,8 @@
  */
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {REGION} from '../config';
-import {FieldValue, postsCol} from '../lib/firestore';
+import {isReactionEmoji} from '../domain/types';
+import {FieldPath, FieldValue, postsCol} from '../lib/firestore';
 import {log} from '../lib/logger';
 
 /** What changed for one person: which emoji they left, and which they took back. */
@@ -43,7 +44,15 @@ const emojiOf = (
 ): string | null => {
   // DocumentData values are `any`; narrow through unknown before trusting it.
   const value = (data as Record<string, unknown> | undefined)?.['emoji'];
-  return typeof value === 'string' && value.length > 0 ? value : null;
+  // Only the closed palette. A reactor document is written CLIENT-DIRECT (the
+  // rules let its owner write it), so this is the one piece of text a reader
+  // can put on somebody else's post without passing `createPost`, the
+  // prefilter, the classifier or the slur check. It used to accept ANY
+  // non-empty string, which then rendered verbatim as a pill in every reader's
+  // feed — with no report path, no way for the author to remove it, and no
+  // bound on how many distinct keys one person could add to the map. The rules
+  // carry the same list; either half alone is sufficient and both are cheap.
+  return isReactionEmoji(value) ? value : null;
 };
 
 export const onReaction = onDocumentWritten(
@@ -61,16 +70,27 @@ export const onReaction = onDocumentWritten(
     );
     if (delta.added === null && delta.removed === null) return;
 
-    const update: Record<string, FirebaseFirestore.FieldValue> = {};
+    // `FieldPath`, never a template string. `update()` parses a string key as a
+    // DOT-SEPARATED path, so an emoji containing a dot wrote a NESTED map
+    // (`reactions: {a: {b: 1}}`) and every client then threw casting
+    // `reactions` to Map<String,int> — taking the community tab down for
+    // EVERY user, with no way for the server to heal it and no way for the
+    // author to edit it. A FieldPath segment is treated literally. The palette
+    // check above already refuses such a value; this is the second lock on the
+    // same door, because the cost of that door failing is the feed being dead
+    // for everyone at once.
+    const updates: [FirebaseFirestore.FieldPath, FirebaseFirestore.FieldValue][] = [];
     if (delta.removed !== null) {
-      update[`reactions.${delta.removed}`] = FieldValue.increment(-1);
+      updates.push([new FieldPath('reactions', delta.removed), FieldValue.increment(-1)]);
     }
     if (delta.added !== null) {
-      update[`reactions.${delta.added}`] = FieldValue.increment(1);
+      updates.push([new FieldPath('reactions', delta.added), FieldValue.increment(1)]);
     }
+    const [first, ...rest] = updates;
+    if (first === undefined) return;
 
     try {
-      await postsCol().doc(postId).update(update);
+      await postsCol().doc(postId).update(first[0], first[1], ...rest.flat());
     } catch (error) {
       // The post may have been removed between the tap and this trigger.
       // A reaction on a deleted post is not worth a retry storm.

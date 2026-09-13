@@ -5106,3 +5106,53 @@ subscription image can only be edited while its subscription is out of an
 active review submission. What is left is the founder's: `flutter build ipa`
 and upload the build carrying the 5.6.3 fix, re-add the subscriptions to the
 draft, and *Resubmit to App Review*.
+
+---
+
+## 39. THE SITE CATCHES UP WITH THE STORES (Sep 13) — no waitlist, no "coming soon"
+
+Both listings were live — Google Play, and the App Store since Sep 12
+(`id6806871144`, "Quit Vaping Tracker - Cirrus", 1.0.17) — while cirrusquit.com
+still said "Coming soon", carried the waitlist in 36 places, and told iPhone
+readers the app "genuinely isn't built yet". Two bylined posts said Cirrus was
+Android-only and sent iPhone owners elsewhere.
+
+**What `cirrus-landing` does now.** Every download CTA is one component,
+`StoreBadges.astro`: the official App Store SVG and Google Play PNG, never
+redrawn, at one shared visible height, with the reader's own store first
+(`data-os` stamped in BaseLayout's head before paint). The home page leads with
+the badges beside a larger live keypad demo, then an example day drawn as a
+timeline (every feature shipped, every tag its real tier, the times labelled as
+made up), the App Store screenshots, a devices row, a Free vs Premium table
+built from docs/13 §4, the cited stats, the FAQ, and a closing band with a QR
+code to `/download` on wide screens. The coach row says **up to 100** messages a
+day, not unlimited, because that is what the server enforces. `/download` shows
+both badges and still never redirects (the Android app claims the path). iPhone
+Safari gets Apple's Smart App Banner; the home schema is `MobileApplication`
+with both listings as `sameAs`.
+
+**Removed:** the waitlist form, its `/api/subscribe` Pages Function and the
+Listmonk vars. The 103 signups are untouched in Listmonk, so the privacy
+policy's waitlist paragraph stays true and stays. `/thanks` is a noindex "it's
+out" page in case an old confirmation link lands there.
+
+**Checked rather than trusted:**
+
+| Claim the page could have made | What the stores actually say |
+|---|---|
+| "Rated 4.6 on Google Play" | The 4.6 on the Play page belongs to another app by the same developer, in the "more by" rail. Cirrus has **no ratings** on either store, so the page shows none |
+| "Apple Watch app" | The App Store lookup lists `Watch4` among supported devices, so the watch app ships in the binary — claimed |
+| "No account needed" | Founder: the app requires an account. Removed from the hero |
+
+App Store links carry **no campaign tag**: Apple attributes `ct` only together
+with a `pt` provider token, and the privacy policy says only Play links are
+tagged. Tag one and the other has to change in the same commit.
+
+Gates: `npm run check` 0 errors / 0 warnings, `npm run build` 16 pages, the
+built HTML grepped for every retired phrase, and the built site looked at once
+at 1280px and inside a 390px frame with an Android user agent.
+
+Still owed: **production deploy is manual** (Actions → Deploy cirrus-landing →
+production). Emailing the waitlist that the app is out is a founder call. And
+the first App Store screenshot still reads "No account needed" — it is not used
+on the site, but it is on the listing.

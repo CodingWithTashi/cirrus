@@ -71,18 +71,17 @@ class FirebaseCommunityRepository implements CommunityRepository {
         .limit(_feedLimit)
         .get();
 
-    // Replies come back in ONE collection-group query rather than one query
-    // per post — a 50-post feed would otherwise cost 51 round trips.
-    final replies = await _db
-        .collectionGroup('replies')
-        .where('status', isEqualTo: 'live')
-        .get();
-    final repliesByPost = <String, List<Reply>>{};
-    for (final doc in replies.docs) {
-      final postId = doc.reference.parent.parent?.id;
-      if (postId == null) continue;
-      (repliesByPost[postId] ??= []).add(_toReply(doc.id, doc.data()));
-    }
+    // The feed loads NO replies. It shows a count and nothing else
+    // (`PostCard` reads `Post.replyTotal`), and the bodies are fetched per
+    // thread by [fetchPost].
+    //
+    // This used to run `collectionGroup('replies')` filtered only on
+    // `status == 'live'` with no limit — every live reply in the app, on
+    // every feed open, to render a number. One query beat 51 round trips
+    // while the collection was small, and replying is uncapped and free, so
+    // it grew with replies TIMES readers: ~225M document reads a day and 9MB
+    // per open at a realistic mid-launch size. See
+    // `functions/src/lib/replyCount.ts` for the full table.
 
     await _loadMyReactions();
     final mine = uid == null
@@ -95,7 +94,7 @@ class FirebaseCommunityRepository implements CommunityRepository {
           _toPost(
             doc.id,
             doc.data(),
-            _ordered(repliesByPost[doc.id] ?? const []),
+            const [],
             isMine: mine.containsKey(doc.id),
           ),
     ];
@@ -136,20 +135,18 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   /// The server-owned mirror of this account's posts: id → document.
   Future<Map<String, Map<String, dynamic>>> _loadMine(String uid) async {
-    final snap = await _myPosts(uid)
-        .orderBy('createdAt', descending: true)
-        .limit(_feedLimit)
-        .get();
+    final snap = await _myPosts(
+      uid,
+    ).orderBy('createdAt', descending: true).limit(_feedLimit).get();
     return {for (final doc in snap.docs) doc.id: doc.data()};
   }
 
   /// One post and its replies.
   ///
-  /// Deliberately NOT shaped like [fetchPosts]'s reply load. That one runs an
-  /// unbounded `collectionGroup('replies')` with no post filter, which is the
-  /// right trade for a 50-post feed and the wrong one here — for a single
-  /// thread it would fetch every live reply in the app to keep a handful.
-  /// This asks the post's own subcollection.
+  /// This is the ONLY place reply bodies are loaded. The feed shows a count
+  /// (`Post.replyTotal`, from the server-maintained `replyCount`) and fetches
+  /// nothing; asking the post's own subcollection here keeps the read
+  /// proportional to the thread being opened.
   ///
   /// Returns null for a post that is missing or not live. The author's own
   /// pending or held post is still answered, from their mirror row, so a
@@ -259,12 +256,24 @@ class FirebaseCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> addReply(String postId, Reply reply) async {
-    await _functions.call('createReply', {
-      'postId': postId,
-      'text': reply.text ?? '',
-      'alias': reply.alias,
-      'avatarEmoji': reply.avatarEmoji,
-    });
+    try {
+      await _functions.call('createReply', {
+        'postId': postId,
+        'text': reply.text ?? '',
+        'alias': reply.alias,
+        'avatarEmoji': reply.avatarEmoji,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      // Same shape as `addPost` above, and for the same reason: a refusal is
+      // FINAL, and telling it apart from a dropped connection is what lets
+      // the caller take the reply back out of the thread instead of leaving
+      // it there looking sent. `not-found` (the parent post is gone) is
+      // deliberately not folded in — the thread itself is already going away.
+      if (error.code == 'invalid-argument') {
+        throw const ContentRefusedException(ContentRefusal.rules);
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -345,6 +354,10 @@ class FirebaseCommunityRepository implements CommunityRepository {
     ),
     text: data['text'] as String? ?? '',
     createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    // Absent on a post written before the field existed; `Post.replyTotal`
+    // falls back to the replies actually loaded, and the `onReplyStatus`
+    // trigger fills it in the first time anyone replies.
+    replyCount: (data['replyCount'] as num?)?.toInt(),
     reactions: {
       for (final e in (data['reactions'] as Map? ?? const {}).entries)
         e.key as String: (e.value as num).toInt(),
@@ -371,7 +384,9 @@ class FirebaseCommunityRepository implements CommunityRepository {
     sorted.sort((a, b) {
       final at = a.createdAt;
       final bt = b.createdAt;
-      if (at == null || bt == null) return at == null ? (bt == null ? 0 : 1) : -1;
+      if (at == null || bt == null) {
+        return at == null ? (bt == null ? 0 : 1) : -1;
+      }
       return at.compareTo(bt);
     });
     return sorted;

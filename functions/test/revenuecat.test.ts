@@ -6,7 +6,7 @@
  * `gives_access`, `auto_renewal_status`, inline entitlement lookup keys) and
  * every ambiguity fails closed — because failing open costs the paywall.
  */
-import {beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
   deleteSubscriber,
   fetchSubscriber,
@@ -379,7 +379,21 @@ const json = (body: unknown, status = 200) =>
 const BASE = '/v2/projects/proj_test';
 
 describe('fetchSubscriber', () => {
-  beforeEach(resetRevenueCatCaches);
+  // Unlike `snapshotOf`, which takes its clock as an argument, `fetchSubscriber`
+  // reads the real one (`snapshotOf(..., Date.now())`) — correctly, since
+  // mirroring an entitlement must use real time. The fixtures below are
+  // absolute dates, so without pinning the clock this whole block quietly
+  // expires: it passed for the week after 2026-09-02 and went red on
+  // 2026-09-09, when IN_A_WEEK fell into the past and every grant read FREE.
+  // Only `Date` is faked — the scripted fetch awaits real promises, and faking
+  // the timers too would hang them.
+  beforeEach(() => {
+    vi.useFakeTimers({toFake: ['Date'], now: NOW});
+    resetRevenueCatCaches();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('resolves product and entitlement ids, and caches both', async () => {
     const fetchImpl = scripted({

@@ -5,15 +5,9 @@
 	"name": "cirrus-landing",
 	"compatibility_date": "2026-08-30",
 	// Static Astro output. `wrangler pages deploy` needs no directory argument.
-	"pages_build_output_dir": "./dist",
-
-	// Plain runtime vars for functions/api/subscribe.ts. NEITHER IS A SECRET:
-	// Listmonk's public subscription endpoint takes no API key — the list just
-	// has to be public — so these belong in the repo, not in `wrangler secret`.
-	"vars": {
-		"LISTMONK_URL": "https://mail.kharagedition.com",
-		"LISTMONK_LIST_UUID": "213fd41b-a5f0-461d-bfc6-23c752b039e3"
-	}
+	// There are no Pages Functions any more: the only one was the waitlist's
+	// /api/subscribe, removed with the waitlist when both stores went live.
+	"pages_build_output_dir": "./dist"
 
 	// Production domain: cirrusquit.com (+ www, which 301s to the apex via a
 	// zone Redirect Rule) is attached to this project in the dashboard under

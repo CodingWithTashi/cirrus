@@ -79,10 +79,7 @@ void main() {
         PostQuality.checkPost('help help help', sos: true),
         PostQualityIssue.repetitive,
       );
-      expect(
-        PostQuality.minSosChars,
-        lessThan(PostQuality.minPostChars),
-      );
+      expect(PostQuality.minSosChars, lessThan(PostQuality.minPostChars));
     });
 
     test('lets a real cry for help through', () {
@@ -119,7 +116,12 @@ void main() {
 
   group('a reply may be a nod', () {
     test('accepts the short, real ones', () {
-      for (final real in ['thanks', 'yes yes', 'you got this', 'proud of you']) {
+      for (final real in [
+        'thanks',
+        'yes yes',
+        'you got this',
+        'proud of you',
+      ]) {
         expect(
           PostQuality.checkReply(real),
           isNull,
@@ -143,10 +145,7 @@ void main() {
       // does not. If these two ever converge, one of them is wrong.
       expect(PostQuality.checkPost('thanks'), isNotNull);
       expect(PostQuality.checkReply('thanks'), isNull);
-      expect(
-        PostQuality.minReplyChars,
-        lessThan(PostQuality.minPostChars),
-      );
+      expect(PostQuality.minReplyChars, lessThan(PostQuality.minPostChars));
       expect(
         PostQuality.minReplyDistinctLetters,
         lessThan(PostQuality.minPostDistinctLetters),
@@ -226,6 +225,72 @@ void main() {
     expect(
       PostQuality.minReplyDistinctLetters,
       server('minReplyDistinctLetters'),
+    );
+  });
+
+  test('the reaction palette is the same list in all THREE places', () {
+    // A reactor document is written client-direct, so the palette is a
+    // security boundary, not a style choice — and it is enforced in three
+    // independent places. If they drift, the mildest outcome is a pill the
+    // client draws and the rules refuse to write; the worst is the rules
+    // admitting something `onReaction` will happily key a map with.
+    final ts = File('functions/src/domain/types.ts').readAsStringSync();
+    final block = RegExp(
+      r'export const REACTION_EMOJI = \[(.*?)\] as const;',
+      dotAll: true,
+    ).firstMatch(ts);
+    expect(block, isNotNull, reason: 'REACTION_EMOJI not found in types.ts');
+    // The TS side writes them as \u{...} escapes; decode to compare by value.
+    final server = RegExp(r'\\u\{([0-9A-Fa-f]+)\}')
+        .allMatches(block!.group(1)!)
+        .map((m) => String.fromCharCode(int.parse(m.group(1)!, radix: 16)))
+        .toList();
+    expect(
+      server,
+      CommunityReactions.palette,
+      reason: 'types.ts REACTION_EMOJI must match CommunityReactions.palette',
+    );
+
+    final rules = File('firestore.rules').readAsStringSync();
+    final ruleLine = RegExp(
+      r"request\.resource\.data\.emoji in \[(.*?)\]",
+    ).firstMatch(rules);
+    expect(
+      ruleLine,
+      isNotNull,
+      reason: 'no emoji allow-list in firestore.rules',
+    );
+    final allowed = RegExp(
+      "'([^']+)'",
+    ).allMatches(ruleLine!.group(1)!).map((m) => m.group(1)!).toList();
+    expect(
+      allowed,
+      CommunityReactions.palette,
+      reason: 'firestore.rules must allow exactly the palette',
+    );
+  });
+
+  test('the CEILINGS are the ones the server enforces', () {
+    // The floors above have been pinned across the two languages for a while;
+    // the maximums never were, and the reply composer had no maximum at all.
+    // So a three-sentence reply passed the composer, was refused by
+    // `createReply`, and was dropped by `addReply`'s `.ignore()` — rendered as
+    // sent, seen by nobody. Same drift the floors are pinned against, at the
+    // other end of the range.
+    int handlerConst(String file, String name) {
+      final source = File('functions/src/handlers/$file').readAsStringSync();
+      final match = RegExp('const $name = (\\d+);').firstMatch(source);
+      expect(match, isNotNull, reason: '$name missing from $file');
+      return int.parse(match!.group(1)!);
+    }
+
+    expect(
+      PostQuality.maxPostChars,
+      handlerConst('createPost.ts', 'MAX_POST_CHARS'),
+    );
+    expect(
+      PostQuality.maxReplyChars,
+      handlerConst('createReply.ts', 'MAX_REPLY_CHARS'),
     );
   });
 }

@@ -329,6 +329,73 @@ describe('the security boundary', () => {
     const res = await call({nonsense: true}, {authorization: 'Bearer wrong'});
     expect(res.status).toBe(401);
   });
+
+  it('an UNSET token closes the endpoint instead of opening it', async () => {
+    // The failure this guards against is not an attacker — it is a deploy.
+    // A secret that fails to bind (it has happened: a key pasted into
+    // `functions/.env` blocked this very function's deploy on Sep 2) would
+    // leave `value()` empty, and a naive compare would then accept
+    // `Authorization: Bearer ` from anyone who found the URL. That is free
+    // Premium for the world, written by the one endpoint the coach trusts.
+    vi.spyOn(REVENUECAT_WEBHOOK_TOKEN, 'value').mockReturnValue('');
+
+    for (const authorization of ['Bearer ', 'Bearer', '', null]) {
+      const res = await call(event(), {authorization});
+      expect(res.status, `authorization: ${String(authorization)}`).toBe(401);
+    }
+    expect((await userDoc('alice').get()).exists).toBe(false);
+    expect(fetchedIds).toEqual([]);
+  });
+});
+
+describe('the uid is a document path, not a label', () => {
+  it('skips a uid that could never be one of ours, without failing the event', async () => {
+    // `getUser` throws `invalid-uid` — not `user-not-found` — for an overlong
+    // or malformed id, which would escape `userExists` as an unhandled error
+    // and answer 500. RevenueCat would then retry that event every few
+    // minutes, forever, for a customer id that can never resolve.
+    for (const bad of ['a'.repeat(129), 'has/slash', 'has space', '..', '']) {
+      const res = await call(event({app_user_id: bad}));
+      // An empty id names nobody at all; the rest are simply not ours.
+      expect([200, 400], `uid: ${bad}`).toContain(res.status);
+    }
+    expect(fetchedIds).toEqual([]);
+  });
+
+  it('a TRANSFER with one unusable side still mirrors the other', async () => {
+    // The skip is a `continue`, not a `return` — one nonsense id in a pair
+    // must not cost the real customer their write.
+    await makeUser('bob');
+    subscribers.set('bob', {tier: 'premium'});
+    const res = await call(
+      event({
+        type: 'TRANSFER',
+        app_user_id: undefined,
+        transferred_from: ['a'.repeat(200)],
+        transferred_to: ['bob'],
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect((await userDoc('bob').get()).get('entitlement.tier')).toBe('premium');
+  });
+});
+
+describe('malformed shapes that still type as an object', () => {
+  it('an array event names nobody and is refused', async () => {
+    // `typeof [] === 'object'`, so an array walks straight past the event
+    // guard. It must die at "names nobody" rather than reaching a write.
+    const res = await call({event: []});
+    expect(res.status).toBe(400);
+    expect(fetchedIds).toEqual([]);
+  });
+
+  it('an app_user_id that is not a string names nobody', async () => {
+    for (const bad of [42, true, {}, ['alice']]) {
+      const res = await call(event({app_user_id: bad}));
+      expect(res.status, `app_user_id: ${JSON.stringify(bad)}`).toBe(400);
+    }
+    expect(fetchedIds).toEqual([]);
+  });
 });
 
 describe('mirroring the snapshot', () => {

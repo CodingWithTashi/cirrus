@@ -39,10 +39,22 @@ class _RecordingCommunity implements CommunityRepository {
   Stream<PostStatus> watchPostStatus(String postId) => const Stream.empty();
 
   @override
-  Future<void> setReaction(String postId, String emoji, {required bool on}) async {}
+  Future<void> setReaction(
+    String postId,
+    String emoji, {
+    required bool on,
+  }) async {}
+
+  /// Makes `addReply` answer the way `createReply` does for a slur or an
+  /// over-long reply: a final refusal, not a dropped connection.
+  bool refuseReplies = false;
 
   @override
-  Future<void> addReply(String postId, Reply reply) async {}
+  Future<void> addReply(String postId, Reply reply) async {
+    if (refuseReplies) {
+      throw const ContentRefusedException(ContentRefusal.rules);
+    }
+  }
 
   @override
   Future<void> reportPost(String postId) async {}
@@ -60,6 +72,7 @@ class _RecordingCommunity implements CommunityRepository {
 Post sosPost({
   List<Reply> replies = const [],
   Map<String, int> reactions = const {},
+  int? replyCount,
 }) => Post(
   id: 'p1',
   alias: '@slowturtle',
@@ -69,6 +82,7 @@ Post sosPost({
   text: 'sitting outside a gas station',
   createdAt: DateTime.now(),
   replies: replies,
+  replyCount: replyCount,
   reactions: reactions,
 );
 
@@ -205,4 +219,174 @@ void main() {
       );
     });
   });
+
+  group('the feed counts replies without downloading them', () {
+    // `fetchPosts` used to run an unlimited `collectionGroup('replies')` — every
+    // live reply in the app, on every feed open — to render "3 replied". The
+    // count is server-maintained now (`posts/{id}.replyCount`, kept by the
+    // `onReplyStatus` trigger) and the feed loads no reply bodies at all.
+    test('reads the server count when the list is empty', () {
+      // Exactly the feed's shape: a number, and nothing loaded.
+      final post = sosPost(replies: const [], replyCount: 7);
+      expect(post.replyTotal, 7);
+      expect(post.replies, isEmpty);
+    });
+
+    test('falls back to the loaded replies when there is no count', () {
+      // A post written before the field existed, and every post on the fake
+      // backend — where the loaded list IS the whole truth.
+      expect(sosPost(replies: [reply('r1'), reply('r2')]).replyTotal, 2);
+      expect(sosPost().replyTotal, 0);
+    });
+
+    test('a thread agrees with its own card', () {
+      final post = sosPost(replies: [reply('r1')], replyCount: 1);
+      expect(post.replyTotal, 1);
+    });
+
+    Future<ProviderContainer> opened({
+      int? replyCount,
+      bool refuse = false,
+    }) async {
+      final repo = _RecordingCommunity([sosPost(replyCount: replyCount)])
+        ..refuseReplies = refuse;
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          communityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await container.read(communityStoreProvider.notifier).retryFeed();
+      return container;
+    }
+
+    Post postIn(ProviderContainer c) =>
+        c.read(communityStoreProvider).posts.firstWhere((p) => p.id == 'p1');
+
+    test('an optimistic reply moves the COUNT, not just the list', () async {
+      // Otherwise the thread shows the new reply while the card behind it
+      // still reads one fewer, until the next feed load.
+      final container = await opened(replyCount: 4);
+      await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'you have got this');
+      expect(postIn(container).replyTotal, 5);
+      expect(postIn(container).replyCount, 5);
+    });
+
+    test('a refused reply takes its count back with it', () async {
+      final container = await opened(replyCount: 4, refuse: true);
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'a reply the server will refuse');
+      expect(sent, isFalse);
+      expect(postIn(container).replyTotal, 4);
+      expect(postIn(container).replyCount, 4);
+    });
+
+    test('a post with no server count still counts up as you reply', () async {
+      final container = await opened();
+      expect(postIn(container).replyTotal, 0);
+      await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'you have got this');
+      expect(postIn(container).replyTotal, 1);
+      expect(
+        postIn(container).replyCount,
+        isNull,
+        reason: 'no count was known, so none is invented — the list answers',
+      );
+    });
+  });
+
+  group('a reply that was refused stops claiming it was sent', () {
+    Future<(ProviderContainer, _RecordingCommunity)> opened({
+      required bool refuse,
+    }) async {
+      final repo = _RecordingCommunity([sosPost()])..refuseReplies = refuse;
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          communityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await container.read(communityStoreProvider.notifier).retryFeed();
+      return (container, repo);
+    }
+
+    List<Reply> repliesIn(ProviderContainer c) => c
+        .read(communityStoreProvider)
+        .posts
+        .firstWhere((p) => p.id == 'p1')
+        .replies;
+
+    test('a refusal takes it back out of the thread and says so', () async {
+      // Every outcome used to go through `.ignore()`, so a reply the callable
+      // refused — a slur, or anything over its 300-character limit — sat in
+      // the author's own thread looking sent, forever, while nobody else
+      // could ever see it.
+      final (container, _) = await opened(refuse: true);
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'a reply the server will refuse');
+
+      expect(sent, isFalse, reason: 'the caller has to be able to say so');
+      expect(
+        repliesIn(container).length,
+        before,
+        reason: 'a refused reply must not keep rendering as sent',
+      );
+    });
+
+    test('an accepted reply stays, and answers true', () async {
+      final (container, _) = await opened(refuse: false);
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'you have got this');
+
+      expect(sent, isTrue);
+      expect(repliesIn(container).length, before + 1);
+    });
+
+    test('offline KEEPS the reply — that is the local-first stance', () async {
+      // A dropped connection is not a verdict on the reply. The offline
+      // banner is already telling that story, and a reply that vanishes
+      // because the radio was waking would be the worse outcome.
+      final repo = _OfflineReplies([sosPost()]);
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(),
+          communityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(quitStoreProvider.notifier).seedDemoJourney();
+      await container.read(communityStoreProvider.notifier).retryFeed();
+      final before = repliesIn(container).length;
+
+      final sent = await container
+          .read(communityStoreProvider.notifier)
+          .addReply('p1', 'sent from a tunnel');
+
+      expect(sent, isTrue);
+      expect(repliesIn(container).length, before + 1);
+    });
+  });
+}
+
+/// Answers `addReply` the way a dead connection does.
+class _OfflineReplies extends _RecordingCommunity {
+  _OfflineReplies(super.posts);
+
+  @override
+  Future<void> addReply(String postId, Reply reply) async =>
+      throw const NoConnectionException();
 }

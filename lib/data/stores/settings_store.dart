@@ -381,6 +381,16 @@ class SettingsStore extends Notifier<SettingsState> {
     final end = endHour % 24;
     if (start == end) return;
     _commit(state.copyWith(quietStartHour: start, quietEndHour: end));
+    // The server is the half that SENDS, so it has to be told. This was the
+    // one push-affecting setter that did not sync: the local reminders
+    // honoured the new window immediately while `users/{uid}.pushPrefs` kept
+    // whatever was last written — for most people nothing at all, so
+    // `openGate` fell back to 23–8. A night worker who moved their window to
+    // 09:00–17:00 was silenced correctly by every local reminder and buzzed
+    // awake by every community reply. It hid itself, too: touching any
+    // notification toggle sends the whole map, so the symptom vanished until
+    // they next changed the window.
+    _syncPushPrefs();
   }
 
   void setTrialReminder(bool on) =>

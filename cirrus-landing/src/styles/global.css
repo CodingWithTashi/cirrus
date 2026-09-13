@@ -196,17 +196,9 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 }
 .site-nav a:hover { color: var(--text); }
 
-.pill {
-  border-radius: 999px;
-  padding: 0.4rem 0.85rem;
-  background: rgb(200 245 66 / 0.12);
-  color: var(--volt);
-  border: 1px solid rgb(200 245 66 / 0.25);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
+/* The nav CTA. `.site-nav a` above would otherwise paint it muted grey on volt. */
+.site-nav .btn-primary,
+.site-nav .btn-primary:hover { color: var(--void); }
 
 /* ---------- buttons ---------- */
 
@@ -270,67 +262,328 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   margin: 18px 0 28px;
 }
 
-.hero__trust { margin-top: 14px; }
-.hero__trust strong { color: var(--text); }
-
-/* ---------- waitlist form ---------- */
-
-.waitlist { max-width: 34rem; }
-.waitlist__label { margin-bottom: 10px; }
-
-.waitlist-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-
-.waitlist-input {
-  flex: 1 1 14rem;
-  min-width: 0;
-  background: var(--slate);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  color: var(--text);
-  font: inherit;
-  font-size: 1rem;
-  min-height: 54px;
-  padding: 0 1rem;
-}
-.waitlist-input::placeholder { color: #67707e; }
-.waitlist-input:focus { border-color: var(--volt); outline: none; }
-.waitlist-input[aria-invalid='true'] { border-color: var(--relapse); }
-
-.waitlist-btn { flex: 0 0 auto; }
-.waitlist-btn[disabled] { opacity: 0.65; cursor: progress; }
-
-.waitlist-status {
-  font-size: 0.875rem;
-  color: var(--muted);
-  margin: 10px 0 0;
-  min-height: 1.4em;
-}
-.waitlist-status[data-tone='err'] { color: var(--relapse); }
-
-/* Off-screen rather than display:none, which some bots detect. */
-.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-
-/* Success replaces the whole form. */
-.waitlist__done { display: none; }
-.waitlist[data-done='true'] .waitlist__form { display: none; }
-.waitlist[data-done='true'] .waitlist__done {
+/* Three honest promises under the badges. */
+.hero__trust {
+  list-style: none;
   display: flex;
-  gap: 0.9rem;
-  align-items: center;
-  background: var(--slate);
-  border: 1px solid rgb(200 245 66 / 0.35);
-  border-radius: var(--r-lg);
-  padding: 1.1rem 1.25rem;
-  box-shadow: var(--glow-volt);
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin: 18px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
-.waitlist__done img { height: 44px; width: auto; }
-.waitlist__done strong { font-family: var(--font-display); font-size: 1.05rem; display: block; }
-.waitlist__done span { color: var(--muted); font-size: 0.875rem; }
+.hero__trust li { display: inline-flex; align-items: center; gap: 0.45rem; }
+.hero__trust li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--volt);
+  box-shadow: 0 0 10px rgb(200 245 66 / 0.6);
+}
 
-@media (prefers-reduced-motion: no-preference) {
-  .waitlist[data-done='true'] .waitlist__done { animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  @keyframes pop { from { transform: scale(0.9); } to { transform: none; } }
+/* Header-sized button. After .btn-primary on purpose: it drops the glow, which
+   would otherwise halo a 40px control sitting beside plain links. */
+.btn-sm {
+  min-height: 40px;
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  box-shadow: none;
 }
+
+/* ---------- store badges (StoreBadges.astro) ----------
+   Official artwork at one shared visible height. Google's PNG is 250px tall
+   around a 168px badge, with 41px of clear space on every side, so the image
+   is scaled by 250/168 and the clear space is pulled back in with a negative
+   margin. Never recolour or redraw either badge. */
+
+.stores {
+  --badge-h: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+}
+.stores--sm { --badge-h: 40px; gap: 10px; }
+
+.store {
+  display: inline-flex;
+  align-items: center;
+  height: var(--badge-h);
+  border-radius: 9px;
+}
+.store svg { display: block; height: var(--badge-h); width: auto; }
+.store--play img {
+  display: block;
+  height: calc(var(--badge-h) * 250 / 168);
+  width: auto;
+  max-width: none;
+  margin: calc(var(--badge-h) * -41 / 168);
+}
+
+/* The reader's own store first. data-os is stamped in BaseLayout's head. */
+html[data-os='android'] .store--play { order: -1; }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .store { transition: transform 0.14s ease; }
+  .store:hover { transform: translateY(-2px); }
+}
+
+/* ---------- home: section heads that sit beside their content ---------- */
+
+.section__head--left { margin-inline: 0; text-align: left; }
+
+/* ---------- home: an example day ----------
+   A real sequence, so it is drawn as one: a rail through the day with the
+   clock in the left column. The dot colour follows the app's own meanings —
+   Oxygen for the panic moment, Ember for a slip and for a craving beaten. */
+
+.day { display: grid; gap: clamp(28px, 5vw, 64px); }
+.day .section__head { margin-bottom: 0; }
+@media (min-width: 62rem) {
+  .day { grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr); align-items: start; }
+  .day .section__head { position: sticky; top: 32px; }
+}
+
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+
+/* The rail sits in the middle of the column gap: 4.6rem clock + 0.8rem. */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: calc(4.6rem + 0.8rem);
+  top: 0.7rem;
+  bottom: 1.8rem;
+  width: 1px;
+  background: linear-gradient(var(--border), var(--border) 85%, transparent);
+}
+
+.timeline li {
+  --dot: var(--volt);
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  column-gap: 1.6rem;
+  padding-bottom: 1.9rem;
+}
+.timeline li:last-child { padding-bottom: 0; }
+.timeline li[data-tone='oxygen'] { --dot: var(--oxygen); }
+.timeline li[data-tone='ember'] { --dot: var(--ember); }
+
+.timeline li::after {
+  content: '';
+  position: absolute;
+  left: calc(4.6rem + 0.8rem - 6px);
+  top: 0.42rem;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--void);
+  border: 2px solid var(--dot);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--dot) 45%, transparent);
+}
+
+.timeline__time {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.timeline__time small {
+  margin-left: 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.timeline h3 { font-size: 1.125rem; line-height: 1.45; }
+.timeline p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.975rem; max-width: 54ch; }
+
+.tag {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.32rem 0.55rem;
+  border: 1px solid rgb(200 245 66 / 0.32);
+  border-radius: 999px;
+  color: var(--volt);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.tag--pro { color: var(--ember); border-color: rgb(255 138 0 / 0.38); }
+
+/* ---------- home: store screenshots ----------
+   A snap rail at every width: seven screens never fit one row, and the head
+   says so. The rail bleeds into the gutter so the next card peeks in. */
+
+.rail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.rail-head .section__head { margin-bottom: 0; }
+
+.rail {
+  display: flex;
+  gap: 16px;
+  margin: clamp(28px, 4vw, 40px) calc(var(--gutter) * -1) 0;
+  padding: 4px var(--gutter) 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.rail:focus-visible { outline-offset: -2px; }
+.rail figure { flex: 0 0 auto; width: clamp(168px, 44vw, 214px); margin: 0; scroll-snap-align: start; }
+.rail img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--slate);
+}
+
+/* ---------- home: devices ----------
+   A ruled list, not four cards: stacked rows on a phone, four columns split by
+   hairlines once there is room. */
+
+.devices { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--border); }
+.devices li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 0.25rem 1rem;
+  padding-block: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.devices svg {
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: var(--volt);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.devices h3 { font-size: 1.05rem; line-height: 1.5; }
+.devices p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+@media (min-width: 52rem) {
+  .devices { grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 0; }
+  .devices li {
+    grid-template-columns: 1fr;
+    padding: 0 1.4rem;
+    border-bottom: 0;
+    border-left: 1px solid var(--border);
+  }
+  .devices li:first-child { padding-left: 0; border-left: 0; }
+  .devices svg { grid-row: auto; margin-bottom: 0.75rem; }
+}
+
+/* ---------- home: free vs premium ---------- */
+
+.plans { display: grid; gap: clamp(28px, 4vw, 48px); }
+.plans .section__head { margin-bottom: 0; }
+@media (min-width: 62rem) {
+  .plans { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; }
+}
+
+.price { margin-top: 1.75rem; }
+.price__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.75rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+}
+.price__list b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.price__list span { color: var(--muted); font-size: 0.875rem; }
+.section__head .price__note { margin: 1rem 0 0; font-size: 0.875rem; max-width: 40ch; }
+.price__note b { color: var(--volt); font-weight: 600; }
+
+.compare-wrap { overflow-x: auto; }
+.compare-wrap:focus-visible { outline-offset: 4px; }
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+.compare__feature { width: 44%; }
+.compare th,
+.compare td {
+  padding: 0.78rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.compare th:first-child,
+.compare td:first-child { padding-left: 0; }
+.compare thead th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom-color: var(--muted);
+}
+.compare thead th.compare__pro { color: var(--volt); }
+.compare tbody th { color: var(--text); font-weight: 600; }
+.compare td { color: var(--muted); }
+.compare td.compare__pro { color: var(--text); background: rgb(200 245 66 / 0.04); }
+.compare__yes { color: var(--volt); font-family: var(--font-display); font-weight: 700; }
+.compare__no { color: #67707e; }
+
+/* ---------- home: closing band layout + QR ---------- */
+
+.cta-band__grid { display: grid; gap: 32px; align-items: center; }
+@media (min-width: 56rem) { .cta-band__grid { grid-template-columns: 1fr auto; } }
+/* `.cta-band p` gives body copy its spacing; the eyebrow keeps its own. */
+.cta-band .micro { margin: 0 0 10px; }
+
+/* A phone reader is already on the device they install on, so the code only
+   shows where it can help: a wide screen with a pointer. */
+.qr { display: none; }
+@media (min-width: 56rem) and (hover: hover) {
+  .qr {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem 1rem 1rem;
+    background: var(--void);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+}
+.qr__code {
+  flex: none;
+  width: 128px;
+  height: 128px;
+  padding: 8px;
+  background: #ffffff; /* a QR code needs a light quiet zone to scan */
+  border-radius: 12px;
+}
+.qr__code svg { display: block; width: 100%; height: 100%; }
+.qr__text { max-width: 15ch; color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
+.qr__text b { display: block; margin-bottom: 0.25rem; color: var(--text); font-family: var(--font-display); font-size: 1rem; }
+.qr__text span { display: block; }
 
 /* ---------- the live widget ---------- */
 
@@ -1065,7 +1318,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   margin: 0.5rem 0 0;
 }
 .post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
-.post-cta--end .waitlist { margin-top: 1.2rem; }
+.post-cta--end .stores { margin-top: 1.2rem; }
 
 /* ---------- post layout: article + sidebar ----------
    One column on a phone, two once there is genuinely room. The breakpoint is
@@ -1171,19 +1424,33 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   .demo { grid-template-columns: 264px 1fr; justify-content: center; }
 }
 
-/* The phone shell, reused from the screenshot frames but sized for live UI. */
-.phone--live { width: 100%; max-width: 264px; margin-inline: auto; }
+/* The phone shell, reused from the screenshot frames but sized for live UI.
+   340px is roughly a phone's own width in CSS pixels, so the keypad reads at
+   life size beside the headline rather than as a thumbnail. */
+.phone--live {
+  width: 100%;
+  max-width: 340px;
+  margin-inline: auto;
+  padding: 8px;
+  border-radius: 36px;
+  box-shadow: 0 30px 80px -30px rgb(200 245 66 / 0.18);
+}
 
 .app {
   background: var(--void);
-  border-radius: 20px;
-  padding: 20px 14px 14px;
+  border-radius: 28px;
+  padding: 30px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.app__q { font-size: 1.2rem; margin: 0; }
+.app__q {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  margin: 0;
+}
 
 .app__readout { text-align: center; }
 
@@ -1191,44 +1458,44 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin: 2px 0 10px;
+  gap: 12px;
+  margin: 4px 0 12px;
 }
 
 .app__num {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 3rem;
+  font-size: 3.9rem;
   line-height: 1;
   color: var(--volt);
-  text-shadow: 0 0 26px rgb(200 245 66 / 0.45);
+  text-shadow: 0 0 30px rgb(200 245 66 / 0.45);
   font-variant-numeric: tabular-nums;
   margin: 0;
 }
 
 /* Nudge the value without going near the keypad. */
-.app__stepper { display: flex; flex-direction: column; gap: 4px; }
+.app__stepper { display: flex; flex-direction: column; gap: 5px; }
 .app__stepper button {
   background: var(--slate);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--muted);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   line-height: 1;
-  padding: 5px 7px;
+  padding: 7px 9px;
   cursor: pointer;
   transition: color 0.08s ease, border-color 0.08s ease;
 }
 .app__stepper button:hover { color: var(--volt); border-color: var(--volt); }
 .app__stepper button:active { transform: translateY(1px); }
-.app__badge { margin: 0 0 10px; }
-.app__equiv { color: var(--muted); font-size: 0.8125rem; margin: 0; }
+.app__badge { margin: 0 0 12px; }
+.app__equiv { color: var(--muted); font-size: 0.9rem; margin: 0; }
 .app__equiv b { color: var(--text); font-family: var(--font-display); }
 .app__quip {
   color: var(--muted);
-  font-size: 0.78rem;
-  margin: 6px 0 0;
-  min-height: 2.6em;
+  font-size: 0.875rem;
+  margin: 8px 0 0;
+  min-height: 2.8em;
   text-wrap: balance;
 }
 
@@ -1237,7 +1504,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
   border: 0;
   color: var(--volt);
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -1247,25 +1514,25 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .app__pad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
   margin-top: auto;
 }
 .app__pad button {
   background: var(--slate);
   border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  border-radius: 12px;
   color: var(--text);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.15rem;
-  padding: 0.6rem 0;
+  font-size: 1.35rem;
+  padding: 0.8rem 0;
   cursor: pointer;
   transition: background 0.08s ease, transform 0.08s ease;
 }
 .app__pad button:hover { background: #1c2230; }
 .app__pad button:active { transform: translateY(1px); background: #222a3a; }
 
-.app__cta { width: 100%; min-height: 48px; }
+.app__cta { width: 100%; min-height: 54px; }
 
 /* ---------- the "what it means" panel ---------- */
 

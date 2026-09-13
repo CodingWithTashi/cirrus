@@ -19,10 +19,28 @@ import {sendToUser} from '../lib/push';
 import {tierOf, ungated} from '../lib/usage';
 import {decodeJourney} from '../domain/journeyCodec';
 import {dayKeyIn} from '../domain/dateKey';
-import {dangerHours, trailingDays} from '../domain/streakEngine';
+import {dangerHours, isConfirmed, trailingDays} from '../domain/streakEngine';
 import type {UserDoc} from '../lib/firestore';
 
 const PAGE_SIZE = 300;
+
+/**
+ * The local hours a report may be generated and pushed in.
+ *
+ * Awake hours, because this is the one cron whose work ends in a notification.
+ * Three of them rather than one so a bucket too big for a single 540s pass is
+ * finished by the next — `generateFor` is idempotent per week, so the later
+ * passes cost one read each for everyone already done.
+ */
+const LOCAL_HOURS = [9, 10, 11];
+
+/**
+ * Stop generating at this point and leave the rest to the next local hour.
+ *
+ * Comfortably inside `timeoutSeconds: 540` so the run ends on its own terms —
+ * a killed invocation logs nothing, and `retryCount: 0` means nothing follows.
+ */
+const DEADLINE_MS = 440_000;
 
 export interface Insight {
   headline: string;
@@ -43,65 +61,132 @@ export const weeklyInsight = onSchedule(
     retryCount: 0, // a missed week is skipped silently (docs/04 §5), not retried
   },
   async () => {
+    const startedAt = Date.now();
     const hourUtc = new Date().getUTCHours();
-    let generated = 0;
-    let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+    const run = {generated: 0, skipped: 0, ranOutOfTime: false};
 
-    for (;;) {
-      let query = db
-        .collection('users')
-        .where('recalcHourUtc', '==', hourUtc)
-        .orderBy('__name__')
-        .limit(PAGE_SIZE);
-      if (cursor) query = query.startAfter(cursor);
-
-      const page = await query.get();
-      if (page.empty) break;
-
-      for (const doc of page.docs) {
-        const data = doc.data() as UserDoc;
-        // The same reading `tierFor` makes, on the document already in hand
-        // (no second read per user); `ungated` applies once per run. A lapsed
-        // `expiresAt` is free here too — the two crons and the coach must
-        // agree on who is premium.
-        if (!ungated() && tierOf(data) === 'free') continue;
-        const tz = data.tz ?? 'UTC';
-        const today = new Date();
-        // Only fire on the user's local Sunday.
-        const weekday = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz, weekday: 'short',
-        }).format(today);
-        if (weekday !== 'Sun') continue;
-
-        try {
-          // The server-owned name, already on the doc we just read — the
-          // report must not call itself Ember for someone who renamed it.
-          if (await generateFor(doc.id, tz, data.coachName)) generated++;
-        } catch (error) {
-          log.warn('weeklyInsight.user_failed', {uid: doc.id, error: String(error)});
-        }
-      }
-
-      cursor = page.docs.at(-1);
-      if (page.size < PAGE_SIZE) break;
+    // `recalcHourUtc` marks the UTC hour of the user's local 01:00 — the right
+    // slot for `taperRecalc`, which writes a number nobody is awake to read,
+    // and the wrong one for anything ending in a notification. Quiet hours
+    // default to 23:00-08:00, so generating AND pushing at 01:00 meant
+    // `insightReady` was silenced 100% of the time, by construction:
+    // `insights_quiet` at low importance on Android, `interruption-level:
+    // passive` and no sound on iOS. A paying subscriber's flagship weekly
+    // feature announced itself with a notification they would never see.
+    //
+    // Three local hours rather than one, swept in sequence. That is also the
+    // fix for the tail: a pass cut short at 09:00 is finished by the 10:00 and
+    // 11:00 ones, and `generateFor` skips anyone already holding this week's
+    // report, so the later passes cost one read each for work already done.
+    //
+    // Deliberately three SEPARATE queries rather than one `in` filter: each is
+    // the same `==` + `orderBy(__name__)` + `startAfter` shape the fan-out has
+    // always used in production. An `in` query is merged from sub-queries
+    // server-side, and pairing that with a cursor is a behaviour the emulator
+    // would not have caught us getting wrong.
+    for (const local of LOCAL_HOURS) {
+      if (run.ranOutOfTime) break;
+      await sweepHour((hourUtc - local + 1 + 24) % 24, startedAt, run);
     }
 
-    log.info('weeklyInsight.done', {hourUtc, generated});
+    // `ranOutOfTime` is the line to alert on: a bucket outgrew one pass. Not
+    // data loss while later hours still run, but the signal that the window
+    // needs widening or the page needs splitting.
+    log.info('weeklyInsight.done', {hourUtc, ...run});
   },
 );
+
+/** One local hour's worth of users, paged, mutating [run] as it goes. */
+async function sweepHour(
+  recalcHourUtc: number,
+  startedAt: number,
+  run: {generated: number; skipped: number; ranOutOfTime: boolean},
+): Promise<void> {
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+  for (;;) {
+    let query = db
+      .collection('users')
+      .where('recalcHourUtc', '==', recalcHourUtc)
+      .orderBy('__name__')
+      .limit(PAGE_SIZE);
+    if (cursor) query = query.startAfter(cursor);
+
+    const page = await query.get();
+    if (page.empty) return;
+
+    for (const doc of page.docs) {
+      // Stop before the platform kills us. A premium user costs a read, a
+      // 20s-bounded model call, a write and a push, so 540s buys far fewer
+      // than one 300-user page — and being killed mid-page is invisible:
+      // ordering is by `__name__`, so the survivors were always the same
+      // lexicographically-first uids and the losers always the same tail,
+      // every week, permanently. Ending deliberately leaves a log line and
+      // leaves the rest to the next hour's pass.
+      if (Date.now() - startedAt > DEADLINE_MS) {
+        run.ranOutOfTime = true;
+        return;
+      }
+      const data = doc.data() as UserDoc;
+      // The same reading `tierFor` makes, on the document already in hand
+      // (no second read per user); `ungated` applies once per run. A lapsed
+      // `expiresAt` is free here too — the two crons and the coach must
+      // agree on who is premium.
+      if (!ungated() && tierOf(data) === 'free') continue;
+      const tz = data.tz ?? 'UTC';
+      // Only fire on the user's local Sunday.
+      const weekday = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, weekday: 'short',
+      }).format(new Date());
+      if (weekday !== 'Sun') continue;
+
+      try {
+        // The server-owned name, already on the doc we just read — the
+        // report must not call itself Ember for someone who renamed it.
+        if (await generateFor(doc.id, tz, data.coachName, data.locale)) {
+          run.generated++;
+        } else {
+          run.skipped++;
+        }
+      } catch (error) {
+        log.warn('weeklyInsight.user_failed', {uid: doc.id, error: String(error)});
+      }
+    }
+
+    cursor = page.docs.at(-1);
+    if (page.size < PAGE_SIZE) return;
+  }
+}
 
 async function generateFor(
   uid: string,
   timeZone: string,
   coachName?: string,
+  locale?: string,
 ): Promise<boolean> {
+  const todayKey = dayKeyIn(new Date(), timeZone);
+  const weekId = todayKey; // one report per local Sunday
+
+  // Already written this week — the fan-out runs over three local hours so a
+  // bucket that outgrows one pass is finished by the next, and this is what
+  // makes those later passes free for everyone already done. Checked BEFORE
+  // the journey read, so a repeat costs one read rather than a read plus a
+  // premium model call.
+  if ((await insightDoc(uid, weekId).get()).exists) return false;
+
   const snap = await journeyDoc(uid).get();
   if (!snap.exists) return false;
 
   const journey = decodeJourney(snap.data());
-  const todayKey = dayKeyIn(new Date(), timeZone);
-  const weekId = todayKey; // one report per local Sunday
-  const week = trailingDays(journey.days, todayKey, 7);
+  // Confirmed days only, and filtered BEFORE the signal gate. An unlogged day
+  // arrives as `puffs: 0` beside a real limit, and the model — told to report
+  // "the week's best moment with real numbers" — writes exactly what it sees:
+  // a flawless day the user never had. `weekStats` already filters the same
+  // data for the same reason ("a week summary reports what is known"). Before
+  // the gate too, so somebody who opened the app three times to check a mood
+  // no longer clears "enough signal to say anything true" on three days they
+  // never recorded.
+  const week = trailingDays(journey.days, todayKey, 7).filter(isConfirmed);
   if (week.length < 3) return false; // not enough signal to say anything true
 
   const payload = {
@@ -119,7 +204,7 @@ async function generateFor(
   try {
     const result = await model.generate({
       model: MODEL_PREMIUM.value(),
-      systemInstruction: insightPrompt(journey.profile.alias, coachName),
+      systemInstruction: insightPrompt(journey.profile.alias, coachName, locale),
       turns: [{role: 'user', text: JSON.stringify(payload)}],
       // Must hold thoughts + the ~150-token JSON: the premium model cannot
       // stop thinking and spends thought tokens inside this cap (see

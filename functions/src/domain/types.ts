@@ -64,6 +64,39 @@ export const COACH_CHIPS = ['craving', 'roughDay', 'slipped', 'progress'] as con
 export type CoachChip = (typeof COACH_CHIPS)[number];
 
 /**
+ * The only reactions that exist. Mirrored by `CommunityReactions.palette` in
+ * `lib/domain/logic/community_rules.dart` and pinned across the two by
+ * `test/domain/post_quality_test.dart`.
+ *
+ * A closed list, not a free field, and that is load-bearing in three ways.
+ *
+ * 1. A reactor document is written CLIENT-DIRECT (`firestore.rules` lets the
+ *    owner write their own `reactors/{uid}`), so it is the one piece of text a
+ *    reader can put on somebody else's post without passing `createPost`, the
+ *    prefilter, the classifier or the slur check. Unconstrained, a repackaged
+ *    client could render "BUY 50MG PODS t.me/xyz" as a pill on an SOS post, in
+ *    every reader's feed, with no report path and no way for the author to
+ *    remove it.
+ * 2. `reactions` is a MAP keyed by this value. An open key set grows without
+ *    bound — a few hundred distinct values push the post document at the 1MiB
+ *    ceiling, after which every server write to it (moderation status, report
+ *    auto-hide) fails.
+ * 3. It is what makes the feature reachable at all: the feed renders a pill per
+ *    key already on the post, so a post created with an empty map offered
+ *    nothing to tap. `createPost` seeds these three at zero.
+ */
+export const REACTION_EMOJI = ['\u{1F4AA}', '\u{1F525}', '\u{1F4AC}'] as const;
+export type ReactionEmoji = (typeof REACTION_EMOJI)[number];
+
+/** Whether [value] is a reaction we are willing to store and render. */
+export function isReactionEmoji(value: unknown): value is ReactionEmoji {
+  return (
+    typeof value === 'string' &&
+    (REACTION_EMOJI as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Ember's template repertoire (`CoachTemplate` in models.dart). The server
  * only ever emits the deterministic ones — `capReached` and
  * `connectionLost` — free-form AI answers travel in `CoachReply.text`.

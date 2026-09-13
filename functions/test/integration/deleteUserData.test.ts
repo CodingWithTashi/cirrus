@@ -175,3 +175,128 @@ describe('deleteUserData — what stays', () => {
     await expect(getAuth().getUser('bob')).resolves.toBeDefined();
   });
 });
+
+/**
+ * The trail a reader leaves without ever writing a word.
+ *
+ * Both of these live UNDER `posts`, keyed by the uid, so neither
+ * `recursiveDelete(users/{uid})` nor the two anonymize passes reached them.
+ * A full erasure used to leave the departed account's uid written on every
+ * post it had reacted to or reported — a durable record of what that person
+ * read and how they felt about it, outliving the one operation whose whole
+ * promise is that nothing does.
+ */
+describe('deleteUserData — the reader trail', () => {
+  const reactorRef = (postId: string, uid: string) =>
+    postsCol().doc(postId).collection('reactors').doc(uid);
+  const reporterRef = (postId: string, uid: string) =>
+    postsCol().doc(postId).collection('reporters').doc(uid);
+
+  it('removes every reaction the departing account left', async () => {
+    await makeUser('alice');
+    await makeUser('bob');
+    const a = await createPost.run(
+      request({text: 'a post worth reacting to', tag: 'win'}, 'bob'),
+    );
+    const b = await createPost.run(
+      request({text: 'another one worth reacting to', tag: 'win'}, 'bob'),
+    );
+    // The client writes its OWN reactor document; the uid is both the id and
+    // a field, which is what makes it findable at erasure time.
+    await reactorRef(a.postId, 'alice').set({uid: 'alice', emoji: '\u{1F525}'});
+    await reactorRef(b.postId, 'alice').set({uid: 'alice', emoji: '\u{1F4AA}'});
+    await reactorRef(a.postId, 'bob').set({uid: 'bob', emoji: '\u{1F525}'});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    expect((await reactorRef(a.postId, 'alice').get()).exists).toBe(false);
+    expect((await reactorRef(b.postId, 'alice').get()).exists).toBe(false);
+    // Somebody else's reaction is none of this operation's business.
+    expect((await reactorRef(a.postId, 'bob').get()).exists).toBe(true);
+  });
+
+  it('removes every report they filed, but never the count', async () => {
+    // Deliberately not symmetrical with reactions. `reportCount` is what
+    // auto-hides a post at three; undoing a real reader's judgement because
+    // they later closed their account would quietly un-hide flagged content.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'a post somebody flagged', tag: 'win'}, 'bob'),
+    );
+    await postsCol().doc(postId).update({reportCount: 2});
+    await reporterRef(postId, 'alice').set({uid: 'alice', reportedAt: new Date()});
+    await reporterRef(postId, 'bob').set({uid: 'bob', reportedAt: new Date()});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    expect((await reporterRef(postId, 'alice').get()).exists).toBe(false);
+    expect((await reporterRef(postId, 'bob').get()).exists).toBe(true);
+    expect((await postsCol().doc(postId).get()).get('reportCount')).toBe(2);
+  });
+
+  it('sweeps past a single page — reactions are uncapped', async () => {
+    // Posts are capped at three a day, so the authorship sweeps were always
+    // bounded in practice. Reactions and replies are not: a heavy reader
+    // accumulates them without limit. An unpaged `.get()` would materialise
+    // the lot inside a 512MiB function, and a sweep that stopped at one page
+    // would leave the rest of the trail behind — which is the failure that
+    // looks like success, because the first 200 really do disappear.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'the post everyone reacted to', tag: 'win'}, 'bob'),
+    );
+    const reactors = postsCol().doc(postId).collection('reactors');
+
+    // One post cannot hold two reactions from the same person, so the volume
+    // is spread across sibling posts' subcollections — which is also what
+    // makes this a genuine collection-GROUP sweep.
+    const TOTAL = 250;
+    for (let i = 0; i < TOTAL; i += 100) {
+      const batch = db.batch();
+      for (let j = i; j < Math.min(i + 100, TOTAL); j += 1) {
+        batch.set(
+          postsCol().doc(`seeded-${j}`).collection('reactors').doc('alice'),
+          {uid: 'alice', emoji: '\u{1F525}'},
+        );
+      }
+      await batch.commit();
+    }
+    await reactors.doc('alice').set({uid: 'alice', emoji: '\u{1F4AA}'});
+
+    const before = await db
+      .collectionGroup('reactors')
+      .where('uid', '==', 'alice')
+      .get();
+    expect(before.size).toBe(TOTAL + 1);
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    const after = await db
+      .collectionGroup('reactors')
+      .where('uid', '==', 'alice')
+      .get();
+    expect(after.empty, 'the sweep stopped before the end').toBe(true);
+  }, 120_000);
+
+  it('leaves no document anywhere still carrying the uid', async () => {
+    // The catch-all. Anything new that files a row under `posts` keyed by the
+    // reader rather than the author has to be added to the erasure path, and
+    // this is what fails when it is not.
+    await makeUser('alice');
+    await makeUser('bob');
+    const {postId} = await createPost.run(
+      request({text: 'the post everything hangs off', tag: 'win'}, 'bob'),
+    );
+    await reactorRef(postId, 'alice').set({uid: 'alice', emoji: '\u{1F525}'});
+    await reporterRef(postId, 'alice').set({uid: 'alice', reportedAt: new Date()});
+
+    await deleteUserData.run(request({}, 'alice'));
+
+    for (const group of ['reactors', 'reporters', 'postAuthors', 'replyAuthors']) {
+      const left = await db.collectionGroup(group).where('uid', '==', 'alice').get();
+      expect(left.empty, `${group} still names the departed account`).toBe(true);
+    }
+  });
+});

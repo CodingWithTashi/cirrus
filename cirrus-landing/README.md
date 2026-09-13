@@ -37,35 +37,38 @@ pick `preview` or `production`. Nothing deploys on push.
    `cirrusquit.com` (and `www`). The domain is attached in the dashboard, not
    from `wrangler.jsonc`, so it survives deploys.
 
-## Waitlist
+## Store links
 
-The hero and footer forms post to `functions/api/subscribe.ts` — a **Cloudflare
-Pages Function**, not an Astro route. Config is in `wrangler.jsonc` `vars`:
-`LISTMONK_URL` and `LISTMONK_LIST_UUID`. Neither is a secret; Listmonk's public
-subscription endpoint takes no API key, the list just has to be public.
+Both stores are live — Google Play, and the App Store since Sep 12 2026 — so
+the site has no waitlist and no "coming soon". The URLs live in `src/consts.ts`
+and only `src/lib/store.ts` turns them into hrefs; every download CTA on the site
+is `src/components/StoreBadges.astro`.
 
-Two things worth knowing before changing this:
+- **Official badge artwork only** (`src/assets/badges/`), never redrawn or
+  recoloured. Apple's SVG is inlined. Google's PNG carries its own clear space,
+  so `.store--play img` scales it by 250/168 and pulls the margin back in until
+  both badges share one visible height.
+- **Play links carry a campaign tag** (`playUrl('hero')`, `blog-<slug>`, …) for
+  Play Console's acquisition report. **App Store links carry none**: Apple only
+  attributes `ct` together with a `pt` provider token, and the privacy policy
+  says only Play links are tagged — change both together or neither.
+- **The reader's store goes first.** BaseLayout stamps `data-os` on `<html>`
+  before first paint; CSS moves Play first on Android, and the hero demo's
+  Continue button opens that phone's store. With JS off both badges still show.
+- **`/download` never redirects.** It is a real, indexable page, and the
+  Android app claims that path through App Links (see below).
+- iPhone Safari shows Apple's own Smart App Banner from the `apple-itunes-app`
+  meta tag in BaseLayout.
 
-- **Do not reach for `@astrojs/cloudflare`.** It targets Workers: it restructures
-  `dist/` into `client/` + `server/` and injects an `ASSETS` binding whose name
-  Pages reserves, which breaks `wrangler pages deploy`. A Pages Function sits
-  beside the static build instead, so every page stays prerendered.
-- **The server hop is not optional.** Listmonk needs no key, but sends no CORS
-  headers, so a browser cannot post to it directly.
+The waitlist is gone: the form, its `/api/subscribe` Pages Function and the
+Listmonk vars were removed at launch. The signups themselves are still in
+Listmonk, which is why the privacy policy still describes them. `/thanks`
+survives as a noindex "it's out" page in case an old confirmation link points
+there.
 
-The endpoint rejects cross-origin posts, drops honeypot submissions without
-calling Listmonk, validates, and rate-limits per IP (8/min). The form is a real
-`<form>` with a real `action`, so it still works with JavaScript off.
-
-Test it locally against the real Pages runtime:
-
-```
-npm run build
-npx wrangler pages dev dist --binding LISTMONK_URL=... --binding LISTMONK_LIST_UUID=...
-```
-
-Use invalid addresses when testing anything that fires repeatedly — valid ones
-reach the live list and have to be cleaned out of Listmonk by hand.
+If a form ever comes back, the old lessons still apply: **do not reach for
+`@astrojs/cloudflare`** (it restructures `dist/` for Workers and breaks
+`wrangler pages deploy`); put a Pages Function beside the static build instead.
 
 ## Content rules
 
@@ -121,7 +124,7 @@ Two things that are easy to get wrong:
 The table of contents and the reading time are both **derived**, never typed: the
 TOC comes from `render()`'s `headings` (so it cannot drift from the real H2s) and
 the reading time is measured from the body. The progress bar, share row and
-end-of-post form come from the template.
+end-of-post store badges come from the template.
 
 #### In-article furniture
 
@@ -204,18 +207,13 @@ needs to break out, give it `max-width: none` — never a `100vw` width, because
 `vw` includes the scrollbar and the figure ends up a few pixels wider than the
 viewport, then gets silently clipped by `body { overflow-x: hidden }`.
 
-**Post CTAs go to `/download`, never to `play.google.com`.** Markdown cannot read
-`PLAY_STORE_URL`, so a store link written into a post goes stale silently — two
-of them already did, pointing at the listing before it was public. `/download`
-is the indirection: one page that stays correct whether the store is open or
-not, and the only place besides `src/lib/store.ts` that knows the store URL.
-The end-of-post form tags its signups `blog-<slug>`, which is what tells you a
-post is converting.
-
-**The waitlist did not retire when Android shipped — it became the iPhone list.**
-About half of this site's readers are on iOS and that build is months away.
-`/download` shows the Play button *and* an iOS signup; the home hero
-deliberately still leads with the waitlist.
+**Post CTAs in Markdown go to `/download`, never to a store.** Markdown cannot
+read the store URLs, so a store link written into a post goes stale silently —
+two of them already did, pointing at the Play listing before it was public.
+`/download` is the indirection. The post template's own CTAs (the sidebar card
+and the end-of-post band) are `StoreBadges`, tagged `blog-<slug>` and
+`blog-<slug>-end`, which is how Play Console tells you which post converts. A
+listing URL in a post's `sources` frontmatter is a citation, not a CTA.
 
 ## /get — the platform-aware download link
 

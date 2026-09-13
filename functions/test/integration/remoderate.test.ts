@@ -200,6 +200,32 @@ describe('remoderateOnce', () => {
     expect((await db.collection('moderation').doc('p1').get()).get('retryable')).toBe(false);
   });
 
+  it('stands down when the founder decides DURING the model call', async () => {
+    // The status guard runs before `classify`, which is a live model call —
+    // one to three seconds in which the founder, working the same queue
+    // through an in-app screen, can resolve the row. Their decision used to be
+    // overwritten in silence: block, then the sweeper's `allow` republishes
+    // the post, sets the author's mirror live, and stamps the row
+    // `reviewedBy: 'remoderate'` over the founder's own name — so it leaves
+    // the queue and they never learn it was undone.
+    await seedOutageHold('p1');
+    vi.mocked(classify).mockImplementationOnce(async () => {
+      // The human lands mid-call.
+      await postsCol().doc('p1').update({status: 'blocked'});
+      return {action: 'allow', reason: 'looks clean now'} as never;
+    });
+
+    const result = await remoderateOnce(50);
+
+    expect((await postsCol().doc('p1').get()).get('status')).toBe('blocked');
+    expect(result.published).toBe(0);
+    expect(result.dropped).toBe(1);
+    // And the row is closed rather than left to be re-asked forever.
+    expect(
+      (await db.collection('moderation').doc('p1').get()).get('retryable'),
+    ).toBe(false);
+  });
+
   it('stops selecting a row whose subject is gone', async () => {
     await seedOutageHold('p1');
     await postsCol().doc('p1').delete();

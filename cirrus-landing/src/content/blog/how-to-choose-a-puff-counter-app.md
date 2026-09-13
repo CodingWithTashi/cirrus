@@ -3,6 +3,7 @@ title: How to choose a puff counter app
 description: Most vape trackers count puffs and stop there. Five things worth checking before you install one, and an honest look at what is available on each platform.
 standfirst: Most vape trackers count puffs and stop there. Five things worth checking before you install one.
 publishedAt: 2026-07-24
+updatedAt: 2026-09-13
 tags: ['puff count', 'quitting vaping', '#puffcounter', '#quitvapingapp', '#lastpuff', '#cirrusquit']
 draft: false
 ctaAngle: "An app that resets you to day one after one bad night punishes the moment you most need it."
@@ -16,16 +17,14 @@ takeaways:
   - A counter that starts from a number you guessed is measuring your optimism, not your habit.
   - Check whether the app cites its statistics. Uncited percentages are the norm in this category and they are usually invented.
   - Ask what happens on a bad day. An app that resets you to day one punishes the exact moment you most need it.
-  - Platforms matter more than feature lists here. As of August 2026, Puff Count is iOS only and Cirrus is Android first.
+  - Platforms matter more than feature lists here. As of September 2026, Puff Count is iOS only and Cirrus is on both iOS and Android.
 
 faq:
   - q: What is the best puff counter app?
     a: >-
-      It depends which phone you have, because the main options do not overlap. As of
-      August 2026 Puff Count is on iOS with an Android version listed as coming soon, and
-      Cirrus is Android first with iOS to follow. Beyond that, judge on whether the app
-      starts from your real count, cites its numbers, and handles a bad day without
-      resetting you.
+      Start with which phone you have. As of September 2026 Puff Count is iPhone only, and
+      Cirrus is on both iPhone and Android. Beyond that, judge on whether the app starts
+      from your real count, cites its numbers, and handles a bad day without resetting you.
   - q: Is there a free puff counter app?
     a: >-
       Yes, several, including both apps named here. Look at what the free tier actually
@@ -106,7 +105,7 @@ isn't a free tier, it's a trial.
 
 The most practical filter, and the one most comparison articles skip.
 
-**Checked 30 August 2026:**
+**Puff Count checked 30 August 2026; Cirrus updated 13 September 2026:**
 
 <div class="table-wrap" tabindex="0">
 <table>
@@ -114,9 +113,9 @@ The most practical filter, and the one most comparison articles skip.
 <tr><th></th><th>Puff Count</th><th>Cirrus</th></tr>
 </thead>
 <tbody>
-<tr><td>iOS</td><td>Available</td><td>Not yet, planned as a fast-follow</td></tr>
-<tr><td>Android</td><td>Listed as "coming soon to Google Play", waitlist only</td><td>First platform, launching soon</td></tr>
-<tr><td>Price</td><td>Free</td><td>Free tier, paid plan for the adaptive plan and unlimited coaching</td></tr>
+<tr><td>iOS</td><td>Available</td><td>Available</td></tr>
+<tr><td>Android</td><td>Listed as "coming soon to Google Play", waitlist only</td><td>Available</td></tr>
+<tr><td>Price</td><td>Free</td><td>Free tier; Premium adds the adaptive plan and more coaching</td></tr>
 <tr><td>Counts puffs</td><td>Yes</td><td>Yes</td></tr>
 <tr><td>Trigger patterns</td><td>Yes</td><td>Yes</td></tr>
 <tr><td>Cites its statistics</td><td>Not on the site</td><td>Every figure, on the site and in the app</td></tr>
@@ -124,16 +123,11 @@ The most practical filter, and the one most comparison articles skip.
 </table>
 </div>
 
-We should be straight with you about two things there. Puff Count is the established option
-with a real user base and it's genuinely free. And Cirrus isn't downloadable yet on any
-platform, so if you want something to open tonight and you're on iPhone, that's your answer,
-and we'd rather tell you than waste your evening.
+We should be straight with you about one thing there. Puff Count is the established option
+with a real user base and it's genuinely free. Cirrus is new on both stores and has no reviews
+yet, so you are judging it on its design rather than on a track record.
 
-If you're on Android, neither of us is shipping today, which is worth knowing before you
-scroll through the store hoping.
-
-**Since this was written, Cirrus has launched on Google Play.** For current prices and a
-third app in the mix, see
+For current prices and a third app in the mix, see
 [Cirrus vs Puff Count vs Kwit](/blog/best-quit-vaping-apps), re-checked on the stores in
 September.
 
