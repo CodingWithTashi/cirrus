@@ -1,0 +1,41 @@
+---
+// The official App Store and Google Play badges, side by side.
+//
+// Official artwork only, never redrawn or recoloured — both stores' badge rules
+// forbid it. Apple's is inlined as SVG so it stays crisp at any size. Google
+// publishes a PNG with its clear space built in (41px around a 168px badge, in
+// a 250px-tall file), so global.css scales the image until the visible badge
+// matches Apple's height and pulls that margin back in.
+//
+// Order follows the reader's phone: BaseLayout stamps `data-os` on <html>
+// before first paint and CSS moves Play first on Android. With JS off, or on a
+// computer, both show in the default order.
+import { Image } from 'astro:assets';
+import appStoreSvg from '../assets/badges/app-store.svg?raw';
+import playBadge from '../assets/badges/google-play.png';
+import { appStoreUrl, playUrl } from '../lib/store';
+
+interface Props {
+  /** Play campaign tag: where on the site the tap happened. */
+  campaign: string;
+  /** `sm` for narrow columns such as the blog sidebar. */
+  size?: 'md' | 'sm';
+}
+
+const { campaign, size = 'md' } = Astro.props;
+
+// Apple's file carries a <title> naming its own export; drop it and label the
+// link instead, so a screen reader hears the action once.
+const appSvg = appStoreSvg
+  .replace(/<title>[\s\S]*?<\/title>/, '')
+  .replace('<svg ', '<svg aria-hidden="true" focusable="false" ');
+---
+
+<div class:list={['stores', `stores--${size}`]}>
+  <a class="store store--app" href={appStoreUrl()} rel="noopener" aria-label="Download on the App Store">
+    <Fragment set:html={appSvg} />
+  </a>
+  <a class="store store--play" href={playUrl(campaign)} rel="noopener" aria-label="Get it on Google Play">
+    <Image src={playBadge} alt="" height={144} format="png" loading="eager" />
+  </a>
+</div>
