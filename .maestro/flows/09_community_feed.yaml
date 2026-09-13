@@ -1,0 +1,69 @@
+# The feed: seeded posts under their aliases, a live SOS pinned on top, the
+# tag filters, a reaction that toggles, and a reply that lands in a thread.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Community feed, filters, reactions and a reply'
+tags:
+  - community
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+- tapOn: 'Community'
+- extendedWaitUntil:
+    visible: 'you''re @\w+'
+    timeout: 15000
+
+# Filters
+- assertVisible: 'All ✓'
+- assertVisible: '🏆 Win'
+- assertVisible: '🆘 SOS'
+- assertVisible: 'Day 1'
+- assertVisible: 'Milestone'
+
+# A card is one label: avatar, alias · day · age, tag, text, footer.
+# The 22-minute-old SOS is inside its pin window, so it carries the
+# "I got you" line and its reply count.
+- assertVisible: '(?s).*@slowturtle9 · day 4 · \d+m\n🆘 SOS\noutside the gas station.*I got you 💬\n4 already replied'
+- assertVisible: '(?s).*@cactusjuice21 · day 1 · .*threw mine in the lake.*'
+
+# Filtering to SOS hides the Day 1 post; All brings it back
+- tapOn: '🆘 SOS'
+- assertVisible: '🆘 SOS ✓'
+- assertNotVisible: '(?s).*@cactusjuice21.*'
+- assertVisible: '(?s).*@slowturtle9.*'
+- tapOn: 'All'
+- assertVisible: 'All ✓'
+- assertVisible: '(?s).*@cactusjuice21.*'
+
+# A reaction toggles on and off, and the count follows
+- tapOn: '💪 47'
+- assertVisible: '💪 48'
+- tapOn: '💪 48'
+- assertVisible: '💪 47'
+
+# Open the SOS thread and reply
+- tapOn: '(?s).*outside the gas station.*'
+- extendedWaitUntil:
+    visible: 'Add your voice…'
+    timeout: 10000
+- assertVisible: '(?s).*walk. just walk one block.*'
+- assertVisible: '(?s).*bought the gatorade.*'
+- tapOn: 'Add your voice…'
+- inputText: 'you have got this. one block at a time'
+- pressKey: Enter
+- runFlow: ../shared/dismiss_push_ask.yaml
+- scrollUntilVisible:
+    element:
+      text: '(?s).*one block at a time.*'
+    direction: DOWN
+    timeout: 10000
+- assertVisible: '(?s).*outside the gas station.*5 already replied'
+
+# Back on the feed the count went up by one
+- runFlow: ../shared/go_back.yaml
+- extendedWaitUntil:
+    visible: '(?s).*outside the gas station.*5 already replied'
+    timeout: 10000

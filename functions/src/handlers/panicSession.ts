@@ -14,7 +14,7 @@
  * is descoped (founder decision, Aug 2026).
  */
 import {onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {dayKeyIn} from '../domain/dateKey';
 import {FieldValue, userDoc} from '../lib/firestore';
 import {requireCaller} from '../lib/guards';
@@ -49,7 +49,7 @@ export function cravingFields(data: Record<string, unknown>): {
 }
 
 export const panicSession = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{aiAvailable: boolean; sessionsToday: number}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

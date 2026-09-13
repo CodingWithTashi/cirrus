@@ -51,6 +51,8 @@ void main() {
       armedMilestone: 'weekFlame',
       armedMilestoneAt: DateTime(2026, 9, 6, 8),
       milestonesAdopted: true,
+      reviewAskedAt: DateTime(2026, 9, 10, 21, 30),
+      reviewAskedCount: 1,
     );
 
     await SettingsPersistence.save(saved);
@@ -74,6 +76,10 @@ void main() {
     expect(loaded.armedMilestone, 'weekFlame');
     // Without this the next launch re-adopts, wiping the ledger it just read.
     expect(loaded.milestonesAdopted, isTrue);
+    // A "not now" that reset on relaunch would re-ask on the very next
+    // craving — the pestering Guideline 5.6.3 is about.
+    expect(loaded.reviewAskedAt, DateTime(2026, 9, 10, 21, 30));
+    expect(loaded.reviewAskedCount, 1);
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -138,6 +144,10 @@ void main() {
       'armedMilestone',
       'armedMilestoneAt',
       'milestonesAdopted',
+      // The store-rating ask ledger (`ReviewAskPolicy`). Device-shaped, so
+      // it is NOT on the sign-out forget list — see the field's comment.
+      'reviewAskedAt',
+      'reviewAskedCount',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });

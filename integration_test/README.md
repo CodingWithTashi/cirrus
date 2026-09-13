@@ -37,8 +37,9 @@ flutter test integration_test/f_firebase_backend_test.dart \
 
 ## App Check
 
-Every callable sets `enforceAppCheck: true`, so `f_firebase_backend`
-only passes on a device whose debug token is registered:
+Every callable enforces App Check (`ENFORCE_APP_CHECK=true` in
+`functions/.env.alastpuff`), so `f_firebase_backend` only passes on a device
+whose debug token is registered:
 
 ```
 firebase appcheck:debugtokens:create <token> --project alastpuff \

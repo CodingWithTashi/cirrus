@@ -17,6 +17,22 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '../consts';
 export const DOWNLOAD_URL = '/download';
 
 /**
+ * The short link that picks the store for you — served by `functions/get.ts`.
+ *
+ * This is the one to hand out: a bio, a QR code, a printed card, a reply to
+ * someone asking what the app is called. It reads the User-Agent and bounces
+ * Android to Play and iPhone to the App Store, and it falls back to
+ * [DOWNLOAD_URL] for everyone else, so it is never wrong and never a dead end.
+ *
+ * Prefer [playUrl] / [appStoreUrl] for a link whose platform you already know.
+ * /get is for links that have to survive being read on a phone you cannot see.
+ */
+export const GET_URL = '/get';
+
+/** The three answers `/get` can reach from a User-Agent. */
+export type Platform = 'android' | 'ios' | 'other';
+
+/**
  * A Play link tagged so Play Console's acquisition report can attribute the
  * install to the page it came from — no SDK, no advertising ID, no third party.
  *
@@ -45,4 +61,22 @@ export function playUrl(campaign: string): string {
  */
 export function appStoreUrl(): string {
   return APP_STORE_URL;
+}
+
+/**
+ * The store URL for one platform, or `null` when there is no store to send
+ * that platform to.
+ *
+ * Both listings are live, so only `other` answers null today. The null stays in
+ * the signature because it is what the `/get` redirector branches on: "send
+ * them to a store" versus "send them to [DOWNLOAD_URL]". A fallback baked in
+ * here would make a desktop visitor look to it like a successful redirect.
+ *
+ * @param platform what the User-Agent said the visitor is holding
+ * @param campaign where the tap happened — `get`, `blog-<slug>`, `qr-card`
+ */
+export function storeUrlFor(platform: Platform, campaign: string): string | null {
+  if (platform === 'android') return playUrl(campaign);
+  if (platform === 'ios') return appStoreUrl();
+  return null;
 }

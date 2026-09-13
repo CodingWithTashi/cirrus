@@ -17,6 +17,7 @@
   "commonUndo": "Undo",
   "commonEdit": "Edit",
   "commonClose": "Close",
+  "commonBack": "Back",
   "commonNotNow": "Not now",
   "commonMaybeLater": "Maybe later",
   "commonDayN": "day {day}",
@@ -36,6 +37,7 @@
   "authWhyAccountCard": "Your streak, plan, and coach memory sync across devices. 🔒 We never sell your data. No ad trackers. Ever.",
   "authTerms": "Terms",
   "authPrivacy": "Privacy",
+  "legalEula": "EULA",
   "authRegisterTitle": "Create your account",
   "authEmailLabel": "EMAIL",
   "authPasswordLabel": "PASSWORD",
@@ -457,10 +459,12 @@
     }
   },
   "obCommitPrivacy": "🔒 We never sell your data. No ad trackers. Ever.",
-  "obRatingTitle": "One quitter's review helps the next one find us.",
-  "obRatingSubtitle": "30 seconds. Skippable. No hard feelings.",
-  "obRatingQuoteBadge": "REAL REVIEW",
-  "obRatingCta": "Rate Cirrus",
+  "reviewAskTitle": "One quitter's review helps the next one find us.",
+  "@reviewAskTitle": {
+    "description": "Title of the store-rating ask on the Survived screen (never in onboarding — App Store Guideline 5.6.3). Also the Settings row that opens the store's review page."
+  },
+  "reviewAskSubtitle": "30 seconds. Skippable. No hard feelings.",
+  "reviewAskCta": "Rate Cirrus",
   "obCoachNameTitle": "Meet your coach.",
   "obCoachNameSubtitle": "Your coach. Quit two years ago, remembers exactly how it felt, and has already read your plan.",
   "obCoachNameAsk": "We call it {name}. It answers to anything — pick the name you'd text at 2am.",
@@ -483,6 +487,7 @@
   },
   "obCoachNameCta": "That's the one",
   "obCoachNameLater": "You can change it any time in Settings.",
+  "obCoachNameAiNote": "Your coach is an AI. What you write to it is processed by Google Gemini to reply — never sold, never used for ads.",
   "obCoachNameErrorEmpty": "Give them something to be called.",
   "obCoachNameErrorLong": "Keep it to 20 characters or fewer.",
   "obCoachNameErrorChars": "Letters, numbers, spaces and - ' only.",
@@ -1201,6 +1206,7 @@
   "coachChipSlipped": "I slipped",
   "coachChipProgress": "Show my progress",
   "coachInputHint": "Message your coach…",
+  "coachSend": "Send",
   "coachTyping": "{name} is typing…",
   "@coachTyping": {
     "placeholders": {
@@ -1378,7 +1384,7 @@
       }
     }
   },
-  "coachSafetyNote": "{name} is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.",
+  "coachSafetyNote": "{name} is an AI support tool, not a doctor. Your messages are processed by Google Gemini. In crisis? Call or text 988 (US & Canada), any time.",
   "@coachSafetyNote": {
     "placeholders": {
       "name": {
@@ -1582,6 +1588,7 @@
     }
   },
   "communityReport": "Report",
+  "communityPostMenu": "Post options",
   "communityMute": "Mute",
   "communityBlock": "Block user",
   "communityReported": "Reported. We review within 24h — 3 reports auto-hide a post.",
@@ -2147,6 +2154,7 @@
   "settingsWebsite": "Website",
   "settingsPrivacyPolicy": "Privacy policy",
   "settingsTermsOfUse": "Terms of use",
+  "settingsEula": "License agreement (EULA)",
   "settingsSupport": "Contact support",
   "settingsDeleteEverything": "Delete everything",
   "settingsDeleteConfirmTitle": "Delete everything?",

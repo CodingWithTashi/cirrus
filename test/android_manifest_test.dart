@@ -170,7 +170,12 @@ void main() {
         final prefixes = attr('pathPrefix');
         final hosts = attr('host');
 
-        for (final uri in [LpLinks.website, LpLinks.privacy, LpLinks.terms]) {
+        for (final uri in [
+          LpLinks.website,
+          LpLinks.privacy,
+          LpLinks.terms,
+          LpLinks.appleEula,
+        ]) {
           if (!hosts.contains(uri.host)) continue;
           final path = uri.path.isEmpty ? '/' : uri.path;
           for (final prefix in prefixes) {

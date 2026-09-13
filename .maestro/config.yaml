@@ -1,0 +1,4 @@
+# Maestro workspace. `maestro test .maestro` runs every file under flows/;
+# shared/ holds subflows that are only ever reached through runFlow.
+flows:
+  - "flows/*.yaml"

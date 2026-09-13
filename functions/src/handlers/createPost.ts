@@ -14,7 +14,7 @@
 import {createHash} from 'node:crypto';
 import {onCall} from 'firebase-functions/v2/https';
 import {HttpsError} from 'firebase-functions/v2/https';
-import {readAllowance, REGION} from '../config';
+import {enforceAppCheck, readAllowance, REGION} from '../config';
 import {postQuality, prefilter} from '../ai/prefilter';
 import {dayKeyIn} from '../domain/dateKey';
 import {db, FieldValue, myPostsCol, postsCol} from '../lib/firestore';
@@ -41,7 +41,7 @@ const CLIENT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const SOS_COOLDOWN_MS = 60 * 60 * 1000;
 
 export const createPost = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{postId: string}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

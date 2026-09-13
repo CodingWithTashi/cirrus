@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/utils/lp_review.dart';
 import '../../data/stores/onboarding_draft_persistence.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
@@ -37,14 +36,10 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// A draft read from disk, held until the user accepts or rejects it.
   OnboardingDraft? _pending;
 
-  /// Riverpod 2's `Ref` has no `mounted`, and both of the async warm-ups here
-  /// outlive a fast user: a draft read and a testimonial fetch can both land
-  /// after the notifier is gone (`complete` invalidates it), and
-  /// writing state then throws.
+  /// Riverpod 2's `Ref` has no `mounted`, and the async draft read here can
+  /// outlive a fast user: it can land after the notifier is gone (`complete`
+  /// invalidates it), and writing state then throws.
   bool _disposed = false;
-
-  /// Issue number of the newest D3 prefetch; see [_prefetchRatingStep].
-  int _prefetchSeq = 0;
 
   @override
   OnboardingState build() {
@@ -293,18 +288,6 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
         analytics.planRevealed();
       // `commit_held` rides the hold gesture (markCommitted) and `notif_prompt`
       // needs the OS answer, so both fire from where that fact exists.
-      // Leaving the worries screen is the first moment every tag exists, and
-      // it is four screens before D3 — so the tailored quotes almost always
-      // land while the user is somewhere else, and the card never blinks.
-      //
-      // ONLY this step. An empty case falls through to the next non-empty one,
-      // so the seven steps below used to land here too: seven calls per
-      // onboarding, six of them fired before `why` or `worries` had been
-      // answered — i.e. with the two heaviest tailoring signals empty — and
-      // the responses race, so an early untailored answer could overwrite the
-      // tailored one.
-      case ObStep.worries:
-        _prefetchRatingStep();
       case ObStep.gender:
       case ObStep.birthYear:
       case ObStep.under18:
@@ -312,56 +295,16 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       case ObStep.frequency:
       case ObStep.strength:
       case ObStep.firstPuff:
+      case ObStep.worries:
       case ObStep.why:
       case ObStep.building:
       case ObStep.coachName:
       case ObStep.whyWords:
       case ObStep.commit:
-      case ObStep.rating:
       case ObStep.notifications:
         break;
     }
     _stepEnteredAt = DateTime.now();
-  }
-
-  /// Warms D3: the tailored quotes, and whether the rating CTA has anywhere
-  /// to go (the OS sheet, or the store listing on a non-Play install).
-  ///
-  /// Both are best-effort and both fail to the same place — bundled quotes and
-  /// a hidden CTA — so neither is awaited and neither can block the funnel.
-  Future<void> _prefetchRatingStep() async {
-    // Ordering guard. These are not awaited, so two in flight can land in
-    // either order and the LAST one wins — which, with the fallthrough above,
-    // meant an early untailored prefetch could overwrite the tailored one.
-    // Only the newest issue is allowed to write.
-    final seq = ++_prefetchSeq;
-    final answers = state;
-    final available = await LpReview.isAvailable();
-    var quotes = const <Testimonial>[];
-    try {
-      quotes = await ref
-          .read(testimonialsRepositoryProvider)
-          .matched(
-            whys: answers.whys,
-            worries: answers.worries,
-            attempts: answers.attempts,
-            gender: answers.gender,
-            dependence: answers.dependence,
-          );
-    } on Object {
-      // Offline, or a backend that refused. The bundled quotes are honest and
-      // already on screen, so there is nothing to report and nothing to retry.
-      quotes = const [];
-    }
-    if (_disposed || seq != _prefetchSeq) return;
-    // All-or-nothing: one tailored quote beside one generic one reads as a
-    // bug rather than as social proof.
-    _persistSuppressed = true;
-    super.state = state.copyWith(
-      testimonials: quotes.length >= 2 ? quotes : const [],
-      reviewAvailable: available,
-    );
-    _persistSuppressed = false;
   }
 
   void next() {

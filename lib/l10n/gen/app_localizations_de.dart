@@ -41,6 +41,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonClose => 'Schließen';
 
   @override
+  String get commonBack => 'Zurück';
+
+  @override
   String get commonNotNow => 'Jetzt nicht';
 
   @override
@@ -79,6 +82,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authPrivacy => 'Datenschutz';
+
+  @override
+  String get legalEula => 'EULA';
 
   @override
   String get authRegisterTitle => 'Erstell dein Konto';
@@ -757,17 +763,14 @@ class AppLocalizationsDe extends AppLocalizations {
       '🔒 Wir verkaufen nie deine Daten. Keine Tracker. Niemals.';
 
   @override
-  String get obRatingTitle =>
+  String get reviewAskTitle =>
       'Die Bewertung eines Ex-Vapers hilft dem nächsten, uns zu finden.';
 
   @override
-  String get obRatingSubtitle => '30 Sekunden. Überspringbar. Kein Groll.';
+  String get reviewAskSubtitle => '30 Sekunden. Überspringbar. Kein Groll.';
 
   @override
-  String get obRatingQuoteBadge => 'ECHTE BEWERTUNG';
-
-  @override
-  String get obRatingCta => 'Cirrus bewerten';
+  String get reviewAskCta => 'Cirrus bewerten';
 
   @override
   String get obCoachNameTitle => 'Das ist dein Coach.';
@@ -798,6 +801,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get obCoachNameLater =>
       'Du kannst das jederzeit in den Einstellungen ändern.';
+
+  @override
+  String get obCoachNameAiNote =>
+      'Dein Coach ist eine KI. Was du schreibst, verarbeitet Google Gemini für die Antwort – nie verkauft, nie für Werbung genutzt.';
 
   @override
   String get obCoachNameErrorEmpty => 'Gib ihm einen Namen.';
@@ -1853,6 +1860,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get coachInputHint => 'Schreib deinem Coach…';
 
   @override
+  String get coachSend => 'Senden';
+
+  @override
   String coachTyping(String name) {
     return '$name tippt…';
   }
@@ -2050,7 +2060,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String coachSafetyNote(String name) {
-    return '$name ist ein Unterstützungstool, kein Arzt. In einer Krise? Ruf die 988 an oder texte ihr (USA & Kanada), jederzeit.';
+    return '$name ist ein KI-Unterstützungstool, kein Arzt. Deine Nachrichten werden von Google Gemini verarbeitet. In einer Krise? Ruf die 988 an oder texte ihr (USA & Kanada), jederzeit.';
   }
 
   @override
@@ -2267,6 +2277,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get communityReport => 'Melden';
+
+  @override
+  String get communityPostMenu => 'Post-Optionen';
 
   @override
   String get communityMute => 'Stummschalten';
@@ -3048,6 +3061,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsTermsOfUse => 'Nutzungsbedingungen';
+
+  @override
+  String get settingsEula => 'Lizenzvereinbarung (EULA)';
 
   @override
   String get settingsSupport => 'Support kontaktieren';

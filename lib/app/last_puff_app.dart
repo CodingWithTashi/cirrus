@@ -229,6 +229,7 @@ class _WidgetSync extends ConsumerStatefulWidget {
 class _WidgetSyncState extends ConsumerState<_WidgetSync> {
   AppLifecycleListener? _listener;
   ProviderSubscription<JourneyState?>? _session;
+  StreamSubscription<int>? _taps;
 
   @override
   void initState() {
@@ -239,6 +240,16 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
     // Constructed here rather than lazily: the listener registers itself with
     // the binding on construction.
     _listener = AppLifecycleListener(onResume: _drain);
+
+    // A tap from the wrist while the app is already open. Resume above and
+    // the session transition below are the only other drains, and neither
+    // fires for a phone that never left the foreground — a launcher widget tap
+    // always takes the app off screen first, so a resume follows it; a wrist
+    // tap does not — so the puff sat in the outbox, Home said zero and the
+    // watch said one, until the app was closed and reopened (Sep 8 2026,
+    // docs/10 §36). The relay has already written the outbox when this fires;
+    // the drain reads it like any other.
+    _taps = coordinator.watchTaps.listen((_) => _drainOnly());
 
     // Cold launch. `restoreSession` resolves inside the splash, roughly a
     // second and a half in, and every other session-establishing path
@@ -258,6 +269,24 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
         unawaited(coordinator.discardQueued());
       }
     });
+  }
+
+  /// A wrist tap: fold the outbox in, and nothing else.
+  ///
+  /// Not [_drain], whose `invalidate()` is the self-healing re-push a
+  /// FOREGROUND earns — on a tap it is redundant when events land (the drain
+  /// forces its own repaint after the cursor) and, on a coalesced drain that
+  /// found nothing, it would clear the fingerprint so the next unchanged
+  /// mirror is re-sent for no reason.
+  void _drainOnly() {
+    final coordinator = ref.read(widgetCoordinatorProvider);
+    if (coordinator == null) return;
+    unawaited(
+      coordinator.drain(
+        ref.read(quitStoreProvider.notifier),
+        now: ref.read(nowProvider)(),
+      ),
+    );
   }
 
   void _drain() {
@@ -281,6 +310,7 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
 
   @override
   void dispose() {
+    _taps?.cancel();
     _session?.close();
     _listener?.dispose();
     super.dispose();
@@ -312,8 +342,31 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
         emptyTitle: l10n.widgetEmptyTitle,
         emptyBody: l10n.widgetEmptyBody,
         watchOpenPhone: l10n.widgetWatchOpenPhone,
+        // The wrist's other two screens. Every one of these is a string the
+        // app already ships — Stats' week labels and the panic flow's — so
+        // the watch gained two screens without gaining an ARB key.
+        //
+        // The `%1$@` arguments turn a gen-l10n getter into a NATIVE format
+        // template: gen-l10n emits plain interpolation, so passing the token
+        // through yields `craving timer · %1$@ · peaks ~15 min`, which Swift
+        // fills with `String(format:)`. Word order stays per-locale, which is
+        // the whole reason `widgetLeftAhead` carries a `%1$d`.
+        weekTitle: l10n.statsPuffsThisWeek,
+        vsLast: l10n.statsVsLast(r'%1$@'),
+        savedLabel: l10n.homeSavedSoFar,
+        cravingsLabel: l10n.statsCravingsBeaten,
+        breatheIn: l10n.panicBreatheIn,
+        breatheHold: l10n.panicBreatheHold,
+        breatheOut: l10n.panicBreatheOut,
+        breathePattern: l10n.panicBreathePattern,
+        cravingTimer: l10n.panicCravingTimer(r'%1$@'),
+        cravingTimerLate: l10n.panicCravingTimerLate(r'%1$@'),
       ),
       now: ref.read(nowProvider)(),
+      // The app's own language, not the watch's: someone running Cirrus in
+      // Spanish on an English phone must not get dollars formatted one way on
+      // Home and another on their wrist.
+      locale: context.localeTag,
       // Watched, not read: it resolves asynchronously after a session is
       // established, so the first push of a cold launch can legitimately carry
       // no id at all and the watch is built to treat that as "not yet" rather

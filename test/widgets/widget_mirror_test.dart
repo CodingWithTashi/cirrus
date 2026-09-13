@@ -9,6 +9,10 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/data/stores/widget_coordinator.dart';
 import 'package:last_puff/data/stores/widget_mirror.dart';
 import 'package:last_puff/domain/date_key.dart';
+import 'package:last_puff/core/utils/lp_format.dart';
+import 'package:last_puff/domain/logic/day_window.dart';
+import 'package:last_puff/domain/logic/week_trend.dart';
+import 'package:last_puff/domain/models/models.dart';
 
 import 'package:last_puff/data/seed/seed_data.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
@@ -28,6 +32,16 @@ const _copy = WidgetCopy(
   emptyTitle: 'Start your plan',
   emptyBody: 'Tap to open Cirrus',
   watchOpenPhone: 'Open Cirrus on your iPhone',
+  weekTitle: 'PUFFS THIS WEEK',
+  vsLast: r'%1$@ vs last',
+  savedLabel: 'saved so far',
+  cravingsLabel: 'cravings beaten',
+  breatheIn: 'Breathe in',
+  breatheHold: 'Hold',
+  breatheOut: 'Breathe out',
+  breathePattern: 'In 4 · Hold 7 · Out 8',
+  cravingTimer: r'craving timer · %1$@ · peaks ~15 min',
+  cravingTimerLate: r'craving timer · %1$@ · past the worst',
 );
 
 /// What the app pushes to the home-screen widget.
@@ -335,6 +349,7 @@ void main() {
         copy: _copy,
         now: DateTime.now(),
         sid: sid,
+        locale: 'en',
       );
       expect(build('uid-x')['sid'], 'uid-x');
       expect(build(null).containsKey('sid'), isFalse);
@@ -378,6 +393,136 @@ void main() {
       container.read(quitStoreProvider.notifier).signOut();
       await tester.pumpAndSettle();
       expect(store.watchSyncs, greaterThan(afterSeed));
+    });
+  });
+
+  /// The week card the wrist draws (frame 03 of the store set).
+  ///
+  /// Everything on it is computed here and shipped as a value: the wrist owns
+  /// no arithmetic beyond turning a count into a bar height, which is layout.
+  group('the week card the wrist draws', () {
+    final now = DateTime(2026, 9, 8, 10);
+    final journey = SeedData.journey(now);
+
+    Map<String, dynamic> build({JourneyState? state, DateTime? at}) {
+      final j = state ?? journey;
+      final when = at ?? now;
+      return buildMirror(
+        journey: j,
+        snapshot: TodaySnapshot.of(j, when),
+        copy: _copy,
+        now: when,
+        sid: 'uid-demo',
+        locale: 'en',
+      );
+    }
+
+    test('the bars are the calendar week, oldest first, from the engine', () {
+      final mirror = build();
+      final week = DayWindow.trailing(journey, now, kMirrorLimitDays);
+      expect(mirror['weekPuffs'], [for (final l in week) l.puffs]);
+      expect((mirror['weekPuffs'] as List), hasLength(kMirrorLimitDays));
+      // The denominator travels so the wrist renormalizes rather than
+      // inventing one — and it can never be 0, which would divide by zero on
+      // a week nobody logged.
+      expect(mirror['weekMax'], greaterThanOrEqualTo(1));
+    });
+
+    test('the hard day and the best day are decided here, not on the wrist', () {
+      final mirror = build();
+      final week = DayWindow.trailing(journey, now, kMirrorLimitDays);
+      expect(mirror['weekHardest'], WeekTrend.hardestIndex(week));
+      expect(mirror['weekBest'], WeekTrend.bestIndex(week, now));
+    });
+
+    test('money is formatted here, and the raw double never travels', () {
+      final mirror = build();
+      final snapshot = TodaySnapshot.of(journey, now);
+      expect(mirror['savedText'], LpFormat.money(snapshot.savedLifetime, 'en'));
+      // Shipping the double would invite the wrist to re-derive it, and the
+      // rule that produced it — an unconfirmed day is unknown, never a saving
+      // — is a domain rule that must have exactly one implementation.
+      expect(mirror.containsKey('savedLifetime'), isFalse);
+      expect(mirror['cravingsBeaten'], snapshot.cravingsSurvivedTotal);
+    });
+
+    test('a flat week is present and 0, never absent', () {
+      // The case the absent-vs-zero rule exists to protect: 0 means "flat",
+      // which the card paints volt as good news, so it has to be a value.
+      final flat = journeyOnDay(20, now: now);
+      final days = <DateTime, DayLog>{};
+      for (var i = 0; i < 20; i++) {
+        final day = LpDate.addDays(LpDate.dayStart(flat.plan.startDate), i);
+        days[day] = DayLog(date: day, puffs: 40, limit: 100);
+      }
+      final mirror = build(state: flat.copyWith(days: days));
+      expect(mirror['weekVsLast'], 0);
+      expect(mirror['weekVsLastLabel'], '0%');
+    });
+
+    test('with no previous window to compare, both keys are ABSENT', () {
+      // Day 3: `DayWindow.previous` returns nothing, so there is no honest
+      // answer. A 0 here would claim a flat week on an account with no
+      // history at all.
+      final young = journeyOnDay(3, now: now);
+      final mirror = build(state: young);
+      expect(mirror.containsKey('weekVsLast'), isFalse);
+      expect(mirror.containsKey('weekVsLastLabel'), isFalse);
+    });
+
+    test('the two vs-last keys always travel together or not at all', () {
+      for (final state in [journey, journeyOnDay(3, now: now)]) {
+        final mirror = build(state: state);
+        expect(
+          mirror.containsKey('weekVsLast'),
+          mirror.containsKey('weekVsLastLabel'),
+        );
+      }
+    });
+
+    test('no journey means NO week numbers — not empty ones', () {
+      // The rule every widget surface inherits, as a set equality so a future
+      // key cannot quietly leak into the signed-out document. A wrist is the
+      // most public form of this leak there is.
+      final mirror = buildMirror(
+        journey: null,
+        snapshot: null,
+        copy: _copy,
+        now: now,
+        sid: 'uid-demo',
+        locale: 'en',
+      );
+      expect(mirror.keys.toSet(), {'v', 'hasJourney', 'copy'});
+    });
+
+    testWidgets('the week and breathe templates survive translation', (
+      tester,
+    ) async {
+      // `String(format:)` reads garbage off the stack for a stray `%`, so a
+      // translator who writes "%1$@ %" turns a wrist screen into a memory
+      // bug. Exactly one placeholder, and no other percent, in all five.
+      for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
+        final (_, store) = await open(tester, locale: Locale(locale));
+        final copy = mirrorIn(store)['copy'] as Map<String, dynamic>;
+        for (final key in ['vsLast', 'cravingTimer', 'cravingTimerLate']) {
+          final value = copy[key] as String;
+          expect(
+            RegExp(r'%1\$@').allMatches(value).length,
+            1,
+            reason: '$locale/$key must interpolate exactly once: $value',
+          );
+          expect(
+            RegExp(r'%').allMatches(value).length,
+            1,
+            reason: '$locale/$key has a stray % that String(format:) would '
+                'read as a directive: $value',
+          );
+        }
+        // The panic verbs carry no placeholder at all.
+        for (final key in ['breatheIn', 'breatheHold', 'breatheOut']) {
+          expect((copy[key] as String).contains('%'), isFalse, reason: locale);
+        }
+      }
     });
   });
 }

@@ -15,6 +15,7 @@ import '../../domain/logic/billing_catalog.dart';
 import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/utils/lp_review.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_error.dart';
@@ -380,6 +381,31 @@ class SettingsScreen extends ConsumerWidget {
               value: '',
               onTap: () => LpLinks.open(LpLinks.terms).ignore(),
             ),
+            // Apple's standard EULA, on Apple platforms only — see
+            // `LpLinks.appleEula` for the review rejection behind it.
+            if (LpLinks.appleEulaApplies)
+              row(
+                icon: Icons.article_outlined,
+                label: l10n.settingsEula,
+                value: '',
+                onTap: () => LpLinks.open(LpLinks.appleEula).ignore(),
+              ),
+            // The one place a person can go looking for "rate this app". The
+            // unprompted ask is on the Survived screen behind `ReviewAskPolicy`
+            // (never in onboarding — App Store Guideline 5.6.3, Sep 11 2026);
+            // this row is theirs to tap whenever they like, so it opens the
+            // store's review page rather than asking StoreKit for a sheet it
+            // shows three times a year at most. Hidden when no store would
+            // open: a row that does nothing is worse than no row.
+            if ((ref.watch(reviewRouteProvider).valueOrNull ??
+                    ReviewRoute.none) !=
+                ReviewRoute.none)
+              row(
+                icon: Icons.star_outline_rounded,
+                label: l10n.reviewAskCta,
+                value: '',
+                onTap: () => LpReview.openListing().ignore(),
+              ),
             row(
               icon: Icons.mail_outline_rounded,
               label: l10n.settingsSupport,

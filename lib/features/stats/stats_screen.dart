@@ -235,22 +235,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final best = WeekTrend.bestIndex(shown, now);
 
     // Percent vs the previous equal-length window, over confirmed days only
-    // — unlogged days are unknown, not zero.
-    int? vsLast;
-    final prev = DayWindow.previous(
-      journey,
-      now,
-      window,
-    ).where((l) => l.isConfirmed).toList();
-    final confirmedNow = shown.where((l) => l.isConfirmed).toList();
-    if (prev.isNotEmpty && confirmedNow.isNotEmpty) {
-      final prevAvg = prev.fold(0, (a, b) => a + b.puffs) / prev.length;
-      final nowAvg =
-          confirmedNow.fold(0, (a, b) => a + b.puffs) / confirmedNow.length;
-      if (prevAvg > 0) {
-        vsLast = (((nowAvg - prevAvg) / prevAvg) * 100).round();
-      }
-    }
+    // — unlogged days are unknown, not zero. The engine answers null when
+    // there is nothing honest to say, and the pill below is simply not built.
+    // Shared with the watch's week card so the two can never disagree.
+    final vsLast = WeekTrend.vsPrevious(
+      shown,
+      DayWindow.previous(journey, now, window),
+    );
 
     return LpCard(
       padding: const EdgeInsets.all(16),

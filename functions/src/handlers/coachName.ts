@@ -13,7 +13,7 @@
  * construction.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {FieldValue, userDoc} from '../lib/firestore';
 import {requireCaller, requireText} from '../lib/guards';
 import {
@@ -36,7 +36,7 @@ import {log} from '../lib/logger';
 const MAX_WIRE_CHARS = COACH_NAME_MAX * 2;
 
 export const setCoachName = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{coachName: string}> => {
     const {uid} = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

@@ -79,7 +79,6 @@ void main() {
       'ObCoachName',
       'ObWhyWords',
       'ObCommit',
-      'ObRating',
     ])
       name: const OnboardingFlow(),
     'Moderation': const ModerationScreen(),
@@ -103,7 +102,6 @@ void main() {
     'ObCoachName': ObStep.coachName,
     'ObWhyWords': ObStep.whyWords,
     'ObCommit': ObStep.commit,
-    'ObRating': ObStep.rating,
   };
 
   /// A small phone and a large one, both logical pixels at dpr 1.

@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get commonClose;
 
+  /// No description provided for @commonBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get commonBack;
+
   /// No description provided for @commonNotNow.
   ///
   /// In en, this message translates to:
@@ -235,6 +241,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy'**
   String get authPrivacy;
+
+  /// No description provided for @legalEula.
+  ///
+  /// In en, this message translates to:
+  /// **'EULA'**
+  String get legalEula;
 
   /// No description provided for @authRegisterTitle.
   ///
@@ -1400,29 +1412,23 @@ abstract class AppLocalizations {
   /// **'🔒 We never sell your data. No ad trackers. Ever.'**
   String get obCommitPrivacy;
 
-  /// No description provided for @obRatingTitle.
+  /// Title of the store-rating ask on the Survived screen (never in onboarding — App Store Guideline 5.6.3). Also the Settings row that opens the store's review page.
   ///
   /// In en, this message translates to:
   /// **'One quitter\'s review helps the next one find us.'**
-  String get obRatingTitle;
+  String get reviewAskTitle;
 
-  /// No description provided for @obRatingSubtitle.
+  /// No description provided for @reviewAskSubtitle.
   ///
   /// In en, this message translates to:
   /// **'30 seconds. Skippable. No hard feelings.'**
-  String get obRatingSubtitle;
+  String get reviewAskSubtitle;
 
-  /// No description provided for @obRatingQuoteBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'REAL REVIEW'**
-  String get obRatingQuoteBadge;
-
-  /// No description provided for @obRatingCta.
+  /// No description provided for @reviewAskCta.
   ///
   /// In en, this message translates to:
   /// **'Rate Cirrus'**
-  String get obRatingCta;
+  String get reviewAskCta;
 
   /// No description provided for @obCoachNameTitle.
   ///
@@ -1471,6 +1477,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can change it any time in Settings.'**
   String get obCoachNameLater;
+
+  /// No description provided for @obCoachNameAiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your coach is an AI. What you write to it is processed by Google Gemini to reply — never sold, never used for ads.'**
+  String get obCoachNameAiNote;
 
   /// No description provided for @obCoachNameErrorEmpty.
   ///
@@ -3073,6 +3085,12 @@ abstract class AppLocalizations {
   /// **'Message your coach…'**
   String get coachInputHint;
 
+  /// No description provided for @coachSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get coachSend;
+
   /// No description provided for @coachTyping.
   ///
   /// In en, this message translates to:
@@ -3352,7 +3370,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachSafetyNote.
   ///
   /// In en, this message translates to:
-  /// **'{name} is a support tool, not a doctor. In crisis? Call or text 988 (US & Canada), any time.'**
+  /// **'{name} is an AI support tool, not a doctor. Your messages are processed by Google Gemini. In crisis? Call or text 988 (US & Canada), any time.'**
   String coachSafetyNote(String name);
 
   /// No description provided for @planTitle.
@@ -3696,6 +3714,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Report'**
   String get communityReport;
+
+  /// No description provided for @communityPostMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Post options'**
+  String get communityPostMenu;
 
   /// No description provided for @communityMute.
   ///
@@ -4992,6 +5016,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terms of use'**
   String get settingsTermsOfUse;
+
+  /// No description provided for @settingsEula.
+  ///
+  /// In en, this message translates to:
+  /// **'License agreement (EULA)'**
+  String get settingsEula;
 
   /// No description provided for @settingsSupport.
   ///

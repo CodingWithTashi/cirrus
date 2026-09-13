@@ -129,9 +129,13 @@ firebase deploy --only functions
       it on, anyone who can make a sandbox purchase gets a real entitlement.
 
 - [ ] **Enable App Check** (Play Integrity + App Attest) and register the apps.
-      Every callable sets `enforceAppCheck: true`; without App Check registered,
-      real clients will be rejected — and without it enforced, `aiCoachChat` is
-      a public Gemini proxy.
+      Every callable enforces App Check through ONE flag, `ENFORCE_APP_CHECK`
+      in `.env.alastpuff` (`enforceAppCheck` in `src/config.ts`); without App
+      Check registered, real clients will be rejected — and without it
+      enforced, `aiCoachChat` is a public Gemini proxy. `ENFORCE_APP_CHECK=false`
+      + deploy is the escape hatch for an attestation that refuses every real
+      client. It fails closed (only the exact word `false` disarms it, an unset
+      value enforces) and must never stay at `false`.
 - [ ] Set `COACH_MIN_INSTANCES=1` — a cold start on a 2am craving is a product
       failure, not a perf nit (~$15/mo).
 - [ ] Confirm the Firestore location matches `REGION` in `src/config.ts`.

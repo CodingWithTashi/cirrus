@@ -109,6 +109,7 @@ PHASE D: PAYOFF        D1 Plan reveal → D2 Commitment (hold-to-commit) → D3 
 - Privacy card beneath (real, engineered claim): "🔒 We never sell your data. No ad trackers in this app. Ever."
 
 ### D3 — Rating ask ⭐ (their genius placement, our honest copy)
+- > 🚫 **Superseded Sep 11 2026 — this placement is an App Store rejection.** Review bounced 1.0.16 under Guideline 5.6.3: "The app requests users to rate the app on first launch or during onboarding, before they've had enough time to gain a clear understanding of the app's value." The step is gone from the funnel (commit → notifications); the ask lives on the Survived screen behind `ReviewAskPolicy` — plan day ≥ 3, three cravings beaten, twice ever, 14 days apart — with a user-initiated row in Settings. docs/10 §38.
 - Trigger native StoreKit review prompt at THIS peak-motivation moment (before paywall, before anything can annoy).
 - Lead-in screen copy: "One quitter's review helps the next one find us. 10 seconds, huge karma." **No fake statistic.**
 - Show real quotes only. Never stock-photo fake personas (clone's "Sarah, 29" = review-bomb risk).

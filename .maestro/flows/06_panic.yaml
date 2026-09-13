@@ -1,0 +1,60 @@
+# SOS → breathe → why → break the loop → it passed → survived, and the
+# cravings-beaten count on Home goes up by one.
+#
+# Every CTA is tapped by text on both platforms ON PURPOSE. With a Material
+# Slider on the why-step, iOS reported this screen's accessibility frames at
+# 1/devicePixelRatio after the switch, and a text tap landed in the wrong
+# place (the slider is a CupertinoSlider now — see `_WhyStep` and docs/10
+# §35). A text tap lands only when the frames are right, so this flow is the
+# regression check for that fix. If it ever misses here again, look there.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'A craving survived through the panic flow'
+tags:
+  - panic
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+- copyTextFrom: '(?s)\d+\ncravings beaten'
+- evalScript: ${output.before = parseInt(maestro.copiedText)}
+
+- tapOn: 'SOS'
+
+# Step 1 — the breathing pacer
+- assertVisible: 'PANIC MODE · 1 OF 3'
+- assertVisible: 'Breathe with the circle.'
+- assertVisible: 'In 4 · Hold 7 · Out 8'
+- assertVisible: 'craving timer · .*'
+- tapOn: 'Skip to my why →'
+
+# Step 2 — their own why, and the intensity question
+- assertVisible: 'PANIC MODE · 2 OF 3'
+- assertVisible: 'Remember why you started.'
+- assertVisible: 'YOU SAID'
+- assertVisible: 'How bad is it right now\?'
+- assertVisible: '\d+/10'
+- assertVisible: 'It passed 🎉 I''m good'
+- tapOn: 'Still craving — next'
+
+# Step 3 — the three loop breakers
+- assertVisible: 'PANIC MODE · 3 OF 3'
+- assertVisible: 'Break the loop.'
+- assertVisible: '(?s).*Play for a minute.*'
+- assertVisible: '(?s).*Ask the community.*'
+- assertVisible: '(?s).*Talk to coach.*'
+- tapOn: 'It passed 🎉 I''m good'
+
+# Survived
+- assertVisible: '\+1 craving beaten'
+- assertVisible: '(?s).*cravings survived total.*'
+- assertVisible: 'Share the W ↗'
+- tapOn: 'Back to today'
+
+- extendedWaitUntil:
+    visible: 'LOG PUFF'
+    timeout: 15000
+- copyTextFrom: '(?s)\d+\ncravings beaten'
+- assertTrue: ${parseInt(maestro.copiedText) === output.before + 1}

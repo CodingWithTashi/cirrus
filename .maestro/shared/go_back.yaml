@@ -1,0 +1,5 @@
+# Leave a pushed screen through the app bar's back chevron, which is the
+# labelled button "Back" since Sep 8 2026 (`BackChevron` in lp_misc.dart).
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- tapOn: 'Back'

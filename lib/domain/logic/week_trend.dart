@@ -59,6 +59,42 @@ abstract final class WeekTrend {
     return _mean(done.sublist(done.length - half)) < _mean(done.sublist(0, half));
   }
 
+  /// How [current] compares with [previous] as a signed percent, or null when
+  /// the question has no honest answer.
+  ///
+  /// The average of a window's CONFIRMED days against the average of the
+  /// window before it — an average, not a sum, so a week with three confirmed
+  /// days is still comparable with one that has seven. Unconfirmed days are
+  /// dropped from both sides rather than counted as zero: an unlogged day is
+  /// unknown, and reading it as a perfect one is the same lie `MoneyEngine`
+  /// refuses to tell.
+  ///
+  /// **Null is a real answer and must not collapse to 0** — `0` already means
+  /// "flat", which the Stats pill paints volt as good news. Four ways to get
+  /// nothing: an empty previous window (the plan is younger than two windows),
+  /// no confirmed day in it, no confirmed day in [current], or a previous
+  /// window that averaged zero — where the ratio is undefined and −100% would
+  /// be an invention.
+  ///
+  /// Lifted out of `stats_screen.dart`, where it was inline in a build method,
+  /// so the Stats pill and the watch's week card cannot drift apart. The
+  /// caller supplies the windows (`DayWindow.trailing` / `.previous`), which
+  /// keeps this pure over two lists like everything else here.
+  static int? vsPrevious(List<DayLog> current, List<DayLog> previous) {
+    final before = [
+      for (final log in previous)
+        if (log.isConfirmed) log,
+    ];
+    final now = [
+      for (final log in current)
+        if (log.isConfirmed) log,
+    ];
+    if (before.isEmpty || now.isEmpty) return null;
+    final beforeAvg = _mean(before);
+    if (beforeAvg <= 0) return null;
+    return (((_mean(now) - beforeAvg) / beforeAvg) * 100).round();
+  }
+
   static double _mean(List<DayLog> logs) =>
       logs.fold<int>(0, (sum, log) => sum + log.puffs) / logs.length;
 }

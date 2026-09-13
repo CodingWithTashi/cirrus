@@ -1,0 +1,87 @@
+# The composer and every rule it enforces on the fake backend: too short,
+# where-to-buy, tag required, a post that reaches the feed under my alias,
+# an SOS that pins, a second SOS refused while the first is up, and the
+# Premium cap of three regular posts a day (SOS has its own allowance).
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Composer rules and posting'
+tags:
+  - community
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+- tapOn: 'Community'
+- extendedWaitUntil:
+    visible: 'you''re @\w+'
+    timeout: 15000
+
+# Post 1 — the rules, then a Win
+- runFlow: ../shared/open_composer.yaml
+- assertVisible: 'Cancel'
+- assertVisible: 'Post'
+- assertVisible: 'posting as @\w+ · day \d+ · always anonymous'
+- assertVisible: 'TAG IT'
+- assertVisible: 'Pick a tag — it routes your post to the right people.'
+# The field autofocuses; the keyboard is already up
+- inputText: 'hi there'
+- assertVisible: 'A few more words — enough that someone can actually help.'
+- eraseText
+- inputText: 'anyone know where to buy the mango ones near me'
+- assertVisible: 'Where-to-buy and for-sale talk isn''t allowed here. Edit it and try again.'
+- eraseText
+- inputText: 'e2e: day twelve and the 9pm wave just broke on its own'
+- tapOn: '🏆 Win'
+- assertNotVisible: 'Pick a tag — it routes your post to the right people.'
+- tapOn: 'Post'
+- runFlow: ../shared/dismiss_push_ask.yaml
+# The snack lives a few seconds and the permission sheet can outlast it, so
+# it is a soft check; the card on the feed is the real one.
+- assertVisible:
+    text: 'Posted. A quick safety check runs before others can see it.'
+    optional: true
+- extendedWaitUntil:
+    visible: '(?s).*@quietfox\d+ · day \d+ · .*🏆 WIN\ne2e: day twelve and the 9pm wave just broke on its own.*'
+    timeout: 15000
+
+# Post 2 — an SOS, which pins to the top for an hour
+- runFlow: ../shared/open_composer.yaml
+- inputText: 'e2e: craving hard right now, someone talk me down'
+- tapOn: '🆘 SOS'
+- tapOn: 'Post'
+- runFlow: ../shared/dismiss_push_ask.yaml
+- extendedWaitUntil:
+    visible: '(?s).*@quietfox\d+ · day \d+ · .*🆘 SOS\ne2e: craving hard right now, someone talk me down.*'
+    timeout: 15000
+
+# Post 3 — a second SOS is refused while the first is still up; Vent is fine
+- runFlow: ../shared/open_composer.yaml
+- inputText: 'e2e: a second sos while the first is still pinned'
+- tapOn: '🆘 SOS'
+- assertVisible: 'Your SOS is still at the top of the feed. People are seeing it.'
+- tapOn: 'Vent'
+- assertNotVisible: 'Your SOS is still at the top of the feed. People are seeing it.'
+- tapOn: 'Post'
+- runFlow: ../shared/dismiss_push_ask.yaml
+- extendedWaitUntil:
+    visible: '(?s).*@quietfox\d+ · day \d+ · .*VENT\ne2e: a second sos while the first is still pinned.*'
+    timeout: 15000
+
+# Post 4 — SOS has its own allowance, so this is only the third regular post
+- runFlow: ../shared/open_composer.yaml
+- inputText: 'e2e: the third regular post of the day still goes through'
+- tapOn: 'Vent'
+- tapOn: 'Post'
+- runFlow: ../shared/dismiss_push_ask.yaml
+- extendedWaitUntil:
+    visible: '(?s).*@quietfox\d+ · day \d+ · .*VENT\ne2e: the third regular post of the day still goes through.*'
+    timeout: 15000
+
+# Post 5 — the Premium allowance is three regular posts a day
+- runFlow: ../shared/open_composer.yaml
+- inputText: 'e2e: the fourth regular post hits the cap'
+- tapOn: 'Vent'
+- assertVisible: 'That''s 3 today — the counter resets at midnight.'
+- tapOn: 'Cancel'
+- assertVisible: 'you''re @\w+'

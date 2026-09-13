@@ -22,7 +22,7 @@
  * whole, ordered by `snapshotAt`, exactly as the webhook writes it.
  */
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
-import {RC_ACCEPT_SANDBOX, REGION, REVENUECAT_SECRET_API_KEY} from '../config';
+import {enforceAppCheck, RC_ACCEPT_SANDBOX, REGION, REVENUECAT_SECRET_API_KEY} from '../config';
 import {mirrorEntitlement} from '../lib/entitlementMirror';
 import {requireCaller} from '../lib/guards';
 import {log} from '../lib/logger';
@@ -31,7 +31,7 @@ import {RevenueCatUnavailable} from '../lib/revenuecat';
 export const refreshEntitlement = onCall(
   {
     region: REGION,
-    enforceAppCheck: true,
+    enforceAppCheck,
     secrets: [REVENUECAT_SECRET_API_KEY],
     memory: '256MiB',
   },

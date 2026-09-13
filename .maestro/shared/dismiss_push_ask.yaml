@@ -1,0 +1,12 @@
+# The first reply or post of a session may raise the "Want to know when
+# someone replies?" sheet. Decline it so no OS permission dialog is involved.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- runFlow:
+    when:
+      visible: 'Want to know when someone replies\?'
+    commands:
+      - tapOn: 'Maybe later'
+      - extendedWaitUntil:
+          notVisible: 'Want to know when someone replies\?'
+          timeout: 5000

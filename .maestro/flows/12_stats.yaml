@@ -1,0 +1,52 @@
+# Stats: the week card, the comparison against the previous seven days, and
+# the records row — the surface `WeekTrend` feeds, and the one the watch's week
+# card now reads from the same engine (docs/10 §37). If `vsPrevious` ever
+# collapses its null case to 0, or the extraction drifts from what the pill
+# used to compute inline, this is where it shows.
+#
+# Every card here merges its title, its figures and its caption into ONE
+# semantics node separated by newlines, so each assertion is a dot-all regex
+# rather than the bare label — the trap the README names.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Stats renders the week'
+tags:
+  - stats
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+
+- tapOn: 'Stats'
+- assertVisible: 'Day'
+- assertVisible: 'Week'
+- assertVisible: 'Month'
+
+# The week card, its comparison and its caption are one node. The percent is
+# asserted as a SHAPE, not a value, so it holds on any day's seed — but it must
+# be a real signed number: a `0%` here would mean the engine had started
+# answering "flat" where it used to answer "nothing honest to say".
+- assertVisible: '(?s)PUFFS THIS WEEK.*-\d+% vs last.*was the difficult day.*'
+
+# Records, computed over the whole journey and free to everyone.
+- assertVisible: '(?s).*longest gap.*best day \(puffs\).*cravings beaten.*'
+- assertVisible: 'long-press any bar to fix a day'
+
+# The other two cards.
+- assertVisible: '(?s)TRIGGER HOURS.*danger window.*'
+- assertVisible: '(?s)NICOTINE / DAY.*mg.*'
+
+# Day is a different window, and carries no week comparison at all.
+- tapOn: 'Day'
+- assertVisible: '(?s)PUFFS TODAY · BY HOUR.*'
+- assertNotVisible: '(?s).*vs last.*'
+
+# Month is Premium; the demo account has it, so the pill switches rather than
+# opening the paywall.
+- tapOn: 'Month'
+- assertVisible: '(?s)PUFFS · LAST 30 DAYS.*'
+
+- tapOn: 'Week'
+- assertVisible: '(?s)PUFFS THIS WEEK.*-\d+% vs last.*'

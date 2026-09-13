@@ -42,6 +42,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commonClose => 'Fermer';
 
   @override
+  String get commonBack => 'Retour';
+
+  @override
   String get commonNotNow => 'Pas maintenant';
 
   @override
@@ -80,6 +83,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get authPrivacy => 'Confidentialité';
+
+  @override
+  String get legalEula => 'CLUF';
 
   @override
   String get authRegisterTitle => 'Crée ton compte';
@@ -755,17 +761,14 @@ class AppLocalizationsFr extends AppLocalizations {
       '🔒 On ne vend jamais tes données. Zéro traqueur. Jamais.';
 
   @override
-  String get obRatingTitle =>
+  String get reviewAskTitle =>
       'L\'avis d\'un ancien vapoteur aide le suivant à nous trouver.';
 
   @override
-  String get obRatingSubtitle => '30 secondes. Passable. Sans rancune.';
+  String get reviewAskSubtitle => '30 secondes. Passable. Sans rancune.';
 
   @override
-  String get obRatingQuoteBadge => 'AVIS RÉEL';
-
-  @override
-  String get obRatingCta => 'Noter Cirrus';
+  String get reviewAskCta => 'Noter Cirrus';
 
   @override
   String get obCoachNameTitle => 'Voici ton coach.';
@@ -796,6 +799,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get obCoachNameLater =>
       'Tu peux le changer à tout moment dans les Réglages.';
+
+  @override
+  String get obCoachNameAiNote =>
+      'Ton coach est une IA. Ce que tu lui écris est traité par Google Gemini pour répondre — jamais vendu, jamais utilisé pour de la pub.';
 
   @override
   String get obCoachNameErrorEmpty => 'Donne-lui un nom.';
@@ -1851,6 +1858,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get coachInputHint => 'Écris à ton coach…';
 
   @override
+  String get coachSend => 'Envoyer';
+
+  @override
   String coachTyping(String name) {
     return '$name écrit…';
   }
@@ -2048,7 +2058,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String coachSafetyNote(String name) {
-    return '$name est un outil de soutien, pas un médecin. En crise ? Appelle ou texte le 988 (É.-U. & Canada), à toute heure.';
+    return '$name est un outil de soutien basé sur l\'IA, pas un médecin. Tes messages sont traités par Google Gemini. En crise ? Appelle ou texte le 988 (É.-U. & Canada), à toute heure.';
   }
 
   @override
@@ -2265,6 +2275,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get communityReport => 'Signaler';
+
+  @override
+  String get communityPostMenu => 'Options du post';
 
   @override
   String get communityMute => 'Masquer';
@@ -3048,6 +3061,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsTermsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get settingsEula => 'Contrat de licence (CLUF)';
 
   @override
   String get settingsSupport => 'Contacter le support';

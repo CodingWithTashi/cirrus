@@ -25,8 +25,9 @@ import 'harness.dart';
 ///   flutter test integration_test/f_firebase_backend_test.dart \
 ///     -d emulator-5554 --dart-define=LP_BACKEND=firebase
 ///
-/// Every callable sets `enforceAppCheck: true`, so this only passes on a
-/// device whose App Check debug token is registered in the console. A blanket
+/// Every callable enforces App Check (`ENFORCE_APP_CHECK` in
+/// `functions/.env.alastpuff`), so this only passes on a device whose App
+/// Check debug token is registered in the console. A blanket
 /// `unauthorized`/`unauthenticated` failure across every case means the token,
 /// not the code.
 void main() {

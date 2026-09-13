@@ -145,6 +145,17 @@ class _CoachNameStepState extends ConsumerState<CoachNameStep> {
           ],
         ),
         const Spacer(),
+        // App Store 5.1.2(i): personal data handed to a third-party AI must
+        // be disclosed before it is sent. This is the screen that introduces
+        // the coach, so it is where the reader learns what the coach is and
+        // who processes what they write to it; the coach thread repeats it
+        // under the composer (`coachSafetyNote`).
+        Text(
+          l10n.obCoachNameAiNote,
+          textAlign: TextAlign.center,
+          style: LpType.caption(lp.textFaint),
+        ),
+        const SizedBox(height: 6),
         Text(
           l10n.obCoachNameLater,
           textAlign: TextAlign.center,

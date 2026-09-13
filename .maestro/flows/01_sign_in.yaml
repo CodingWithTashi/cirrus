@@ -1,0 +1,50 @@
+# Sign in with an existing account → the journey is restored → Home.
+# Fake backend: any email + a password of 6+ characters restores the seeded
+# day-12 journey; a shorter password is "wrong". Against Firebase, edit the
+# env block below to a real account (a flow's own env wins over -e).
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Sign in restores an existing journey'
+tags:
+  - auth
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- tapOn: 'Continue with email'
+- assertVisible: 'Create your account'
+# The register screen autofocuses its email field; the "Log in" link sits
+# under that keyboard.
+- runFlow: ../shared/dismiss_keyboard.yaml
+- tapOn: 'Already have one\? Log in'
+- assertVisible: 'Welcome back.'
+- tapOn:
+    below:
+      text: 'EMAIL'
+    index: 0
+- eraseText
+- inputText: ${EMAIL}
+- tapOn:
+    below:
+      text: 'PASSWORD'
+    index: 0
+# Wrong password first: the field shakes and the copy stays kind.
+- inputText: 'nope'
+- runFlow: ../shared/dismiss_keyboard.yaml
+- tapOn: 'Log in'
+- assertVisible: 'not that one — try again'
+- tapOn:
+    below:
+      text: 'PASSWORD'
+    index: 0
+- eraseText
+- inputText: ${PASSWORD}
+- runFlow: ../shared/dismiss_keyboard.yaml
+- tapOn: 'Log in'
+- extendedWaitUntil:
+    visible: 'LOG PUFF'
+    timeout: 30000
+# Home's header merges the date line and the "Today" title into one label.
+- assertVisible: '(?s).*Day \d+ of \d+.*Today'
+- assertVisible: 'SOS'

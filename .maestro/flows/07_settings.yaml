@@ -1,0 +1,63 @@
+# Settings: rename the coach, switch appearance, theme and language, and put
+# each one back (theme and language are device-local and survive restarts).
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Settings rows apply live'
+tags:
+  - settings
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+
+# Home → profile → Settings
+- tapOn: '🦊'
+- assertVisible: '(?s).*FREEDOM DAY COUNTDOWN.*'
+- tapOn: 'Settings'
+- assertVisible: 'Settings'
+- assertVisible: '(?s)Your coach''s name\nEmber ›'
+- assertVisible: '(?s)Manage subscription\n.*'
+
+# Rename the coach
+- tapOn: '(?s)Your coach''s name\n.*'
+- tapOn:
+    below:
+      text: 'COACH''S NAME'
+    index: 0
+- inputText: 'Wren'
+- runFlow: ../shared/dismiss_keyboard.yaml
+- tapOn: 'Save'
+- assertVisible: 'Alright — Wren from now on.'
+- assertVisible: '(?s)Your coach''s name\nWren ›'
+- assertVisible: '(?s)What Wren remembers.*'
+
+# Appearance
+- tapOn: '(?s)Appearance\n.*'
+- tapOn: 'Dark'
+- assertVisible: '(?s)Appearance\nDark ›'
+- tapOn: '(?s)Appearance\n.*'
+- tapOn: 'Light'
+- assertVisible: '(?s)Appearance\nLight ›'
+
+# Theme (the demo account is Premium, so Tide is allowed)
+- tapOn: '(?s)Theme\n.*'
+- tapOn: '(?s)Tide\n.*'
+- assertVisible: '(?s)Theme\nTide ›'
+- tapOn: '(?s)Theme\n.*'
+- tapOn: '(?s)Ember\n.*'
+- assertVisible: '(?s)Theme\nEmber ›'
+
+# Language: French renders French, and back
+- tapOn: '(?s)Language\n.*'
+- tapOn: 'Français'
+- assertVisible: 'Réglages'
+- assertVisible: '(?s)Langue\nFrançais ›'
+- tapOn: '(?s)Langue\n.*'
+- tapOn: 'Comme le système'
+- assertVisible: 'Settings'
+
+# Leave the device as found
+- tapOn: '(?s)Appearance\n.*'
+- tapOn: 'Match system'
+- assertVisible: '(?s)Appearance\nMatch system ›'

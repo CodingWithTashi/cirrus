@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -607,6 +609,68 @@ void main() {
         await tester.ensureVisible(find.text(label));
         final text = tester.widget<Text>(find.text(label));
         expect(text.style?.decoration, TextDecoration.underline, reason: label);
+      }
+    });
+
+    testWidgets("carry Apple's EULA on iOS — paywall, sign-in and Settings", (
+      tester,
+    ) async {
+      // App Store review rejected the first submission (Sep 7 2026) for a
+      // missing Terms of Use (EULA) link. The product page links Apple's
+      // standard agreement now, and 3.1.2 wants the same link in the binary:
+      // on the surface with the purchase button, and somewhere a reviewer
+      // browsing the app will find it. The URL is pinned in lp_links_test.
+      //
+      // The override must be cleared inside the body: flutter_test asserts
+      // every foundation debug variable is unset BEFORE tearDowns run.
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        final container = await open(tester, Routes.paywall);
+        final router = container.read(routerProvider);
+
+        for (final route in [Routes.paywall, Routes.settings, Routes.auth]) {
+          router.go(route);
+          await tester.pumpAndSettle();
+          final label = route == Routes.settings
+              ? l10n.settingsEula
+              : l10n.legalEula;
+          // Settings is a lazy ListView: a row below the fold does not exist
+          // until it is scrolled to, so ensureVisible finds nothing there.
+          if (route == Routes.settings) {
+            await tester.scrollUntilVisible(
+              find.text(label),
+              200,
+              scrollable: find.byType(Scrollable).first,
+            );
+          } else {
+            await tester.ensureVisible(find.text(label));
+          }
+          expect(find.text(label), findsOneWidget, reason: route);
+        }
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('never mention the EULA on Android', (tester) async {
+      // Google has no equivalent document; a Play reviewer sent to a page
+      // that names the App Store has been sent to the wrong store.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final container = await open(tester, Routes.paywall);
+        expect(find.text(l10n.legalEula), findsNothing);
+        container.read(routerProvider).go(Routes.settings);
+        await tester.pumpAndSettle();
+        // Scroll to where the row would sit, so its absence means something
+        // in a lazy list.
+        await tester.scrollUntilVisible(
+          find.text(l10n.settingsTermsOfUse),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text(l10n.settingsEula), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
       }
     });
 

@@ -27,7 +27,36 @@ enum WatchKeys {
     /// The mirror's identity when the last hand-over happened, as
     /// `<dayKey>|<puffs>`. A mirror that differs from it is one that has been
     /// through the phone's drain, which is when the cursor may finally move.
+    ///
+    /// Since Sep 8 2026 this is the fallback for a phone that does not name the
+    /// seq its mirror reflects (`fieldReflected`). It guessed, and once the
+    /// phone started draining a relayed tap within the second the guess was
+    /// wrong in both directions: two hand-overs bracketing one mirror retired
+    /// the second tap early (the count dropped by one), and a mirror that beat
+    /// its own receipt left the mark pointing at the drained count, so the tap
+    /// was never retired at all (one too high, for ever).
     static let mark = "lp.watchMark"
+
+    /// When the craving the breathing screen is pacing began, as a
+    /// `timeIntervalSince1970`.
+    ///
+    /// Watch-only and journey-free: it counts a clock, never a puff, so it
+    /// crosses no wire and reaches no journey. It lives in the container rather
+    /// than in view state because watchOS tears the app down on a wrist-down,
+    /// and a craving timer that restarts at 0:00 would quietly flatter the
+    /// person reading it.
+    static let breatheStartedAt = "lp.watchBreatheStart"
+
+    /// What each relayed wrist tap became on the phone, as
+    /// `[sid: <account>, e: [[watchSeq, phoneSeq], …]]`. Phone-only, written by
+    /// `relay`, read by `contextPayload` — so the phone can tell the wrist
+    /// EXACTLY which of its taps a mirror already includes, instead of leaving
+    /// the wrist to infer it from a mark. A refused tap is recorded too, against
+    /// the phone's seq at the time: it was consumed, and the wrist must stop
+    /// counting it as soon as the phone is that far along.
+    static let relayed = "lp.watchRelayed"
+    static let relayedSid = "sid"
+    static let relayedEntries = "e"
 
     /// Envelope version. A payload from a version this build does not know is
     /// dropped rather than guessed at — the same stance `CirrusMirror.read`
@@ -50,6 +79,11 @@ enum WatchKeys {
     static let fieldSid = "sid"
     /// The seq the phone has taken responsibility for, in a reply.
     static let fieldThrough = "u"
+    /// In a context: the highest watch seq whose tap this mirror already
+    /// counts. Absent from a phone that has relayed nothing for this account,
+    /// from a no-journey mirror, and from any phone built before Sep 8 2026 —
+    /// the watch then falls back to `mark`.
+    static let fieldReflected = "r"
 }
 
 /// The protocol the phone and the watch speak, with **no WatchConnectivity
@@ -76,8 +110,38 @@ enum WatchWire {
     /// Group, so the watch decodes it with the same `CirrusMirror.decode` the
     /// widget uses. One parser, one schema, one place a field can go missing.
     static func contextPayload(from suite: UserDefaults? = .cirrus) -> [String: Any]? {
-        guard let raw = suite?.string(forKey: CirrusKeys.mirror) else { return nil }
-        return [WatchKeys.fieldVersion: WatchKeys.version, WatchKeys.fieldMirror: raw]
+        guard let defaults = suite, let raw = defaults.string(forKey: CirrusKeys.mirror) else {
+            return nil
+        }
+        var payload: [String: Any] = [
+            WatchKeys.fieldVersion: WatchKeys.version,
+            WatchKeys.fieldMirror: raw,
+        ]
+        if let reflected = reflected(in: defaults, for: CirrusMirror.decode(raw)) {
+            payload[WatchKeys.fieldReflected] = reflected
+        }
+        return payload
+    }
+
+    /// The highest watch seq whose tap the phone has folded into the journey
+    /// the mirror describes — or nil when there is nothing honest to say: a
+    /// no-journey mirror (it carries no count and may never move a cursor),
+    /// nothing ever relayed, or a ledger kept for another account.
+    ///
+    /// Read off the phone's own `lp.cursor`, which Dart writes only after the
+    /// journey write is durable and BEFORE the mirror that follows it is
+    /// pushed (`WidgetCoordinator` parks a mid-drain push for exactly that
+    /// reason). So a mirror that says `r: 7` includes wrist tap 7 and everything
+    /// before it, and the wrist can retire those and keep counting the rest.
+    static func reflected(in defaults: UserDefaults, for mirror: CirrusMirror) -> Int? {
+        guard mirror.hasJourney, let ledger = defaults.dictionary(forKey: WatchKeys.relayed) else {
+            return nil
+        }
+        let ledgerSid = ledger[WatchKeys.relayedSid] as? String ?? ""
+        if !ledgerSid.isEmpty, !mirror.sid.isEmpty, ledgerSid != mirror.sid { return nil }
+        let cursor = CirrusOutbox.drained(in: defaults)
+        let entries = ledger[WatchKeys.relayedEntries] as? [[Int]] ?? []
+        return entries.filter { $0.count == 2 && $0[1] <= cursor }.map { $0[0] }.max() ?? 0
     }
 
     /// Stores a pushed context on the watch. Returns whether the wrist had to
@@ -127,11 +191,25 @@ enum WatchWire {
         // mirror carries no count, so it says nothing about whether the phone
         // has drained. Letting it move the cursor would stop the wrist counting
         // taps the phone is still holding — the dip again, on every cold start.
-        if !changed, incoming.hasJourney,
-           let held = defaults.string(forKey: WatchKeys.mark),
-           held != markOf(incoming) {
-            defaults.set(String(defaults.integer(forKey: WatchKeys.sent)), forKey: CirrusKeys.cursor)
-            defaults.removeObject(forKey: WatchKeys.mark)
+        if !changed, incoming.hasJourney {
+            if let reflected = payload[WatchKeys.fieldReflected] as? Int {
+                // A phone that names the seq its numbers include. The cursor
+                // follows it exactly — never backwards, and never past this
+                // wrist's own seq: a ledger the phone kept for a previous
+                // install of the watch app can name seqs this wrist has not
+                // minted yet, and retiring those would swallow its next taps.
+                // The mark is moot beside it.
+                let target = min(reflected, defaults.integer(forKey: CirrusKeys.seq))
+                if target > CirrusOutbox.drained(in: defaults) {
+                    defaults.set(String(target), forKey: CirrusKeys.cursor)
+                }
+                defaults.removeObject(forKey: WatchKeys.mark)
+            } else if let held = defaults.string(forKey: WatchKeys.mark),
+                      held != markOf(incoming) {
+                // A phone from before Sep 8 2026: the mark heuristic.
+                defaults.set(String(defaults.integer(forKey: WatchKeys.sent)), forKey: CirrusKeys.cursor)
+                defaults.removeObject(forKey: WatchKeys.mark)
+            }
         }
 
         defaults.set(raw, forKey: CirrusKeys.mirror)
@@ -164,6 +242,11 @@ enum WatchWire {
         defaults.removeObject(forKey: WatchKeys.sid)
         defaults.removeObject(forKey: WatchKeys.sent)
         defaults.removeObject(forKey: WatchKeys.mark)
+        // The craving clock is device-scoped state that is account-SHAPED, the
+        // same trap `celebratedMilestones` set on the phone: left behind, the
+        // next person to open the breathing page is told they have been in a
+        // craving for ten minutes they never had.
+        defaults.removeObject(forKey: WatchKeys.breatheStartedAt)
     }
 
     // MARK: - Watch → phone
@@ -291,22 +374,45 @@ enum WatchWire {
         if !sid.isEmpty, !mine.sid.isEmpty, sid != mine.sid { return 0 }
 
         var seen = defaults.stringArray(forKey: WatchKeys.seen) ?? []
+        // The ledger of what each wrist tap became here. Kept per account: a
+        // ledger left by the last person on this phone says nothing about the
+        // next person's wrist. An EMPTY stored sid is adopted rather than
+        // treated as different — the phone can relay before its own uid lookup
+        // has answered, exactly as `applyContext` allows on the watch.
+        let ledger = defaults.dictionary(forKey: WatchKeys.relayed) ?? [:]
+        let ledgerSid = ledger[WatchKeys.relayedSid] as? String ?? ""
+        var entries = ledger[WatchKeys.relayedEntries] as? [[Int]] ?? []
+        if !ledgerSid.isEmpty, !mine.sid.isEmpty, ledgerSid != mine.sid { entries = [] }
         var landed = 0
         for event in events.sorted(by: { ($0["s"] as? Int ?? 0) < ($1["s"] as? Int ?? 0) }) {
             guard
                 let id = event["i"] as? String, !seen.contains(id),
+                let seq = event["s"] as? Int,
                 let delta = event["d"] as? Int,
                 let millis = (event["t"] as? NSNumber)?.doubleValue
             else { continue }
+            // An UNSEEN id at or below a seq already on the ledger is a wrist
+            // whose seq space restarted — the watch app reinstalled on the same
+            // account. Its old entries would otherwise name its new taps as
+            // already counted.
+            if let top = entries.last?.first, seq <= top { entries = [] }
             let at = Date(timeIntervalSince1970: millis / 1000)
             // A REFUSED tap is remembered too. `append` returns nil for a `−`
             // at zero, and forgetting that would let the next re-send ask the
-            // same question for ever.
+            // same question for ever. It goes on the ledger as well, against
+            // the phone's seq as it stands: consumed, so the wrist retires it
+            // as soon as the phone is that far along.
             if CirrusOutbox.append(delta: delta, at: at, in: defaults) != nil { landed += 1 }
+            entries.append([seq, defaults.integer(forKey: CirrusKeys.seq)])
             seen.append(id)
         }
         if seen.count > WatchKeys.seenLimit { seen = Array(seen.suffix(WatchKeys.seenLimit)) }
+        if entries.count > WatchKeys.seenLimit { entries = Array(entries.suffix(WatchKeys.seenLimit)) }
         defaults.set(seen, forKey: WatchKeys.seen)
+        defaults.set(
+            [WatchKeys.relayedSid: mine.sid, WatchKeys.relayedEntries: entries],
+            forKey: WatchKeys.relayed
+        )
         return landed
     }
 }

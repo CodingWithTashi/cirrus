@@ -1,9 +1,22 @@
 ---
+// Every other page wraps its content in `.wrap .page`; this one did not, so it
+// rendered with no gutter and no vertical padding — the heading and both lines
+// sat hard against the left edge of the viewport and were clipped on narrow
+// screens. `.wrap` is what supplies the gutter, `.page` the block padding.
+//
+// A 404 is a dead end, so it offers the two things somebody who mistyped a URL
+// is most likely to have been looking for rather than only the home page.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { DOWNLOAD_URL } from '../lib/store';
 ---
 
 <BaseLayout title="Page not found" description="That page doesn't exist." noindex>
-  <h1>404</h1>
-  <p class="lede">That page doesn't exist.</p>
-  <p><a href="/">Back to home</a></p>
+  <div class="wrap page">
+    <h1>404</h1>
+    <p class="lede">That page doesn't exist.</p>
+    <p>
+      <a href="/">Back to home</a> · <a href={DOWNLOAD_URL}>Get the app</a> ·
+      <a href="/blog">Read the blog</a>
+    </p>
+  </div>
 </BaseLayout>

@@ -174,6 +174,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   LpLegalLink(label: l10n.authTerms, url: LpLinks.terms),
                   Text(' · ', style: LpType.caption(lp.textSecondary)),
                   LpLegalLink(label: l10n.authPrivacy, url: LpLinks.privacy),
+                  // App Store 3.1.2: the EULA must be a working link inside
+                  // the app, not only on the product page. Apple only.
+                  if (LpLinks.appleEulaApplies) ...[
+                    Text(' · ', style: LpType.caption(lp.textSecondary)),
+                    LpLegalLink(label: l10n.legalEula, url: LpLinks.appleEula),
+                  ],
                 ],
               ),
 

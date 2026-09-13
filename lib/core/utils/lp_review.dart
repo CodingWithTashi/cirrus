@@ -43,9 +43,22 @@ enum ReviewRoute {
 /// forbids asking the user's opinion at all before presenting the rating card
 /// — including a star picker that routes every value identically. So there is
 /// no way to pass a rating into this, and there must not be.
+///
+/// **And WHEN to ask is not this class's decision.** The ask used to be
+/// onboarding step D3, and the Sep 11 2026 App Store rejection (Guideline
+/// 5.6.3) was for exactly that: no rating request on first launch or during
+/// onboarding. `ReviewAskPolicy` (domain) decides, the Survived screen is the
+/// only place that asks unprompted, and Settings carries a row the person
+/// taps themselves. Nothing under `features/onboarding/` may import this file
+/// — `test/review_ask_placement_test.dart` reads the sources to make sure.
 abstract final class LpReview {
   /// The installer id Play stamps on everything it installs.
   static const String playStore = 'com.android.vending';
+
+  /// The App Store record's numeric id (App Store Connect → App Information).
+  /// What `openStoreListing` needs on iOS to land on the write-review sheet
+  /// rather than a search; Android derives its listing from the package name.
+  static const String appStoreId = '6806871144';
 
   /// The decision on its own, so it can be pinned without a plugin in the
   /// loop. [sheetAvailable] is the platform's own answer (Play Store present
@@ -61,7 +74,9 @@ abstract final class LpReview {
   }) {
     if (!sheetAvailable) return ReviewRoute.none;
     if (platform != TargetPlatform.android) return ReviewRoute.sheet;
-    return installerStore == playStore ? ReviewRoute.sheet : ReviewRoute.listing;
+    return installerStore == playStore
+        ? ReviewRoute.sheet
+        : ReviewRoute.listing;
   }
 
   /// Where a tap would go on this device, right now.
@@ -94,8 +109,7 @@ abstract final class LpReview {
   }
 
   /// Whether the CTA has somewhere to go.
-  static Future<bool> isAvailable() async =>
-      await route() != ReviewRoute.none;
+  static Future<bool> isAvailable() async => await route() != ReviewRoute.none;
 
   /// Does the one thing this device can do: asks the OS for its sheet, or
   /// opens the listing. Silence from the sheet is a normal outcome.
@@ -105,12 +119,28 @@ abstract final class LpReview {
         case ReviewRoute.sheet:
           await InAppReview.instance.requestReview();
         case ReviewRoute.listing:
-          await InAppReview.instance.openStoreListing();
+          await InAppReview.instance.openStoreListing(appStoreId: appStoreId);
         case ReviewRoute.none:
           break;
       }
     } on Object {
       // Nothing to tell the user: we could not have confirmed success either.
+    }
+  }
+
+  /// Opens the store page where a review is written — the App Store's
+  /// write-review sheet on iOS, the Play listing on Android.
+  ///
+  /// For a tap the PERSON initiated (the Settings row), and deliberately not
+  /// [request]: StoreKit shows its sheet at most three times a year and
+  /// decides for itself, so a settings row wired to it would do nothing most
+  /// of the time — a dead button. This does something visible every time,
+  /// which is what makes it honest as a control.
+  static Future<void> openListing() async {
+    try {
+      await InAppReview.instance.openStoreListing(appStoreId: appStoreId);
+    } on Object {
+      // No store app to hand off to. Nothing to claim either way.
     }
   }
 }

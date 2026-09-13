@@ -1,0 +1,45 @@
+# Sign out asks first, lands on the sign-in screen, and signing back in
+# restores the journey — including a puff logged just before leaving.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Sign out and back in keeps the journey'
+tags:
+  - settings
+  - auth
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+
+- tapOn: 'LOG PUFF'
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- evalScript: ${output.logged = parseInt(maestro.copiedText)}
+- extendedWaitUntil:
+    notVisible: 'Undo'
+    timeout: 8000
+
+- tapOn: '🦊'
+- tapOn: 'Settings'
+- assertVisible: 'Settings'
+- scrollUntilVisible:
+    element:
+      text: 'Sign out'
+    direction: DOWN
+- tapOn: 'Sign out'
+
+# The confirm dialog, then its own Sign out button (beside Cancel)
+- assertVisible: 'Sign out\?'
+- assertVisible: 'Your data stays on your account. The streak keeps burning.'
+- tapOn:
+    text: 'Sign out'
+    rightOf:
+      text: 'Cancel'
+- extendedWaitUntil:
+    visible: 'Continue with email'
+    timeout: 15000
+
+# Back in: the puff logged before signing out is still counted
+- runFlow: ../shared/sign_in.yaml
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- assertTrue: ${parseInt(maestro.copiedText) === output.logged}

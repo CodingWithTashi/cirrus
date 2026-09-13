@@ -89,7 +89,10 @@ abstract final class OnboardingDraftPersistence {
     }
   }
 
-  static Future<void> save(OnboardingState state, {required DateTime now}) async {
+  static Future<void> save(
+    OnboardingState state, {
+    required DateTime now,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, jsonEncode(_encode(state, now)));
@@ -157,7 +160,12 @@ abstract final class OnboardingDraftPersistence {
     return OnboardingState(
       // A step name this build does not know restarts the funnel rather than
       // throwing — the same forward-compatibility stance the DTO codecs take.
-      step: enumByName(ObStep.values, json['step'], ObStep.welcome),
+      // One name is known and gone: `rating` was D3 until the Sep 11 2026
+      // App Store rejection removed it, and a draft parked there resumes on
+      // the step that took its place rather than at the top of the funnel.
+      step: json['step'] == 'rating'
+          ? ObStep.notifications
+          : enumByName(ObStep.values, json['step'], ObStep.welcome),
       email: json['email'] as String?,
       gender: enumByNameOrNull(Gender.values, json['gender']),
       birthYearInput: json['birthYearInput'] as String? ?? '',

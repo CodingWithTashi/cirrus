@@ -1,0 +1,49 @@
+# The hook loop: a tap is one puff, Undo takes back exactly what was logged,
+# N taps are N puffs, and press-and-hold ticks more than one.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+env:
+  EMAIL: maya@quitmail.com
+  PASSWORD: cirrus-demo
+name: 'Logging puffs and undoing them'
+tags:
+  - home
+  - smoke
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/sign_in.yaml
+
+# Read the count off the ring ("52\nof 93\npuffs today…" → 52)
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- evalScript: ${output.before = parseInt(maestro.copiedText)}
+
+# One tap, one puff, one undo snack
+- tapOn: 'LOG PUFF'
+- assertVisible: 'Logged 1 puff'
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- assertTrue: ${parseInt(maestro.copiedText) === output.before + 1}
+- tapOn: 'Undo'
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- assertTrue: ${parseInt(maestro.copiedText) === output.before}
+- extendedWaitUntil:
+    notVisible: 'Undo'
+    timeout: 8000
+
+# Three taps are exactly three puffs (the tap ramp is gone for good)
+- tapOn:
+    text: 'LOG PUFF'
+    repeat: 3
+    delay: 250
+# The snack groups taps that land inside one burst window; a slower device
+# may show "Logged 1 puff" three times instead, so only the count is pinned.
+- assertVisible: 'Logged \d+ puffs?'
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- assertTrue: ${parseInt(maestro.copiedText) === output.before + 3}
+- extendedWaitUntil:
+    notVisible: 'Undo'
+    timeout: 8000
+
+# Press-and-hold ticks one puff at a time for as long as it is held
+- longPressOn: 'LOG PUFF'
+- assertVisible: 'Logged \d+ puffs?'
+- copyTextFrom: '(?s)\d+\nof \d+\npuffs today\n.*'
+- assertTrue: ${parseInt(maestro.copiedText) > output.before + 3}

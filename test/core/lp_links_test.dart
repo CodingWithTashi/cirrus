@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/core/utils/lp_links.dart';
 
@@ -17,13 +19,43 @@ void main() {
       expect(LpLinks.terms.toString(), 'https://cirrusquit.com/terms');
     });
 
+    test(
+      "the EULA is Apple's standard agreement, at the URL review expects",
+      () {
+        // App Store 3.1.2 rejection, Sep 7 2026: a subscription app must link
+        // the Terms of Use (EULA) on its product page AND in the binary. The
+        // listing links this exact URL; the app must link the same one.
+        expect(
+          LpLinks.appleEula.toString(),
+          'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+        );
+      },
+    );
+
+    test('the EULA applies on Apple platforms and nowhere else', () {
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      for (final platform in TargetPlatform.values) {
+        debugDefaultTargetPlatformOverride = platform;
+        expect(
+          LpLinks.appleEulaApplies,
+          platform == TargetPlatform.iOS || platform == TargetPlatform.macOS,
+          reason: '$platform',
+        );
+      }
+    });
+
     test('support is a mailto for the address the legal pages publish', () {
       expect(LpLinks.support.scheme, 'mailto');
       expect(LpLinks.support.path, LpLinks.supportEmail);
     });
 
     test('every link is https, or a mailto — never cleartext', () {
-      for (final url in [LpLinks.website, LpLinks.privacy, LpLinks.terms]) {
+      for (final url in [
+        LpLinks.website,
+        LpLinks.privacy,
+        LpLinks.terms,
+        LpLinks.appleEula,
+      ]) {
         expect(url.scheme, 'https', reason: '$url');
       }
     });

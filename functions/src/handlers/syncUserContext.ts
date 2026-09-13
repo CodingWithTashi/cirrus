@@ -17,7 +17,7 @@
  * door would be a second thing to forget.
  */
 import {onCall} from 'firebase-functions/v2/https';
-import {REGION} from '../config';
+import {enforceAppCheck, REGION} from '../config';
 import {
   FieldValue,
   db,
@@ -104,7 +104,7 @@ function readIdsFrom(value: unknown, limit: number): string[] {
 }
 
 export const syncUserContext = onCall(
-  {region: REGION, enforceAppCheck: true, memory: '256MiB'},
+  {region: REGION, enforceAppCheck, memory: '256MiB'},
   async (request): Promise<{ok: true}> => {
     const caller = requireCaller(request);
     const data = (request.data ?? {}) as Record<string, unknown>;

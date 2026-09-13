@@ -1,0 +1,25 @@
+# From the sign-in screen: log into the existing account and land on Home.
+# Happy path only — 01_sign_in.yaml covers the wrong-password branch.
+appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
+---
+- tapOn: 'Continue with email'
+- assertVisible: 'Create your account'
+- runFlow: dismiss_keyboard.yaml
+- tapOn: 'Already have one\? Log in'
+- assertVisible: 'Welcome back.'
+- tapOn:
+    below:
+      text: 'EMAIL'
+    index: 0
+- eraseText
+- inputText: ${EMAIL}
+- tapOn:
+    below:
+      text: 'PASSWORD'
+    index: 0
+- inputText: ${PASSWORD}
+- runFlow: dismiss_keyboard.yaml
+- tapOn: 'Log in'
+- extendedWaitUntil:
+    visible: 'LOG PUFF'
+    timeout: 30000

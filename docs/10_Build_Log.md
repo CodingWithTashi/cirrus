@@ -4431,9 +4431,685 @@ Still owed, and it cannot be done from here: **two real accounts, phone and
 emulator, against deployed functions.** A same-account reply is dropped by
 design (`authorUid === replierUid`), so one account proves nothing.
 
+## 33. ONE FLAG FOR APP CHECK (Sep 7) — sixteen literals, one param, and the boolean that fails open
+
+Every callable carried `enforceAppCheck: true` as its own literal: sixteen
+edits to switch it off in an emergency, and nothing to notice a seventeenth
+callable that shipped without it. Now each passes `enforceAppCheck` from
+`config.ts`, resolved from one deploy-time param, `ENFORCE_APP_CHECK`, set in
+`.env.alastpuff`. `true` is the only production value; `false` + deploy is the
+escape hatch for the day the attestation itself is what is broken (a Play
+Integrity / App Attest registration refusing every real client), when "open
+for an hour while it is fixed" beats "nobody can use the app". It never lives
+long, and like every param it is a deploy, not a live toggle.
+
+Two things about its shape are deliberate, and both were measured rather than
+assumed.
+
+**It is a string read as `!== 'false'`, not a `defineBoolean`.** The SDK's
+`BooleanParam.runtimeValue()` is `process.env[name] === 'true'` — it ignores
+its own `default` when the variable is unset — so a boolean param would have
+turned App Check OFF on every project whose `.env` never named it, in every
+test process, and on every deploy that forgot the file: silently, and in the
+direction that gives the product away. Same sign as the `ENTITLEMENT_MODE`
+lesson (§18): an unresolved value must fail closed. `test/appCheck.test.ts`
+pins the trap itself (`defineBoolean(…, {default: true}).value()` is `false`
+with nothing set) so an SDK release that fixes it is noticed.
+
+**It is a resolved boolean, not `ENFORCE_APP_CHECK.notEquals('false')`,
+though `CallableOptions` types the option as `boolean | Expression<boolean>`
+and invites exactly that.** `onCall` resolves this one option eagerly, calling
+`Expression.value()` where the handler is defined, and `value()` warns under
+`FUNCTIONS_CONTROL_API=true` — which is precisely how the CLI loads the code
+at deploy discovery. Simulated before deploying (`FUNCTIONS_CONTROL_API=true
+node -e "require('./lib/src/index.js')"`): the Expression form printed
+`params.ENFORCE_APP_CHECK != "false".value() invoked during function
+deployment … This is usually a mistake` three times per callable, 48 lines
+per deploy describing the mistake they are not. Reading
+`process.env[ENFORCE_APP_CHECK.name]` gives the same answer
+(`StringParam.runtimeValue()` is `process.env[name] || ''`), the param stays
+declared so the CLI still resolves it from `.env.alastpuff` and uploads it,
+and the same simulation prints nothing.
+
+The test scans `src/handlers` for every `onCall(` and requires the shared
+name on each, imported from config, and no literal anywhere. Run red in both
+directions before being trusted: a literal `true` put back on one callable,
+and the option dropped from it. Resolution checked on the built output:
+`false` → off; `true`, `FALSE`, empty and unset → on.
+
+functions `verify` **322/322** (+9). The app is untouched — the client sends
+its token exactly as before, and the debug-token discipline of §7 stands.
+
+## 34. THE LINK THAT WAS THERE AND STILL WAS NOT (Sep 7) — Apple's EULA is a specific document
+
+App Store review bounced the first Cirrus submission with an automated
+message: the app offers auto-renewable subscriptions and "does not include a
+functional link to the Terms of Use (EULA) in the app metadata". The app had
+linked `cirrusquit.com/terms` from the sign-in footer, the paywall and
+Settings since S5-11, and the listing carried a privacy-policy URL. Neither is
+what the check looks for. Guideline 3.1.2 wants the *EULA* — Apple's own
+standard Licensed Application End User License Agreement, unless a custom one
+is filed in App Store Connect — linked from the product page (the description,
+or the License Agreement field) AND from inside the binary. A custom EULA has
+to reproduce Apple's minimum terms verbatim, so the standard one is the safer
+answer, and the two documents are not in competition: ours governs the
+service, Apple's governs the licence to the binary.
+
+Three changes, one per surface:
+
+- **Listing.** The description now ends with the Privacy Policy, Terms of Use
+  and standard-EULA URLs. With no custom EULA filed, the description is the
+  only field the automated check reads.
+- **App.** `LpLinks.appleEula` and `LpLinks.appleEulaApplies` — iOS and macOS
+  only, because Google has no equivalent document and a Play reviewer sent to
+  a page that names the App Store has been sent to the wrong store. The link
+  sits beside Terms on the sign-in footer and the paywall, and is a Settings
+  row. `paywall_test` pins it present on all three on iOS and absent on
+  Android; `lp_links_test` pins the URL and the platform rule.
+- **Terms.** `/terms` says Apple's EULA also applies to App Store installs
+  (`LEGAL_LAST_UPDATED` bumped; deploys with the site).
+
+Same pass, the rest of the common-rejection list checked against the repo
+rather than assumed: block, mute and report exist per post; account deletion
+is in-app and immediate; the 18+ gate is an onboarding step; the plist carries
+`ITSAppUsesNonExemptEncryption`; no IPv4 literal anywhere in `lib/` or
+`functions/src`; the paywall states price, period, auto-renewal and the cancel
+path above the button with Restore beside the links; `/`, `/privacy`,
+`/terms` and `/delete-account` all answer 200 (there is no `/support` page —
+the support URL in App Store Connect must be the apex or the mailto). The one
+real gap was guideline 5.1.2(i) (2025): personal data handed to a third-party
+AI has to be disclosed before it is sent, and nothing in the app said the
+coach was a language model or that Google Gemini reads the messages — the
+privacy policy did, the app did not. `obCoachNameAiNote` now says it on the
+step that introduces the coach, and `coachSafetyNote` repeats it under the
+composer, in all five locales. The stricter reading of 5.1.2(i) is an
+explicit consent tap before the first message; the disclosure sits on the two
+screens that precede one, which is the proportionate answer until a reviewer
+asks for more.
+
+The listing had a second problem the rejection did not name. **App Privacy**
+declared exactly two data types — Name and Email — and marked Email *used
+for tracking*. Apple's "tracking" means joining the data with third-party
+data for advertising or handing it to a data broker; Cirrus does neither, and
+the app requests no IDFA and shows no App Tracking Transparency prompt, so a
+label that claims tracking is a 5.1.2 rejection waiting for the next reviewer.
+The label was also plainly incomplete for an app with Firebase Analytics,
+Amplitude, Crashlytics, RevenueCat, a community feed and a coach transcript.
+The privacy-policy URL there still pointed at the retired Firebase host (which
+today answers 200 rather than the 301 §18 intended — worth checking the
+`hosting` block). Repointed, and the missing types selected; the per-type
+answers, which end in a **Publish** click the founder should make:
+
+| Data type | Purposes | Linked to identity | Tracking |
+|---|---|---|---|
+| Name, Email Address | App Functionality | yes | **no** |
+| Health (puffs, nicotine mg, mood) | App Functionality, Product Personalization | yes | no |
+| Other User Content (posts, coach messages) | App Functionality | yes | no |
+| User ID | App Functionality, Analytics | yes | no |
+| Device ID (Amplitude/Firebase instance ids) | Analytics | yes | no |
+| Purchases (RevenueCat) | App Functionality | yes | no |
+| Product Interaction | Analytics | yes | no |
+| Crash Data (Crashlytics) | App Functionality | no | no |
+
+Not declared, deliberately: location (the IANA timezone the callables read is
+a device setting, not a location), payment details (Apple's), contacts,
+photos, advertising data. The age rating there reads **16+** while the app,
+its terms and its description all say 18+ — the questionnaire answers decide
+that number, so it is a founder call whether the tobacco-reference answer
+should move it.
+
+## 35. THE APP DRIVEN FROM OUTSIDE (Sep 8) — a Maestro suite for sign-in, register and onboarding
+
+The first black-box UI tests: `.maestro/` holds three flows that drive the
+installed app through its accessibility tree, written and run through the
+Maestro MCP against the iPhone 16 Pro simulator on the fake backend.
+`01_sign_in` takes the email path, tries a wrong password (the field shakes,
+the copy stays kind) and lands on the day-12 Home; `02_register` refuses a
+short password in place and creates a fresh account per run; `03_onboarding`
+answers all twelve questions, names the coach, holds the commit ring, declines
+the rating and the push prompt, and ends on the paywall. 101 commands, all
+green in one directory run. `.maestro/README.md` carries the build recipe and
+the selector rules.
+
+What the first runs taught, each one a failed assertion first: option cards
+merge title and subtitle into one label with a newline, so `2–5` matches
+nothing and `(?s)2–5.*` does; Home merges its date line with "Today" the same
+way; a Flutter text field carries no label of its own and is reached `below`
+the caption above it; the register screen's autofocused keyboard pushes the
+"Log in" link out of the tree entirely, so the flow taps the keyboard's
+"done" key first; and a keypad digit collides with the number it just typed,
+so the birth year is 1985 (no digit repeats) and the puffs keypad is anchored
+below the estimator link because the rolling counter passes through every
+value on its way up.
+
+Two things outside the flows. Under Xcode 26, `flutter run` forces a `clean`
+whenever the engine's public headers changed since the last build of that
+shape — 31 minutes of pod recompilation on a build that looked incremental —
+and records a fingerprint so the next one is not. And `inspect_screen` shows
+the offline pill's label, "offline — logs still count, we'll sync later",
+present in the accessibility tree on every screen while the pill is hidden;
+a VoiceOver user hears it, a sighted one never sees it. Not fixed here.
+
+The same three flows then ran on the founder's Pixel 8 over wireless adb,
+unchanged except for two platform seams. The Play internal-testing build had
+to come off first — Play's signing key means no local build can install over
+it — and the fake-backend debug APK went on in its place (still there; Play
+reinstalls in one tap). The bundle id differs per platform, and a flow's own
+`env:` block wins over `-e`, so the header is now
+`appId: "${maestro.platform == 'android' ? … : …}"` and nothing platform-
+specific lives in `env`. The iOS-only wait for the keyboard's "done" key
+(Android exposes no such element) became a platform-conditional subflow.
+Green on both: 101 commands each.
+
+The second round, the same afternoon, added five flows past the paywall:
+Home (every engine number, the quick links, the four tabs), puff logging
+(one tap is one puff, Undo takes back exactly that, three taps are three,
+press-and-hold ticks more), panic (SOS → breathe → why → loop breakers →
+it passed → survived, cravings beaten +1), settings (rename the coach,
+appearance, Tide, French and back) and sign-out (a puff logged before
+leaving is still there after signing back in). They read the numbers off
+the screen with `copyTextFrom` and compare in JS, so they hold on any day's
+seed. Four passed on iOS at the first attempt; panic did not, and the reason
+is the finding of the round.
+
+**Flutter's iOS accessibility frames go wrong inside the panic flow.** Step
+1 reports correct frames. The moment `AnimatedSwitcher` swaps to step 2,
+every frame on the step — and on the Survived screen pushed after it — is
+reported at one third of its real position: exactly 1/devicePixelRatio on a
+3× device, so the subtree has lost the root's scale. The screen draws
+correctly; only the accessibility geometry is wrong, which is what VoiceOver
+uses to draw focus and what Maestro uses to tap. Dragging the intensity
+slider then empties the tree for the rest of the process — nothing on any
+later screen is reported until a restart. Nothing in the app scales
+anything (the route is a plain fade, the switcher is stock), so this sits in
+the framework or engine; at that point the flow tapped those two CTAs by
+position on iOS and never touched the slider there (both undone once the
+cause was found — see below). Two smaller ones from the same inspection:
+`BackChevron` is an unlabeled icon, so no screen reader can name it and no
+flow can tap it by text; and the offline pill's label is readable on every
+screen because `AnimatedSlide` hides it visually only. All four are in
+`.maestro/README.md`, none fixed here.
+
+On the Pixel all five passed too, once the puff flow stopped asserting the
+burst snack's plural: Android's slower taps can each fall outside the burst
+window and read "Logged 1 puff" three times, and the count — one tap, one
+puff — is the assertion that matters. Eight flows, both platforms, green.
+
+Third round: community. `09_community_feed` reads the seeded feed (a card
+is one label: avatar, alias · day · age, tag, text, footer), checks the
+22-minute-old SOS sits on top with "I got you" and its reply count, filters
+to SOS and back, toggles a 💪 reaction 47 → 48 → 47, opens the SOS thread,
+replies, declines the "Want to know when someone replies?" sheet that the
+first reply raises, and finds the count at 5 on the way back.
+`10_community_post` drives the composer through every rule the fake
+enforces — "A few more words", where-to-buy, tag required — then posts a
+Win, an SOS that pins above it, a second SOS that is refused while the
+first is up ("Your SOS is still at the top of the feed"), a Vent, and the
+Premium cap on the fourth regular post. One expectation was mine, not the
+app's: SOS carries its own allowance, so three regular posts plus an SOS
+is not the cap. Two more unlabeled controls surfaced: the composer FAB
+(tapped by position) and every post's `…` menu — which means Report, Mute
+and Block are unreachable for VoiceOver, and 1.2 asks for exactly those.
+
+Both community flows passed on the Pixel unchanged, first attempt — the
+position taps for the FAB and the app-bar corner hold on both screens. Ten
+flows, both platforms, green.
+
+**Fixed the same afternoon, all four of the app-side findings.** `BackChevron`
+is a labelled button ("Back", `commonBack`, five locales); the composer FAB
+carries "New post"; each post's `…` menu carries "Post options"
+(`communityPostMenu`), so Report, Mute and Block exist for a screen reader
+again; and `OfflineBanner` wraps its pill in `ExcludeSemantics(excluding:
+online)`, so hidden means hidden. `test/widgets/chrome_semantics_test.dart`
+pins all four through the real tree with a live `SemanticsHandle` — which
+flutter_test checks for BEFORE tearDowns run, so the handle is disposed in
+the test body, never in `addTearDown`. `go_back.yaml`, `open_composer.yaml`
+and the post menu can now be driven by text; the flows kept the position
+taps for one more run and switched in the fourth round.
+
+The fifth finding resisted a standalone repro — four rebuilds of a scratch
+app, each closer to the real screen, all clean — so the bisect ran on the
+app itself, one rebuild and one tree inspection per cycle. Gutting the
+why-step fixed it; restoring the first card kept it fixed; the intensity
+card alone brought it back, yet `LpCard` around a bare slider was clean and
+the text rows around a slider without the card were clean. An explicit
+`Semantics(container: true)` around the card fixed the initial frames and
+the drag, but the step after a drag was scaled again; `explicitChildNodes`
+brought the tree death back; an unfocusable Material slider fixed step 2
+only; holding the new step out of the tree until the old one had left — by
+timer, then by a one-frame two-phase switch — changed nothing. Then the one
+swap that changed everything: `CupertinoSlider` in place of `Slider`, on the
+otherwise untouched screen, is clean through the drag, step 3, Survived and
+Home, by text taps, twice. The culprit is the Material slider's own
+semantics on iOS; what about them, the engine will have to say. The app's
+one other Material slider — the onboarding estimator, inside a modal sheet —
+was checked the same way and is fine, so it stays. `06_panic.yaml` taps
+every CTA by text on both platforms now and is the regression check;
+`test/widgets/panic_slider_test.dart` pins the widget. The scratch app was
+discarded — a repro that does not reproduce is not one; an upstream report
+would start from the app's own steps. The Cupertino build passed the same
+flow on the Pixel too, so the swap costs Android nothing.
+
+Fourth round, the same evening: coach. `11_coach` reads the greeting under
+the coach's name and status, taps a chip and sends it, types a message
+("party" always draws the party playbook), asks for progress and finds the
+week card, opens What Ember remembers from Settings and checks the facts
+card carries Home's own numbers, renames the coach and finds the thread's
+greeting re-read as Wren, then walks the panic flow to "Talk to coach" and
+sends from there. The coach's send arrow turned out to be one more
+unlabeled icon — the keyboard's send action was the only route for a screen
+reader — and is "Send" now (`coachSend`, five locales, pinned in
+`chrome_semantics_test`). With every icon labelled, `go_back.yaml` and
+`open_composer.yaml` tap "Back" and "New post" by text instead of by
+position, verified through the two community flows. Eleven flows on iOS.
+
+Not covered yet, deliberately: the report/mute/block menu (labelled now, so
+a flow can follow), the panic games arena, the coach's free-message cap
+(the demo account is Premium), Sign in with Apple/Google, and the two OS
+sheets (rating, push) the flows decline.
+
+## 36. THE TAP THE PHONE HEARD AND IGNORED (Sep 8) — a wrist can tap into an app that is already open
+
+**Found by the founder on the paired simulators**, first session with both
+running: `+` on the wrist, Home stayed at zero. Close the phone app, reopen it,
+and the puff was there. Not a simulator defect — a real gap, and it would have
+shipped.
+
+**Why.** The watch reuses the home-screen widget's outbox, deliberately: the
+relay in `CirrusWatchLink` writes each tap into `lp.outbox` and `WidgetCoordinator`
+drains it through the one `logPuff(at:)` path. The outbox was drained at exactly
+two moments — app resume, and the session transition on launch — because that is
+all a launcher widget can ever need: nobody taps a launcher widget while the app
+is on screen. A wrist is the first surface that can deliver a tap *into a
+foregrounded app*, and nothing woke the drain for it. The relay reloaded the
+widget timeline and stopped. The watch, meanwhile, draws its un-handed-over queue
+on top of the mirror, so the two devices disagreed until the next resume.
+
+**The fix, in one direction only.** The relay now announces every landed batch
+back over the channel it already had (`cirrus/watch`, method `queued`, argument =
+count) from BOTH delivery paths — `didReceiveMessage` for a reachable phone,
+`didReceiveUserInfo` for a transfer that arrives while the app happens to be
+open. `WidgetStore.watchTaps` surfaces it as a stream (`HomeWidgetStore`
+registers one handler per process; `MemoryWidgetStore` exposes a controller so
+a widget test can play the relay), and `_WidgetSync` drains on it exactly as it
+drains on resume. A background delivery with no engine announces to nobody and
+loses nothing: the outbox is already written and the launch drain reads it, as
+before.
+
+**The second half, which the first would have hidden.** `drain()` serialised
+itself by answering any caller that arrived mid-drain with the *running* drain's
+result. Correct for two resumes racing — but a tap relayed in while the resume
+drain has already read the outbox is the ordinary case now, and that caller
+would have been told "0" and the tap left queued until the next resume, which
+on a phone that stays open is never. `drain()` now coalesces: one follow-up,
+shared by every caller in the window, that starts after the running drain has
+written its cursor and reads the outbox fresh. Nothing counted twice, nothing
+waiting on a lifecycle event. And it runs whether the drain it waited on
+succeeded or threw, forgetting itself either way — a follow-up parked behind a
+failed future would have answered every later mid-drain caller with that same
+stale failure and switched real-time draining off for the rest of the session,
+which is the shape of bug this section exists to end.
+
+**Pinned.** `widget_drain_test` gates the first outbox read, appends a tap
+underneath it and proves the follow-up applies exactly that tap (and that three
+callers in the window share one follow-up). `watch_tap_test` pumps the real app,
+plays the relay — outbox first, signal second — and asserts Home moved with no
+lifecycle event of any kind, then that the resume path still works when the
+signal is withheld. `ios_watch_test` pins the method name on both sides, the
+`announce` on both Swift delivery paths, and the main-thread hop a platform
+channel needs.
+
+Verified on the paired iPhone 17 Pro / Watch Series 11 simulators against
+production Firebase the same evening.
+
+**The review round, same evening.** A high-effort review of the diff found the
+first version had opened four holes while closing one, each pinned now:
+
+1. *The coalesced drain could run beside a discard.* `_inFlight` was cleared by
+   an unconditional `whenComplete`, which clobbered a `discardQueued()` chained
+   on the running drain — so the follow-up saw nothing in flight, read the OLD
+   cursor and the previous account's outbox, and could hand those taps to
+   whoever signed in meanwhile. Pre-existing, but the follow-up was the first
+   caller to land in that window by construction. `_track` clears `_inFlight`
+   only when it is still the task that set it.
+2. *A background delivery ran the whole drain in the background.* Both
+   WCSession paths can wake a backgrounded app with a live engine, and a drain
+   there sits on the Firestore ack where iOS suspends the process before the
+   cursor lands — the "counted twice" window the coordinator accepts only on
+   the launch path — while spending WidgetKit's daily reload budget. `announce`
+   is gated on `applicationState == .active`; the resume drain has always
+   covered the rest. And a `queued` nobody is listening for yet (a tap relayed
+   while Dart is still in `main()`) is logged as such, not as a delivery.
+3. *The wrist's mark heuristic was wrong both ways once the phone drained
+   within the second.* Two hand-overs bracketing one mirror retired the second
+   tap early (the count dropped by one until the next mirror — the regression
+   `WatchKeys.sent` exists to prevent); a mirror that beat its own receipt left
+   the mark pointing at the drained count, so the tap was never retired at all.
+   The phone now keeps a per-account ledger of what each wrist seq became
+   (`lp.watchRelayed`) and the context carries `r`, the highest wrist seq the
+   mirror already counts; the watch's cursor follows it exactly, clamped to its
+   own seq so a ledger from a previous install of the watch app cannot retire
+   taps it has not minted, and the phone resets the ledger on an unseen seq at
+   or below its top (a reinstalled watch) or on another account. The mark
+   survives only as the fallback for a phone without the field.
+   `ios_watch_contract_test` plays all of it on the real Swift: bracketing,
+   mirror-before-receipt, a refused `−`, a reinstalled watch, a legacy phone,
+   a second account.
+4. *A mirror pushed mid-drain rendered one too high.* The optimistic commit
+   rebuilds and pushes while the cursor is still old, so the launcher drew
+   `count + pending` with the same events on both sides, and the wrist would
+   have done the same against a stale `r`. `push` now parks a mirror while a
+   drain or discard is in flight and `_settle` flushes the latest one after the
+   cursor — one repaint per drain, and the follow-up runs on the latest
+   caller's clock so a tap across local midnight is filed on the right day.
+
+Plus the smaller ones: the wrist listener drains without `invalidate()`, the
+widget test that claimed to exercise the mid-drain window now gates the store
+so it actually does, and the architecture note names both seam members.
+
+## 37. TWO MORE SCREENS ON THE WRIST (Sep 8) — the week, and a breath
+
+Founder ask, off four store mockups: two of the four already shipped (the
+no-journey card and the day counter); **frame 02 (PANIC · BREATHE) and frame 03
+(THIS WEEK) did not exist at all.** The read that they were "already in the app,
+just not on the watch" was right, and cheaper than expected — **no backend
+change, no Firestore rule, no callable, no ARB key, and no schema bump.**
+
+**Why the panic screen cost nothing on the server.** The whole panic flow is
+already local: `PanicRepository.begin()` and `.survived()` are fire-and-forget
+`.ignore()`d calls, `begin()`'s answer changes exactly one subtitle string, and
+`NoopPanicRepository` already runs the entire flow against no server. So the
+wrist's version is a **breathing aid only** — founder decision. It logs nothing
+and queues nothing, which is the point: `CirrusOutbox` carries a puff delta
+clamped to ±1, and counting a survived craving from the wrist would turn it into
+a general command queue, touching the seq minting, the id dedupe and the two
+cursors that the contract test exists to protect. `ios_watch_test` pins the
+absence — no `CirrusOutbox`, no `log(delta:` — so the decision survives the next
+contributor who thinks a survived breath should count.
+
+**Three of frame 03's four numbers were already in scope.** `TodaySnapshot` —
+already handed to `buildMirror` — carries `savedLifetime`, `puffsNotTaken` and
+`cravingsSurvivedTotal`. What was missing was the week series and the
+comparison, so `WeekTrend.vsPrevious` was lifted out of a build method on
+`stats_screen.dart` (where it was inline) into the engine both surfaces now
+read. `stats_numbers_test` stayed green untouched, which is the proof the
+extraction changed nothing.
+
+**`weekVsLast` is ABSENT, never 0, and that is the whole design of the field.**
+`0` already means "flat", which the card paints volt as good news — so a
+defaulted zero would claim an improvement the account has not made. Four ways to
+have no honest answer (no previous window, nothing confirmed in it, nothing
+confirmed now, a previous window averaging zero). It is the one genuine
+`Int?` in `CirrusMirror` against a file whose every other field is `?? default`,
+and both the comment and a regex test defend it, because either alone gets
+argued away. Verified live: a day-1 account's mirror carries no `weekVsLast` key
+at all and the wrist simply draws no percent line.
+
+**The one piece of arithmetic the wrist now duplicates is the pacer, so it is
+the one that gets executed rather than pinned.** `Curves.easeInOutSine` is **not
+a sine** — it is `Cubic(0.445, 0.05, 0.55, 0.95)` solved by Flutter's bisection
+with a `0.001` error bound. A `cos`-based port looks entirely plausible and is
+visibly out of step. `ios_watch_contract_test` compiles `BreathPacer.swift` with
+`swiftc` and compares **every frame of a 60fps 19-second cycle** plus the phase
+boundaries ±1e-9/±1e-12, every whole second, and wraps at 1.5, 2.25 and −0.25 —
+that last one pinning `t - floor(t)`, because Dart's `%` is non-negative while
+Swift's remainder keeps the dividend's sign and would drop a backwards clock
+mid-exhale. `phase` and `remaining` compare exactly; the rest to 1e-12. A fourth
+test asserts the curve differs from the analytic sine by >0.005 somewhere, so
+the "simplification" fails loudly rather than shifting the orb.
+
+**Today's bar is replaced, not trusted.** The day card already folds in taps the
+phone has not drained; a week chart that ignored them would disagree with the
+screen beside it by exactly the un-handed-over count — §36's bug shape, one
+swipe apart. `cirrusWeek` overwrites the last bar with `today.count`, gated on
+the mirror being about today so a stale one never paints pending taps onto
+yesterday, and renormalizes so a tap past the phone's denominator makes today
+the tallest bar rather than a clipped one. The verdicts are never recomputed:
+today's growing bar may briefly out-top the ember one without the ember moving,
+which is correct because today is not a confirmed hard day yet.
+
+**The build trap that had to be closed first.** `tool/ios_watch_target.rb` exited
+early whenever the target already existed, so a new `.swift` file was never given
+a target membership — while `ios_watch_test` globs both watch folders and demands
+every file appear in the pbxproj. The script's header promised idempotency and
+delivered it for the *target* and not its *files*; it now syncs sources on a
+re-run (adds only, never prunes) and reports what it added. All three new files
+were registered by running it.
+
+**Verified on the paired simulators** (iPhone 17 Pro / Watch Series 11, watchOS
+26.2) against production `alastpuff`, throwaway account deleted with
+`E2E_STEP=teardown`: three pages with a journey and one without; the week card
+drawing `$4 saved` and an ember bar off `weekHardest: 0` while `weekBest` stayed
+`-1` (today is never the best day) and no percent line appeared; **three taps on
+the wrist relayed to the phone, became journey puffs, and came back as
+`weekPuffs: [3]` with the count unchanged across the hand-off and the queued dot
+cleared**; and the breathing orb advancing In→Hold→Out on the 4-7-8 beat with
+the honest elapsed line, `craving timer · 0:03 · peaks ~15 min`.
+
+**What the mock asked for and did not get.** "peaks in 2:41" counts *down* to a
+precise peak moment. Nothing on either device can know when a particular craving
+peaks, so the app's own count-up line ships instead. The mock's `$47` is likewise
+not reproducible under docs/03 §4 — the wrist renders what `MoneyEngine`
+produces, and the store screenshot is taken from a running build.
+
+**The mark, and two wrong swings at it (same evening).** The founder caught that
+the signed-out wrist had no logo on it at all — the store frame shows the ring
+above "Start your plan" and the card shipped with bare text, because §37's plan
+carried the glyph as a small final step that was simply never done. The two
+attempts that followed are worth recording, because both looked right in
+isolation. First a SwiftUI arc traced off `ic_stat_cirrus`'s measured geometry —
+a 26° gap at 20°–45°, stroke 0.146 of the box — which is close to the mark and
+is not it: the terminals taper and no circular arc reproduces that. Then the
+real artwork, but the wrong one: `assets/images/cirrus_monochrome.png` is the
+launcher's monochrome layer and carries the vapour wisp the store frame drops.
+What ships is the shipped `ic_stat_cirrus` densities at 1x/2x/3x in the watch's
+asset catalogue, template-rendered so the mark takes `cwVolt` rather than a
+colour of its own, and pinned by digest against the three Android sources — the
+watch bundle needs its own copy because it cannot read Flutter's asset bundle,
+and a pin is what stops that copy drifting from the brand.
+
+**And the no-mirror card stopped introducing the app.** It read "Cirrus" over
+"…to sync your plan.", which is a splash screen where an instruction belongs. A
+wrist cannot tell "signed out" from "no mirror has ever arrived" and should not
+have to — the answer is the same either way — so the one hardcoded fallback in
+the feature is now the English of `widgetEmptyTitle`/`widgetWatchOpenPhone`
+verbatim, pinned equal to the ARB so the two cannot drift.
+
+**Verified end to end on the paired simulators, all four frames:** the empty
+card with the mark; the day counter reaching `3 / 190` from three taps on the
+wrist with the queued dot lit; the week card folding those three into today's
+bar *before* the phone had them; and the breathing orb on the 4-7-8 beat. Then
+the phone drained — `puffs: 3`, `weekPuffs: [3]`, `weekHardest: 0`,
+`weekBest: -1` (today is never the best day), `savedText: "$4"` — the wrist's
+count unchanged across the hand-off, the dot cleared and the bar turned ember.
+Deleting the account collapsed the `TabView` from three pages to one: no page
+dots, and a swipe goes nowhere. Throwaway account removed with
+`E2E_STEP=teardown`.
+
+**One trap for the next person running this loop.** `j_widget_session_test`'s
+`setup` calls `createUserWithEmailAndPassword`, which throws
+`email-already-in-use` if the account survived a previous pass — and `flutter
+run --no-resident` swallows that into a test failure the console barely shows,
+leaving the phone signed out and the wrist on the empty card while everything
+looks like it ran. **Run `E2E_STEP=teardown` first, then setup.**
+
+**The review round on §37 (same evening).** A high-effort review of the diff
+confirmed the extraction and the port — `WeekTrend.vsPrevious` is behaviour-
+identical to the inline code it replaced (same filters, same `prevAvg > 0`
+guard, same rounding), `cirrusWeek` is index-safe (the verdict indices are only
+ever *compared* to the loop index, never used to subscript), and `BreathPacer`
+matches the Dart original term for term including the `(a,c)`/`(b,d)` split.
+It found three real defects, all now fixed and pinned:
+
+1. *An older mirror drew a bare `0` as the reader's own number.* A phone build
+   predating these screens writes a perfectly valid `hasJourney: true` document
+   with none of their fields — and the watch keeps its last mirror across an app
+   update, so this is the ordinary first launch after updating, not an edge
+   case. The week page rendered a blank title, no bars, and `0` under a blank
+   label at somebody who had beaten forty cravings. Both new pages are now gated
+   on their own DATA (`weekPuffs` / `copyBreatheIn`) rather than on `hasJourney`
+   alone, in `CirrusWatchApp` and again inside `WatchWeekView`.
+2. *The craving clock was not on the wrist's forget list.* `lp.watchBreatheStart`
+   is device-scoped state that is account-SHAPED — the same trap
+   `celebratedMilestones` set on the phone. Person A opens the breathing page,
+   the phone changes hands, and B is told they are ten minutes into a craving
+   they never started. One `removeObject` in `WatchWire.forget`.
+3. *The breath cycle was anchored on the craving clock.* `startedAt` did double
+   duty, so a second craving twenty minutes inside the 30-minute resume window
+   opened two-thirds through an inhale — or partway down an exhale, telling
+   somebody to breathe out as they arrived. The two anchors are separate now:
+   the craving clock persists and resumes (the wrist-down case it exists for),
+   `cycleAnchor` is re-taken every time the page appears, and the 1Hz text
+   timeline follows the cycle so the countdown turns over on the pacer's own
+   seconds. Confirmed on the simulator: `craving timer · 0:04` beside `Hold 7`
+   — second four of the cycle, which is the top of an inhale four seconds ago.
+
 ---
 
-## 33. THE SITE CATCHES UP WITH THE STORES (Sep 13) — no waitlist, no "coming soon"
+## 38. THE ASK THAT CAME TOO EARLY (Sep 11) — App Store rejection 1.0.16, three issues
+
+Submission `e83fc9bd-9ed2-4b6e-836c-46bd53f04f9a`, reviewed Sep 11 2026 on an
+iPhone 17 Pro Max, build 1.0.16 (17). Three findings, each with a different
+kind of fix: one in the binary, one in App Store Connect, one a question to
+answer. Read in App Store Connect end to end (the founder's paste was the
+whole message — nothing was hidden behind "See More").
+
+### 5.6.3 — "requests users to rate the app on first launch or during onboarding"
+
+**What was wrong.** D3. The funnel ran commit → *"One quitter's review helps
+the next one find us"* → notifications → paywall, and docs/02 §3 called the
+slot "their genius placement, our honest copy". The copy was honest — no star
+picker, no gating, no "thanks for rating" (docs/10 §25) — and the *placement*
+was the violation. Guideline 5.6.3 does not weigh the copy: an account that is
+minutes old has not "had enough time to gain a clear understanding of the
+app's value", full stop. The reviewer's screenshot even shows the StoreKit
+sheet landing over the notifications step, a screen late, which is the OS's
+own timing and would have looked the same to any user.
+
+**What changed in the binary.**
+
+- `ObStep.rating` is gone, and so is `RatingStep`. Onboarding is commit →
+  notifications → paywall. `OnboardingState` lost `testimonials` and
+  `reviewAvailable`, the view model lost `_prefetchRatingStep`, and
+  `OnboardingDraftPersistence` decodes a draft parked on `rating` to
+  `notifications` rather than restarting the funnel.
+- The strings survived the move: `obRatingTitle/Subtitle/Cta` are
+  `reviewAskTitle/Subtitle/Cta` in all five locales (JSON round-trip, per the
+  ARB gotcha), so no new translation was needed; `obRatingQuoteBadge` is
+  deleted with the quote cards.
+- **`ReviewAskPolicy`** (`domain/logic/`, pure): plan day ≥ 3, ≥ 3 cravings
+  survived in total, at most 2 asks ever, at least 14 *calendar* days apart
+  (`LpDate.daysBetween`, not `inDays`). The thresholds are pinned so that
+  "let's ask a bit earlier" is a deliberate edit with the guideline in view.
+- **`_ReviewAsk`** on the Survived screen (Frame 35) — a card under the stat
+  card: title, "30 seconds. Skippable. No hard feelings.", **Rate Cirrus** and
+  *Not now*. Both answers `markReviewAsked`, because both are the person's
+  answer and re-asking on the next craving after a "not now" is the pestering
+  the guideline is about. Hidden until `reviewRouteProvider` (new, a
+  `FutureProvider` over `LpReview.route()`) says a tap would go somewhere, and
+  gated on `settings.hydrated` like every automatic reader of settings — on
+  the defaults a device already asked twice reads as never asked.
+- **Settings → Rate Cirrus**, the person's own way in. It calls the new
+  `LpReview.openListing()` — the App Store write-review URL with
+  `appStoreId` 6806871144, the Play listing on Android — and deliberately not
+  `requestReview`: StoreKit shows its sheet three times a year at most and
+  decides for itself, so a settings row wired to it would be a dead button
+  most of the time.
+- The ledger is `SettingsState.reviewAskedAt` / `reviewAskedCount`,
+  persisted, and **deliberately not on the sign-out forget list**: a store
+  rating belongs to the Apple ID or Google account the phone is signed into,
+  not to the Cirrus account, so "asked already" is the device's fact.
+- The Survived screen scrolls now. Its column was bare; with the ask card on
+  it (and a game's result lines beside) it overflowed by 80 px in the test
+  window. Same shape as `StepScrollView` — min-height + `IntrinsicHeight`, so
+  the two `Spacer`s still centre the celebration on a tall phone.
+
+**Pinned.** `test/domain/review_ask_policy_test.dart` (the thresholds, day 1
+and day 2 with any number of cravings, the fortnight, the cap, calendar-day
+spacing); `test/widgets/survived_review_ask_test.dart` (an engaged user sees
+one honest card and no stars; the reviewer's day-1 account sees nothing;
+"Not now" holds across the next craving; "Rate Cirrus" claims nothing after
+the tap; a device asked twice is never asked again; no card when a tap would
+go nowhere; the Settings row present and absent); and
+`test/review_ask_placement_test.dart`, which reads the sources — no `rating`
+in `ObStep`, nothing under `features/onboarding/`, `auth/` or `day1/` reaches
+`lp_review.dart` / `InAppReview` / `reviewRouteProvider`, and the Survived
+screen is the only unprompted caller of `LpReview.request`. The back-nav
+pairs, the layout list, the persistence round trip and Maestro flow 03 were
+updated to match. Full suite: 1854 green.
+
+**Deliberately absent.** No analytics event for the ask — docs/02 §7's
+registry has none, and the registry is added to first. The testimonials
+pipeline (`matchedTestimonials`, `testimonials`, `TestimonialCodec`,
+`FirebaseTestimonialsRepository`) stays intact server-side with no client
+surface; it returns when real consented quotes exist and a home for them is
+chosen, which is not a decision to take inside a rejection fix.
+
+### 2.3.2 — "duplicate or identical promotional images"
+
+**Finding, from App Store Connect.** One 1024×1024 shield PNG was uploaded
+as the *Image* on all three of `weekly_299`, `monthly_799` and `yearly_3999`
+(checked on each product page, not inferred). The "Promote on the App Store"
+sheet lists weekly and monthly as *Prepare for Submission*, neither
+displayed — and it opens with a warning that they **cannot be promoted at
+all**, because the approved binary does not implement the StoreKit
+`PurchaseIntent` API. So today the image serves only
+win-back offers and offer codes, and there are none of either (the $3.99
+win-back is gated off until the tagged offer exists — docs/12). Apple's rule
+(developer.apple.com/app-store/promoting-in-app-purchases): "each promoted
+in-app purchase requires a unique promotional image", no text overlay, not a
+screenshot, not the icon.
+
+**Backup first.** The original is at `~/Downloads/cirrus_promo_original_1024.png`,
+pulled from Apple's CDN before anything was touched.
+
+**Blocked in the current state.** Founder's call was to keep the image on
+yearly and drop it from weekly + monthly. It cannot be done yet: the image is
+`WAITING_FOR_REVIEW`, attached to the rejected-but-still-open submission, so
+the iris `DELETE /subscriptionImages/{id}` returns `409
+ENTITY_ERROR.ATTRIBUTE.INVALID.UNMODIFIABLE`, and the tile shows only the
+file-replace "+" overlay — the page's only "Remove" control is "Remove from
+Sale" for the whole subscription. The metadata unlocks when the submission is
+cancelled or when the version is edited for the resubmission; the image is
+removed from weekly + monthly then. It changes nothing in the meantime: the
+"Set Up App Store Promotion" sheet says these products cannot be promoted at
+all until a build ships the StoreKit `PurchaseIntent` API, so the promotional
+image is not on the product page today. **Open (founder), one ASC step.**
+
+### 2.1 — "Does your app send user's information and text to the third party AI services?"
+
+A question, not a finding, and the answer is yes — said plainly, with what and
+what not. Ember runs on Google Gemini through our own Cloud Functions
+(`aiCoachChat`; `weeklyInsight`; the `moderatePost`/`moderateReply`
+classifier in `ai/moderation.ts`; the memory embeddings). What reaches the
+model: the message the user typed, the deterministic user card built from
+their journey (`ai/memoryCard.ts`: plan day, puffs, streak, savings, alias,
+coach name, their why-words, mood notes), recent turns, remembered facts, and
+— for moderation — the text of a community post or reply. What never does:
+email, uid, payment or purchase data, device identifiers, contacts, location.
+The API key is server-side only (Secret Manager) and App Check gates every
+callable, so the app itself never talks to Google's model endpoint. Disclosed
+in three places before this question was asked: the coach-name step
+(`obCoachNameAiNote`), under the coach composer (`coachSafetyNote`, visible in
+the reviewer's own screenshot), and `cirrusquit.com/privacy` § "Who else sees
+it" — and the App Privacy label since docs/10 §34. **The reply was sent** (App Store Connect → the submission's App Review
+thread, Sep 11, 11:06 PM), in a plain first-person voice signed by the
+founder: it answers the AI question in full, notes 5.6.3 is fixed in the next
+build, and says the duplicate promotional image is being corrected — without
+claiming it is already removed, since it is review-locked. **Resolved Sep 11.** The image stayed `WAITING_FOR_REVIEW` (409 UNMODIFIABLE)
+until the founder removed the three subscriptions from the draft submission —
+that flipped the image state to `PREPARE_FOR_SUBMISSION`, and the iris
+`DELETE /subscriptionImages/{id}` then returned 204 for both weekly
+(`03c65730…`) and monthly (`144ee60f…`). Yearly keeps its image
+(`68f89359…`), so no two products share one. The lock was the takeaway: a
+subscription image can only be edited while its subscription is out of an
+active review submission. What is left is the founder's: `flutter build ipa`
+and upload the build carrying the 5.6.3 fix, re-add the subscriptions to the
+draft, and *Resubmit to App Review*.
+
+---
+
+## 39. THE SITE CATCHES UP WITH THE STORES (Sep 13) — no waitlist, no "coming soon"
 
 Both listings were live — Google Play, and the App Store since Sep 12
 (`id6806871144`, "Quit Vaping Tracker - Cirrus", 1.0.17) — while cirrusquit.com

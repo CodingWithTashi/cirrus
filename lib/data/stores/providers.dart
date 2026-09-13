@@ -55,6 +55,7 @@ import 'settings_store.dart';
 import 'widget_coordinator.dart';
 import '../api/widget_store.dart';
 import '../../domain/date_key.dart';
+import '../../core/utils/lp_review.dart';
 
 // ---- backend seam -----------------------------------------------------------
 // [backendModeProvider] picks who answers the domain contracts: mobile runs
@@ -153,7 +154,9 @@ final journeyRepositoryProvider = Provider<JourneyRepository>(
 /// journey — the fake backend has nothing to sync to.
 final userContextRepositoryProvider = Provider<UserContextRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
-    BackendMode.fake => NoopUserContextRepository(ref.watch(fakeServerProvider)),
+    BackendMode.fake => NoopUserContextRepository(
+      ref.watch(fakeServerProvider),
+    ),
     BackendMode.firebase => FirebaseUserContextRepository(),
   },
 );
@@ -509,6 +512,20 @@ final moderationStoreProvider =
 /// stale list here would show someone a disclosure they had already deleted.
 final coachMemoriesProvider = FutureProvider.autoDispose<List<CoachMemory>>(
   (ref) => ref.watch(coachRepositoryProvider).memories(),
+);
+
+/// Where a "Rate Cirrus" tap would go on this device — the OS review sheet,
+/// the store listing, or nowhere (desktop, `flutter test`, a phone without a
+/// store). Asked once per app run: it is the plugin's and the OS's answer, and
+/// neither changes while the app is open.
+///
+/// The Survived screen's ask and the Settings row both hide until this has
+/// answered and is not [ReviewRoute.none], so a dead rating button never
+/// renders — not even for the one frame the lookup takes. Tests override it
+/// to put the ask on screen; on the real plugin in `flutter test` it answers
+/// `none`, which is why the widget tests must.
+final reviewRouteProvider = FutureProvider<ReviewRoute>(
+  (_) => LpReview.route(),
 );
 
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(

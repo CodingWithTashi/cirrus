@@ -104,7 +104,6 @@ abstract final class ObTailoring {
       // them.
       ObStep.whyWords ||
       ObStep.commit ||
-      ObStep.rating ||
       ObStep.notifications => null,
     };
   }
