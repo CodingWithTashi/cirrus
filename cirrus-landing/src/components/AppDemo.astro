@@ -15,6 +15,7 @@
 //   DependenceEngine          — round(puffs / 14) cigarettes; ~600 puffs a disposable
 //   TaperEngine               — round(B * (1 - d/P)^1.5) with the <=3, <=1, 0 tail
 //   MoneyEngine               — the visitor's own spend x52. Their arithmetic, not ours.
+import { appStoreUrl, playUrl } from '../lib/store';
 
 interface Props { part?: 'phone' | 'output' }
 const { part = 'phone' } = Astro.props;
@@ -57,7 +58,17 @@ const { part = 'phone' } = Astro.props;
         <button type="button" data-key="del" aria-label="Delete">⌫</button>
       </div>
 
-      <button class="app__cta btn btn-primary" type="button" data-continue>Continue</button>
+      {/* A real link, so it works with JS off: it scrolls to the badges and the
+          QR code. On a phone the script points it at that phone's store. */}
+      <a
+        class="app__cta btn btn-primary"
+        href="#get"
+        data-continue
+        data-ios={appStoreUrl()}
+        data-android={playUrl('hero-demo')}
+      >
+        Continue
+      </a>
     </div>
   </div>
 )}
@@ -217,13 +228,13 @@ const { part = 'phone' } = Astro.props;
       render();
     });
 
-    // Continue does the honest thing: sends you to the one action on the page.
-    $<HTMLButtonElement>('[data-continue]').addEventListener('click', () => {
-      const input = document.querySelector<HTMLInputElement>('#waitlist-hero-email')
-        ?? document.querySelector<HTMLInputElement>('input[type=email]');
-      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => input?.focus({ preventScroll: true }), 400);
-    });
+    // Continue does what it says. On a phone it opens that phone's store; on a
+    // computer it keeps its #get href and scrolls to the badges and QR code.
+    // `data-os` is stamped on <html> by BaseLayout before first paint.
+    const cont = $<HTMLAnchorElement>('[data-continue]');
+    const os = document.documentElement.dataset.os;
+    if (os === 'ios' && cont.dataset.ios) cont.href = cont.dataset.ios;
+    if (os === 'android' && cont.dataset.android) cont.href = cont.dataset.android;
 
     spendEl?.addEventListener('input', render);
     render();

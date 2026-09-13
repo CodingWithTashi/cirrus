@@ -3,7 +3,7 @@
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font, Image } from 'astro:assets';
 import mark from '../assets/mark.png';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL } from '../consts';
+import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL, APP_STORE_ID, APP_STORE_URL, PLAY_STORE_URL } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -142,16 +142,17 @@ const primary =
 
 const graph: Record<string, unknown>[] = [org, primary];
 
-// The app itself. Android-only until iOS is buildable (docs/08 B17), and the
-// rating is declared 17+ to match the content guidance in docs/06 §2.5.
+// The app itself, live on both stores since Sep 12 2026. MobileApplication is
+// schema.org's SoftwareApplication subtype for store apps. Rated 17+ to match
+// docs/06 §2.5 and the App Store's own rating.
 if (softwareApp) {
   graph.push({
-    '@type': 'SoftwareApplication',
+    '@type': 'MobileApplication',
     name: SITE_TITLE,
     applicationCategory: 'HealthApplication',
-    operatingSystem: 'Android',
+    operatingSystem: 'iOS, Android',
     contentRating: '17+',
-    alternateName: 'Cirrus — Quit Vaping',
+    alternateName: 'Quit Vaping Tracker - Cirrus',
     // schema.org keywords is a real, read field — unlike <meta name="keywords">,
     // which Google dropped in 2009 and Bing treats as a spam signal.
     keywords:
@@ -159,8 +160,11 @@ if (softwareApp) {
     description: SITE_DESCRIPTION,
     url: Astro.site?.href,
     publisher: { '@id': org['@id'] },
-    // A free tier exists; paid plans are not listed because the billing
-    // integration is not built yet and schema prices must be real.
+    // The two listings are this same app, so they are its sameAs: that is how
+    // a crawler joins this page to the store entries it already knows.
+    sameAs: [APP_STORE_URL, PLAY_STORE_URL],
+    // Free to download on both stores. Premium prices are deliberately absent:
+    // each store localises them, so no single figure is true for every reader.
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   });
 }
@@ -222,6 +226,9 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#0a0c10" />
+    {/* iPhone Safari's own "open in the App Store" banner. Every other browser
+        ignores the tag, so it costs nothing anywhere else. */}
+    <meta name="apple-itunes-app" content={`app-id=${APP_STORE_ID}`} />
 
     {/* Runs before first paint: .reveal only hides content once we know JS is
         alive AND motion is welcome, so a failed observer can never leave the
@@ -231,6 +238,12 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
         var r = document.documentElement;
         r.classList.add('js');
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) r.classList.add('motion');
+        // Which store goes first (StoreBadges, AppDemo). Stamped before paint so
+        // the badges never visibly reorder. iPadOS reports itself as a Mac, so a
+        // touch-capable "Macintosh" is an iPad.
+        var ua = navigator.userAgent;
+        r.setAttribute('data-os', /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+          ? 'ios' : /Android/i.test(ua) ? 'android' : 'desktop');
       })();
     </script>
 
@@ -297,7 +310,9 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
         </a>
         <nav class="site-nav" aria-label="Primary">
           <a href="/blog">Blog</a>
-          <span class="pill">Coming soon</span>
+          {/* Home scrolls to its own closing band (badges + QR code); every other
+              page goes to /download, which puts the reader's store first. */}
+          <a class="btn btn-primary btn-sm" href={cleanPath === '/' ? '#get' : '/download'}>Get the app</a>
         </nav>
       </div>
     </header>

@@ -267,8 +267,7 @@ One more thing, because it's the house rule: every stat the app shows you traces
 source, the same as every figure in this article. No invented numbers anywhere.
 
 **[Get Cirrus, free to start](/download)**
-and let your phone carry half of the plan. On iPhone? The iOS version is next on the
-list.
+and let your phone carry half of the plan, on iPhone or Android.
 
 ## What about cold turkey?
 

@@ -3,6 +3,7 @@ title: 'Best quit vaping apps 2026: Cirrus vs Puff Count vs Kwit'
 description: We make one of these three, so here is the comparison with the prices attached — what each app counts, what the free tier does, and what a year costs.
 standfirst: Three apps, checked on the stores this week. We build one of them, so the prices and the platforms are all here rather than a feature list you have to take on trust.
 publishedAt: 2026-09-06
+updatedAt: 2026-09-13
 tags: ['puff count', 'quitting vaping', '#puffcounter', '#quitvapingapp', '#quitvaping', '#cirrusquit']
 draft: false
 ctaAngle: "Most quit apps decide what a bad day costs you. Cirrus bends the plan instead of resetting your streak."
@@ -18,7 +19,7 @@ heroImageCaption: Three apps, one question. Platform narrows it faster than any 
 
 takeaways:
   - Only two of the three count individual puffs. Kwit tracks consumption and cravings, which is a different job done well.
-  - Platform decides this for most people. Puff Count is iPhone only, Cirrus is Android first, Kwit is on both.
+  - Platform narrows it for most people. Puff Count is iPhone only; Cirrus and Kwit are on both iPhone and Android.
   - All three are free to install. Only one of the three free tiers is documented as permanent.
   - Both competitors run several prices at once, so the figure you are shown may not be the figure someone else is shown. Annual, on 6 September 2026 - Cirrus $39.99, Puff Count $59.99, Kwit between $46.99 and $127.99.
 
@@ -32,9 +33,9 @@ faq:
       before subscribing.
   - q: Is there a quit vaping app that works on both iPhone and Android?
     a: >-
-      Kwit is the only one of these three on both today. Puff Count is iPhone only. Cirrus is
-      Android first with iOS as a fast-follow. If you and the person you are quitting
-      alongside are on different phones, that narrows it immediately.
+      Two of the three are. Cirrus and Kwit are both on iPhone and Android; Puff Count is
+      iPhone only. If you and the person you are quitting alongside are on different phones,
+      that narrows it immediately.
   - q: Do any of them stay free?
     a: >-
       All three are free to install and all three sell a subscription. Cirrus documents a
@@ -63,6 +64,8 @@ sources:
     url: 'https://play.google.com/store/apps/details?id=fr.kwit.android'
   - text: 'Cirrus: Quit Vaping Puff Count. Google Play listing and Data safety declaration, checked 6 September 2026.'
     url: 'https://play.google.com/store/apps/details?id=com.quitvape.last_puff'
+  - text: 'Quit Vaping Tracker - Cirrus. App Store listing, checked 13 September 2026.'
+    url: 'https://apps.apple.com/app/id6806871144'
   - text: 'Evins AE et al. Varenicline for vaping cessation in adolescents and young adults. JAMA, 2025;333(21):1876-1886.'
     id: 'doi:10.1001/jama.2025.3810'
     url: 'https://doi.org/10.1001/jama.2025.3810'
@@ -86,7 +89,7 @@ the stores on **6 September 2026** and the listings are in the sources at the bo
 <tr><th></th><th>Cirrus</th><th>Puff Count</th><th>Kwit</th></tr>
 </thead>
 <tbody>
-<tr><td>Platforms</td><td>Android; iOS to follow</td><td>iPhone only</td><td>iOS and Android</td></tr>
+<tr><td>Platforms</td><td>iOS and Android</td><td>iPhone only</td><td>iOS and Android</td></tr>
 <tr><td>Counts individual puffs</td><td>Yes</td><td>Yes</td><td>No — consumption and cravings</td></tr>
 <tr><td>Track record</td><td>New, no ratings yet</td><td>4.3 stars, 2.6K ratings</td><td>4.6 stars, 19.3K reviews, 1M+ installs</td></tr>
 <tr><td>Log without opening the app</td><td>Home screen widget</td><td>No — reviewers ask for it</td><td>Widget</td></tr>
@@ -152,24 +155,23 @@ token instead of erasing three weeks.
 That is not a small preference. Losing a twelve-day streak to one rough night is how quit
 apps make people delete quit apps.
 
-**You can log without opening it.** An Android home screen widget logs a puff in one tap,
+**You can log without opening it.** A home screen widget logs a puff in one tap,
 with a five-second undo for the mistaps, and you can edit any past day afterwards. Both are
 things Puff Count reviewers have asked for repeatedly on the App Store — one of the most
-helpful reviews on the listing is a request for exactly this. The iOS widget and an Apple
-Watch app are built and ship with the iOS version.
+helpful reviews on the listing is a request for exactly this. The widget is on iPhone and
+Android alike, and the iPhone version adds an Apple Watch app.
 
 **The free tier is documented, not implied.** The counter, the widget, the daily limit, the
 streak, money saved, the recovery timeline and the community are free permanently. Premium
 buys the unlimited AI coach and Panic Button, the fully adaptive plan, craving forecasts and
 unlimited history.
 
-And the honest side of the ledger: Cirrus is **Android only today**, it launched this month,
-and it has no reviews. Puff Count has six years of iPhone users behind it and Kwit has a
-million installs. If you are on an iPhone right now, two of these three apps exist for you
-and Cirrus is not one of them.
+And the honest side of the ledger: Cirrus launched this month, on Google Play first and on
+the App Store a week later, and it has no reviews yet. Puff Count has six years of iPhone
+users behind it and Kwit has a million installs.
 
-**Best for:** an Android vaper who wants a real per-puff count and a plan that survives a bad
-night.
+**Best for:** a vaper on either phone who wants a real per-puff count and a plan that survives
+a bad night.
 
 ## What a year actually costs
 
@@ -219,9 +221,9 @@ form is four questions:
 4. **Is the free tier usable, or is it a trial?** Counting, your limit and your streak are
    the core. Behind a paywall, that is not a free tier.
 
-And then the practical filter that decides it for most people anyway: which phone is in your
-hand. Puff Count if it is an iPhone, Cirrus if it is Android, Kwit if you want the CBT
-programme and do not need a per-puff number.
+And then the practical filter: which phone is in your hand. Puff Count is iPhone only, so on
+Android the per-puff choice is Cirrus; on an iPhone it is Puff Count or Cirrus. Kwit if you
+want the CBT programme and do not need a per-puff number.
 
 None of the three is a treatment. The strongest evidence in vaping cessation combines
 medication, behavioural support and tracking; an app is the tracking layer and the layer that

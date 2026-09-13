@@ -91,16 +91,18 @@ export const FAQS = [
     a: 'Broadly three: cold turkey, tapering, and nicotine replacement. Cold turkey is fastest and has the lowest success rate. Tapering trades speed for a much higher chance of it sticking. NRT can support either. Cirrus is a taper app because that is the method most people can actually hold.',
   },
   {
-    q: 'When is Cirrus available, and is it on iPhone?',
-    a: 'Android first. iPhone is a fast-follow. It genuinely is not built yet, and we would rather say so than take your money for a pre-order. Join the waitlist and you will hear the day it lands on your platform.',
+    q: 'Is Cirrus on iPhone and Android?',
+    a: 'Yes, both. Cirrus is free on the App Store for iPhone (iOS 15 or later) and on Google Play for Android, and the iPhone version comes with an Apple Watch app.',
   },
   {
+    // Prices are the founder-locked US prices (docs/08 §1). "Up to 100" coach
+    // messages, never "unlimited": 100 a day is what the server enforces.
     q: 'Is Cirrus free?',
-    a: 'There is a free tier that keeps working forever: puff logging, streaks, money saved, your daily limit, community, and a few coach messages a day. Paid unlocks the adaptive plan and unlimited coaching. We never sell your data and there are no ad trackers in the app.',
+    a: 'Yes. The free tier keeps working forever: puff logging, the widget, streaks, money saved, your daily limit, the community and five coach messages a day. Premium adds the adaptive plan, up to 100 coach messages a day and your full history, at $2.99 a week, $7.99 a month or $39.99 a year in the US, with a 7-day free trial on every plan. We never sell your data and there are no ad trackers in the app.',
   },
   {
     q: 'How is this different from Puff Count?',
-    a: 'Mostly honesty, and which phone you own. We publish a source for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own.',
+    a: 'Honesty, mostly. We publish a source for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own. Cirrus is also on both iPhone and Android; Puff Count is iPhone only.',
     more: { label: 'What to look for in a puff counter app', href: '/blog/how-to-choose-a-puff-counter-app' },
   },
 ] as const;

@@ -27,7 +27,7 @@ const CONTENT_SIGNAL = 'search=yes,ai-train=no,use=reference';
 // (OAI-SearchBot, Claude-SearchBot, PerplexityBot, ChatGPT-User, DuckAssistBot,
 // Applebot...). Those fetch a page to answer someone's question right now and
 // cite the source — that is distribution, not extraction, and it is how a
-// pre-launch app gets found.
+// new app gets found.
 const TRAINING_CRAWLERS = [
   'Amazonbot',
   'Applebot-Extended',

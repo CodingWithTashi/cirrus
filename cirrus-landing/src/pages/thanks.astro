@@ -1,25 +1,31 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import StoreBadges from '../components/StoreBadges.astro';
 import { SITE_TITLE } from '../consts';
 
-// noindex: a confirmation page has no search value and would compete with the
-// landing page for brand queries. It is also excluded from the sitemap.
+// Left over from the pre-launch waitlist. The signup form and its Pages
+// Function were removed when both stores went live (Sep 2026); the page stays
+// because a confirmation link already sent may still point here, and a 404 is
+// a poor answer to somebody who asked to be told when the app was out.
+//
+// noindex: no search value, and it is excluded from the sitemap.
 ---
 
 <BaseLayout
-  title="You're on the list"
-  description="Confirm your email to finish joining the Cirrus waitlist."
+  title="Cirrus is out"
+  description="Cirrus is live on the App Store and Google Play."
   noindex
 >
   <div class="wrap page">
-  <h1>Almost. Check your email.</h1>
-  <p class="lede">
-    We've sent a confirmation link. Clicking it is the bit everyone forgets, and without it we
-    can't email you when {SITE_TITLE} lands.
-  </p>
-  <p>
-    Android lands first, iPhone follows. Nothing else will reach your inbox in the meantime.
-  </p>
-  <p><a href="/">Back to the home page</a></p>
+    <h1>No more waiting. It's out.</h1>
+    <p class="lede">{SITE_TITLE} is free on iPhone and Android, today.</p>
+    <div class="thanks__stores">
+      <StoreBadges campaign="thanks" />
+    </div>
+    <p><a href="/">Back to the home page</a></p>
   </div>
 </BaseLayout>
+
+<style>
+  .thanks__stores { margin: 1.75rem 0 2rem; }
+</style>
