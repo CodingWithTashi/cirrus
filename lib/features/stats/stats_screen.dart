@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
+import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
@@ -24,7 +25,7 @@ import '../../domain/logic/danger_hours.dart';
 import '../../domain/date_key.dart';
 import '../../domain/logic/allowances.dart';
 import '../../domain/logic/day_window.dart';
-import '../../domain/logic/dependence_engine.dart';
+import '../../domain/logic/nicotine_trend.dart';
 import '../../domain/logic/puff_gaps.dart';
 import '../../domain/logic/week_trend.dart';
 import '../../domain/models/journey_state.dart';
@@ -42,6 +43,10 @@ class StatsScreen extends ConsumerStatefulWidget {
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _range = 1; // 0=day, 1=week, 2=month
+
+  /// The Day chart's height with its hour labels, which the "no puffs today"
+  /// line matches so the first puff grows bars in place.
+  static const double _dayChartHeight = 89;
 
   /// The range actually rendered: Month is Premium, so a free account (or
   /// one whose Premium lapsed with Month selected) is clamped to Week.
@@ -118,54 +123,34 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 ),
               ),
             const SizedBox(height: 14),
-            if (logs.length < 2) ...[
-              LpCard(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  children: [
-                    const Text('📈', style: TextStyle(fontSize: 24)),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.statsEmptyTitle,
-                      style: LpType.body14(
-                        lp.textPrimary,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.statsEmptyBody,
-                      textAlign: TextAlign.center,
-                      style: LpType.caption(lp.textSecondary),
-                    ),
-                  ],
-                ),
+            // Every card from day one (docs/10 §40). The screen used to hold
+            // all of them behind "at least two days on the books", so a first
+            // day with fourteen puffs logged read "Charts show up tomorrow." on
+            // the Day view — whose whole subject is today — and on the week,
+            // and day two read it again until its first puff. An empty window
+            // now says so inside its own card, and the charts move with every
+            // tap because they are built from the journey the store just set.
+            _puffsCard(context, journey, now, locale),
+            const SizedBox(height: 10),
+            // The trigger-hours card: the heat is honest with one day of data
+            // (today's own hours), tapping it is how the danger window gets
+            // set — and it is Day-1 step three's spotlight target, which must
+            // exist for a REAL day-1 account and not only for the 12-day demo
+            // seed the tests use.
+            _triggerHoursCard(context, logs, snap.dangerWindow, locale),
+            const SizedBox(height: 10),
+            _nicotineCard(context, journey, visibleLogs, now),
+            const SizedBox(height: 10),
+            // Records are records, not history browsing: a "best day" over
+            // seven days would be a wrong number, not a hidden one.
+            _recordsRow(context, journey, logs, now),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                l10n.statsEditHint,
+                style: LpType.caption11(lp.textFaint),
               ),
-              const SizedBox(height: 10),
-              // The trigger-hours card renders from day one: the heat is
-              // honest with one day of data (today's own hours), tapping it
-              // is how the danger window gets set — and it is Day-1 step
-              // three's spotlight target, which must exist for a REAL day-1
-              // account and not only for the 12-day demo seed the tests use.
-              _triggerHoursCard(context, logs, snap.dangerWindow, locale),
-            ] else ...[
-              _puffsCard(context, journey, now, locale),
-              const SizedBox(height: 10),
-              _triggerHoursCard(context, logs, snap.dangerWindow, locale),
-              const SizedBox(height: 10),
-              _nicotineCard(context, journey, visibleLogs),
-              const SizedBox(height: 10),
-              // Records are records, not history browsing: a "best day" over
-              // seven days would be a wrong number, not a hidden one.
-              _recordsRow(context, journey, logs, now),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  l10n.statsEditHint,
-                  style: LpType.caption11(lp.textFaint),
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       ),
@@ -196,7 +181,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           journey.logFor(now) ??
           DayLog(date: JourneyState.dateKey(now), puffs: 0, limit: 0);
       final buckets = today.hourBuckets;
-      final hours = [for (var h = 6; h < 24; h += 2) h];
+      // The whole calendar day, midnight first, in three-hour buckets. It was
+      // 6 AM to midnight in twos, so a puff logged at 2:30 AM counted in
+      // today's total and was drawn nowhere (docs/10 §40). Eight buckets is
+      // also what fits eight hour labels — the same eight the trigger-hours
+      // heatmap prints under this card.
+      final starts = [for (var h = 0; h < 24; h += 3) h];
       return GestureDetector(
         onLongPress: () {
           LpHaptics.medium();
@@ -208,15 +198,25 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionLabel(label, padding: const EdgeInsets.only(bottom: 12)),
-              BarChart(
-                values: [
-                  for (final h in hours)
-                    (buckets[h] ?? 0) + (buckets[h + 1] ?? 0),
-                ],
-                labels: [for (final h in hours) LpFormat.hour(h, locale)],
-                height: 70,
-                gap: 5,
-              ),
+              if (today.puffs == 0)
+                // Nothing logged today: a sentence, not eight slivers that
+                // read as a chart of zeros.
+                _NoPuffs(l10n.statsDayNoPuffs, height: _dayChartHeight)
+              else
+                BarChart(
+                  values: [
+                    for (final h in starts)
+                      (buckets[h] ?? 0) +
+                          (buckets[h + 1] ?? 0) +
+                          (buckets[h + 2] ?? 0),
+                  ],
+                  labels: [for (final h in starts) LpFormat.hour(h, locale)],
+                  height: 70,
+                  gap: 8,
+                  // With every puff in one bucket that bar is already full
+                  // height; its number is what shows the next puff land.
+                  showValues: true,
+                ),
             ],
           ),
         ),
@@ -265,6 +265,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           const SizedBox(height: 12),
           _EditableBars(
             logs: shown,
+            slots: window,
             hardest: hardest,
             best: best,
             locale: locale,
@@ -274,24 +275,47 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           Text(
             hardest == -1
                 ? l10n.statsWindowNoPuffs
-                : switch (shown[hardest].moodNote ??
-                      (shown[hardest].mood == Mood.rough
-                          ? context.l10n.moodRough
-                          : null)) {
-                    // No note, no rough mood — drop the dash clause entirely.
-                    null => l10n.statsHardDayCaptionPlain(
-                      LpFormat.weekday(shown[hardest].date, locale),
-                    ),
-                    final reason => l10n.statsHardDayCaption(
-                      LpFormat.weekday(shown[hardest].date, locale),
-                      reason,
-                    ),
-                  },
+                : _hardDayCaption(context, shown, hardest, now, locale),
             style: LpType.caption11(lp.textSecondary),
           ),
         ],
       ),
     );
+  }
+
+  /// The line under the bars about the day with the most puffs.
+  ///
+  /// It used to end "You recovered next morning." whatever the next morning
+  /// held — including when the hard day was TODAY, which on day one it always
+  /// is, so a first-day account was told it had recovered from a day still in
+  /// progress (docs/10 §40). The claim is made only when the next day is over,
+  /// confirmed and lighter ([WeekTrend.recoveredAfter]).
+  String _hardDayCaption(
+    BuildContext context,
+    List<DayLog> shown,
+    int hardest,
+    DateTime now,
+    String locale,
+  ) {
+    final l10n = context.l10n;
+    final day = shown[hardest];
+    // No note, no rough mood — drop the dash clause entirely.
+    final reason =
+        day.moodNote ?? (day.mood == Mood.rough ? l10n.moodRough : null);
+    if (!day.date.isBefore(LpDate.dayStart(now))) {
+      return reason == null
+          ? l10n.statsHardDayToday
+          : l10n.statsHardDayTodayReason(reason);
+    }
+    final weekday = LpFormat.weekday(day.date, locale);
+    if (WeekTrend.recoveredAfter(shown, hardest, now)) {
+      return reason == null
+          ? l10n.statsHardDayCaptionPlain(weekday)
+          : l10n.statsHardDayCaption(weekday, reason);
+    }
+    return reason == null
+        ? l10n.statsHardDayNoRecovery(weekday)
+        : l10n.statsHardDayNoRecoveryReason(weekday, reason);
   }
 
   Widget _triggerHoursCard(
@@ -373,18 +397,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     BuildContext context,
     JourneyState journey,
     List<DayLog> logs,
+    DateTime now,
   ) {
     final lp = context.lp;
     final l10n = context.l10n;
-    final series = [
-      for (final log in logs)
-        DependenceEngine.nicotineMg(log.puffs, journey.plan.strength),
-    ];
-    final latestFull = logs.length >= 2
-        ? series[series.length - 2]
-        : series.isEmpty
-        ? 0.0
-        : series.last;
+    // Completed, confirmed days only, and an arrow only when two of them say
+    // which way it went (docs/10 §41). The card printed "≈ 14mg ↓" with the
+    // arrow inside the string — pointing down beside a line that climbed —
+    // named the day before yesterday on any morning before the first puff,
+    // and dropped its line to zero for every day nobody logged.
+    final trend = NicotineTrend.of(logs, journey.plan.strength, now);
+    final latest = trend.latestMg;
+    final direction = trend.direction;
+    final down = direction == TrendDirection.down;
 
     return LpCard(
       padding: const EdgeInsets.all(16),
@@ -395,14 +420,39 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               SectionLabel(l10n.statsNicotinePerDay, padding: EdgeInsets.zero),
-              Text(
-                '≈ ${l10n.statsNicotineValue(latestFull.round())}',
-                style: LpType.displaySmall(lp.voltText, size: 14),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    latest == null
+                        ? '—'
+                        : '≈ ${l10n.statsNicotineValue(latest.round())}',
+                    style: LpType.displaySmall(lp.textPrimary, size: 14),
+                  ),
+                  if (direction == TrendDirection.down ||
+                      direction == TrendDirection.up) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      down
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
+                      size: 15,
+                      color: down ? lp.voltText : lp.emberText,
+                      semanticLabel: down
+                          ? l10n.statsNicotineDown
+                          : l10n.statsNicotineUp,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          TrendLine(values: series),
+          // A trend needs two points; before that the card is the figure alone
+          // rather than a blank strip where a line would be.
+          if (trend.series.length >= 2) ...[
+            const SizedBox(height: 10),
+            TrendLine(values: trend.series),
+          ],
         ],
       ),
     );
@@ -463,10 +513,49 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   }
 }
 
+/// A chart area with nothing to draw, saying so at the height of the chart it
+/// stands in for.
+class _NoPuffs extends StatelessWidget {
+  const _NoPuffs(this.text, {required this.height});
+
+  final String text;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.bar_chart_rounded, size: 22, color: lp.textFaint),
+          const SizedBox(height: 6),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: LpType.body13(lp.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Bars with long-press-to-edit (stepper sheet, min 0).
+///
+/// Always [slots] columns — seven for the week, thirty for the month — so a
+/// bar is as wide on day one as on day ninety. It used to be one `Expanded`
+/// column per day in the window, and a young plan's window is only as long as
+/// the plan (`DayWindow.trailing`), so day two drew two slabs half the card
+/// wide and day one a single slab across all of it (docs/10 §40). The days a
+/// young plan's window has not reached yet hold their place as a faint mark
+/// with nothing to press, and no bar is ever wider than [_barWidth].
 class _EditableBars extends ConsumerWidget {
   const _EditableBars({
     required this.logs,
+    required this.slots,
     required this.hardest,
     required this.best,
     required this.locale,
@@ -474,22 +563,45 @@ class _EditableBars extends ConsumerWidget {
   });
 
   final List<DayLog> logs;
+  final int slots;
   final int hardest;
   final int best;
   final String locale;
   final bool compact;
 
+  /// Wide enough to read as a bar, never as a slab.
+  static const double _barWidth = 26;
+  static const double _compactBarWidth = 9;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lp = context.lp;
     final maxPuffs = logs.fold(1, (m, l) => l.puffs > m ? l.puffs : m);
+    final gap = compact ? 3.0 : 7.0;
+    final barWidth = compact ? _compactBarWidth : _barWidth;
+    // The window ends today, so what a young plan's window is missing is the
+    // days still to come.
+    final upcoming = [
+      if (logs.isNotEmpty)
+        for (var i = 1; i <= slots - logs.length; i++)
+          LpDate.addDays(logs.last.date, i),
+    ];
+
+    Widget weekday(DateTime date, Color color, {bool strong = false}) => Text(
+      LpFormat.weekday(date, locale).characters.first.toUpperCase(),
+      style: LpType.micro(
+        color,
+        weight: strong ? FontWeight.w600 : FontWeight.w400,
+      ),
+    );
+
     return SizedBox(
-      height: 96,
+      height: compact ? 96 : 112,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           for (final (i, log) in logs.indexed) ...[
-            if (i > 0) SizedBox(width: compact ? 3 : 7),
+            if (i > 0) SizedBox(width: gap),
             Expanded(
               child: GestureDetector(
                 // The whole column, not just the painted bar: an empty day
@@ -504,59 +616,38 @@ class _EditableBars extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: FractionallySizedBox(
-                          // Keyed by the day, so a test can read the bar a
-                          // calendar day is drawn as.
-                          key: ValueKey(log.date),
-                          heightFactor: (log.puffs / maxPuffs).clamp(0.04, 1.0),
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: i == hardest
-                                  ? lp.ember
-                                  : i == best
-                                  ? lp.volt
-                                  : lp.border,
-                              borderRadius: BorderRadius.circular(5),
-                              boxShadow: i == hardest
-                                  ? [
-                                      BoxShadow(
-                                        color: lp.ember.withValues(alpha: 0.4),
-                                        blurRadius: 10,
-                                      ),
-                                    ]
-                                  : i == best
-                                  ? [
-                                      BoxShadow(
-                                        color: lp.volt.withValues(alpha: 0.5),
-                                        blurRadius: 10,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                          ),
-                        ),
+                      child: _Bar(
+                        log: log,
+                        fraction: (log.puffs / maxPuffs).clamp(0.04, 1.0),
+                        width: barWidth,
+                        color: i == hardest
+                            ? lp.ember
+                            : i == best
+                            ? lp.volt
+                            : lp.border,
+                        glow: i == hardest
+                            ? lp.ember.withValues(alpha: 0.4)
+                            : i == best
+                            ? lp.volt.withValues(alpha: 0.5)
+                            : null,
+                        countColor: i == hardest
+                            ? lp.emberText
+                            : i == best
+                            ? lp.voltText
+                            : lp.textSecondary,
+                        showCount: !compact,
                       ),
                     ),
                     if (!compact) ...[
                       const SizedBox(height: 5),
-                      Text(
-                        LpFormat.weekday(
-                          log.date,
-                          locale,
-                        ).characters.first.toUpperCase(),
-                        style: LpType.micro(
-                          i == hardest
-                              ? lp.emberText
-                              : i == best
-                              ? lp.voltText
-                              : lp.textSecondary,
-                          weight: i == hardest || i == best
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        ),
+                      weekday(
+                        log.date,
+                        i == hardest
+                            ? lp.emberText
+                            : i == best
+                            ? lp.voltText
+                            : lp.textSecondary,
+                        strong: i == hardest || i == best,
                       ),
                     ],
                   ],
@@ -564,8 +655,123 @@ class _EditableBars extends ConsumerWidget {
               ),
             ),
           ],
+          for (final date in upcoming) ...[
+            SizedBox(width: gap),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    width: barWidth,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: lp.border.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(height: 5),
+                    weekday(date, lp.textFaint),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// One day's bar, with its count riding just above it.
+///
+/// Animated from where it stood, so logging a puff grows the bar rather than
+/// snapping it. The count lives in headroom reserved above the tallest bar,
+/// so it never runs into the card's edge.
+class _Bar extends StatelessWidget {
+  const _Bar({
+    required this.log,
+    required this.fraction,
+    required this.width,
+    required this.color,
+    required this.glow,
+    required this.countColor,
+    required this.showCount,
+  });
+
+  final DayLog log;
+  final double fraction;
+  final double width;
+  final Color color;
+  final Color? glow;
+  final Color countColor;
+  final bool showCount;
+
+  static const double _countHeight = 14;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final track = math.max(
+          0.0,
+          box.maxHeight - (showCount ? _countHeight : 0),
+        );
+        return TweenAnimationBuilder<double>(
+          // An explicit begin, or the first build never animates (CLAUDE.md).
+          tween: Tween(begin: 0.04, end: fraction),
+          duration: LpMotion.slow,
+          curve: LpMotion.ease,
+          builder: (context, t, _) => Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: track,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    width: width,
+                    child: FractionallySizedBox(
+                      // Keyed by the day, so a test can read the bar a
+                      // calendar day is drawn as.
+                      key: ValueKey(log.date),
+                      heightFactor: t,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: glow == null
+                              ? null
+                              : [BoxShadow(color: glow!, blurRadius: 10)],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // A confirmed vape-free day shows its 0 — a win, not a blank.
+              // An unlogged day shows nothing: it is unknown, not zero.
+              if (showCount && (log.puffs > 0 || log.isConfirmed))
+                Positioned(
+                  left: -4,
+                  right: -4,
+                  bottom: track * t + 2,
+                  child: Text(
+                    '${log.puffs}',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: LpType.micro(countColor, weight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

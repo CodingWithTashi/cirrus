@@ -17,6 +17,7 @@ import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/logic/money_engine.dart';
 import '../../domain/models/models.dart';
+import 'savings_info.dart';
 
 /// Frame 40 — Money back: rolling hero, goal bars, "the math is yours".
 /// A goal crossing 100% while on screen fires confetti (true milestone).
@@ -64,19 +65,28 @@ class MoneyScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Center(
-                  child: Text(
-                    l10n.moneySavedSince(
-                      LpFormat.shortDate(journey.plan.startDate, locale),
-                      LpFormat.money(
-                        snap.savedRunRatePerDay,
-                        locale,
-                        cents: true,
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        l10n.moneySavedSince(
+                          LpFormat.shortDate(journey.plan.startDate, locale),
+                          LpFormat.money(
+                            snap.savedRunRatePerDay,
+                            locale,
+                            cents: true,
+                          ),
+                        ),
+                        textAlign: TextAlign.center,
+                        style: LpType.body13(lp.textSecondary),
                       ),
                     ),
-                    style: LpType.body13(lp.textSecondary),
-                  ),
+                    // Home's (i), opening Home's sheet: the figure above
+                    // follows a rule nobody can read off it (docs/10 §40).
+                    const SavingsInfoButton(),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 SectionLabel(l10n.moneyBuysLabel),

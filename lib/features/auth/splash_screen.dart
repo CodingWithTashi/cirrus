@@ -9,6 +9,9 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
+import '../../core/widgets/lp_error.dart';
+import '../../data/network/connectivity.dart';
+import '../../data/stores/journey_store.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/date_key.dart';
 import '../../domain/logic/launch_paywall_policy.dart';
@@ -51,14 +54,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     unawaited(_advance());
   }
 
+  /// A session is open and its journey could not be read, so the splash is a
+  /// retry. Sending a signed-in person to the sign-in screen is the bug this
+  /// replaced (docs/10 §40).
+  bool _unavailable = false;
+
   /// Restores the backend session while the wordmark breathes — but never
-  /// under the branding beat of 1.5s.
-  Future<void> _advance() async {
-    await Future.wait([
-      Future<void>.delayed(const Duration(milliseconds: 1500)),
+  /// under the branding beat of 1.5s. A retry skips the beat: it has been
+  /// watched once already.
+  Future<void> _advance({bool beat = true}) async {
+    final results = await Future.wait<Object?>([
       ref.read(quitStoreProvider.notifier).restoreSession(),
+      if (beat) Future<void>.delayed(const Duration(milliseconds: 1500)),
     ]);
     if (!mounted) return;
+    if (results.first == SessionRestore.unavailable) {
+      setState(() => _unavailable = true);
+      return;
+    }
     final journey = ref.read(quitStoreProvider);
     if (journey == null) {
       context.go(Routes.auth);
@@ -96,6 +109,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
   }
 
+  /// Back to the breathing mark while it asks again, so a retry reads as the
+  /// app trying rather than as a button that did nothing.
+  Future<void> _retry() async {
+    if (!_unavailable) return;
+    setState(() => _unavailable = false);
+    await _advance(beat: false);
+  }
+
   @override
   void dispose() {
     _breath.dispose();
@@ -106,6 +127,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
+    // The connection came back while the retry was up: ask again untapped.
+    ref.listen<bool>(connectivityProvider, (was, online) {
+      if (online && was == false) unawaited(_retry());
+    });
+    if (_unavailable) {
+      final l10n = context.l10n;
+      return Scaffold(
+        body: SafeArea(
+          child: LpErrorState(
+            icon: Icons.cloud_off_rounded,
+            title: l10n.splashJourneyUnavailableTitle,
+            body: l10n.splashJourneyUnavailableBody,
+            retryLabel: l10n.errorRetry,
+            onRetry: () => unawaited(_retry()),
+          ),
+        ),
+      );
+    }
     // The Scaffold hands its body LOOSE constraints, and a Stack under loose
     // constraints sizes itself to its largest non-positioned child. So a bare
     // `Stack(alignment: center)` here was a 340dp square parked in the

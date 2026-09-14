@@ -295,6 +295,49 @@ describe('posts/{id}/reactors — one document per person', () => {
     );
   });
 
+  // Nobody reacts to their own post (docs/10 §41). The app offers its author
+  // no pill to press; this is what refuses a repackaged client. Alice wrote
+  // livePost (postAuthors/livePost), and the seeded reactors/alice is a
+  // reaction she left before the rule existed.
+  it('does NOT let an author react to their own post', async () => {
+    await assertFails(
+      setDoc(doc(alice(), 'posts', 'livePost', 'reactors', ALICE), {
+        emoji: '\u{1F525}',
+        uid: ALICE,
+      }),
+    );
+  });
+
+  it('does NOT let an author switch an old self-reaction to another emoji', async () => {
+    await assertFails(
+      updateDoc(doc(alice(), 'posts', 'livePost', 'reactors', ALICE), {
+        emoji: '\u{1F4AA}',
+      }),
+    );
+  });
+
+  it('lets an author take back a reaction left before the rule', async () => {
+    // Taking it back is what lets onReaction remove its count.
+    await assertSucceeds(
+      deleteDoc(doc(alice(), 'posts', 'livePost', 'reactors', ALICE)),
+    );
+  });
+
+  it('still lets a reader react to a post with no authorship row', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'posts', 'seededPost'), {
+        alias: 'z', tag: 'win', text: 'seeded', reactions: {},
+        reportCount: 0, status: 'live',
+      });
+    });
+    await assertSucceeds(
+      setDoc(doc(bob(), 'posts', 'seededPost', 'reactors', BOB), {
+        emoji: '\u{1F4AA}',
+        uid: BOB,
+      }),
+    );
+  });
+
   it('refuses any emoji outside the palette', async () => {
     // This document is written CLIENT-DIRECT — the one piece of text a reader
     // puts on somebody else's post without passing `createPost`, the

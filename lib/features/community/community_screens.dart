@@ -315,46 +315,53 @@ class PostCard extends ConsumerWidget {
             ],
             const SizedBox(height: 10),
             Text(postText(context, post), style: LpType.body14(lp.textPrimary)),
-            const SizedBox(height: 12),
-            if (isSos)
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: lp.oxygenSoft,
-                      borderRadius: BorderRadius.circular(LpDimens.rChip),
-                      border: Border.all(
-                        color: lp.oxygen.withValues(alpha: 0.4),
+            if (isSos) ...[
+              // "I got you" invites a reply, so it is for everyone but the
+              // person who asked. Their own SOS offered it to them too, and
+              // now shows only how many came (docs/10 §41).
+              if (!post.isMine || post.replyTotal > 0) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (!post.isMine)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: lp.oxygenSoft,
+                          borderRadius: BorderRadius.circular(LpDimens.rChip),
+                          border: Border.all(
+                            color: lp.oxygen.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Text(
+                          l10n.communityIGotYou,
+                          style: LpType.caption(
+                            lp.oxygenText,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.communityIGotYou,
-                      style: LpType.caption(
-                        lp.oxygenText,
-                        weight: FontWeight.w600,
+                    if (post.replyTotal > 0) ...[
+                      if (!post.isMine) const SizedBox(width: 10),
+                      // The real count. `replyingNow` used to live here: a
+                      // fabricated 3 on your own SOS post and 12 in the demo
+                      // fixtures, and nothing on the real backend could ever
+                      // compute it — live presence needs a backend we do not
+                      // have. A number that is only ever invented is worse than
+                      // no number, especially one claiming people are with you.
+                      Text(
+                        l10n.communityRepliedCount(post.replyTotal),
+                        style: LpType.caption11(lp.textSecondary),
                       ),
-                    ),
-                  ),
-                  if (post.replyTotal > 0) ...[
-                    const SizedBox(width: 10),
-                    // The real count. `replyingNow` used to live here: a
-                    // fabricated 3 on your own SOS post and 12 in the demo
-                    // fixtures, and nothing on the real backend could ever
-                    // compute it — live presence needs a backend we do not
-                    // have. A number that is only ever invented is worse than
-                    // no number, especially one claiming people are with you.
-                    Text(
-                      l10n.communityRepliedCount(post.replyTotal),
-                      style: LpType.caption11(lp.textSecondary),
-                    ),
+                    ],
                   ],
-                ],
-              )
-            else
+                ),
+              ],
+            ] else if (!post.isMine) ...[
+              const SizedBox(height: 12),
               // The PALETTE, not the keys on the document. Drawing a pill per
               // key meant a post created on the real backend — where
               // `reactions` starts empty — showed no pills at all, so there
@@ -370,8 +377,57 @@ class PostCard extends ConsumerWidget {
                   ],
                 ],
               ),
+            ] else if (_reactionTotal(post) > 0) ...[
+              const SizedBox(height: 12),
+              // The author's own post: nothing until somebody else reacts,
+              // then the counts that are there, with nothing to press. The
+              // palette used to sit under every post, this one included, so a
+              // fresh post invited its writer to react to themselves — and the
+              // tap counted, for everyone to see (docs/10 §40).
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final emoji in CommunityReactions.palette)
+                    if ((post.reactions[emoji] ?? 0) > 0)
+                      _ReactionCount(
+                        emoji: emoji,
+                        count: post.reactions[emoji]!,
+                      ),
+                ],
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Everyone's reactions on a post, zeros ignored.
+int _reactionTotal(Post post) =>
+    post.reactions.values.fold(0, (sum, n) => n > 0 ? sum + n : sum);
+
+/// A reaction count on the author's own post: the pill, and nothing to press.
+class _ReactionCount extends StatelessWidget {
+  const _ReactionCount({required this.emoji, required this.count});
+
+  final String emoji;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: lp.surfaceInset,
+        borderRadius: BorderRadius.circular(LpDimens.rChip),
+        border: Border.all(color: lp.border),
+      ),
+      child: Text(
+        '$emoji $count',
+        style: LpType.caption(lp.textSecondary, weight: FontWeight.w600),
       ),
     );
   }

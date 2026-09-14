@@ -922,6 +922,72 @@
     }
   },
   "homeSavedSoFar": "saved so far",
+  "savingsInfoLabel": "How savings are counted",
+  "savingsInfoTitle": "How your savings add up",
+  "savingsInfoUsualDay": "Your usual day",
+  "savingsInfoUsualDayValue": "{puffs, plural, one{{puffs} puff} other{{puffs} puffs}} · {spend}",
+  "@savingsInfoUsualDayValue": {
+    "placeholders": {
+      "puffs": {
+        "type": "num"
+      },
+      "spend": {
+        "type": "String"
+      }
+    }
+  },
+  "savingsInfoToday": "Today",
+  "savingsInfoTodayNotCounted": "Not counted yet",
+  "savingsInfoTodayValue": "{puffs, plural, one{{puffs} puff} other{{puffs} puffs}} · {saved} kept",
+  "@savingsInfoTodayValue": {
+    "placeholders": {
+      "puffs": {
+        "type": "num"
+      },
+      "saved": {
+        "type": "String"
+      }
+    }
+  },
+  "savingsInfoTotal": "Saved so far",
+  "savingsInfoWhyNotCounted": "Today starts counting with your first logged puff, or when you confirm a vape-free day. Until then it adds nothing.",
+  "savingsInfoWhyKept": "Every puff under your usual {usual} keeps about {perPuff}. Today that's {notTaken, plural, one{{notTaken} puff} other{{notTaken} puffs}} not taken.",
+  "@savingsInfoWhyKept": {
+    "placeholders": {
+      "usual": {
+        "type": "int"
+      },
+      "perPuff": {
+        "type": "String"
+      },
+      "notTaken": {
+        "type": "num"
+      }
+    }
+  },
+  "savingsInfoWhyKeptPerTen": "Every 10 puffs under your usual {usual} keep about {perTen}. Today that's {notTaken, plural, one{{notTaken} puff} other{{notTaken} puffs}} not taken.",
+  "@savingsInfoWhyKeptPerTen": {
+    "placeholders": {
+      "usual": {
+        "type": "int"
+      },
+      "perTen": {
+        "type": "String"
+      },
+      "notTaken": {
+        "type": "num"
+      }
+    }
+  },
+  "savingsInfoWhyNothingKept": "Today is at or over your usual {usual} puffs, so it adds nothing. Tomorrow starts fresh.",
+  "@savingsInfoWhyNothingKept": {
+    "placeholders": {
+      "usual": {
+        "type": "int"
+      }
+    }
+  },
+  "savingsInfoWhyUnpriced": "Your plan has no weekly spend, so there's nothing to count yet.",
   "homeCravingsBeaten": "cravings beaten",
   "homeCoachNudgeTitle": "Rough {weekday}? I noticed.",
   "@homeCoachNudgeTitle": {
@@ -1252,6 +1318,8 @@
   "errorOfflineBanner": "offline — logs still count, we'll sync later",
   "errorOfflineTitle": "No wifi, no worries",
   "errorOfflineBody": "You're offline right now. Nothing's lost — reconnect and we'll pick up right where you left off.",
+  "splashJourneyUnavailableTitle": "Can't reach your journey",
+  "splashJourneyUnavailableBody": "You're still signed in and nothing is lost. Check your connection and try again.",
   "errorGenericTitle": "Well, that glitched",
   "errorGenericBody": "That one's on us, not you. Give it another shot in a sec.",
   "errorPurchaseNotAllowedTitle": "Purchases are off on this device",
@@ -1501,6 +1569,7 @@
   "statsRangeMonth": "Month",
   "statsPuffsThisWeek": "PUFFS THIS WEEK",
   "statsPuffsToday": "PUFFS TODAY · BY HOUR",
+  "statsDayNoPuffs": "No puffs logged today",
   "statsPuffsThisMonth": "PUFFS · LAST 30 DAYS",
   "statsVsLast": "{percent} vs last",
   "@statsVsLast": {
@@ -1516,6 +1585,34 @@
       "day": {
         "type": "String"
       },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "statsHardDayNoRecovery": "{day} was the difficult day.",
+  "@statsHardDayNoRecovery": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "statsHardDayNoRecoveryReason": "{day} was the difficult day — {reason}.",
+  "@statsHardDayNoRecoveryReason": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "statsHardDayToday": "So far, today has the most puffs.",
+  "statsHardDayTodayReason": "So far, today has the most puffs — {reason}.",
+  "@statsHardDayTodayReason": {
+    "placeholders": {
       "reason": {
         "type": "String"
       }
@@ -1540,7 +1637,7 @@
     }
   },
   "statsNicotinePerDay": "NICOTINE / DAY",
-  "statsNicotineValue": "{mg}mg ↓",
+  "statsNicotineValue": "{mg}mg",
   "@statsNicotineValue": {
     "placeholders": {
       "mg": {
@@ -1548,11 +1645,11 @@
       }
     }
   },
+  "statsNicotineDown": "Lower than the previous full day",
+  "statsNicotineUp": "Higher than the previous full day",
   "statsLongestGap": "longest gap",
   "statsBestDay": "best day (puffs)",
   "statsCravingsBeaten": "cravings beaten",
-  "statsEmptyTitle": "Charts show up tomorrow.",
-  "statsEmptyBody": "One day of logs = one dot. Keep logging — the picture draws itself.",
   "statsEditDayTitle": "Edit {date}",
   "@statsEditDayTitle": {
     "placeholders": {

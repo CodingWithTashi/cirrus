@@ -16,8 +16,20 @@ DocumentReference<Map<String, dynamic>> journeyDoc(
   String uid,
 ) => db.collection('journeys').doc(uid);
 
-Future<JourneyState?> fetchJourney(FirebaseFirestore db, String uid) async {
-  final data = (await journeyDoc(db, uid).get()).data();
+/// [source] is Firestore's own choice by default: the server when it can
+/// reach one, the device's copy once it has decided it cannot. Launch asks for
+/// [Source.cache] outright when the server is slow — Firestore's own decision
+/// can take longer than the launch budget — and the post-launch refresh asks
+/// for [Source.server] to get past that copy (docs/10 §40).
+Future<JourneyState?> fetchJourney(
+  FirebaseFirestore db,
+  String uid, {
+  Source source = Source.serverAndCache,
+}) async {
+  final data = (await journeyDoc(
+    db,
+    uid,
+  ).get(GetOptions(source: source))).data();
   if (data == null) return null;
   // Platform channels may hand nested maps back as Map<Object?, Object?>;
   // every value is a JSON primitive by codec contract, so a JSON round-trip

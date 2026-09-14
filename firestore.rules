@@ -24,6 +24,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Whether the caller wrote [postId]. Posts carry no uid (createPost keeps
+    // authorship in the server-only postAuthors map), and a rules get() can
+    // read that map without exposing it to any client. A post with no row —
+    // seeded, or older than the map — has no author to protect.
+    function isAuthorOf(postId) {
+      return signedIn()
+          && exists(/databases/$(database)/documents/postAuthors/$(postId))
+          && get(/databases/$(database)/documents/postAuthors/$(postId)).data.uid == request.auth.uid;
+    }
+
     // --- The quit journey: private, client-owned -------------------------
     match /journeys/{uid} {
       allow read, write: if isOwner(uid);
@@ -91,10 +101,18 @@ service cloud.firestore {
         // server-side (REACTION_EMOJI in functions/src/domain/types.ts,
         // mirrored by CommunityReactions.palette in Dart) — either half alone
         // is sufficient, and both are cheap.
+        //
+        // And nobody reacts to their own post (docs/10 §41). The app gives an
+        // author no pill to press, but that is the app; a repackaged client
+        // wrote the document anyway and `onReaction` counted it for every
+        // reader. Delete stays open above, so a reaction an author left
+        // before this rule can still be taken back — and taking it back is
+        // what lets `onReaction` remove its count.
         allow create, update: if isOwner(uid)
                               && request.resource.data.uid == uid
                               && request.resource.data.emoji is string
-                              && request.resource.data.emoji in ['💪', '🔥', '💬'];
+                              && request.resource.data.emoji in ['💪', '🔥', '💬']
+                              && !isAuthorOf(postId);
       }
 
       // A reply is UGC too, so it gets the same moderation gate as a post:

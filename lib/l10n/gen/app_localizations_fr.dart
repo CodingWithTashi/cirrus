@@ -1426,6 +1426,81 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeSavedSoFar => 'économisés';
 
   @override
+  String get savingsInfoLabel => 'Comment les économies sont calculées';
+
+  @override
+  String get savingsInfoTitle => 'Comment tes économies s\'additionnent';
+
+  @override
+  String get savingsInfoUsualDay => 'Ta journée habituelle';
+
+  @override
+  String savingsInfoUsualDayValue(num puffs, String spend) {
+    String _temp0 = intl.Intl.pluralLogic(
+      puffs,
+      locale: localeName,
+      other: '$puffs bouffées',
+      one: '$puffs bouffée',
+    );
+    return '$_temp0 · $spend';
+  }
+
+  @override
+  String get savingsInfoToday => 'Aujourd\'hui';
+
+  @override
+  String get savingsInfoTodayNotCounted => 'Pas encore comptée';
+
+  @override
+  String savingsInfoTodayValue(num puffs, String saved) {
+    String _temp0 = intl.Intl.pluralLogic(
+      puffs,
+      locale: localeName,
+      other: '$puffs bouffées',
+      one: '$puffs bouffée',
+    );
+    return '$_temp0 · $saved économisés';
+  }
+
+  @override
+  String get savingsInfoTotal => 'Économisés jusqu\'ici';
+
+  @override
+  String get savingsInfoWhyNotCounted =>
+      'Aujourd\'hui compte dès ta première bouffée enregistrée, ou quand tu confirmes une journée sans vape. D\'ici là, rien ne s\'ajoute.';
+
+  @override
+  String savingsInfoWhyKept(int usual, String perPuff, num notTaken) {
+    String _temp0 = intl.Intl.pluralLogic(
+      notTaken,
+      locale: localeName,
+      other: '$notTaken bouffées',
+      one: '$notTaken bouffée',
+    );
+    return 'Chaque bouffée sous tes $usual habituelles te fait garder environ $perPuff. Aujourd\'hui : $_temp0 en moins.';
+  }
+
+  @override
+  String savingsInfoWhyKeptPerTen(int usual, String perTen, num notTaken) {
+    String _temp0 = intl.Intl.pluralLogic(
+      notTaken,
+      locale: localeName,
+      other: '$notTaken bouffées',
+      one: '$notTaken bouffée',
+    );
+    return 'Toutes les 10 bouffées sous tes $usual habituelles te font garder environ $perTen. Aujourd\'hui : $_temp0 en moins.';
+  }
+
+  @override
+  String savingsInfoWhyNothingKept(int usual) {
+    return 'Aujourd\'hui, tu atteins ou dépasses tes $usual bouffées habituelles, donc rien ne s\'ajoute. Demain, on repart de zéro.';
+  }
+
+  @override
+  String get savingsInfoWhyUnpriced =>
+      'Ton plan n\'a pas de dépense hebdomadaire, donc il n\'y a rien à compter pour l\'instant.';
+
+  @override
   String get homeCravingsBeaten => 'cravings vaincus';
 
   @override
@@ -1911,6 +1986,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tu es hors ligne. Rien n\'est perdu — reconnecte-toi et on reprend exactement où tu en étais.';
 
   @override
+  String get splashJourneyUnavailableTitle =>
+      'Impossible de charger ton parcours';
+
+  @override
+  String get splashJourneyUnavailableBody =>
+      'Ta session est toujours ouverte et rien n\'est perdu. Vérifie ta connexion et réessaie.';
+
+  @override
   String get errorGenericTitle => 'Bon, ça a buggé';
 
   @override
@@ -2174,6 +2257,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsPuffsToday => 'TAFFES AUJOURD\'HUI · PAR HEURE';
 
   @override
+  String get statsDayNoPuffs => 'Aucune bouffée enregistrée aujourd\'hui';
+
+  @override
   String get statsPuffsThisMonth => 'TAFFES · 30 DERNIERS JOURS';
 
   @override
@@ -2184,6 +2270,25 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String statsHardDayCaption(String day, String reason) {
     return '$day a été le jour difficile — $reason. Tu t\'es repris·e dès le matin.';
+  }
+
+  @override
+  String statsHardDayNoRecovery(String day) {
+    return '$day a été le jour difficile.';
+  }
+
+  @override
+  String statsHardDayNoRecoveryReason(String day, String reason) {
+    return '$day a été le jour difficile — $reason.';
+  }
+
+  @override
+  String get statsHardDayToday =>
+      'Pour l\'instant, aujourd\'hui est le jour avec le plus de bouffées.';
+
+  @override
+  String statsHardDayTodayReason(String reason) {
+    return 'Pour l\'instant, aujourd\'hui est le jour avec le plus de bouffées — $reason.';
   }
 
   @override
@@ -2208,8 +2313,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String statsNicotineValue(int mg) {
-    return '${mg}mg ↓';
+    return '${mg}mg';
   }
+
+  @override
+  String get statsNicotineDown => 'Plus bas que la journée complète précédente';
+
+  @override
+  String get statsNicotineUp => 'Plus haut que la journée complète précédente';
 
   @override
   String get statsLongestGap => 'plus longue pause';
@@ -2219,13 +2330,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get statsCravingsBeaten => 'cravings vaincus';
-
-  @override
-  String get statsEmptyTitle => 'Les graphiques arrivent demain.';
-
-  @override
-  String get statsEmptyBody =>
-      'Un jour de données = un point. Continue — le dessin se fait tout seul.';
 
   @override
   String statsEditDayTitle(String date) {

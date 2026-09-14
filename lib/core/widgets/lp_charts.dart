@@ -283,6 +283,7 @@ class BarChart extends StatelessWidget {
     this.positive = const {},
     this.gap = 7,
     this.radius = 5,
+    this.showValues = false,
   });
 
   /// Raw values; bars normalize to the max.
@@ -298,6 +299,18 @@ class BarChart extends StatelessWidget {
   final double gap;
   final double radius;
 
+  /// Prints each non-zero value above its bar, inside [height].
+  ///
+  /// Off by default so the coach and Insight charts are unchanged. Stats' Day
+  /// view turns it on: bars normalize to the tallest, so when every puff of
+  /// the day sits in one bucket that bar is already full height, and the
+  /// number is the only thing that can show the next puff landing
+  /// (docs/10 §40).
+  final bool showValues;
+
+  /// Room above the tallest bar for its value.
+  static const double _valueRoom = 16;
+
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
@@ -306,6 +319,7 @@ class BarChart extends StatelessWidget {
     final max = values.isEmpty
         ? 1.0
         : values.fold<double>(0, (m, v) => v.toDouble() > m ? v.toDouble() : m);
+    final track = showValues ? height - _valueRoom : height;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -335,8 +349,8 @@ class BarChart extends StatelessWidget {
                           : isWin
                           ? lp.volt
                           : lp.border;
-                      return Container(
-                        height: height * t,
+                      final bar = Container(
+                        height: track * t,
                         decoration: BoxDecoration(
                           color: color,
                           borderRadius: BorderRadius.circular(radius),
@@ -356,6 +370,38 @@ class BarChart extends StatelessWidget {
                                 ]
                               : null,
                         ),
+                      );
+                      if (!showValues) return bar;
+                      // The value rides on its bar: a fixed-height slot above
+                      // it, so a long number can never push the row past
+                      // [height].
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          SizedBox(
+                            height: _valueRoom - 2,
+                            child: values[i] > 0
+                                ? Text(
+                                    '${values[i]}',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.visible,
+                                    textAlign: TextAlign.center,
+                                    style: LpType.micro(
+                                      isHot
+                                          ? lp.emberText
+                                          : isWin
+                                          ? lp.voltText
+                                          : lp.textSecondary,
+                                      weight: FontWeight.w600,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 2),
+                          bar,
+                        ],
                       );
                     },
                   ),

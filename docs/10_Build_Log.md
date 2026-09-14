@@ -5156,3 +5156,196 @@ Still owed: **production deploy is manual** (Actions → Deploy cirrus-landing �
 production). Emailing the waitlist that the app is out is a founder call. And
 the first App Store screenshot still reads "No account needed" — it is not used
 on the site, but it is on the listing.
+
+## 40. FIVE REPORTS FROM DAY TWO (Sep 13) — a $0 nobody explained, charts that waited a day, a reaction to yourself, a sign-in for an account still signed in, a thread that lost its reply
+
+The founder reported five things from a Pixel 8 on day two of a fresh test
+journey, and asked for each to be confirmed before anything changed. Each was
+reproduced first with a throwaway probe through the real stores and screens
+(deleted afterwards), reported as expected vs actual, and only then fixed.
+
+### 40.1 "$0 saved" until the first puff — kept, now explained
+
+A day counts toward savings only once it is confirmed (`DayLog.isConfirmed`: a
+puff logged, or a vape-free day confirmed). On the helper plan — 100 puffs a day
+at $30 a week — day one read **$0** at zero puffs, **$4** after the first puff
+($4.24: a whole usual day less one puff), and fell from there, while the
+vape-free confirm that would count a clean day only appears after 8 PM. The
+rule is deliberate (an unlogged day is unknown, never a saving) and the founder
+kept it. What was missing was any explanation.
+
+`SavingsInfoButton` (`features/money/savings_info.dart`) is the (i) in the
+corner of Home's savings tile and beside the Money hero — one widget, one sheet.
+Every figure on the sheet comes from `SavingsBreakdown` (`domain/logic/`), which
+takes them from `MoneyEngine`, so it explains the number without computing a
+second one: the usual day ("100 puffs · $4.29"), today ("Not counted yet", or
+"12 puffs · $3.77 kept"), saved so far, and one sentence for the state — not
+counted yet, kept (with the per-puff figure), at or over the usual day, or a
+plan with no spend. In the tile's corner it keeps both bento tiles the same
+height and still gives the tap 44dp. No figure changed, so the coach card's
+parity with `memoryCard.ts` is untouched.
+
+### 40.2 Stats from the first puff
+
+Three bugs. The screen held every card behind `logs.length < 2`, so day one with
+fourteen puffs read "Charts show up tomorrow." on the Day view — whose subject is
+today — and on the week, and day two read it again until its first puff. When
+the week did render, each day of a window as long as the plan was an `Expanded`
+column: two slabs **169px wide on a 411px screen** on day two, one across the
+whole card on day one. And the Day view bucketed 6 AM to midnight in twos, so a
+2:30 AM puff counted in the total and was drawn nowhere (probe: 8 logged, 5
+drawn).
+
+Every card now renders from day one. The Day view is the whole calendar day in
+eight 3-hour buckets, midnight first, and says "No puffs logged today" instead of
+eight slivers. Week and Month are always 7 and 30 slots: a young plan's days to
+come hold their place as faint marks with nothing to press, a bar stops at 26dp
+(9dp on Month), each week bar carries its count, and a bar grows as you log
+(`TweenAnimationBuilder` with an explicit begin). An empty window keeps its
+slots, because an unlogged day is still the long-press target QA H4 needed, under
+"no puffs logged in this window". The nicotine line waits for a second point
+instead of drawing a blank strip. `statsEmptyTitle` and `statsEmptyBody` are gone
+from all five ARBs.
+
+The pass on the Pixel 8 turned up two more. The Day view's bars carried no
+numbers, and bars normalize to the tallest, so on a day whose puffs all sat in
+one bucket the next puff changed nothing on screen: `BarChart` takes
+`showValues` now, off everywhere but the Day view. And the caption under the
+week ended "You recovered next morning." whatever the next morning held — false
+of any day still in progress, so every account read it about today on its first
+day. It is said only when `WeekTrend.recoveredAfter` finds the next day over,
+confirmed and lighter; otherwise "{day} was the difficult day.", and for today
+"So far, today has the most puffs." (four new strings, five locales).
+
+### 40.3 Reacting to your own post
+
+`PostCard` drew the reaction palette under every non-SOS post, the author's own
+included: a new post showed its writer "💪 0 🔥 0 💬 0", and a tap counted for
+everyone. Neither the `reactors/{uid}` rule nor `onReaction` knows who wrote a
+post — posts carry no uid — so nothing refused it.
+
+The author now sees no reaction row until somebody else reacts, then only the
+non-zero counts, as pills with nothing to press (`_ReactionCount`), and
+`CommunityStore.toggleReaction` refuses an `isMine` post as a second lock. **Not
+done:** a server-side guard (`onReaction` skipping a reactor who is the post's
+`postAuthors` uid) needs a functions deploy, so a repackaged client could still
+do it, and reactions authors already left on their own posts still count.
+
+### 40.4 The sign-in screen for an account still signed in
+
+`FirebaseAuthRepository.restoreSession` found the session, then read
+`journeys/{uid}` under a hard five-second `.timeout`; `JourneyStore.restoreSession`
+caught every exception as "proceed signed out", and the splash sent that to
+`/auth`. Nothing had signed anybody out. A probe with the Firebase repository's
+exact timeout shape over the fake backend: a 2s read landed on Home, a 6s read on
+sign-in with the session still open. Why it was intermittent is inferred, not
+observed: the first read after a long gap refreshes the ID and App Check tokens
+over a radio that is still waking, and Firestore's own fallback to its cached
+copy of the document comes later than the budget.
+
+A slow or failed server read now reads the same document from the device's cache
+(`Source.cache`). With nothing cached — a fresh install or a cleared cache on a
+dead connection — the repository throws `JourneyUnavailableException`,
+`restoreSession` answers `SessionRestore.unavailable`, and the splash becomes a
+retry (`splashJourneyUnavailable*`) that also re-runs by itself when the
+connection returns. Sign-in is for `signedOut` only. A cached copy is only as
+fresh as this device's last sync, so after every restore the store reads
+`JourneyRepository.fetchLatest()` (`Source.server`) once and adopts it only when
+nothing changed locally and it differs; a local change is already on its way as a
+whole-document write, the same last-writer-wins every mutation has. The fake
+backend throws the same exception when it is unreachable with a session open.
+
+### 40.5 The notification that opened a thread without its reply
+
+On a cold start from a notification, `AppShell` warms the feed
+(`ref.listen(communityStoreProvider)`) and `PostDetailScreen`'s post-frame
+`ensurePost` opens the thread, within a frame of each other. `_load` replaced the
+whole post list, and the real backend's feed carries reply counts but no reply
+bodies (`const []`), so whichever read finished second won: when it was the feed,
+the thread lost the reply the notification was about, and a post older than the
+50-post page vanished into "That thread is gone". Pull-to-refresh always fixed
+it, which is why it looked intermittent. The suite could not see it: the fake
+answers in call order at zero latency and ships bodies in its feed.
+
+`CommunityStore` now stamps every thread read that lands (`_threadReads`, on a
+counter rather than a clock). A feed read keeps the thread for any post read
+after it began — including one outside its page — never brings back a thread that
+read found gone, and never blanks reply bodies it did not load itself.
+
+**That was one of two causes, and the Pixel 8 found the other.** From a killed
+app, the thread still opened with no replies, and stayed that way for twelve
+minutes until a pull-to-refresh. Temporary `DEBUG-SEP13` log lines (removed, the
+four files verified byte-identical afterwards) showed the order: the thread read
+started with the post not in the list (`posts=0`), the feed landed mid-read and
+added its reply-less copy, then the thread read landed with all nine replies.
+`ensurePost` had decided "not in the list" when it *started*, so it **appended a
+second copy** behind the feed's — and the screen, which takes the first post with
+that id, showed the empty one. Pull-to-refresh replaced both copies, which is why
+it always fixed it. The read now places its result against the list as it is when
+it lands: the first copy is replaced in place and any other dropped; the gone and
+failed branches ask the same question at landing time. The duplicate would also
+have shown the post twice in the feed.
+
+### 40.6 Gates, and the Pixel 8 pass
+
+`flutter analyze` clean; `flutter test` **1881 passed, 28 skipped, 0 failed**. New
+suites: `savings_breakdown_test` (7), `savings_info_test` (4), `stats_day_one_test`
+(9), `own_post_reactions_test` (4), `session_restore_test` (8),
+`community_thread_race_test` (5, the mid-read case red before its fix), and five
+`WeekTrend.recoveredAfter` cases. Existing tests changed only where they pinned the
+old behaviour: the two Day-view cases in `stats_window_test`, the best-day finder
+and the hard-day caption in `stats_numbers_test`, and the `JourneyRepository` fakes
+in `widget_drain_test`.
+
+On the founder's Pixel 8 against production, with a debug build of this tree.
+After one scripted tap landed in another app the founder had opened, every step
+checked that Cirrus held the focus before tapping or capturing, and shade captures
+kept only the Cirrus row.
+
+| Check | Result |
+|---|---|
+| Savings (i), Home and Money | The same sheet from both: 200 puffs · $4.29, 21 puffs · $3.84 kept, $7.69 saved — agreeing with Home's $8 |
+| Week bars | Two 26dp bars reading 20 and 21, five faint slots to come; a live puff moved 21 → 22, taken back with the day editor |
+| Caption | "So far, today has the most puffs." where it had claimed a recovery from today |
+| Day view | 12 AM → 9 PM, "21" on the 6 PM bucket |
+| Own post | No reaction row; a synthetic reader's 💪 (a real `reactors/{uid}` write, removed afterwards) rendered read-only, and a tap changed nothing |
+| Relaunch with the app's network cut | Splash at 3s, Home from the cached copy with the offline banner at 7s and 12s; the banner cleared once the network was back |
+| Notification tap, app killed | Previous build: the thread opened with no replies and was still empty twelve minutes later. Fixed build, two confirmed-kill runs: all nine replies on first open |
+
+Left on the account: the test puff logged at 8:01 PM and taken back moved
+`lastPuffAt` to 8:01 PM; the count is unchanged. Not demonstrable on this account:
+the savings sheet's before-the-first-puff wording, since the day already had 21 puffs
+(`savings_info_test` pins it). Still owed: the server-side reaction guard (40.3), and
+a commit.
+
+## 41. WHAT §40 LEFT OPEN (Sep 13) — a reaction the server still took, a "last puff" that outlived its Undo, an arrow that always pointed down
+
+The three items §40 closed on, and what fixing them turned up. App, rules and tests only; **not committed**, and the rules are **not deployed**.
+
+### 41.1 The server refuses a reaction to your own post
+
+§40.3 hid the palette from the author, but any client could still write `posts/{id}/reactors/{uid}` for its own post and `onReaction` would count it. No function change was needed: `firestore.rules` gains `isAuthorOf(postId)` — `exists()` + `get()` on the server-only `postAuthors/{postId}` — and the reactors create/update rule now ends `&& !isAuthorOf(postId)`. Delete stays open to the reactor, so anything written before the rule can still be taken back; a post with no `postAuthors` row (seeded) is unaffected. Four new cases in `functions/test/rules/firestore.rules.test.ts`; `npm run test:rules` 57/57.
+
+Self-reactions already stored: `tool/reaction_self_backfill.mjs` (a dry run unless `--apply`, which deletes them and lets `onReaction` take the counts back) scanned production on Sep 13 — 1 authored post, **0 self-reactions**, nothing to backfill. **To deploy:** `firebase deploy --only firestore:rules`.
+
+### 41.2 The nicotine card
+
+`statsNicotineValue` was `"{mg}mg ↓"` in all five locales. The arrow was copy, so it pointed down beside a line that climbed. The figure was the second-to-last LOGGED day — the day before yesterday on any morning before the first puff — and the line plotted every log, so an unlogged day dropped it to zero and today's unfinished count dragged its end down. `NicotineTrend.of` (`domain/logic/nicotine_trend.dart`) works over completed, confirmed days only: the figure is the latest of them (`—` before one exists), and the arrow is an icon — down in volt, up in ember, with a spoken label — that appears only when two such days say which way it went.
+
+### 41.3 "Before your first puff"
+
+§40.6 could not show the savings sheet's before-the-first-puff wording on the founder's account, which already had 21 puffs that day. `savings_info_test` pins it; **it has not been seen on a device** — the fresh-account pass was dropped when the session was wrapped up.
+
+While there: the "why" sentence priced a single puff, and on a typical plan one puff rounds to a few cents — "about $0.04" × 88 is $3.52 beside a line reading $3.77. Under 10¢ a puff it now prices ten (`savingsInfoWhyKeptPerTen`), which adds up.
+
+### 41.4 Found while fixing
+
+- **Undo left "last puff" where the undone puff had put it.** `lastPuffAt` only ever moved forward, so an accidental tap and its Undo restarted the health timeline from the tap — §40.6's device pass did exactly that to the founder's account. `JourneyStore` keeps a session trail of the anchor each puff replaced and follows it back on undo while it still matches; `PuffAnchor.settle` then keeps the anchor in an hour that still holds a puff, at that hour's end, so the stretch since the last puff never reads longer than it was. A day whose buckets do not add up to its count has no hours to judge by — the rule `PuffGaps` already applies. The trail is cleared on sign-out and account deletion, and put back when a widget drain is refused.
+- **Past-day corrections never moved it at all.** Answering the morning-after "I vaped" for an unlogged yesterday left the timeline counting from the day before. Puffs added on or after the anchor's day now move it to the end of that day, never past now; a day corrected to 0 loses its hour buckets, and if it held the last puff the anchor moves back to the last one still logged (none: Health's "no puff on record").
+- **"vs day 1" compared any two logs.** The first and last logs of any kind, so a skipped yesterday read "-100% vs day 1" — and the chip was volt for "+20%" too. `TodaySnapshot.vsDay1Percent` is `int?`: plan day one, when it had puffs, against the latest confirmed completed day after it; null — never 0, which means flat — when there is none. Home hides the chip on null and shows an increase in ember; the trial-ending card says `—`; the fake coach's rough-day line that quotes the drop is offered only when there is a drop to quote.
+- **Your own SOS offered you "I got you".** The chip shows only on other people's SOS posts; the author sees how many replied.
+- **A confirmed vape-free day's bar had no number.** Week bars now print its 0; an unlogged day still prints nothing.
+
+### 41.5 Gates
+
+`flutter analyze` clean · full suite 1916 passed, 28 skipped, 0 failed · `npm run test:rules` 57/57. **No device pass for §41.**

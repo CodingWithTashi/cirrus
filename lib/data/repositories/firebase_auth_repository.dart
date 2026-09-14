@@ -34,18 +34,39 @@ class FirebaseAuthRepository implements AuthRepository {
   /// google_sign_in v7 must be initialized exactly once per process.
   Future<void>? _googleInit;
 
+  /// How long launch waits on the server before reading the device's copy.
+  static const _serverBudget = Duration(seconds: 5);
+
   @override
   Future<JourneyState?> restoreSession() async {
-    // First emission, never `currentUser` — a cold start may not have loaded
-    // the persisted session yet. The timeouts keep the splash's Future.wait
-    // from hanging on a dead wire; the store treats the throw as signed out.
+    // First emission, never `currentUser` alone — a cold start may not have
+    // loaded the persisted session yet. It is read from disk, so the timeout
+    // is the rare case; when it fires, whatever the SDK holds by then answers.
     final user = await _auth.authStateChanges().first.timeout(
       const Duration(seconds: 5),
+      onTimeout: () => _auth.currentUser,
     );
     if (user == null) return null;
-    return guardAuth(
-      () => fetchJourney(_db, user.uid),
-    ).timeout(const Duration(seconds: 5));
+    try {
+      return await guardAuth(
+        () => fetchJourney(_db, user.uid),
+      ).timeout(_serverBudget);
+    } on Exception {
+      // The session is real; only the READ failed. This used to throw
+      // straight to the store, which read every throw as "signed out" — so a
+      // returning user whose first read after a long gap outlasted the budget
+      // (tokens to refresh, a radio still waking) was shown the sign-in screen
+      // for an account they were still signed into (docs/10 §40). Firestore
+      // keeps this document on the device, and its own fallback to that copy
+      // arrives later than the budget, so the copy is asked for directly.
+      try {
+        return await fetchJourney(_db, user.uid, source: Source.cache);
+      } on Exception {
+        // Nothing on the device either — a fresh install or a cleared cache
+        // on a dead connection. Still a session: the splash offers a retry.
+        throw const JourneyUnavailableException();
+      }
+    }
   }
 
   @override

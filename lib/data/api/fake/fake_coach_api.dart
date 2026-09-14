@@ -73,7 +73,7 @@ class FakeCoachApi implements CoachApi {
       CoachTemplate.craving2,
       CoachTemplate.craving3,
     ]),
-    CoachChip.roughDay => _rotate([CoachTemplate.rough1, CoachTemplate.rough2]),
+    CoachChip.roughDay => _rough(),
     CoachChip.slipped => _rotate([CoachTemplate.slip1, CoachTemplate.slip2]),
     CoachChip.progress => _rotate([
       CoachTemplate.progress1,
@@ -108,7 +108,7 @@ class FakeCoachApi implements CoachApi {
       return _rotate([CoachTemplate.progress1, CoachTemplate.progress2]);
     }
     if (hasAny(['rough', 'stress', 'work is', 'bad day', 'tired', 'insane'])) {
-      return _rotate([CoachTemplate.rough1, CoachTemplate.rough2]);
+      return _rough();
     }
     return _rotate([
       CoachTemplate.generic1,
@@ -126,18 +126,35 @@ class FakeCoachApi implements CoachApi {
     return pool[_random.nextInt(pool.length)];
   }
 
+  /// `rough1` ends "you're still {percent}% under your old baseline", so it is
+  /// offered only when there is a real drop to quote (docs/10 §41). It said
+  /// "0% under" before there was anything to compare, and "-20% under" to
+  /// somebody whose count had gone up.
+  CoachTemplate _rough() {
+    final percent = _snapshot()?.vsDay1Percent;
+    return percent != null && percent < 0
+        ? _rotate([CoachTemplate.rough1, CoachTemplate.rough2])
+        : CoachTemplate.rough2;
+  }
+
+  /// The journey the client last synced, as the numbers replies quote.
+  TodaySnapshot? _snapshot() {
+    final json = _server.journeyJsonForCurrentSession();
+    if (json == null) return null;
+    return TodaySnapshot.of(JourneyCodec.decode(json), _server.now());
+  }
+
   /// The user's real numbers, derived from the journey the client last synced.
   Map<String, Object> _args() {
-    final json = _server.journeyJsonForCurrentSession();
-    if (json == null) return const {};
-    final snap = TodaySnapshot.of(JourneyCodec.decode(json), _server.now());
+    final snap = _snapshot();
+    if (snap == null) return const {};
     return {
       'day': snap.dayNumber,
       'today': snap.puffs,
       'limit': snap.limit,
       'count': snap.cravingsSurvivedTotal,
       'saved': snap.savedLifetime,
-      'percent': -snap.vsDay1Percent,
+      'percent': -(snap.vsDay1Percent ?? 0),
       'streak': snap.streak,
     };
   }

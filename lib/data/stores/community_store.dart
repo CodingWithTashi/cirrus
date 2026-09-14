@@ -108,6 +108,16 @@ class CommunityStore extends Notifier<CommunityState> {
   /// instant the duplicate call returns rather than when the read lands.
   final Set<String> _reading = {};
 
+  /// Thread reads that LANDED, by post id: when, on [_clock], and whether the
+  /// post turned out to be gone. A feed load checks this so it never
+  /// overwrites a thread read that finished after the feed read began
+  /// (docs/10 §40).
+  final Map<String, ({int at, bool gone})> _threadReads = {};
+
+  /// A counter rather than a wall clock: all it answers is which of two reads
+  /// began or landed first, and a device clock can move backwards.
+  int _clock = 0;
+
   bool Function() _alive = () => false;
 
   @override
@@ -126,6 +136,7 @@ class CommunityStore extends Notifier<CommunityState> {
     // Plain fields survive `invalidateSelf`, and a stale id here would refuse
     // the next session's first read of that thread.
     _reading.clear();
+    _threadReads.clear();
     unawaited(_load());
     unawaited(_restorePrefs());
     return const CommunityState(posts: []);
@@ -161,6 +172,9 @@ class CommunityStore extends Notifier<CommunityState> {
   }
 
   Future<void> _load() async {
+    // Taken before the await: what matters is whether a thread read landed
+    // while THIS read was on the wire.
+    final startedAt = ++_clock;
     try {
       final posts = await _repo.fetchPosts();
       if (_alive()) {
@@ -169,14 +183,50 @@ class CommunityStore extends Notifier<CommunityState> {
         // rows across is what stops a pull-to-refresh — now a one-swipe
         // gesture rather than a rare error-state retry — from silently
         // erasing an unsent post, its text and its Retry control.
+        //
+        // Nor may it overwrite a thread read that landed after it began. On a
+        // cold start from a notification the shell warms this feed and the tap
+        // opens its thread within a frame of each other, and whichever read
+        // finished second used to win: when it was the feed, the thread lost
+        // the reply the notification was about — or, older than the page,
+        // vanished into "That thread is gone" (docs/10 §40). The page carries
+        // reply counts but no reply bodies on the real backend, so bodies
+        // already loaded are kept too.
         final fromServer = {for (final p in posts) p.id};
+        final held = {for (final p in state.posts) p.id: p};
+        ({int at, bool gone})? readSince(String id) {
+          final read = _threadReads[id];
+          return read != null && read.at > startedAt ? read : null;
+        }
+
+        Post? merge(Post fromPage) {
+          final read = readSince(fromPage.id);
+          final loaded = held[fromPage.id];
+          if (read != null) return read.gone ? null : loaded ?? fromPage;
+          if (loaded != null &&
+              fromPage.replies.isEmpty &&
+              loaded.replies.isNotEmpty) {
+            return fromPage.copyWith(replies: loaded.replies);
+          }
+          return fromPage;
+        }
+
         final unsent = [
           for (final p in state.posts)
             if (!fromServer.contains(p.id) && _isLocalOnly(p.id)) p,
         ];
+        final opened = [
+          for (final p in state.posts)
+            if (!fromServer.contains(p.id) &&
+                !_isLocalOnly(p.id) &&
+                readSince(p.id)?.gone == false)
+              p,
+        ];
         state = state.copyWith(
-          // Newest first, and an unsent post was written just now.
-          posts: [...unsent, ...posts],
+          // Newest first, and an unsent post was written just now. A thread
+          // opened during the read and missing from the page is older than
+          // everything on it.
+          posts: [...unsent, for (final p in posts) ?merge(p), ...opened],
           status: FeedStatus.ready,
         );
         _watchUnsettled(posts);
@@ -265,7 +315,13 @@ class CommunityStore extends Notifier<CommunityState> {
         //
         // `live` is only ever written by the server, so "mine and not live"
         // is exactly the set that may have no document yet.
-        if (cached && !_isLocalOnly(postId)) {
+        final localOnly = _isLocalOnly(postId);
+        // Remembered, so a feed read already on the wire cannot put the post
+        // back from a page it fetched before the thread was found gone.
+        if (!localOnly) _threadReads[postId] = (at: ++_clock, gone: true);
+        // Whether it is in the list NOW — a feed that landed during the read
+        // may have added it — not whether it was when the read began.
+        if (!localOnly && state.posts.any((p) => p.id == postId)) {
           state = state.copyWith(
             posts: [
               for (final p in state.posts)
@@ -276,14 +332,28 @@ class CommunityStore extends Notifier<CommunityState> {
         _setThread(postId, FeedStatus.ready);
         return;
       }
-      state = state.copyWith(
-        posts: cached
-            ? [
-                for (final p in state.posts)
-                  if (p.id == postId) post else p,
-              ]
-            : [...state.posts, post],
-      );
+      // Remembered, so a feed read that was already on the wire when this
+      // landed cannot overwrite it (see `_load`).
+      _threadReads[postId] = (at: ++_clock, gone: false);
+      // Placed against the list as it is NOW, never as it was when the read
+      // began. A feed that lands mid-read has already added its own copy of
+      // the post, and this used to decide "not in the list" at the start and
+      // append a second one behind it — the screen found the feed's copy
+      // first, with no replies, until a pull-to-refresh replaced both. Caught
+      // on a Pixel 8 from a killed-app notification tap (docs/10 §40). The
+      // first copy is replaced in place, any other dropped.
+      final next = <Post>[];
+      var placed = false;
+      for (final p in state.posts) {
+        if (p.id != postId) {
+          next.add(p);
+        } else if (!placed) {
+          next.add(post);
+          placed = true;
+        }
+      }
+      if (!placed) next.add(post);
+      state = state.copyWith(posts: next);
       _setThread(postId, FeedStatus.ready);
       if (post.status == PostStatus.pending || post.status == PostStatus.held) {
         _watch(postId);
@@ -292,8 +362,11 @@ class CommunityStore extends Notifier<CommunityState> {
       if (!_alive()) return;
       // A failed REFRESH must not blank a thread we can already show — the
       // cached copy is stale, not wrong, and an error screen over readable
-      // content is the worse of the two.
-      if (!cached) _setThread(postId, FeedStatus.failed);
+      // content is the worse of the two. "Can already show" is asked now:
+      // the feed may have landed the post while this read was failing.
+      if (!state.posts.any((p) => p.id == postId)) {
+        _setThread(postId, FeedStatus.failed);
+      }
     } finally {
       _reading.remove(postId);
     }
@@ -542,7 +615,9 @@ class CommunityStore extends Notifier<CommunityState> {
 
   void toggleReaction(String postId, String emoji) {
     final post = state.posts.where((p) => p.id == postId).firstOrNull;
-    if (post == null) return;
+    // Nobody reacts to their own post. The card gives its author no pill to
+    // press; this is the second lock on that door (docs/10 §40).
+    if (post == null || post.isMine) return;
     final on = !post.myReactions.contains(emoji);
     state = state.copyWith(
       posts: [

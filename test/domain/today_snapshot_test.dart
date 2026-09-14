@@ -50,7 +50,11 @@ void main() {
     expect(LpFormat.money(snap.savedLifetime, 'en'), r'$3');
     expect(snap.puffsNotTaken, 64);
     expect(snap.savedRunRatePerDay, closeTo(64 * 30 / 700, 1e-9));
-    expect(snap.vsDay1Percent, 0, reason: 'one completed day is not a trend');
+    expect(
+      snap.vsDay1Percent,
+      isNull,
+      reason: 'one completed day is not a trend, and not a flat one either',
+    );
     expect(snap.dangerWindow, isNull);
     expect(snap.daysToFreedom, 28);
     expect(snap.isFreedomDay, isFalse);
@@ -163,14 +167,27 @@ void main() {
     );
   });
 
-  test('vs day 1 compares the latest completed day to the first', () {
+  test('vs day 1 compares the latest confirmed day to day one', () {
     final now = DateTime(2026, 9, 8, 9);
     final s = journeyOnDay(5, now: now, puffsByDay: {1: 100, 4: 60});
     expect(TodaySnapshot.of(s, now).vsDay1Percent, -40);
     final up = journeyOnDay(5, now: now, puffsByDay: {1: 50, 4: 60});
     expect(TodaySnapshot.of(up, now).vsDay1Percent, 20);
-    // A day 1 with nothing logged has no baseline to compare against.
+    // A day one with no puffs has no baseline: no comparison at all — null,
+    // never the 0 that means "flat" (docs/10 §41).
     final zero = journeyOnDay(5, now: now, puffsByDay: {1: 0, 4: 60});
-    expect(TodaySnapshot.of(zero, now).vsDay1Percent, 0);
+    expect(TodaySnapshot.of(zero, now).vsDay1Percent, isNull);
+  });
+
+  test('an unlogged day is skipped, never read as a -100% day', () {
+    // Day four was never logged. Counted as zero puffs it read "-100% vs
+    // day 1" on Home; the comparison is with day three instead.
+    final now = DateTime(2026, 9, 8, 9);
+    final s = journeyOnDay(5, now: now, puffsByDay: {1: 100, 3: 70});
+    final dayFour = LpDate.addDays(s.plan.startDate, 3);
+    final skipped = s.copyWith(
+      days: {...s.days, dayFour: DayLog(date: dayFour, puffs: 0, limit: 80)},
+    );
+    expect(TodaySnapshot.of(skipped, now).vsDay1Percent, -30);
   });
 }

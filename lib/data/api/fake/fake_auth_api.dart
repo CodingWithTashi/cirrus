@@ -10,9 +10,21 @@ class FakeAuthApi implements AuthApi {
 
   final FakeServer _server;
 
+  /// The session is the device's and the journey the server's, so a server
+  /// that cannot be reached while a session is open is a journey that cannot
+  /// be read — never a signed-out person (docs/10 §40). The fake keeps no
+  /// on-device copy to fall back to, so this is what a fresh install on a dead
+  /// connection meets on the real backend: the splash's retry, not sign-in.
   @override
-  Future<Map<String, dynamic>?> restoreSession() =>
-      _server.respond(_server.journeyJsonForCurrentSession);
+  Future<Map<String, dynamic>?> restoreSession() {
+    if (!_server.reachable && _server.hasSession) {
+      return Future<Map<String, dynamic>?>.delayed(
+        _server.latency,
+        () => throw const JourneyUnavailableException(),
+      );
+    }
+    return _server.respond(_server.journeyJsonForCurrentSession);
+  }
 
   @override
   Future<Map<String, dynamic>?> signInWithEmail({

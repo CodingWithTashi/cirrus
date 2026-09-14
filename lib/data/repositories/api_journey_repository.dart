@@ -26,5 +26,11 @@ class ApiJourneyRepository implements JourneyRepository {
       _api.saveJourney(JourneyCodec.encode(journey));
 
   @override
+  Future<JourneyState?> fetchLatest() async {
+    final json = await _api.fetchJourney();
+    return json == null ? null : JourneyCodec.decode(json);
+  }
+
+  @override
   Future<void> delete() => _api.deleteJourney();
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,15 +9,30 @@ import '../../domain/logic/dependence_engine.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/games/game_score.dart';
 import '../../domain/logic/money_engine.dart';
+import '../../domain/logic/puff_anchor.dart';
 import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/repositories/repositories.dart';
+import '../dto/journey_codec.dart';
 import '../seed/seed_data.dart';
 import 'pending_puffs.dart';
 import 'providers.dart';
+
+/// What a launch-time [JourneyStore.restoreSession] found.
+enum SessionRestore {
+  /// A journey is live — restored now, or already there.
+  restored,
+
+  /// Nobody is signed in, or the account has no journey yet: sign-in.
+  signedOut,
+
+  /// Somebody IS signed in and their journey could not be read: a retry,
+  /// never sign-in (docs/10 §40).
+  unavailable,
+}
 
 /// View model of the quit journey. Session lifecycle is awaited API work
 /// (auth + journey creation); every other mutation is optimistic: applied
@@ -201,6 +217,9 @@ class JourneyStore extends Notifier<JourneyState?> {
   }) async {
     final before = state;
     if (before == null || events.isEmpty) return 0;
+    // Put back with the journey if the write is refused below: those puffs
+    // never landed, so neither did the anchors they set or took back.
+    final trailBefore = List.of(_anchorTrail);
 
     var highest = 0;
     _batchedPuffLogs = 0;
@@ -270,7 +289,12 @@ class JourneyStore extends Notifier<JourneyState?> {
       // puffs along) and the cursor still does not move: `restoreSession`
       // replaces the journey from the backend whenever an account is
       // established, and the events drain onto it exactly once.
-      if (identical(state, next)) state = before;
+      if (identical(state, next)) {
+        state = before;
+        _anchorTrail
+          ..clear()
+          ..addAll(trailBefore);
+      }
       // Discarded, not flushed: none of these taps landed.
       _batchedPuffLogs = 0;
       return 0;
@@ -300,16 +324,49 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   /// Splash-time restore. Never clobbers an already-live journey (the frame
   /// map and tests seed state before navigation), and never blocks launch on
-  /// a dead connection — no session restored simply lands on sign-in.
-  Future<void> restoreSession() async {
-    if (state != null) return;
+  /// a dead connection.
+  ///
+  /// Answers what it found, because the splash has to tell apart two failures
+  /// that used to share one outcome: nobody is signed in (sign-in), and
+  /// somebody IS signed in whose journey could not be read (a retry). Every
+  /// throw used to read as the first, so a returning user whose launch read
+  /// outlasted its budget was shown the sign-in screen for an account they
+  /// were still signed into (docs/10 §40).
+  Future<SessionRestore> restoreSession() async {
+    if (state != null) return SessionRestore.restored;
     try {
       final restored = await _auth.restoreSession();
-      if (restored != null && state == null) state = restored;
-      if (restored != null) _onSessionEstablished();
+      if (restored == null) return SessionRestore.signedOut;
+      if (state == null) state = restored;
+      _onSessionEstablished();
+      _adoptServerCopy(restored);
+      return SessionRestore.restored;
+    } on JourneyUnavailableException {
+      return SessionRestore.unavailable;
     } on Exception {
-      // Offline or backend hiccup at launch — proceed signed out.
+      // No session could be read at all — proceed signed out.
+      return SessionRestore.signedOut;
     }
+  }
+
+  /// Launch may have restored the copy of the journey this device keeps —
+  /// what `restoreSession` falls back to when the server is too slow — and
+  /// that copy is only as fresh as this device's last sync. So the server's
+  /// copy is read once, in the background, and adopted only when nothing has
+  /// changed locally since: a local change is already on its way to the server
+  /// as a whole-document write, the same last-writer-wins every mutation here
+  /// has always had.
+  void _adoptServerCopy(JourneyState restored) {
+    _journeys
+        .fetchLatest()
+        .then((latest) {
+          if (latest == null || !identical(state, restored)) return;
+          final same =
+              jsonEncode(JourneyCodec.encode(latest)) ==
+              jsonEncode(JourneyCodec.encode(restored));
+          if (!same) state = latest;
+        })
+        .ignore();
   }
 
   /// Returns true when the account had a journey to restore; false → the
@@ -381,6 +438,8 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Optimistic: signed out locally at once, the API ack is write-behind.
   void signOut() {
     state = null;
+    // The undo trail names this account's puffs (docs/10 §41).
+    _anchorTrail.clear();
     // Before the sign-out call, so the identity is unbound even if the ack
     // never lands. On a shared phone the alternative is the next person's
     // events arriving under the last person's user id — and, for billing,
@@ -449,6 +508,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     // swallowed; the `deleteToken` is the part that matters.
     ref.read(pushTokenRegistrarProvider).forget();
     ref.read(userContextRepositoryProvider).unregister().ignore();
+    _anchorTrail.clear();
     state = null;
   }
 
@@ -463,6 +523,20 @@ class JourneyStore extends Notifier<JourneyState?> {
   void seedDemoJourney() => _commit(SeedData.journey(_now));
 
   // ---- daily log ------------------------------------------------------------
+
+  /// What "last puff" was before each puff logged this session, newest last
+  /// (docs/10 §41).
+  ///
+  /// Undo used to leave `lastPuffAt` wherever the undone puff had put it, so
+  /// an accidental tap and its Undo restarted the health timeline from the
+  /// tap: the puff was gone and its clock stayed. Each entry names the day the
+  /// puff went to, the anchor before it and the anchor it set. An undo follows
+  /// the trail back only while the anchor still matches, so an entry that a
+  /// sign-out, a refused drain or a server copy has overtaken is never used.
+  final _anchorTrail = <({DateTime day, DateTime? before, DateTime? after})>[];
+
+  /// A session convenience, not history.
+  static const _anchorTrailCap = 200;
 
   /// [count] > 1 is one tap of the accelerating quick-log worth several
   /// puffs. The over-limit transition below is applied puff by puff, so a
@@ -545,12 +619,24 @@ class JourneyStore extends Notifier<JourneyState?> {
     // so that would silently rewind every recovery node the user had earned.
     final anchor = s.lastPuffAt;
     final lastPuff = anchor == null || when.isAfter(anchor) ? when : anchor;
+    // One entry per puff: taking back part of a burst keeps the burst's time,
+    // and taking back all of it restores the time before it.
+    for (var i = 0; i < count; i++) {
+      _anchorTrail.add((
+        day: key,
+        before: i == 0 ? anchor : lastPuff,
+        after: lastPuff,
+      ));
+    }
+    if (_anchorTrail.length > _anchorTrailCap) {
+      _anchorTrail.removeRange(0, _anchorTrail.length - _anchorTrailCap);
+    }
 
     _commit(
       _withBadges(
         s.copyWith(
           days: {...s.days, key: updated},
-          lastPuffAt: lastPuff,
+          lastPuffAt: () => lastPuff,
           pendingSlipCleanDays: () => pendingSlip,
           day1TasksDone: {...s.day1TasksDone, 0},
         ),
@@ -591,17 +677,24 @@ class JourneyStore extends Notifier<JourneyState?> {
       }
       remaining--;
     }
-    _commit(
-      s.copyWith(
-        days: {
-          ...s.days,
-          key: log.copyWith(
-            puffs: log.puffs - removed,
-            hourBuckets: buckets,
-          ),
-        },
-      ),
-    );
+    final days = {
+      ...s.days,
+      key: log.copyWith(puffs: log.puffs - removed, hourBuckets: buckets),
+    };
+    // Taking puffs back takes their clock back too (docs/10 §41): follow this
+    // session's trail while it still matches the anchor, then make sure the
+    // anchor sits in an hour that still holds a puff.
+    var anchor = s.lastPuffAt;
+    var undone = 0;
+    while (undone < removed &&
+        _anchorTrail.isNotEmpty &&
+        _anchorTrail.last.day == key &&
+        _anchorTrail.last.after == anchor) {
+      anchor = _anchorTrail.removeLast().before;
+      undone++;
+    }
+    final settled = PuffAnchor.settle(days, anchor);
+    _commit(s.copyWith(days: days, lastPuffAt: () => settled));
   }
 
   /// Marks [date] — today by default — as a confirmed vape-free day.
@@ -654,22 +747,42 @@ class JourneyStore extends Notifier<JourneyState?> {
     // plan said that day.
     final log =
         s.days[key] ?? DayLog(date: key, puffs: 0, limit: s.limitOn(key));
-    _commit(
-      _withBadges(
-        s.copyWith(
-          days: {
-            ...s.days,
-            key: log.copyWith(
-              puffs: puffs,
-              // Typing 0 for a past day is the user's own word that it was
-              // vape-free — the sheet asked for a count and they gave one.
-              // Left unconfirmed, correcting a mis-tap down to zero would
-              // silently break the chain it was meant to repair.
-              vapeFreeConfirmed: puffs == 0 ? true : log.vapeFreeConfirmed,
-            ),
-          },
-        ),
+    final days = {
+      ...s.days,
+      key: log.copyWith(
+        puffs: puffs,
+        // A typed 0 leaves no hour with a puff in it. The buckets kept the old
+        // count's hours, so a day corrected to zero still read as holding
+        // puffs to anything that walks them (docs/10 §41).
+        hourBuckets: puffs == 0 ? const <int, int>{} : null,
+        // Typing 0 for a past day is the user's own word that it was
+        // vape-free — the sheet asked for a count and they gave one.
+        // Left unconfirmed, correcting a mis-tap down to zero would
+        // silently break the chain it was meant to repair.
+        vapeFreeConfirmed: puffs == 0 ? true : log.vapeFreeConfirmed,
       ),
+    };
+    // "Last puff" moves with a correction (docs/10 §41). Fewer puffs: it may
+    // no longer name one that exists. Puffs added on its own day or a later
+    // one carry no time, so they count as late as that day allows — the
+    // morning-after "I vaped" used to leave the health timeline running from
+    // two days back. Never later than now.
+    var anchor = PuffAnchor.settle(days, s.lastPuffAt);
+    final anchorDay = anchor == null ? null : LpDate.dayStart(anchor);
+    if (puffs > 0 &&
+        !key.isAfter(_todayKey) &&
+        (anchorDay == null ||
+            key.isAfter(anchorDay) ||
+            (key == anchorDay && puffs > log.puffs))) {
+      final endOfDay = LpDate.addDays(
+        key,
+        1,
+      ).subtract(const Duration(seconds: 1));
+      anchor = endOfDay.isAfter(_now) ? _now : endOfDay;
+    }
+    final settled = anchor;
+    _commit(
+      _withBadges(s.copyWith(days: days, lastPuffAt: () => settled)),
     );
   }
 

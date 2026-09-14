@@ -145,14 +145,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l10n.statsPuffsToday), findsOneWidget);
 
-    // Every hour bar is zero: nothing was logged today. The old code drew
-    // Sep 27's 10 AM bucket here.
-    final chart = tester.widget<BarChart>(find.byType(BarChart).first);
-    expect(
-      chart.values.every((v) => v == 0),
-      isTrue,
-      reason: chart.values.toString(),
-    );
+    // Nothing was logged today, so nothing is drawn: a sentence, rather than
+    // Sep 27's 10 AM bucket (the old bug) or a row of empty slivers that read
+    // as a chart of zeros (docs/10 §40).
+    expect(find.text(l10n.statsDayNoPuffs), findsOneWidget);
+    expect(find.byType(BarChart), findsNothing);
   });
 
   testWidgets('long-pressing the Day view fixes today, as the caption says', (
@@ -162,7 +159,7 @@ void main() {
     await tester.tap(find.text(l10n.statsRangeDay));
     await tester.pumpAndSettle();
 
-    await tester.longPress(find.byType(BarChart).first);
+    await tester.longPress(find.text(l10n.statsDayNoPuffs));
     await tester.pumpAndSettle();
 
     expect(

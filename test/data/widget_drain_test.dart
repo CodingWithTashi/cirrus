@@ -624,6 +624,9 @@ class _BlockingJourneys implements JourneyRepository {
   }
 
   @override
+  Future<JourneyState?> fetchLatest() => _inner.fetchLatest();
+
+  @override
   Future<void> delete() => _inner.delete();
 }
 
@@ -672,6 +675,9 @@ class _CountingJourneys implements JourneyRepository {
     saves++;
     return _inner.save(journey);
   }
+
+  @override
+  Future<JourneyState?> fetchLatest() => _inner.fetchLatest();
 
   @override
   Future<void> delete() => _inner.delete();

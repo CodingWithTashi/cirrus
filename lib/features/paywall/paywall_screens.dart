@@ -1580,7 +1580,12 @@ class TrialEndingScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         stat(
-                          LpFormat.signedPercent(snap?.vsDay1Percent ?? 0),
+                          // No comparison yet is a dash, never
+                          // the "0%" that means nothing changed.
+                          switch (snap?.vsDay1Percent) {
+                            final pct? => LpFormat.signedPercent(pct),
+                            null => '—',
+                          },
                           l10n.trialEndingVsDay1,
                         ),
                         stat(

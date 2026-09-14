@@ -100,7 +100,7 @@ class JourneyState {
     int? longestStreak,
     List<SavingsGoal>? goals,
     Set<String>? earnedBadges,
-    DateTime? lastPuffAt,
+    DateTime? Function()? lastPuffAt,
     Set<int>? day1TasksDone,
     bool? day1TourSkipped,
     int? Function()? pendingSlipCleanDays,
@@ -117,7 +117,9 @@ class JourneyState {
     longestStreak: longestStreak ?? this.longestStreak,
     goals: goals ?? this.goals,
     earnedBadges: earnedBadges ?? this.earnedBadges,
-    lastPuffAt: lastPuffAt ?? this.lastPuffAt,
+    // A thunk, like `pendingSlipCleanDays`: taking back the only logged puff
+    // leaves no anchor at all, which a plain `??` can never say (docs/10 §41).
+    lastPuffAt: lastPuffAt != null ? lastPuffAt() : this.lastPuffAt,
     day1TasksDone: day1TasksDone ?? this.day1TasksDone,
     day1TourSkipped: day1TourSkipped ?? this.day1TourSkipped,
     pendingSlipCleanDays: pendingSlipCleanDays != null
@@ -168,12 +170,23 @@ class TodaySnapshot {
     final logs = s.days.values.where((l) => !l.date.isAfter(todayKey)).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
     final completed = logs.where((l) => l.date.isBefore(todayKey)).toList();
-    int vsDay1 = 0;
-    if (completed.length >= 2) {
-      final first = completed.first.puffs;
-      final latest = completed.last.puffs;
-      if (first > 0) vsDay1 = (((latest - first) / first) * 100).round();
-    }
+    // Plan day one against the latest completed day after it, CONFIRMED days
+    // only (docs/10 §41). It compared the first and last logs of any kind, so
+    // a skipped yesterday — unlogged, so zero puffs — read "-100% vs day 1".
+    // Null when there is nothing honest to compare; never 0, which already
+    // means "flat".
+    final dayOneKey = JourneyState.dateKey(plan.startDate);
+    final dayOne = s.days[dayOneKey];
+    final latestAfter = completed
+        .where((l) => l.isConfirmed && l.date.isAfter(dayOneKey))
+        .lastOrNull;
+    final vsDay1 =
+        dayOne != null &&
+            dayOne.puffs > 0 &&
+            dayOne.date.isBefore(todayKey) &&
+            latestAfter != null
+        ? (((latestAfter.puffs - dayOne.puffs) / dayOne.puffs) * 100).round()
+        : null;
     final recent = completed.length > 7
         ? completed.sublist(completed.length - 7)
         : completed;
@@ -211,8 +224,11 @@ class TodaySnapshot {
   final int puffsNotTaken;
   final int cravingsSurvivedTotal;
 
-  /// Latest completed day vs day 1, signed percent (negative = down).
-  final int vsDay1Percent;
+  /// The latest completed, confirmed day against plan day one, as a signed
+  /// percent (negative = down). Null when there is no honest comparison — day
+  /// one unlogged or empty, or no confirmed day after it — and never 0 for
+  /// that, because 0 already means "flat".
+  final int? vsDay1Percent;
 
   /// (startHour, endHourExclusive) or null before enough data.
   final (int, int)? dangerWindow;

@@ -10,5 +10,9 @@ abstract interface class JourneyApi {
   /// Write-behind upsert of the whole journey document (Firestore-style).
   Future<void> saveJourney(Map<String, dynamic> journey);
 
+  /// The whole journey document as the server holds it; null without a
+  /// session or a journey.
+  Future<Map<String, dynamic>?> fetchJourney();
+
   Future<void> deleteJourney();
 }

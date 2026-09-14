@@ -46,6 +46,13 @@ class FirebaseJourneyRepository implements JourneyRepository {
   }
 
   @override
+  Future<JourneyState?> fetchLatest() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return fetchJourney(_db, user.uid, source: Source.server);
+  }
+
+  @override
   Future<void> delete() async {
     final user = _auth.currentUser;
     if (user == null) return;

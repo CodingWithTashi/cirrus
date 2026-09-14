@@ -2443,6 +2443,84 @@ abstract class AppLocalizations {
   /// **'saved so far'**
   String get homeSavedSoFar;
 
+  /// No description provided for @savingsInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'How savings are counted'**
+  String get savingsInfoLabel;
+
+  /// No description provided for @savingsInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How your savings add up'**
+  String get savingsInfoTitle;
+
+  /// No description provided for @savingsInfoUsualDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Your usual day'**
+  String get savingsInfoUsualDay;
+
+  /// No description provided for @savingsInfoUsualDayValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{puffs, plural, one{{puffs} puff} other{{puffs} puffs}} · {spend}'**
+  String savingsInfoUsualDayValue(num puffs, String spend);
+
+  /// No description provided for @savingsInfoToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get savingsInfoToday;
+
+  /// No description provided for @savingsInfoTodayNotCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not counted yet'**
+  String get savingsInfoTodayNotCounted;
+
+  /// No description provided for @savingsInfoTodayValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{puffs, plural, one{{puffs} puff} other{{puffs} puffs}} · {saved} kept'**
+  String savingsInfoTodayValue(num puffs, String saved);
+
+  /// No description provided for @savingsInfoTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved so far'**
+  String get savingsInfoTotal;
+
+  /// No description provided for @savingsInfoWhyNotCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Today starts counting with your first logged puff, or when you confirm a vape-free day. Until then it adds nothing.'**
+  String get savingsInfoWhyNotCounted;
+
+  /// No description provided for @savingsInfoWhyKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Every puff under your usual {usual} keeps about {perPuff}. Today that\'s {notTaken, plural, one{{notTaken} puff} other{{notTaken} puffs}} not taken.'**
+  String savingsInfoWhyKept(int usual, String perPuff, num notTaken);
+
+  /// No description provided for @savingsInfoWhyKeptPerTen.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 10 puffs under your usual {usual} keep about {perTen}. Today that\'s {notTaken, plural, one{{notTaken} puff} other{{notTaken} puffs}} not taken.'**
+  String savingsInfoWhyKeptPerTen(int usual, String perTen, num notTaken);
+
+  /// No description provided for @savingsInfoWhyNothingKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Today is at or over your usual {usual} puffs, so it adds nothing. Tomorrow starts fresh.'**
+  String savingsInfoWhyNothingKept(int usual);
+
+  /// No description provided for @savingsInfoWhyUnpriced.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan has no weekly spend, so there\'s nothing to count yet.'**
+  String get savingsInfoWhyUnpriced;
+
   /// No description provided for @homeCravingsBeaten.
   ///
   /// In en, this message translates to:
@@ -3151,6 +3229,18 @@ abstract class AppLocalizations {
   /// **'You\'re offline right now. Nothing\'s lost — reconnect and we\'ll pick up right where you left off.'**
   String get errorOfflineBody;
 
+  /// No description provided for @splashJourneyUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach your journey'**
+  String get splashJourneyUnavailableTitle;
+
+  /// No description provided for @splashJourneyUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re still signed in and nothing is lost. Check your connection and try again.'**
+  String get splashJourneyUnavailableBody;
+
   /// No description provided for @errorGenericTitle.
   ///
   /// In en, this message translates to:
@@ -3547,6 +3637,12 @@ abstract class AppLocalizations {
   /// **'PUFFS TODAY · BY HOUR'**
   String get statsPuffsToday;
 
+  /// No description provided for @statsDayNoPuffs.
+  ///
+  /// In en, this message translates to:
+  /// **'No puffs logged today'**
+  String get statsDayNoPuffs;
+
   /// No description provided for @statsPuffsThisMonth.
   ///
   /// In en, this message translates to:
@@ -3564,6 +3660,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{day} was the difficult day — {reason}. You recovered next morning.'**
   String statsHardDayCaption(String day, String reason);
+
+  /// No description provided for @statsHardDayNoRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} was the difficult day.'**
+  String statsHardDayNoRecovery(String day);
+
+  /// No description provided for @statsHardDayNoRecoveryReason.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} was the difficult day — {reason}.'**
+  String statsHardDayNoRecoveryReason(String day, String reason);
+
+  /// No description provided for @statsHardDayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'So far, today has the most puffs.'**
+  String get statsHardDayToday;
+
+  /// No description provided for @statsHardDayTodayReason.
+  ///
+  /// In en, this message translates to:
+  /// **'So far, today has the most puffs — {reason}.'**
+  String statsHardDayTodayReason(String reason);
 
   /// No description provided for @statsHardDayCaptionPlain.
   ///
@@ -3598,8 +3718,20 @@ abstract class AppLocalizations {
   /// No description provided for @statsNicotineValue.
   ///
   /// In en, this message translates to:
-  /// **'{mg}mg ↓'**
+  /// **'{mg}mg'**
   String statsNicotineValue(int mg);
+
+  /// No description provided for @statsNicotineDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower than the previous full day'**
+  String get statsNicotineDown;
+
+  /// No description provided for @statsNicotineUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher than the previous full day'**
+  String get statsNicotineUp;
 
   /// No description provided for @statsLongestGap.
   ///
@@ -3618,18 +3750,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'cravings beaten'**
   String get statsCravingsBeaten;
-
-  /// No description provided for @statsEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Charts show up tomorrow.'**
-  String get statsEmptyTitle;
-
-  /// No description provided for @statsEmptyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'One day of logs = one dot. Keep logging — the picture draws itself.'**
-  String get statsEmptyBody;
 
   /// No description provided for @statsEditDayTitle.
   ///

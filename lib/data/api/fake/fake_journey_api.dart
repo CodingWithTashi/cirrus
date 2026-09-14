@@ -31,5 +31,9 @@ class FakeJourneyApi implements JourneyApi {
       _server.respond(() => _server.putJourney(journey));
 
   @override
+  Future<Map<String, dynamic>?> fetchJourney() =>
+      _server.respond(_server.journeyJsonForCurrentSession);
+
+  @override
   Future<void> deleteJourney() => _server.respond(_server.deleteJourney);
 }

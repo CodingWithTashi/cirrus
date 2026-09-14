@@ -33,10 +33,9 @@ void main() {
     final store = c.read(quitStoreProvider.notifier);
     store.seedDemoJourney();
     final seeded = c.read(quitStoreProvider)!;
-    // Rebuilt through the factory both backends mint day-1 journeys with,
-    // because `copyWith` cannot CLEAR `lastPuffAt` (plain `??`) and the demo
-    // persona carries one — so "an account that has never logged a puff" is
-    // otherwise unreachable as a fixture.
+    // Rebuilt through the factory both backends mint day-1 journeys with, so
+    // "an account that has never logged a puff" starts exactly as a real one
+    // does, not as the demo persona with its anchor taken away.
     store.replaceForTest(
       InitialJourney.build(
         profile: seeded.profile,
@@ -44,7 +43,7 @@ void main() {
         now: now,
       ).copyWith(
         days: days ?? {},
-        lastPuffAt: lastPuffAt,
+        lastPuffAt: () => lastPuffAt,
         pendingSlipCleanDays: () => null,
       ),
     );

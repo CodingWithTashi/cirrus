@@ -1420,6 +1420,81 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeSavedSoFar => 'poupado até agora';
 
   @override
+  String get savingsInfoLabel => 'Como é calculada a poupança';
+
+  @override
+  String get savingsInfoTitle => 'Como a tua poupança se soma';
+
+  @override
+  String get savingsInfoUsualDay => 'O teu dia habitual';
+
+  @override
+  String savingsInfoUsualDayValue(num puffs, String spend) {
+    String _temp0 = intl.Intl.pluralLogic(
+      puffs,
+      locale: localeName,
+      other: '$puffs tragos',
+      one: '$puffs trago',
+    );
+    return '$_temp0 · $spend';
+  }
+
+  @override
+  String get savingsInfoToday => 'Hoje';
+
+  @override
+  String get savingsInfoTodayNotCounted => 'Ainda não conta';
+
+  @override
+  String savingsInfoTodayValue(num puffs, String saved) {
+    String _temp0 = intl.Intl.pluralLogic(
+      puffs,
+      locale: localeName,
+      other: '$puffs tragos',
+      one: '$puffs trago',
+    );
+    return '$_temp0 · $saved poupados';
+  }
+
+  @override
+  String get savingsInfoTotal => 'Poupado até agora';
+
+  @override
+  String get savingsInfoWhyNotCounted =>
+      'Hoje começa a contar no teu primeiro trago registado, ou quando confirmares um dia sem vape. Até lá, não soma nada.';
+
+  @override
+  String savingsInfoWhyKept(int usual, String perPuff, num notTaken) {
+    String _temp0 = intl.Intl.pluralLogic(
+      notTaken,
+      locale: localeName,
+      other: '$notTaken tragos',
+      one: '$notTaken trago',
+    );
+    return 'Cada trago abaixo dos teus $usual habituais poupa cerca de $perPuff. Hoje: $_temp0 a menos.';
+  }
+
+  @override
+  String savingsInfoWhyKeptPerTen(int usual, String perTen, num notTaken) {
+    String _temp0 = intl.Intl.pluralLogic(
+      notTaken,
+      locale: localeName,
+      other: '$notTaken tragos',
+      one: '$notTaken trago',
+    );
+    return 'Cada 10 tragos abaixo dos teus $usual habituais poupam cerca de $perTen. Hoje: $_temp0 a menos.';
+  }
+
+  @override
+  String savingsInfoWhyNothingKept(int usual) {
+    return 'Hoje estás nos teus $usual tragos habituais ou acima, por isso não soma nada. Amanhã começa do zero.';
+  }
+
+  @override
+  String get savingsInfoWhyUnpriced =>
+      'O teu plano não tem gasto semanal, por isso ainda não há nada para contar.';
+
+  @override
   String get homeCravingsBeaten => 'cravings vencidos';
 
   @override
@@ -1907,6 +1982,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Estás offline agora. Nada se perde — volta a ligar-te e continuamos exatamente onde ficaste.';
 
   @override
+  String get splashJourneyUnavailableTitle =>
+      'Não conseguimos carregar o teu percurso';
+
+  @override
+  String get splashJourneyUnavailableBody =>
+      'Continuas com a sessão iniciada e nada se perdeu. Verifica a ligação e tenta de novo.';
+
+  @override
   String get errorGenericTitle => 'Bem, isso falhou';
 
   @override
@@ -2169,6 +2252,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get statsPuffsToday => 'PASSAS HOJE · POR HORA';
 
   @override
+  String get statsDayNoPuffs => 'Nenhum trago registado hoje';
+
+  @override
   String get statsPuffsThisMonth => 'PASSAS · ÚLTIMOS 30 DIAS';
 
   @override
@@ -2179,6 +2265,24 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String statsHardDayCaption(String day, String reason) {
     return '$day foi o dia difícil — $reason. Recuperaste logo de manhã.';
+  }
+
+  @override
+  String statsHardDayNoRecovery(String day) {
+    return '$day foi o dia difícil.';
+  }
+
+  @override
+  String statsHardDayNoRecoveryReason(String day, String reason) {
+    return '$day foi o dia difícil — $reason.';
+  }
+
+  @override
+  String get statsHardDayToday => 'Por agora, hoje é o dia com mais tragos.';
+
+  @override
+  String statsHardDayTodayReason(String reason) {
+    return 'Por agora, hoje é o dia com mais tragos — $reason.';
   }
 
   @override
@@ -2202,8 +2306,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String statsNicotineValue(int mg) {
-    return '${mg}mg ↓';
+    return '${mg}mg';
   }
+
+  @override
+  String get statsNicotineDown => 'Mais baixo do que o dia completo anterior';
+
+  @override
+  String get statsNicotineUp => 'Mais alto do que o dia completo anterior';
 
   @override
   String get statsLongestGap => 'maior intervalo';
@@ -2213,13 +2323,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get statsCravingsBeaten => 'cravings vencidos';
-
-  @override
-  String get statsEmptyTitle => 'Os gráficos aparecem amanhã.';
-
-  @override
-  String get statsEmptyBody =>
-      'Um dia de registos = um ponto. Continua — o desenho faz-se sozinho.';
 
   @override
   String statsEditDayTitle(String date) {

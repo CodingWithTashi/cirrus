@@ -17,6 +17,7 @@ import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../money/savings_info.dart';
 import '../notifications/notifications_screen.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
@@ -379,7 +380,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         style: LpType.caption(lp.textSecondary),
                                       ),
                                       const SizedBox(height: 10),
-                                      if (snap.vsDay1Percent != 0)
+                                      if (snap.vsDay1Percent
+                                          case final pct? when pct != 0)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 9,
@@ -396,12 +398,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           ),
                                           child: Text(
                                             l10n.homeVsDay1(
-                                              LpFormat.signedPercent(
-                                                snap.vsDay1Percent,
-                                              ),
+                                              LpFormat.signedPercent(pct),
                                             ),
+                                            // Ember when it went up: in
+                                            // volt, "+20%" read as good
+                                            // news (docs/10 §41).
                                             style: LpType.caption11(
-                                              lp.voltText,
+                                              pct < 0
+                                                  ? lp.voltText
+                                                  : lp.emberText,
                                               weight: FontWeight.w600,
                                             ),
                                           ),
@@ -486,34 +491,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 onTap: () => context.push(Routes.money),
                                 child: LpCard(
                                   radius: LpDimens.rBento,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: Stack(
                                     children: [
-                                      RollingNumber(
-                                        snap.savedLifetime,
-                                        format: (v) =>
-                                            LpFormat.money(v, locale),
-                                        style:
-                                            LpType.number(
-                                              lp.voltText,
-                                              size: 26,
-                                            ).copyWith(
-                                              shadows: [
-                                                Shadow(
-                                                  color: lp.volt.withValues(
-                                                    alpha: 0.4,
-                                                  ),
-                                                  blurRadius: 18,
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          RollingNumber(
+                                            snap.savedLifetime,
+                                            format: (v) =>
+                                                LpFormat.money(v, locale),
+                                            style:
+                                                LpType.number(
+                                                  lp.voltText,
+                                                  size: 26,
+                                                ).copyWith(
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: lp.volt
+                                                          .withValues(
+                                                            alpha: 0.4,
+                                                          ),
+                                                      blurRadius: 18,
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            l10n.homeSavedSoFar,
+                                            style: LpType.caption11(
+                                              lp.textSecondary,
                                             ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        l10n.homeSavedSoFar,
-                                        style: LpType.caption11(
-                                          lp.textSecondary,
+                                      // What "saved so far" counts, and why it
+                                      // can read $0 on a day nobody has logged
+                                      // yet (docs/10 §40). In the card's corner
+                                      // so the figure keeps its room, the two
+                                      // bento cards stay the same height, and
+                                      // the tap still has 44dp to land in.
+                                      const Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: SavingsInfoButton(
+                                          extent: 44,
+                                          alignment: Alignment.topRight,
                                         ),
                                       ),
                                     ],

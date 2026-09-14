@@ -58,6 +58,32 @@ void main() {
     });
   });
 
+  group('recoveredAfter', () {
+    // "You recovered next morning" used to follow every hard day, including
+    // one that was still today (docs/10 §40). It is earned now.
+    test('a lighter, confirmed next day that is over is a recovery', () {
+      expect(WeekTrend.recoveredAfter(week([9, 5, 7]), 0, now), isTrue);
+    });
+
+    test('a next day that is still today is not over yet', () {
+      final w = week([null, null, null, null, null, 9, 3]);
+      expect(WeekTrend.recoveredAfter(w, 5, now), isFalse);
+    });
+
+    test('a next day as heavy is not a recovery', () {
+      expect(WeekTrend.recoveredAfter(week([9, 9]), 0, now), isFalse);
+    });
+
+    test('an unlogged next day is unknown, not a recovery', () {
+      expect(WeekTrend.recoveredAfter(week([9, null]), 0, now), isFalse);
+    });
+
+    test('the last day in the window has no next morning in it', () {
+      final w = week([1, 2, 3, 4, 5, 6, 9]);
+      expect(WeekTrend.recoveredAfter(w, 6, now), isFalse);
+    });
+  });
+
   group('isDown', () {
     test('is true when the later half averages fewer puffs', () {
       expect(WeekTrend.isDown(week([10, 9, 8, 4, 3, 2, 7]), now), isTrue);

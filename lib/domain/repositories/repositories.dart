@@ -68,6 +68,14 @@ abstract interface class JourneyRepository {
   /// Write-behind upsert after every local mutation.
   Future<void> save(JourneyState journey);
 
+  /// The journey exactly as the backend holds it now, past any copy this
+  /// device keeps; null without a session or a journey.
+  ///
+  /// Launch may restore the device's copy when the server is slow
+  /// (`AuthRepository.restoreSession`), and that copy is only as fresh as the
+  /// last sync, so the store reads this once afterwards (docs/10 §40).
+  Future<JourneyState?> fetchLatest();
+
   Future<void> delete();
 }
 
@@ -346,6 +354,18 @@ final class ReceiptOwnedElsewhereException extends BillingException {
 /// the friendly offline surfaces, never to a generic failure.
 final class NoConnectionException implements Exception {
   const NoConnectionException();
+}
+
+/// There IS a signed-in account on this device, and its journey could not be
+/// read at launch — not from the server in time, and not from the copy the
+/// device keeps (a fresh install or a cleared cache, on a dead connection).
+///
+/// Never folded into "signed out". Launch used to read every failed restore
+/// as no session, so a returning user on a slow network was shown the sign-in
+/// screen for an account they were still signed into; the splash offers a
+/// retry for this instead (docs/10 §40).
+final class JourneyUnavailableException implements Exception {
+  const JourneyUnavailableException();
 }
 
 /// The backend reached us fine and refused the *app* — App Check attestation

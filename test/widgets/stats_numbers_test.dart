@@ -107,8 +107,11 @@ void main() {
     tester,
   ) async {
     await pumpStats(tester);
+    // Tuesday Sep 8 and the Wednesday after it were both 80 puffs, so there
+    // is no recovery to report and the caption does not claim one
+    // (docs/10 §40).
     expect(
-      find.text(l10n.statsHardDayCaptionPlain(LpFormat.weekday(DateTime(2026, 9, 8), 'en'))),
+      find.text(l10n.statsHardDayNoRecovery(LpFormat.weekday(DateTime(2026, 9, 8), 'en'))),
       findsOneWidget,
     );
   });
@@ -138,7 +141,19 @@ void main() {
   ) async {
     final container = await pumpStats(tester);
     final state = container.read(quitStoreProvider)!;
-    expect(find.text('80'), findsOneWidget, reason: 'best day (puffs)');
+    // Scoped to the record's own cell: the week bars carry their counts now,
+    // and six of this week's days were 80 as well (docs/10 §40).
+    final bestDayCell = find
+        .ancestor(
+          of: find.text(l10n.statsBestDay),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      find.descendant(of: bestDayCell, matching: find.text('80')),
+      findsOneWidget,
+      reason: 'best day (puffs)',
+    );
     final gap = PuffGaps.longestGapHours(state, now)!;
     // 10 AM puffs every day: 11 PM–9 AM... the walk finds the 23-hour stretch
     // between one day's 10 AM bucket and the next — and today, unlogged, is
@@ -175,7 +190,19 @@ void main() {
       earnedBadges: const {},
     );
     await pumpStats(tester, state: unknown);
-    expect(find.text('—'), findsNWidgets(2), reason: 'best day and longest gap');
+    for (final record in [l10n.statsBestDay, l10n.statsLongestGap]) {
+      final cell = find
+          .ancestor(of: find.text(record), matching: find.byType(Column))
+          .first;
+      expect(
+        find.descendant(of: cell, matching: find.text('—')),
+        findsOneWidget,
+        reason: record,
+      );
+    }
+    // The third is the nicotine card, which has no finished, confirmed day to
+    // report either (docs/10 §41).
+    expect(find.text('—'), findsNWidgets(3));
     expect(find.text(l10n.statsWindowNoPuffs), findsOneWidget);
   });
 

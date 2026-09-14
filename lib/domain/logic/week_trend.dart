@@ -41,6 +41,20 @@ abstract final class WeekTrend {
     return best;
   }
 
+  /// Whether the day after `week[index]` went better: it is over (before
+  /// today), confirmed, and had fewer puffs.
+  ///
+  /// The Stats caption used to say "You recovered next morning" about every
+  /// hard day without asking — including one that was still today, which on
+  /// day one it always is (docs/10 §40). It says it only when this is true.
+  static bool recoveredAfter(List<DayLog> week, int index, DateTime now) {
+    if (index < 0 || index + 1 >= week.length) return false;
+    final next = week[index + 1];
+    return next.date.isBefore(LpDate.dayStart(now)) &&
+        next.isConfirmed &&
+        next.puffs < week[index].puffs;
+  }
+
   /// Whether [week] is trending down: its later completed, confirmed days
   /// average fewer puffs than its earlier ones.
   ///
