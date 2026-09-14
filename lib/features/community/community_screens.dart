@@ -968,6 +968,7 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final _reply = TextEditingController();
   final _replyFocus = FocusNode();
+  final _scroll = ScrollController();
 
   @override
   void initState() {
@@ -994,6 +995,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _reply.removeListener(_onReplyChanged);
     _reply.dispose();
     _replyFocus.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -1113,6 +1115,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       .read(communityStoreProvider.notifier)
                       .ensurePost(widget.postId),
                   child: ListView(
+                    controller: _scroll,
                     // A short thread does not fill the viewport, and a list that
                     // cannot scroll cannot be pulled.
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -1264,6 +1267,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final sent = ref
         .read(communityStoreProvider.notifier)
         .addReply(post.id, text);
+    // `addReply` is optimistic: the reply is already the last one in the
+    // thread, so the next frame lays it out and the list can go to it.
+    _followSentReply();
     maybeAskPushPermission(context, ref);
     // The slur list is server-side only, so a reply can still come back
     // refused. Say so — it has just been taken back out of the thread, and a
@@ -1274,6 +1280,43 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         showLpSnack(context, context.l10n.communityStatusBlocked);
       }),
     );
+  }
+
+  /// Glides the thread down to the reply just sent, the way the coach follows
+  /// its chat.
+  ///
+  /// Replies are oldest-first, so a new one lands at the very end — and the
+  /// list used to stay exactly where it was: the box cleared, the reply went
+  /// in below the fold, and nothing on screen said it had arrived until the
+  /// reader scrolled for it.
+  ///
+  /// Only a SEND moves the list. The coach can follow every change to its
+  /// store because everything there arrives at the bottom; here a reaction on
+  /// the post at the top, a report or a pull-to-refresh changes the same
+  /// state, and following those would drag the reader away from what they
+  /// were touching.
+  void _followSentReply() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // A lazy list only ESTIMATES the height of replies it has not laid out,
+      // so a tail that runs longer than what is on screen stops a single
+      // glide short of the end. Each pass lays more of the tail out and
+      // re-reads the extent once that frame is done; the cap is a backstop.
+      for (var pass = 0; pass < 6; pass++) {
+        if (!mounted || !_scroll.hasClients) return;
+        final position = _scroll.position;
+        if (position.pixels >= position.maxScrollExtent) return;
+        // The reader has taken hold of the list. Never fight them for it.
+        if (pass > 0 && position.isScrollingNotifier.value) return;
+        await _scroll.animateTo(
+          position.maxScrollExtent,
+          duration: pass == 0 ? LpMotion.normal : LpMotion.fast,
+          curve: LpMotion.ease,
+        );
+        // The glide's last step has not been laid out yet, so the extent it
+        // would have corrected is still the old estimate.
+        await WidgetsBinding.instance.endOfFrame;
+      }
+    });
   }
 }
 

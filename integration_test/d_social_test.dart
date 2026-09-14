@@ -214,6 +214,44 @@ void main() {
     expect(posted.tag, PostTag.sos, reason: 'the SOS tag was not pre-selected');
   });
 
+  testWidgets('a reply I send is scrolled into view, however long the thread', (
+    tester,
+  ) async {
+    // Replies are oldest-first, so a new one is the last thing in the thread,
+    // and the list used to stay where it was: the box cleared, the reply went
+    // in below the fold, and nothing on screen said it had arrived (founder
+    // report Sep 13 2026, docs/10 §42).
+    final e2e = await signedIn(tester);
+    // The one-time notification ask opens a sheet over the thread after the
+    // first reply. It is not what this tests, and it would stand in front of
+    // every reply checked below.
+    e2e.container.read(settingsStoreProvider.notifier).markPushPromptShown();
+    await openCommunity(e2e);
+    await e2e.tapText(e2e.l10n.seedPostSos);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    // Enough replies that the thread outgrows any phone's screen.
+    for (var i = 1; i <= 8; i++) {
+      final text = 'e2e: still here, reply $i';
+      await tester.enterText(find.byType(TextField).first, text);
+      await e2e.settle();
+      await e2e.tap(find.byIcon(Icons.arrow_upward_rounded), why: 'send reply');
+      expect(e2e.visible(text), isTrue,
+          reason: 'reply $i was sent and is not on screen; '
+              'on screen: ${e2e.texts()}');
+    }
+    final thread = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(thread.position.pixels, greaterThan(0),
+        reason: 'the thread never outgrew the screen, so this proved nothing');
+  });
+
   testWidgets('Ember answers, and the answer renders as a message', (
     tester,
   ) async {

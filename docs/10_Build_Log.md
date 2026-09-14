@@ -5349,3 +5349,18 @@ While there: the "why" sentence priced a single puff, and on a typical plan one 
 ### 41.5 Gates
 
 `flutter analyze` clean · full suite 1916 passed, 28 skipped, 0 failed · `npm run test:rules` 57/57. **No device pass for §41.**
+
+## 42. A REPLY THAT LANDED BELOW THE FOLD (Sep 13) — the thread now follows what you send
+
+Founder report: after posting a reply, it went in below the fold and had to be scrolled to — unlike the coach, which follows its chat. Reproduced on the Pixel 8 against production, in a test thread, before anything changed: send with the keyboard up, the box clears, the list does not move.
+
+The thread's `ListView` had no controller, and replies are oldest-first, so a new one is always the last item. `PostDetailScreen._followSentReply` now glides to the end after a send — the arrow or the keyboard's send key — at the coach's `LpMotion.normal` / `ease`. Two decisions worth keeping:
+
+- **Only a send moves the list.** The coach follows every change to its store; here a reaction on the post at the top, a report or a refresh changes the same state, and following those would drag the reader away from what they were touching.
+- **More than one glide when the tail is long.** A lazy list only estimates the height of replies it has not laid out, so a tail of long replies stops a single glide short. Each pass re-reads the extent after that frame's layout (`endOfFrame` — the animation's future resolves before it), up to six, and stops the moment the reader takes hold of the list.
+
+Found while fixing, not changed: the fake backend throws on any reaction to a seeded post (`PostCodec.encode` passes the fixture's `const` reactions map by reference and `FakeCommunityApi.setReaction` writes into it), and replies read from Firestore never carry `isMine` (`FirebaseCommunityRepository._toReply`), so your own older replies show a report flag.
+
+### 42.1 Gates
+
+`test/widgets/thread_reply_scroll_test.dart` (5 cases) fails 4 of 5 against the old screen — the fifth guards that nothing but a send moves the list — and its long-tail case fails with a single glide · `flutter analyze` clean · full suite 1921 passed, 28 skipped, 0 failed · **Pixel 8, production, a test thread:** from the top, the arrow with the keyboard up and the keyboard's own send key both land on the new reply. `integration_test/d_social_test.dart` gained a case for it; **not yet run on device**, because an integration run uninstalls the app.
