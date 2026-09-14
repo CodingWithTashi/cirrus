@@ -340,7 +340,6 @@
 				873C86E462932012DA685F12 /* Info.plist */,
 				1C95462A9ED8D662256465F2 /* CirrusWidget.entitlements */,
 			);
-			name = CirrusWidget;
 			path = CirrusWidget;
 			sourceTree = "<group>";
 		};
@@ -351,7 +350,6 @@
 				5FF81F11320FDB0DAA5919A0 /* Info.plist */,
 				5CF7958F94B2E0731A4680A6 /* CirrusWatchComplication.entitlements */,
 			);
-			name = CirrusWatchComplication;
 			path = CirrusWatchComplication;
 			sourceTree = "<group>";
 		};
@@ -360,7 +358,6 @@
 			children = (
 				DBD7C0DC24BCFCDAA72FC8A3 /* CirrusWidgetUITests.swift */,
 			);
-			name = RunnerUITests;
 			path = RunnerUITests;
 			sourceTree = "<group>";
 		};
@@ -379,7 +376,6 @@
 				DD692511F5B8CD4E3A6032BF /* WatchBreatheView.swift */,
 				1F0A0DC4D394C78E411953FD /* WatchWeekView.swift */,
 			);
-			name = CirrusWatch;
 			path = CirrusWatch;
 			sourceTree = "<group>";
 		};
@@ -523,7 +519,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1510;
+				LastUpgradeCheck = 2630;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					331C8080294A63A400263BE5 = {
@@ -653,9 +649,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -723,9 +723,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
