@@ -1379,6 +1379,24 @@ html[data-os='android'] .store--play { order: -1; }
 .post-sources a { color: var(--muted); text-decoration-color: var(--border); }
 .post-sources a:hover { color: var(--volt); }
 .post-sources__id { display: block; font-size: 0.8125rem; color: #67707e; word-break: break-word; }
+/* The fold for a long list (see SOURCES_OPEN_MAX in [...slug].astro). Same
+   ▾/▴ marker as the contents toggle; the label swaps without script. */
+.post-sources__more > summary {
+  display: inline-block;
+  margin-top: 0.35rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--volt);
+}
+.post-sources__more > summary::-webkit-details-marker { display: none; }
+.post-sources__more > summary::after { content: ' ▾'; }
+.post-sources__more[open] > summary::after { content: ' ▴'; }
+.post-sources__hide,
+.post-sources__more[open] .post-sources__show { display: none; }
+.post-sources__more[open] .post-sources__hide { display: inline; }
+.post-sources__more ol { margin-top: 0.5rem; }
 
 .disclaimer {
   margin-top: 2.5rem;
