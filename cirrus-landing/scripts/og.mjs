@@ -274,6 +274,21 @@ const POSTS = [
       { n: '3 mths', label: 'dopamine normalises', color: VOLT },
     ],
   },
+  {
+    slug: 'most-effective-way-to-quit-vaping',
+    eyebrow: 'QUITTING VAPING · WHAT THE EVIDENCE SAYS',
+    headline: 'The most effective way to quit vaping',
+    // The post's findings in four figures: the best trial result (12 weeks,
+    // ages 16–25), the cold turkey vs taper tie across 22 smoking trials, what
+    // the quit-vaping subreddits ask for most, and the craving window. Volt for
+    // the evidence, ember for the people.
+    blocks: [
+      { n: '51%', label: 'varenicline + support', color: VOLT },
+      { n: 'Tie', label: 'in 22 smoking trials', color: VOLT },
+      { n: '2 in 3', label: 'posts about support', color: EMBER },
+      { n: '15–20', label: 'min per craving', color: VOLT },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line
