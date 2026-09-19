@@ -48,17 +48,14 @@ const stats = STATS.filter((s) => 'home' in s && s.home);
 // What the FAQ renders AND what the FAQPage schema carries — one list, so the
 // two can never disagree.
 const faq = FAQ_ITEMS.map((item) => {
-  const more = 'more' in item ? link(lang, `/blog/${item.more}`) : undefined;
-  return {
-    ...dict.faq[item.id],
-    // Where a post owns the query, the snippet hands off to it rather than
-    // answering in full (ONE QUERY, ONE PAGE — see lib/content.ts). The post in
-    // the reader's language when it exists; the English one, labelled as such,
-    // until then.
-    more: more && 'more' in item
-      ? { ...more, label: dict.faqMore[item.id as keyof typeof dict.faqMore], away: more.hreflang ? dict.chrome.inEnglish : '' }
-      : undefined,
-  };
+  const words = dict.faq[item.id];
+  if (!('more' in item)) return { ...words, more: undefined };
+  // Where a post owns the query, the snippet hands off to it rather than
+  // answering in full (ONE QUERY, ONE PAGE — see lib/content.ts). The post in
+  // the reader's language when it exists; the English one, labelled as such,
+  // until then.
+  const to = link(lang, `/blog/${item.more}`);
+  return { ...words, more: { ...to, label: dict.faqMore[item.id], away: to.hreflang ? dict.chrome.inEnglish : '' } };
 });
 
 const deviceIcons: Record<DeviceId, string> = {

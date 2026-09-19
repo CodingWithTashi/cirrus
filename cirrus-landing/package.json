@@ -12,6 +12,7 @@
     "preview:edge": "astro build && wrangler pages dev dist --port 8788 --ip 127.0.0.1",
     "check": "astro check",
     "verify": "node scripts/check-dist.mjs",
+    "compare": "node scripts/compare-dist.mjs",
     "deploy": "astro build && npm run verify && wrangler pages deploy",
     "astro": "astro",
     "og": "node scripts/og.mjs",

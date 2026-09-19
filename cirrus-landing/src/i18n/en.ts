@@ -81,8 +81,9 @@ export const en = {
     terms: 'Terms',
     deleteAccount: 'Delete account',
     rssTitle: '{site} blog',
-    // Shown after a link that leaves the reader's language. Empty in English,
-    // where no link does.
+    // Appended to a link that leaves the reader's language — " (en inglés)" —
+    // and it carries its own leading space. Empty in English, where no link does;
+    // it is the one key a locale may leave empty, and only English does.
     inEnglish: '',
   },
 

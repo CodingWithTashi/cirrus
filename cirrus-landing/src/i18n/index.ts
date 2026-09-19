@@ -27,9 +27,6 @@ export function useT(lang: Locale = DEFAULT_LOCALE): Dictionary {
   return dict;
 }
 
-/** Which locales have a dictionary (written, not necessarily live). */
-export const writtenLocales = (): Locale[] => Object.keys(DICTS) as Locale[];
-
 /**
  * Fills `{name}` placeholders. Throws on a placeholder with no value — a
  * translator who renames `{site}` to `{sitio}` would otherwise ship the braces.

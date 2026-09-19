@@ -27,18 +27,10 @@ export function localePath(lang: Locale, path: string): string {
   return path === '/' ? `/${lang}` : `/${lang}${path}`;
 }
 
-/** The inverse: which locale a clean pathname belongs to, and its English path. */
-export function stripLocale(pathname: string): { lang: Locale; path: string } {
-  const [, first = '', ...rest] = pathname.split('/');
-  const lang = LOCALES.find((l) => l !== DEFAULT_LOCALE && l === first);
-  if (!lang) return { lang: DEFAULT_LOCALE, path: pathname || '/' };
-  return { lang, path: rest.length ? `/${rest.join('/')}` : '/' };
-}
-
 const isLive = (lang: Locale) => LIVE_LOCALES.includes(lang);
 
 /** Whether `path` (an English path) has a page in `lang`. */
-export function existsIn(lang: Locale, path: string): boolean {
+function existsIn(lang: Locale, path: string): boolean {
   if (lang === DEFAULT_LOCALE) return true;
   return isLive(lang) && LOCALIZED.includes(path);
 }
@@ -54,7 +46,8 @@ export function link(lang: Locale, path: string): { href: string; hreflang?: str
   const [clean, hash = ''] = path.split('#');
   const suffix = hash ? `#${hash}` : '';
   if (existsIn(lang, clean)) return { href: `${localePath(lang, clean)}${suffix}` };
-  return { href: `${clean}${suffix}`, hreflang: lang === DEFAULT_LOCALE ? undefined : DEFAULT_LOCALE };
+  // Only a non-English page can get here: every path exists in English.
+  return { href: `${clean}${suffix}`, hreflang: DEFAULT_LOCALE };
 }
 
 /**

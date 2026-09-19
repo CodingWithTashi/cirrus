@@ -55,13 +55,6 @@ export const OG_LOCALE = { en: 'en_US', es: 'es_LA', fr: 'fr_FR', de: 'de_DE', p
 export const INTL = { en: 'en-US', es: 'es-419', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR' };
 
 /**
- * What each language calls itself — what a switcher shows. Never translated:
- * someone looking for Deutsch is not helped by reading "German" or "Alemán".
- * @type {Record<Locale, string>}
- */
-export const AUTONYM = { en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português' };
-
-/**
  * The currency the live calculator shows, or null for a bare number.
  *
  * The amounts are the visitor's own arithmetic, so a bare number is always
@@ -71,6 +64,3 @@ export const AUTONYM = { en: 'English', es: 'Español', fr: 'Français', de: 'De
  * @type {Record<Locale, string | null>}
  */
 export const DEMO_CURRENCY = { en: 'USD', es: null, fr: 'EUR', de: 'EUR', pt: null };
-
-/** @param {string} value @returns {value is Locale} */
-export const isLocale = (value) => /** @type {readonly string[]} */ (LOCALES).includes(value);

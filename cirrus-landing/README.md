@@ -310,12 +310,18 @@ the founder's spot-check — and a half-finished one cannot leak a URL.
 
 | File | What it is |
 |---|---|
-| `src/i18n/locales.mjs` | The registry: locales, hreflang / `og:locale` / `Intl` tags, autonyms, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
+| `src/i18n/locales.mjs` | The registry: locales, hreflang / `og:locale` / `Intl` tags, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
 | `src/i18n/en.ts` | English, **and the shape**. Every other locale is declared `: Dictionary`, so a missing key (TS2741) or an extra one (TS2353) fails `npm run check` — the site's `l10n_parity_test` |
 | `src/i18n/index.ts` | `useT(lang)`, `fmt()` for `{placeholders}` (throws on a missing one), `clock()` for the example day |
 | `src/i18n/paths.ts` | `localePath()`, `link()`, `alternatesFor()` — URLs that know which pages exist |
 | `src/lib/content.ts` | Everything about the content that is **not** language: ids, order, tiers, tones, clock times. Words are keyed by these ids, so a locale cannot ship six timeline steps or a statistic without its `source` |
 | `src/components/pages/*.astro` | The page bodies. `src/pages/index.astro`, `download.astro` and `404.astro` are five-line wrappers and **do not move** — App Links claims `/download` |
+
+**Proving a refactor changed nothing.** `npm run compare -- <baseline dist> <new dist>`
+(`scripts/compare-dist.mjs`) reduces every page of two builds to what a browser, a reader
+and a crawler actually get — tags and attributes, decoded text, parsed JSON-LD — and fails
+on any difference. It is how the language structure was landed with English untouched, and
+it is the gate for the next change of that kind (the blog's language plumbing).
 
 Rules that are easy to get wrong:
 
