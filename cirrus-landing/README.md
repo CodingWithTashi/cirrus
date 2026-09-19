@@ -296,6 +296,61 @@ https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=http
 adb shell pm get-app-links com.quitvape.last_puff             # on device
 ```
 
+## Languages
+
+The app ships en, es, fr, de and pt; the site is being brought up to match (docs/10
+§43–44). **Today only English is live** — what exists is the structure every other
+language drops into, and it was landed as a refactor whose built output is
+structurally identical to the English-only site before it.
+
+**One list decides everything: `LIVE_LOCALES` in `src/i18n/locales.mjs`.** Routes,
+hreflang, the sitemap and the language switcher all derive from it and from nothing
+else, so a language goes live by being added there — one at a time if need be, after
+the founder's spot-check — and a half-finished one cannot leak a URL.
+
+| File | What it is |
+|---|---|
+| `src/i18n/locales.mjs` | The registry: locales, hreflang / `og:locale` / `Intl` tags, autonyms, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
+| `src/i18n/en.ts` | English, **and the shape**. Every other locale is declared `: Dictionary`, so a missing key (TS2741) or an extra one (TS2353) fails `npm run check` — the site's `l10n_parity_test` |
+| `src/i18n/index.ts` | `useT(lang)`, `fmt()` for `{placeholders}` (throws on a missing one), `clock()` for the example day |
+| `src/i18n/paths.ts` | `localePath()`, `link()`, `alternatesFor()` — URLs that know which pages exist |
+| `src/lib/content.ts` | Everything about the content that is **not** language: ids, order, tiers, tones, clock times. Words are keyed by these ids, so a locale cannot ship six timeline steps or a statistic without its `source` |
+| `src/components/pages/*.astro` | The page bodies. `src/pages/index.astro`, `download.astro` and `404.astro` are five-line wrappers and **do not move** — App Links claims `/download` |
+
+Rules that are easy to get wrong:
+
+- **Locale homes are `/es`, never `/es/`.** `build.format: 'file'` writes `dist/es.html`
+  beside a `dist/es/` directory — the shape `/blog` already has — and Pages 308s the
+  slashed form. Every canonical, hreflang, sitemap entry and switcher href is slashless.
+- **Astro's own `i18n` config stays off.** Its URL helpers return `/es/privacy` without
+  checking there is one. The legal pages are English-only on purpose (their URLs are
+  frozen by the stores and the apps, and a translated policy is a second legal text), and
+  the blog is translated a few posts at a time. `link()` answers with the localized URL
+  when the page exists and the English one, flagged `hreflang="en"`, when it does not.
+  **Never set `fallback`**: it publishes English bodies under `/es/…`.
+- **No Accept-Language redirect.** Googlebot sends none and crawls from the US, so it
+  would only ever see English and every hreflang target would look like a redirect.
+  hreflang plus `x-default` is the supported mechanism.
+- **The hreflang self-reference is a build error, not a warning.** `BaseLayout` throws if
+  `alternates[lang]` is not the page's own canonical path.
+- **No HTML in a dictionary string, ever.** A sentence that needs markup is split
+  (`{ pre, accent, post }`), which also survives a language that moves the emphasis.
+- **Strings the calculator swaps at runtime travel in a JSON data island**
+  (`#demo-i18n`). Astro bundles a component's `<script>` once for every page, so it has
+  no `lang`; and `define:vars` would force it inline and unbundled.
+- **es and pt are written for the wider audience** — neutral international Spanish and
+  Brazilian Portuguese (founder decision, Sep 19 2026). That is *not* the app's dialect:
+  `app_es.arb` is Peninsular and `app_pt.arb` is European. fr and de copy the ARB wording
+  verbatim. In every language, reuse the app's feature **names** and never its allowance
+  **claims** — the ARB says "Unlimited AI coach"; the server enforces 100 a day and this
+  site says what the server does.
+- **Play campaigns take the locale as a prefix**: `es-hero`, `fr-blog-<slug>-end`
+  (`campaignFor()` in `src/lib/store.ts`). English names are untouched, because installs
+  already attributed to them cannot be re-attributed. Frozen at the first tagged install.
+- **The calculator's currency is config, not copy** (`DEMO_CURRENCY`). `/es` and `/pt`
+  serve two continents each, so they show a bare, locale-grouped number: the arithmetic
+  is the visitor's own, and a symbol would be a guess about where they live.
+
 ## SEO notes
 
 The `<head>` is owned by `src/layouts/BaseLayout.astro` — canonical, Open Graph,

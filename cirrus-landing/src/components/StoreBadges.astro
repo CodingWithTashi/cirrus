@@ -13,16 +13,22 @@
 import { Image } from 'astro:assets';
 import appStoreSvg from '../assets/badges/app-store.svg?raw';
 import playBadge from '../assets/badges/google-play.png';
-import { appStoreUrl, playUrl } from '../lib/store';
+import { appStoreUrl, campaignFor, playUrl } from '../lib/store';
+import { useT, type Locale } from '../i18n/index.ts';
+import { DEFAULT_LOCALE } from '../i18n/locales.mjs';
 
 interface Props {
-  /** Play campaign tag: where on the site the tap happened. */
+  /** Play campaign tag: where on the site the tap happened. Pass the ENGLISH
+      name (`hero`, `closing`); the locale prefix is added here. */
   campaign: string;
+  /** The page's language: the links' accessible names and the campaign prefix. */
+  lang?: Locale;
   /** `sm` for narrow columns such as the blog sidebar. */
   size?: 'md' | 'sm';
 }
 
-const { campaign, size = 'md' } = Astro.props;
+const { campaign, lang = DEFAULT_LOCALE, size = 'md' } = Astro.props;
+const t = useT(lang);
 
 // Apple's file carries a <title> naming its own export; drop it and label the
 // link instead, so a screen reader hears the action once.
@@ -32,10 +38,10 @@ const appSvg = appStoreSvg
 ---
 
 <div class:list={['stores', `stores--${size}`]}>
-  <a class="store store--app" href={appStoreUrl()} rel="noopener" aria-label="Download on the App Store">
+  <a class="store store--app" href={appStoreUrl()} rel="noopener" aria-label={t.stores.appStore}>
     <Fragment set:html={appSvg} />
   </a>
-  <a class="store store--play" href={playUrl(campaign)} rel="noopener" aria-label="Get it on Google Play">
+  <a class="store store--play" href={playUrl(campaignFor(lang, campaign))} rel="noopener" aria-label={t.stores.googlePlay}>
     <Image src={playBadge} alt="" height={144} format="png" loading="eager" />
   </a>
 </div>
