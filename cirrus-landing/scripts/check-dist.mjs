@@ -203,9 +203,14 @@ for (const page of pages) {
     const href = a.href;
     if (!href) continue;
 
-    let url;
+    // A hand-written link can be malformed in two ways — not a URL at all, or a
+    // stray `%` that is not an escape — and both are a finding to report, not a
+    // stack trace that hides every other finding behind it.
+    let url, pathname, fragment;
     try {
       url = new URL(href, urlOf(page.path));
+      pathname = decodeURIComponent(url.pathname);
+      fragment = decodeURIComponent(url.hash.slice(1));
     } catch {
       fail(page.path, `unparseable href "${href}"`);
       continue;
@@ -213,12 +218,11 @@ for (const page of pages) {
     if (url.origin !== SITE) continue; // external, mailto:, tel: — not ours to check
     linkCount += 1;
 
-    const target = resolve(decodeURIComponent(url.pathname));
+    const target = resolve(pathname);
     if (!target) {
       fail(page.path, `link to ${url.pathname} resolves to nothing in dist`);
       continue;
     }
-    const fragment = decodeURIComponent(url.hash.slice(1));
     if (fragment && target.page && !target.page.ids.has(fragment)) {
       fail(page.path, `link to ${url.pathname}#${fragment}: no element with that id on ${target.page.path}`);
     }
