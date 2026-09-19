@@ -35,9 +35,10 @@ export const de: Dictionary = {
   },
 
   meta: {
+    title: 'App zum Aufhören mit dem Vapen – ohne kalten Entzug',
     tagline: 'Mit dem Vapen aufhören – ohne kalten Entzug',
     description:
-      'Die App, die deine echten Züge zählt und sie Schritt für Schritt auf null senkt. Kein kalter Entzug, kein Zurück auf Tag eins, keine erfundene Statistik.',
+      'Gratis-App zum Aufhören mit dem Vapen – iPhone und Android. Einmal tippen pro Zug, dein Limit sinkt auf null. Kein kalter Entzug, kein Zurück auf Tag eins.',
   },
 
   // Apple's and Google's own wording for their badges in German.
@@ -48,15 +49,15 @@ export const de: Dictionary = {
 
   home: {
     hero: {
-      eyebrow: 'Kostenlos für iPhone und Android',
+      eyebrow: 'Kostenlose App gegen das Vapen · iPhone und Android',
       h1: { pre: 'Mit dem Vapen aufhören – ohne ', accent: 'kalten Entzug', post: '.' },
-      sub: 'Die App, die dich Schritt für Schritt runterbringt, statt einen harten Schlussstrich zu verlangen. Ein schlechter Dienstag sollte dich nicht drei Wochen kosten.',
-      trust: ['Kostenlos starten', 'Die Gratis-Version läuft nie ab', 'Keine Werbe-Tracker'],
+      sub: 'Einmal tippen erfasst jeden Zug. Dein Tageslimit sinkt jeden Tag ein Stück, bis es bei null ist – und ein schlechter Tag wirft dich nie auf Tag eins zurück.',
+      trust: ['Die Gratis-Version läuft nie ab', 'Funktioniert mit jeder Vape', 'Keine Werbe-Tracker'],
     },
     number: {
       eyebrow: 'Live · ohne Anmeldung',
       h2: 'Was kostet dich das Vapen wirklich im Jahr?',
-      sub: 'Tipp oben auf die Tastatur. Alles hier unten bewegt sich mit.',
+      sub: 'Tipp oben auf die Tastatur und gib ein, was du ausgibst. Es ist deine Zahl – also tut sie genau so weh, wie sie soll.',
     },
     day: {
       eyebrow: 'Ein Beispieltag',
@@ -70,7 +71,7 @@ export const de: Dictionary = {
         },
         lunch: {
           title: 'Die Mittagspause läuft aus dem Ruder',
-          body: 'Du liegst über dem Limit von heute. Kein Reset, kein Tag eins. Ein Reparatur-Token, den du dir mit sieben sauberen Tagen verdient hast, fängt das ab – die Serie wird blasser, statt zu sterben.',
+          body: 'Du liegst über dem Limit von heute. Kein Reset, kein Tag eins. Wie ein Serienschutz, nur eben verdient: Sieben Tage unter deinem Limit haben dir einen Reparatur-Token gebracht, der den heutigen Tag abfängt – die Serie wird blasser, statt zu sterben.',
           tag: 'Kostenlos',
         },
         headsUp: {
@@ -116,8 +117,8 @@ export const de: Dictionary = {
       },
     },
     devices: {
-      eyebrow: 'Wo sie lebt',
-      h2: 'Auf dem Handy in deiner Hand – und am Handgelenk, das dranhängt.',
+      eyebrow: 'Einmal tippen, überall',
+      h2: 'Erfass einen Zug, wo immer er passiert.',
       items: {
         iphone: { name: 'iPhone', body: 'Im App Store. iOS 15 oder neuer.' },
         android: { name: 'Android', body: 'Bei Google Play.' },
@@ -159,9 +160,15 @@ export const de: Dictionary = {
       },
     },
     stats: {
-      eyebrow: 'Keine erfundenen Zahlen',
-      h2: 'Hier hat jede Zahl eine Quelle.',
-      sub: 'Andere Apps schreiben „78\u00a0% der Mitglieder hören auf“ – und zitieren niemanden. Wir nicht.',
+      eyebrow: 'Kommt dir bekannt vor?',
+      h2: 'Eine Entscheidung ist das schon lange nicht mehr.',
+      sub: 'Unter der Dusche. Im Auto. Direkt nach dem Aufwachen. Eine Vape hat keine Schachtel, die leer wird – also gibt sie dir nie einen Punkt zum Aufhören. Das ist keine Charakterschwäche. Das ist Nikotin.',
+      hooks: {
+        wake30: 'Sie ist in deiner Hand, bevor du aus dem Bett bist.',
+        failedAttempts: 'Du hast schon mal aufgehört. Bis mittags.',
+        cravingWindow: 'Das Craving fühlt sich endlos an. Ist es nicht.',
+      },
+      note: 'Jede Zahl auf dieser Seite hat eine Quelle. Andere Apps schreiben „78\u00a0% der Mitglieder hören auf“ – und zitieren niemanden.',
     },
     faq: {
       eyebrow: 'Klare Antworten',
@@ -211,6 +218,10 @@ export const de: Dictionary = {
       q: 'Ist schrittweises Reduzieren besser als ein kalter Entzug vom Vapen?',
       a: 'Kalter Entzug klappt bei manchen und scheitert bei den meisten. Schrittweises Reduzieren senkt dein Nikotin so langsam, dass der Entzug beherrschbar bleibt – deshalb zählt Cirrus Züge, die sinken, statt Tage, die steigen. Wenn kalter Entzug bei dir schon funktioniert hat, brauchst du keine App.',
     },
+    autoCount: {
+      q: 'Zählt Cirrus die Züge automatisch?',
+      a: 'Nein. Cirrus kann deine Vape nicht sehen, also tippst du einmal pro Zug – in der App, im Homescreen-Widget oder auf deiner Apple Watch. Deshalb funktioniert es auch mit jeder Vape, Einweg-Vapes eingeschlossen. Und genau dieses Tippen ist das Nützliche: Jeden Zug festzuhalten ist eine seit Langem untersuchte Methode, schon für sich allein weniger zu vapen – weil es aus einem Reflex wieder eine Entscheidung macht, die du bemerkst.',
+    },
     puffsPerDay: {
       q: 'Wie viele Züge am Tag sind viel?',
       a: 'Es gibt keine klare Grenze, und keine Gesundheitsbehörde veröffentlicht eine. Etwa 14 Züge entsprechen ungefähr einer Zigarette, also liegen 150 am Tag im Bereich von zehn.',
@@ -249,7 +260,7 @@ export const de: Dictionary = {
     },
     puffCount: {
       q: 'Worin unterscheidet sich das von Puff Count?',
-      a: 'Vor allem in der Ehrlichkeit. Wir nennen für jede Statistik eine Quelle, die Gratis-Version sperrt dich nicht aus, und es gibt einen Coach und eine Community statt nur eines Zählers. Außerdem gibt es Cirrus für iPhone und Android; Puff Count nur für iPhone.',
+      a: 'Beide sind Zug-Zähler zum Tippen, und beide geben dir ein Tageslimit. Die Unterschiede: Unsere Gratis-Version sperrt nie, es gibt einen KI-Coach und eine anonyme Community, und jede Statistik, die wir zeigen, hat eine Quelle. Außerdem gibt es Cirrus für iPhone und Android; Puff Count nur für Apple-Geräte, ohne Android-Version (Stand September 2026).',
     },
   },
   faqMore: {
@@ -276,7 +287,7 @@ export const de: Dictionary = {
     outEyebrow: 'Und das bedeutet es',
     spendLabel: 'Wenn du',
     perWeek: 'pro Woche ausgibst',
-    yearNote: 'im Jahr. Deine Rechnung, nicht unsere',
+    yearNote: 'im Jahr, jedes Jahr. Deine Rechnung, nicht unsere',
     startSuffix: ' am Tag',
     freedom: '0 · Freiheitstag',
     curveLabel: 'Deine Reduktionskurve, die in 30 Tagen auf null fällt.',
@@ -294,12 +305,12 @@ export const de: Dictionary = {
   },
 
   download: {
-    title: 'Cirrus laden',
+    title: 'App zum Aufhören mit dem Vapen für iPhone und Android',
     description:
-      'Lade Cirrus, die App zum Aufhören mit dem Vapen, die deine echten Züge zählt und auf null senkt. Kostenlos im App Store für iPhone und bei Google Play.',
+      'Lade Cirrus, die kostenlose App zum Aufhören mit dem Vapen: Einmal tippen pro Zug, dein Tageslimit sinkt auf null. Im App Store für iPhone und bei Google Play.',
     crumb: 'App holen',
     h1: '{site} laden',
-    lede: 'Ein Zug-Zähler, der dich Schritt für Schritt runterbringt, statt einen harten Schlussstrich zu verlangen. Ein schlechter Dienstag sollte dich nicht drei Wochen kosten.',
+    lede: 'Eine App zum Aufhören mit dem Vapen – mit einem Zug-Zähler zum Tippen und einem Tageslimit, das bis auf null sinkt. Ein schlechter Tag wirft dich nie auf Tag eins zurück.',
     whichH2: 'Welches Handy',
     whichBody:
       'Beide. Cirrus gibt es im App Store für iPhone (iOS 15 oder neuer), inklusive Apple-Watch-App, und bei Google Play für Android. Das Homescreen-Widget funktioniert auf beiden.',

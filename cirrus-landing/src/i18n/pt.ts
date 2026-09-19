@@ -35,9 +35,10 @@ export const pt: Dictionary = {
   },
 
   meta: {
+    title: 'App para parar de usar vape sem cortar de uma vez',
     tagline: 'Pare de usar vape sem cortar de uma vez',
     description:
-      'O app para parar de fumar vape que conta suas tragadas reais e reduz até zero. Sem cortar de uma vez, sem voltar ao dia um e sem estatística inventada.',
+      'App grátis para parar de usar vape, iPhone e Android. Um toque por tragada e seu limite diário cai até zero. Sem cortar de uma vez nem voltar ao dia um.',
   },
 
   // Apple's and Google's own wording for their badges in Brazilian Portuguese.
@@ -48,15 +49,15 @@ export const pt: Dictionary = {
 
   home: {
     hero: {
-      eyebrow: 'Grátis no iPhone e no Android',
+      eyebrow: 'App grátis para largar o vape · iPhone e Android',
       h1: { pre: 'Pare de usar vape sem ', accent: 'cortar de uma vez', post: '.' },
-      sub: 'O app para largar o vape que vai reduzindo aos poucos em vez de exigir que você pare de repente. Uma terça-feira ruim não deveria custar três semanas.',
-      trust: ['Grátis para começar', 'O plano grátis nunca expira', 'Sem rastreadores de anúncios'],
+      sub: 'Um toque registra cada tragada. Seu limite diário cai um pouco a cada dia até chegar a zero, e um dia ruim nunca te leva de volta ao dia um.',
+      trust: ['O plano grátis nunca expira', 'Funciona com qualquer vape', 'Sem rastreadores de anúncios'],
     },
     number: {
       eyebrow: 'Ao vivo · sem cadastro',
       h2: 'Quanto o vape custa para você por ano, de verdade?',
-      sub: 'Toque no teclado ali em cima. Tudo aqui embaixo muda junto.',
+      sub: 'Toque no teclado ali em cima e coloque quanto você gasta. O número é seu, então dói exatamente o quanto tem que doer.',
     },
     day: {
       eyebrow: 'Um dia de exemplo',
@@ -70,7 +71,7 @@ export const pt: Dictionary = {
         },
         lunch: {
           title: 'O almoço sai do controle',
-          body: 'Você passou do limite de hoje. Sem zerar, sem dia um. Uma ficha de reparo que você ganhou com sete dias limpos absorve isso, e a sequência esmaece em vez de morrer.',
+          body: 'Você passou do limite de hoje. Sem zerar, sem dia um. É um protetor de sequência que você teve que conquistar: sete dias abaixo do seu limite renderam uma ficha de reparo, que absorve o dia de hoje, e a sequência esmaece em vez de morrer.',
           tag: 'Grátis',
         },
         headsUp: {
@@ -116,8 +117,8 @@ export const pt: Dictionary = {
       },
     },
     devices: {
-      eyebrow: 'Onde ele vive',
-      h2: 'No celular que está na sua mão, e no pulso que vem junto.',
+      eyebrow: 'Um toque, em qualquer lugar',
+      h2: 'Registre uma tragada onde quer que ela aconteça.',
       items: {
         iphone: { name: 'iPhone', body: 'Na App Store. iOS 15 ou posterior.' },
         android: { name: 'Android', body: 'No Google Play.' },
@@ -159,9 +160,15 @@ export const pt: Dictionary = {
       },
     },
     stats: {
-      eyebrow: 'Sem estatísticas inventadas',
-      h2: 'Aqui, todo número tem uma fonte.',
-      sub: 'Outros apps para parar publicam “78% dos membros param”, sem citar ninguém. Nós não.',
+      eyebrow: 'Parece familiar?',
+      h2: 'Faz tempo que deixou de ser uma escolha.',
+      sub: 'No banho. No trânsito. Assim que você acorda. Um vape não tem maço para acabar, então nunca te dá um ponto para parar. Isso não é defeito de caráter. É a nicotina.',
+      hooks: {
+        wake30: 'Está na sua mão antes de você sair da cama.',
+        failedAttempts: 'Você já parou antes. Até o almoço.',
+        cravingWindow: 'A fissura parece não ter fim. Ela tem.',
+      },
+      note: 'Todo número desta página tem uma fonte. Outros apps para parar publicam “78% dos membros param”, sem citar ninguém.',
     },
     faq: {
       eyebrow: 'Respostas diretas',
@@ -211,6 +218,10 @@ export const pt: Dictionary = {
       q: 'Reduzir aos poucos é melhor do que parar com o vape de uma vez?',
       a: 'Parar de uma vez funciona para algumas pessoas e falha para a maioria. Reduzir aos poucos baixa a sua nicotina devagar o bastante para que a abstinência continue administrável, e é por isso que Cirrus conta tragadas que descem em vez de dias que sobem. Se parar de uma vez já funcionou para você, você não precisa de um app.',
     },
+    autoCount: {
+      q: 'Cirrus conta as tragadas do vape automaticamente?',
+      a: 'Não. Cirrus não consegue ver o seu vape, então você toca uma vez por tragada: no app, no widget da tela inicial ou no seu Apple Watch. É também por isso que funciona com qualquer vape, descartáveis incluídos. E esse toque é a parte útil: anotar cada uma é uma forma estudada há muito tempo de reduzir por si só, porque transforma um reflexo de novo em uma decisão que você percebe.',
+    },
     puffsPerDay: {
       q: 'Quantas tragadas por dia é muito?',
       a: 'Não existe uma linha clara, e nenhum órgão de saúde publica uma. Cerca de 14 tragadas equivalem a mais ou menos um cigarro, então 150 por dia ficam na casa dos dez.',
@@ -249,7 +260,7 @@ export const pt: Dictionary = {
     },
     puffCount: {
       q: 'Qual é a diferença para o Puff Count?',
-      a: 'A honestidade, principalmente. Publicamos uma fonte para cada estatística, o plano grátis não trava você, e há um coach e uma comunidade em vez de um contador sozinho. Cirrus também está no iPhone e no Android; o Puff Count só existe para iPhone.',
+      a: 'Os dois são contadores de tragadas em que você toca, e os dois te dão um limite diário. As diferenças: o nosso plano grátis nunca trava, há um coach com IA e uma comunidade anônima, e toda estatística que mostramos tem uma fonte. Cirrus também está no iPhone e no Android; o Puff Count só existe para aparelhos da Apple, sem versão para Android em setembro de 2026.',
     },
   },
   faqMore: {
@@ -276,7 +287,7 @@ export const pt: Dictionary = {
     outEyebrow: 'E é isto que significa',
     spendLabel: 'Se você gasta',
     perWeek: 'por semana',
-    yearNote: 'por ano. As suas contas, não as nossas',
+    yearNote: 'por ano, todo ano. As suas contas, não as nossas',
     startSuffix: ' por dia',
     freedom: '0 · Dia da liberdade',
     curveLabel: 'Sua curva de redução caindo a zero em 30 dias.',
@@ -294,12 +305,12 @@ export const pt: Dictionary = {
   },
 
   download: {
-    title: 'Baixar Cirrus',
+    title: 'Baixe o app para parar de usar vape no iPhone e no Android',
     description:
-      'Baixe Cirrus, o app para parar de fumar vape que conta suas tragadas reais e reduz até zero. Grátis na App Store para iPhone e no Google Play.',
+      'Baixe Cirrus, o app grátis para parar de usar vape: um toque registra uma tragada e seu limite diário cai até zero. Na App Store para iPhone e no Google Play.',
     crumb: 'Baixar o app',
     h1: 'Baixar {site}',
-    lede: 'Um contador de tragadas que vai reduzindo aos poucos em vez de exigir que você pare de repente. Uma terça-feira ruim não deveria custar três semanas.',
+    lede: 'Um app para parar de usar vape com um contador de tragadas de um toque e um limite diário que cai até zero. Um dia ruim nunca te leva de volta ao dia um.',
     whichH2: 'Qual celular',
     whichBody:
       'Os dois. Cirrus está na App Store para iPhone (iOS 15 ou posterior), com um app para Apple Watch incluído, e no Google Play para Android. O widget da tela inicial funciona nos dois.',

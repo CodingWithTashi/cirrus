@@ -26,7 +26,7 @@
 // Imports carry their `.ts` extension so scripts/check-i18n.mjs can load these
 // files straight through Node's type stripping, with no build step.
 import { SITE_DESCRIPTION, SITE_TAGLINE } from '../consts.ts';
-import type { CompareRowId, DayStepId, DeviceId, FaqId, FaqWithMoreId, ScreenId, StatId } from '../lib/content.ts';
+import type { CompareRowId, DayStepId, DeviceId, FaqId, FaqWithMoreId, HomeStatId, ScreenId, StatId } from '../lib/content.ts';
 
 type Split = { pre: string; accent: string; post: string };
 
@@ -51,7 +51,7 @@ type Shape = {
       included: string; notIncluded: string;
       rows: Record<CompareRowId, { feature: string; free?: string; pro?: string }>;
     };
-    stats: { eyebrow: string; h2: string; sub: string };
+    stats: { eyebrow: string; h2: string; sub: string; hooks: Record<HomeStatId, string>; note: string };
     faq: { eyebrow: string; h2: string };
     closing: { eyebrow: string; h2: string; sub: string; qrLabel: string; qrTitle: string; qrBody: string };
   };
@@ -89,10 +89,17 @@ export const en = {
     language: 'Language',
   },
 
-  // <title>, meta description and the default social-card alt. English reads
-  // them from consts.ts, which scripts/og.mjs and the RSS feed also read, so the
-  // brand line has one home. Every other locale writes its own here.
+  // The home <title>, the meta description and the default social-card alt.
+  // `tagline` and `description` are read from consts.ts in English, which
+  // scripts/og.mjs and the RSS feed also read, so the brand line has one home.
+  // Every other locale writes its own here.
+  //
+  // `title` is the home page's <title> before " · Cirrus". It leads with the
+  // query the page exists to answer ("quit vaping app") and keeps the brand line
+  // after it; the tagline alone never said what the thing IS, and a brand nobody
+  // has heard of yet was spending the first word of the result.
   meta: {
+    title: 'Quit vaping app without going cold turkey',
     tagline: SITE_TAGLINE,
     description: SITE_DESCRIPTION,
   },
@@ -106,15 +113,15 @@ export const en = {
 
   home: {
     hero: {
-      eyebrow: 'Free on iPhone and Android',
+      eyebrow: 'Free quit vaping app · iPhone and Android',
       h1: { pre: 'Quit vaping without going ', accent: 'cold turkey', post: '.' },
-      sub: "The quit vaping app that tapers you down instead of demanding you stop dead. One bad Tuesday shouldn't cost you three weeks.",
-      trust: ['Free to start', 'Free tier never runs out', 'No ad trackers'],
+      sub: 'One tap logs every puff. Your daily limit drops a little each day until it hits zero, and one bad day never sends you back to day one.',
+      trust: ['Free tier never runs out', 'Works with any vape', 'No ad trackers'],
     },
     number: {
       eyebrow: 'Live · no signup',
       h2: 'What does vaping actually cost you a year?',
-      sub: 'Tap the keypad up there. Everything below moves with it.',
+      sub: "Tap the keypad up there, then put in what you spend. It's your number, so it stings exactly as much as it should.",
     },
     day: {
       eyebrow: 'An example day',
@@ -128,7 +135,7 @@ export const en = {
         },
         lunch: {
           title: 'Lunch goes sideways',
-          body: "You're over today's limit. No reset, no day one. A repair token you earned with seven clean days absorbs it, so the streak dims instead of dying.",
+          body: "You're over today's limit. No reset, no day one. It's a streak freeze you had to earn: seven days under your limit bought a repair token, and it absorbs today, so the streak dims instead of dying.",
           tag: 'Free',
         },
         headsUp: {
@@ -175,8 +182,8 @@ export const en = {
       },
     },
     devices: {
-      eyebrow: 'Where it lives',
-      h2: "On the phone in your hand, and the wrist it's attached to.",
+      eyebrow: 'One tap, anywhere',
+      h2: 'Log a puff wherever it happens.',
       items: {
         iphone: { name: 'iPhone', body: 'On the App Store. iOS 15 or later.' },
         android: { name: 'Android', body: 'On Google Play.' },
@@ -219,10 +226,21 @@ export const en = {
         themes: { feature: 'Hearth and Tide themes' },
       },
     },
+    // The status quo, said plainly. Blunt about the dependence, never about the
+    // person (docs/07 §8: no shame words, in marketing too): each hook is a
+    // moment the reader recognises, the card under it is the sourced figure,
+    // and the last card is the way out, because a threat with no answer beside
+    // it is the version of this that makes people look away.
     stats: {
-      eyebrow: 'No invented stats',
-      h2: 'Every number here has a source.',
-      sub: 'Other quit apps ship "78% of members quit", cited to nobody. We don\'t.',
+      eyebrow: 'Sound familiar?',
+      h2: 'It stopped being a choice a while ago.',
+      sub: "In the shower. In the car. The second you wake up. A vape has no pack to finish, so it never hands you a place to stop. That isn't a character flaw. That's nicotine.",
+      hooks: {
+        wake30: "It's in your hand before you're out of bed.",
+        failedAttempts: "You've quit before. Until lunch.",
+        cravingWindow: "The craving feels endless. It isn't.",
+      },
+      note: 'Every number on this page has a source. Other quit apps ship “78% of members quit”, cited to nobody.',
     },
     faq: {
       eyebrow: 'Straight answers',
@@ -277,6 +295,10 @@ export const en = {
       q: 'Is tapering better than quitting vaping cold turkey?',
       a: 'Cold turkey works for some people and fails most. A taper lowers your nicotine slowly enough that withdrawal stays manageable, which is why Cirrus counts puffs going down instead of days going up. If cold turkey has already worked for you, you do not need an app.',
     },
+    autoCount: {
+      q: 'Does Cirrus count vape puffs automatically?',
+      a: "No. Cirrus can't see your vape, so you tap once per puff: in the app, on the home screen widget or on your Apple Watch. That is also why it works with any vape, disposables included. And the tap is the useful part: writing down each one is a long-studied way to cut down in its own right, because it turns a reflex back into a decision you notice.",
+    },
     puffsPerDay: {
       q: 'How many puffs a day is a lot?',
       a: 'There is no clean line, and no health body publishes one. Roughly 14 puffs is about one cigarette, so 150 a day is in the region of ten.',
@@ -317,7 +339,11 @@ export const en = {
     },
     puffCount: {
       q: 'How is this different from Puff Count?',
-      a: 'Honesty, mostly. We publish a source for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own. Cirrus is also on both iPhone and Android; Puff Count is iPhone only.',
+      // Checked Sep 19 2026 against both stores and puffcount.com: Puff Count is
+      // a manual logger with daily limits too, on Apple devices only, and its
+      // Android page still says "coming soon". Say what is the same before what
+      // is different — a reader who has used it will know.
+      a: 'Both are puff counters you tap, and both set you a daily limit. The differences: our free tier never locks, there is an AI coach and an anonymous community, and every statistic we show has a source. Cirrus is also on iPhone and Android; Puff Count is only on Apple devices, with no Android version as of September 2026.',
     },
   },
   faqMore: {
@@ -346,7 +372,7 @@ export const en = {
     outEyebrow: "And here's what that means",
     spendLabel: 'If you spend',
     perWeek: 'a week',
-    yearNote: 'a year. Your maths, not ours',
+    yearNote: 'a year, every year. Your maths, not ours',
     startSuffix: ' a day',
     freedom: '0 · Freedom Day',
     curveLabel: 'Your taper curve falling to zero over 30 days.',
@@ -364,12 +390,13 @@ export const en = {
   },
 
   download: {
-    title: 'Get Cirrus',
+    // "Get Cirrus · Cirrus" said the brand twice and never said what it was.
+    title: 'Download the quit vaping app for iPhone and Android',
     description:
-      'Download Cirrus, the quit vaping app that counts your real puffs and tapers them to zero. Free on the App Store for iPhone and on Google Play.',
+      'Download Cirrus, the free quit vaping app: one tap logs a puff and your daily limit tapers to zero. On the App Store for iPhone and on Google Play.',
     crumb: 'Get the app',
     h1: 'Get {site}',
-    lede: "A puff counter that tapers you down instead of demanding you stop dead. One bad Tuesday shouldn't cost you three weeks.",
+    lede: 'A quit vaping app with a one-tap puff counter and a daily limit that tapers to zero. One bad day never sends you back to day one.',
     whichH2: 'Which phone',
     whichBody:
       'Both. Cirrus is on the App Store for iPhone (iOS 15 or later), with an Apple Watch app included, and on Google Play for Android. The home screen widget works on both.',

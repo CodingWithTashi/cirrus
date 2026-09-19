@@ -123,6 +123,7 @@ for (const lang of LOCALES) {
   const title = (t) => `${t} · ${SITE_TITLE}`;
   const checks = [
     ['meta.tagline', `${SITE_TITLE} · ${dict['meta.tagline'] ?? ''}`, 0, 70],
+    ['meta.title', title(dict['meta.title'] ?? ''), 0, 70],
     ['download.title', title(dict['download.title'] ?? ''), 0, 70],
     ['notFound.title', title(dict['notFound.title'] ?? ''), 0, 70],
     ['meta.description', dict['meta.description'] ?? '', 50, 160],

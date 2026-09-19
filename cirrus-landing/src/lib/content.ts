@@ -27,6 +27,11 @@
  * three-card rhythm. All five stay available to the blog. They used to be picked
  * by matching the English figure ("76%"), which a French "76 %" would have
  * silently dropped.
+ *
+ * On the home page each of the three sits under a one-line moment the reader
+ * recognises (`home.stats.hooks`, keyed by `HomeStatId`), so the card reads as
+ * "this is you, and here is the source" rather than a figure on its own. The
+ * hook carries no number: the figure below it is the only claim on the card.
  */
 export const STATS = [
   { id: 'abstinence' },
@@ -36,6 +41,7 @@ export const STATS = [
   { id: 'puffsPerCig' },
 ] as const;
 export type StatId = (typeof STATS)[number]['id'];
+export type HomeStatId = Extract<(typeof STATS)[number], { home: true }>['id'];
 
 /**
  * FAQ order, and which questions hand off to a post.
@@ -53,6 +59,10 @@ export type StatId = (typeof STATS)[number]['id'];
  */
 export const FAQ_ITEMS = [
   { id: 'taper' },
+  // "vape puff counter", "vape hit counter", "vape counter": the product queries
+  // Search Console shows this site appearing for (Sep 2026). The honest answer
+  // to them is that no phone app can count a vape's puffs by itself.
+  { id: 'autoCount' },
   { id: 'puffsPerDay', more: 'how-many-puffs-a-day-is-a-lot' },
   { id: 'disposable', more: 'how-many-puffs-in-a-disposable-vape' },
   { id: 'costPerYear' },
