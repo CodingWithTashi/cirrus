@@ -43,7 +43,8 @@ const shots: Record<ScreenId, ImageMetadata> = {
 };
 
 // The three strongest of the five approved stats, kept to a three-card rhythm.
-const stats = STATS.filter((s) => 'home' in s && s.home);
+// The type guard is what lets `t.stats.hooks[s.id]` index by HomeStatId.
+const stats = STATS.filter((s): s is Extract<(typeof STATS)[number], { home: true }> => 'home' in s && s.home);
 
 // What the FAQ renders AND what the FAQPage schema carries — one list, so the
 // two can never disagree.
@@ -103,8 +104,38 @@ const qr = qrSvg
     </div>
   </section>
 
-  {/* ---------- 3. AN EXAMPLE DAY ---------- */}
-  <section class="section" aria-labelledby="day-h">
+  {/* ---------- 3. WHAT STAYING COSTS: the cited numbers ----------
+      Straight after the money, so the page names the problem before it sells
+      the fix: the cost in the reader's own arithmetic, then the dependence in
+      sourced figures, then the day with Cirrus. The last card is the way out
+      (a craving ends), because the evidence on fear appeals is that a threat
+      with no answer beside it makes people look away. */}
+  <section class="section section--tight" aria-labelledby="honest">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro micro--ember">{t.stats.eyebrow}</p>
+        <h2 id="honest">{t.stats.h2}</h2>
+        <p>{t.stats.sub}</p>
+      </div>
+
+      <ul class="stats">
+        {
+          stats.map((s, i) => (
+            <li class="stat reveal" data-delay={i}>
+              <h3 class="stat__hook">{t.stats.hooks[s.id]}</h3>
+              <p class="stat__figure">{dict.stats[s.id].figure}</p>
+              <p class="stat__claim">{dict.stats[s.id].claim}</p>
+              <p class="stat__source">{dict.stats[s.id].source}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="stats__note">{t.stats.note}</p>
+    </div>
+  </section>
+
+  {/* ---------- 4. AN EXAMPLE DAY ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="day-h">
     <div class="wrap day">
       <div class="section__head section__head--left">
         <p class="micro">{t.day.eyebrow}</p>
@@ -138,8 +169,8 @@ const qr = qrSvg
     </div>
   </section>
 
-  {/* ---------- 4. SCREENSHOTS ---------- */}
-  <section class="section section--lift section--rules" aria-labelledby="inside">
+  {/* ---------- 5. SCREENSHOTS ---------- */}
+  <section class="section" aria-labelledby="inside">
     <div class="wrap">
       <div class="rail-head">
         <div class="section__head section__head--left">
@@ -162,8 +193,8 @@ const qr = qrSvg
     </div>
   </section>
 
-  {/* ---------- 5. DEVICES ---------- */}
-  <section class="section section--tight" aria-labelledby="where">
+  {/* ---------- 6. DEVICES ---------- */}
+  <section class="section section--tight section--lift section--rules" aria-labelledby="where">
     <div class="wrap">
       <div class="section__head section__head--left">
         <p class="micro">{t.devices.eyebrow}</p>
@@ -184,8 +215,8 @@ const qr = qrSvg
     </div>
   </section>
 
-  {/* ---------- 6. FREE VS PREMIUM ---------- */}
-  <section class="section section--lift section--rules" aria-labelledby="cost">
+  {/* ---------- 7. FREE VS PREMIUM ---------- */}
+  <section class="section" aria-labelledby="cost">
     <div class="wrap plans">
       <div class="section__head section__head--left">
         <p class="micro micro--volt">{t.plans.eyebrow}</p>
@@ -246,29 +277,6 @@ const qr = qrSvg
           </tbody>
         </table>
       </div>
-    </div>
-  </section>
-
-  {/* ---------- 7. CITED NUMBERS ---------- */}
-  <section class="section section--tight" aria-labelledby="honest">
-    <div class="wrap">
-      <div class="section__head">
-        <p class="micro micro--ember">{t.stats.eyebrow}</p>
-        <h2 id="honest">{t.stats.h2}</h2>
-        <p>{t.stats.sub}</p>
-      </div>
-
-      <ul class="stats">
-        {
-          stats.map((s, i) => (
-            <li class="stat reveal" data-delay={i}>
-              <p class="stat__figure">{dict.stats[s.id].figure}</p>
-              <p class="stat__claim">{dict.stats[s.id].claim}</p>
-              <p class="stat__source">{dict.stats[s.id].source}</p>
-            </li>
-          ))
-        }
-      </ul>
     </div>
   </section>
 

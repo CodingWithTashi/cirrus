@@ -32,9 +32,10 @@ export const es: Dictionary = {
   },
 
   meta: {
+    title: 'App para dejar de vapear sin dejarlo de golpe',
     tagline: 'Deja de vapear sin dejarlo de golpe',
     description:
-      'La app para dejar de vapear que cuenta tus caladas (puffs) reales y las baja hasta cero. Sin cortar de golpe, sin volver al día uno y sin una cifra inventada.',
+      'App gratis para dejar de vapear, en iPhone y Android. Un toque por calada (puff) y tu límite diario baja hasta cero. Sin cortar de golpe ni volver al día uno.',
   },
 
   // Apple's and Google's own wording for their badges in Spanish.
@@ -45,15 +46,15 @@ export const es: Dictionary = {
 
   home: {
     hero: {
-      eyebrow: 'Gratis en iPhone y Android',
+      eyebrow: 'App gratis para dejar de vapear · iPhone y Android',
       h1: { pre: 'Deja de vapear sin ', accent: 'dejarlo de golpe', post: '.' },
-      sub: 'La app para dejar de vapear que te va bajando la dosis en lugar de exigirte parar en seco. Un mal martes no debería costarte tres semanas.',
-      trust: ['Gratis para empezar', 'El plan gratis no caduca', 'Sin rastreadores de anuncios'],
+      sub: 'Un toque registra cada calada. Tu límite diario baja un poco cada día hasta llegar a cero, y un mal día nunca te devuelve al día uno.',
+      trust: ['El plan gratis no caduca', 'Funciona con cualquier vape', 'Sin rastreadores de anuncios'],
     },
     number: {
       eyebrow: 'En vivo · sin registro',
       h2: '¿Cuánto te cuesta vapear al año, en realidad?',
-      sub: 'Toca el teclado de arriba. Todo lo de abajo cambia con él.',
+      sub: 'Toca el teclado de arriba y pon lo que gastas. Es tu número, así que duele exactamente lo que tiene que doler.',
     },
     day: {
       eyebrow: 'Un día de ejemplo',
@@ -67,7 +68,7 @@ export const es: Dictionary = {
         },
         lunch: {
           title: 'El almuerzo se tuerce',
-          body: 'Te pasaste del límite de hoy. Sin reinicio, sin día uno. Una ficha de reparación que ganaste con siete días limpios lo absorbe, así que la racha se atenúa en vez de morir.',
+          body: 'Te pasaste del límite de hoy. Sin reinicio, sin día uno. Es un protector de racha que tuviste que ganarte: siete días por debajo de tu límite te dieron una ficha de reparación, que absorbe el día de hoy, así que la racha se atenúa en vez de morir.',
           tag: 'Gratis',
         },
         headsUp: {
@@ -113,8 +114,8 @@ export const es: Dictionary = {
       },
     },
     devices: {
-      eyebrow: 'Dónde vive',
-      h2: 'En el teléfono que tienes en la mano, y en la muñeca que lo sostiene.',
+      eyebrow: 'Un toque, donde sea',
+      h2: 'Registra una calada donde sea que pase.',
       items: {
         iphone: { name: 'iPhone', body: 'En el App Store. iOS 15 o posterior.' },
         android: { name: 'Android', body: 'En Google Play.' },
@@ -156,9 +157,15 @@ export const es: Dictionary = {
       },
     },
     stats: {
-      eyebrow: 'Sin estadísticas inventadas',
-      h2: 'Aquí cada número tiene una fuente.',
-      sub: 'Otras apps para dejarlo publican «el 78% de los miembros lo deja», sin citar a nadie. Nosotros no.',
+      eyebrow: '¿Te suena?',
+      h2: 'Hace tiempo que dejó de ser una decisión.',
+      sub: 'En la ducha. En el tráfico. Apenas te despiertas. Un vape no tiene paquete que terminar, así que nunca te da un punto para parar. No es un defecto de carácter. Es la nicotina.',
+      hooks: {
+        wake30: 'Está en tu mano antes de salir de la cama.',
+        failedAttempts: 'Ya lo dejaste antes. No duró.',
+        cravingWindow: 'El antojo parece eterno. No lo es.',
+      },
+      note: 'Cada número de esta página tiene una fuente. Otras apps para dejarlo publican «el 78% de los miembros lo deja», sin citar a nadie.',
     },
     faq: {
       eyebrow: 'Respuestas directas',
@@ -208,6 +215,10 @@ export const es: Dictionary = {
       q: '¿Es mejor reducir poco a poco que dejar de vapear de golpe?',
       a: 'Dejarlo de golpe le funciona a algunas personas y le falla a la mayoría. Una reducción gradual baja tu nicotina lo bastante despacio para que la abstinencia sea manejable, y por eso Cirrus cuenta caladas que bajan en vez de días que suben. Si dejarlo de golpe ya te funcionó, no necesitas una app.',
     },
+    autoCount: {
+      q: '¿Cirrus cuenta las caladas del vape automáticamente?',
+      a: 'No. Cirrus no puede ver tu vape, así que tocas una vez por calada: en la app, en el widget de la pantalla de inicio o en tu Apple Watch. Por eso funciona con cualquier vape, desechables incluidos. Lo que importa es contra qué se mide el conteo: la investigación sobre el autorregistro encuentra que ayuda más cuando se anota cada vez, se compara con una meta y se te muestra al instante, y un toque frente al límite de hoy hace las tres cosas.',
+    },
     puffsPerDay: {
       q: '¿Cuántas caladas al día son muchas?',
       a: 'No hay una línea clara, y ningún organismo de salud publica una. Unas 14 caladas equivalen más o menos a un cigarrillo, así que 150 al día rondan los diez.',
@@ -246,7 +257,7 @@ export const es: Dictionary = {
     },
     puffCount: {
       q: '¿En qué se diferencia de Puff Count?',
-      a: 'En la honestidad, sobre todo. Publicamos una fuente para cada estadística, el plan gratis no te bloquea, y hay un coach y una comunidad en lugar de un contador solo. Además, Cirrus está en iPhone y en Android; Puff Count solo está en iPhone.',
+      a: 'Los dos son contadores de caladas que tocas, y los dos te ponen un límite diario. Las diferencias: nuestro plan gratis nunca se bloquea, hay un coach con IA y una comunidad anónima, y cada estadística que mostramos tiene una fuente. Además, Cirrus está en iPhone y en Android; Puff Count solo está en dispositivos de Apple, sin versión para Android a septiembre de 2026.',
     },
   },
   faqMore: {
@@ -273,7 +284,7 @@ export const es: Dictionary = {
     outEyebrow: 'Y esto es lo que significa',
     spendLabel: 'Si gastas',
     perWeek: 'a la semana',
-    yearNote: 'al año. Tus cuentas, no las nuestras',
+    yearNote: 'al año que te quedas cuando lo dejas. Tus cuentas, no las nuestras',
     startSuffix: ' al día',
     freedom: '0 · Día de libertad',
     curveLabel: 'Tu curva de reducción bajando a cero en 30 días.',
@@ -291,12 +302,12 @@ export const es: Dictionary = {
   },
 
   download: {
-    title: 'Descarga Cirrus',
+    title: 'Descarga la app para dejar de vapear en iPhone y Android',
     description:
-      'Descarga Cirrus, la app para dejar de vapear que cuenta tus caladas reales y las reduce hasta cero. Gratis en el App Store para iPhone y en Google Play.',
+      'Descarga Cirrus, la app gratis para dejar de vapear: un toque por calada y tu límite diario baja hasta cero. En el App Store para iPhone y en Google Play.',
     crumb: 'Descargar la app',
     h1: 'Descarga {site}',
-    lede: 'Un contador de caladas que te va bajando en lugar de exigirte parar en seco. Un mal martes no debería costarte tres semanas.',
+    lede: 'Una app para dejar de vapear con un contador de caladas de un toque y un límite diario que baja hasta cero. Un mal día nunca te devuelve al día uno.',
     whichH2: 'Qué teléfono',
     whichBody:
       'Los dos. Cirrus está en el App Store para iPhone (iOS 15 o posterior), con una app para Apple Watch incluida, y en Google Play para Android. El widget de pantalla de inicio funciona en ambos.',

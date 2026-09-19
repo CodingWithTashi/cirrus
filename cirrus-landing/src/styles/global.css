@@ -483,6 +483,8 @@ html[data-os='android'] .store--play { order: -1; }
   border: 2px solid var(--dot);
   box-shadow: 0 0 12px color-mix(in srgb, var(--dot) 45%, transparent);
 }
+/* The dot's fill hides the rail behind it, so it takes the section's colour. */
+.section--lift .timeline li::after { background: var(--lift); }
 
 .timeline__time {
   font-family: var(--font-display);
@@ -883,6 +885,13 @@ html[data-os='android'] .store--play { order: -1; }
   border-radius: var(--r-lg);
   padding: 1.25rem;
 }
+/* The moment the reader recognises, above the sourced figure. It is the card's
+   headline, so it reads first; the figure below it is the evidence. */
+.stat__hook {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  margin: 0 0 0.9rem;
+}
 .stat__figure {
   font-family: var(--font-display);
   font-weight: 700;
@@ -901,6 +910,13 @@ html[data-os='android'] .store--play { order: -1; }
   color: var(--muted);
   border-top: 1px solid var(--border);
   padding-top: 0.6rem;
+}
+.stats__note {
+  max-width: var(--measure);
+  margin: 1.5rem auto 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 /* ---------- FAQ ---------- */

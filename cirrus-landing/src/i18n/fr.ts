@@ -30,9 +30,10 @@ export const fr: Dictionary = {
   },
 
   meta: {
+    title: "L'app pour arrêter de vapoter sans tout couper d'un coup",
     tagline: "Arrête de vapoter sans tout couper d'un coup",
     description:
-      "L'app pour arrêter de vapoter qui compte tes vraies taffes et les réduit jusqu'à zéro. Sans arrêt brutal, sans retour au jour un, sans statistique inventée.",
+      "App gratuite pour arrêter de vapoter, iPhone et Android. Un appui par taffe, et ta limite du jour descend à zéro. Sans arrêt brutal ni retour au jour un.",
   },
 
   // Apple's and Google's own wording for their badges in French.
@@ -43,15 +44,15 @@ export const fr: Dictionary = {
 
   home: {
     hero: {
-      eyebrow: 'Gratuit sur iPhone et Android',
+      eyebrow: 'App gratuite pour arrêter de vapoter · iPhone et Android',
       h1: { pre: 'Arrête de vapoter sans ', accent: "tout couper d'un coup", post: '.' },
-      sub: "L'app pour arrêter de vapoter qui te fait diminuer au lieu d'exiger un arrêt net. Un mauvais mardi ne devrait pas te coûter trois semaines.",
-      trust: ['Gratuit pour commencer', "L'offre gratuite n'expire jamais", 'Aucun traceur publicitaire'],
+      sub: "Un appui enregistre chaque taffe. Ta limite du jour baisse un peu chaque jour jusqu'à zéro, et un mauvais jour ne te renvoie jamais au jour un.",
+      trust: ["L'offre gratuite n'expire jamais", 'Marche avec toutes les vapes', 'Aucun traceur publicitaire'],
     },
     number: {
       eyebrow: 'En direct · sans inscription',
       h2: 'Combien la vape te coûte vraiment par an\u00a0?',
-      sub: 'Tape sur le clavier là-haut. Tout ce qui est en dessous bouge avec.',
+      sub: "Tape sur le clavier là-haut, puis indique ce que tu dépenses. C'est ton chiffre\u00a0: ça pique exactement autant que ça doit piquer.",
     },
     day: {
       eyebrow: 'Une journée type',
@@ -65,7 +66,7 @@ export const fr: Dictionary = {
         },
         lunch: {
           title: 'Le déjeuner dérape',
-          body: "Tu as dépassé la limite du jour. Pas de remise à zéro, pas de jour un. Un jeton de réparation gagné avec sept jours propres l'absorbe\u00a0: la série s'atténue au lieu de mourir.",
+          body: "Tu as dépassé la limite du jour. Pas de remise à zéro, pas de jour un. C'est un gel de série, mais mérité\u00a0: sept jours sous ta limite t'ont rapporté un jeton de réparation, qui absorbe aujourd'hui. La série s'atténue au lieu de mourir.",
           tag: 'Gratuit',
         },
         headsUp: {
@@ -111,8 +112,8 @@ export const fr: Dictionary = {
       },
     },
     devices: {
-      eyebrow: 'Où ça vit',
-      h2: 'Sur le téléphone dans ta main, et au poignet qui va avec.',
+      eyebrow: 'Un appui, partout',
+      h2: 'Enregistre une taffe là où ça arrive.',
       items: {
         iphone: { name: 'iPhone', body: "Sur l'App Store. iOS 15 ou version ultérieure." },
         android: { name: 'Android', body: 'Sur Google Play.' },
@@ -154,9 +155,15 @@ export const fr: Dictionary = {
       },
     },
     stats: {
-      eyebrow: 'Aucune stat inventée',
-      h2: 'Ici, chaque chiffre a une source.',
-      sub: "D'autres apps affichent «\u00a078\u00a0% des membres arrêtent\u00a0», sans citer personne. Pas nous.",
+      eyebrow: 'Ça te parle\u00a0?',
+      h2: "Ça fait longtemps que ce n'est plus un choix.",
+      sub: "Sous la douche. Dans la voiture. Dès le réveil. Une vape n'a pas de paquet à finir, alors elle ne te donne jamais de moment pour t'arrêter. Ce n'est pas un défaut de caractère. C'est la nicotine.",
+      hooks: {
+        wake30: 'Elle est dans ta main avant même que tu te lèves.',
+        failedAttempts: "Tu as déjà arrêté. Ça n'a pas tenu.",
+        cravingWindow: "Le craving semble sans fin. Il ne l'est pas.",
+      },
+      note: "Chaque chiffre de cette page a une source. D'autres apps affichent «\u00a078\u00a0% des membres arrêtent\u00a0», sans citer personne.",
     },
     faq: {
       eyebrow: 'Des réponses franches',
@@ -206,6 +213,10 @@ export const fr: Dictionary = {
       q: "Diminuer progressivement, c'est mieux qu'arrêter de vapoter d'un coup\u00a0?",
       a: "Arrêter d'un coup marche pour certains et échoue pour la plupart. Une diminution fait baisser ta nicotine assez lentement pour que le manque reste gérable\u00a0: c'est pour ça que Cirrus compte des taffes qui descendent plutôt que des jours qui montent. Si arrêter d'un coup a déjà marché pour toi, tu n'as pas besoin d'une app.",
     },
+    autoCount: {
+      q: 'Est-ce que Cirrus compte les taffes automatiquement\u00a0?',
+      a: "Non. Cirrus ne peut pas voir ta vape, donc tu appuies une fois par taffe\u00a0: dans l'app, sur le widget de l'écran d'accueil ou sur ton Apple Watch. C'est aussi pour ça que ça marche avec n'importe quelle vape, jetables compris. Ce qui compte, c'est ce à quoi on compare le total\u00a0: la recherche sur l'auto-observation montre qu'elle aide le plus quand chaque fois est notée, comparée à un objectif et renvoyée tout de suite, et un appui face à la limite du jour fait les trois.",
+    },
     puffsPerDay: {
       q: "Combien de taffes par jour, c'est beaucoup\u00a0?",
       a: "Il n'y a pas de limite nette, et aucune autorité de santé n'en publie. Environ 14 taffes font à peu près une cigarette, donc 150 par jour, c'est de l'ordre de dix.",
@@ -244,7 +255,7 @@ export const fr: Dictionary = {
     },
     puffCount: {
       q: 'Quelle différence avec Puff Count\u00a0?',
-      a: "L'honnêteté, surtout. On publie une source pour chaque statistique, l'offre gratuite ne te bloque pas, et il y a un coach et une communauté plutôt qu'un compteur tout seul. Cirrus est aussi sur iPhone et sur Android\u00a0; Puff Count n'est que sur iPhone.",
+      a: "Les deux sont des compteurs de taffes où tu appuies toi-même, et les deux te fixent une limite du jour. Les différences\u00a0: notre offre gratuite ne se bloque jamais, il y a un coach IA et une communauté anonyme, et chaque statistique qu'on affiche a une source. Cirrus est aussi sur iPhone et sur Android\u00a0; Puff Count n'existe que sur les appareils Apple, sans version Android en septembre 2026.",
     },
   },
   faqMore: {
@@ -271,7 +282,7 @@ export const fr: Dictionary = {
     outEyebrow: 'Et voilà ce que ça veut dire',
     spendLabel: 'Si tu dépenses',
     perWeek: 'par semaine',
-    yearNote: 'par an. Tes calculs, pas les nôtres',
+    yearNote: 'par an que tu gardes en arrêtant. Tes calculs, pas les nôtres',
     startSuffix: ' par jour',
     freedom: '0 · Jour de liberté',
     curveLabel: 'Ta courbe de diminution qui tombe à zéro en 30 jours.',
@@ -289,12 +300,12 @@ export const fr: Dictionary = {
   },
 
   download: {
-    title: 'Télécharger Cirrus',
+    title: "Télécharger l'app pour arrêter de vapoter, iPhone et Android",
     description:
-      "Télécharge Cirrus, l'app pour arrêter de vapoter qui compte tes vraies taffes et les réduit à zéro. Gratuit sur l'App Store pour iPhone et sur Google Play.",
+      "Télécharge Cirrus, l'app gratuite pour arrêter de vapoter\u00a0: un appui par taffe, et ta limite du jour descend à zéro. Sur l'App Store (iPhone) et Google Play.",
     crumb: "Obtenir l'app",
     h1: 'Télécharger {site}',
-    lede: "Un compteur de taffes qui te fait diminuer au lieu d'exiger un arrêt net. Un mauvais mardi ne devrait pas te coûter trois semaines.",
+    lede: "Une app pour arrêter de vapoter, avec un compteur de taffes en un appui et une limite du jour qui descend jusqu'à zéro. Un mauvais jour ne te renvoie jamais au jour un.",
     whichH2: 'Quel téléphone',
     whichBody:
       "Les deux. Cirrus est sur l'App Store pour iPhone (iOS 15 ou version ultérieure), avec une app Apple Watch incluse, et sur Google Play pour Android. Le widget d'écran d'accueil fonctionne sur les deux.",

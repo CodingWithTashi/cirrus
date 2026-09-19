@@ -76,12 +76,13 @@ const {
 const t = useT(lang);
 const description = descriptionProp ?? t.meta.description;
 
-// Home gets brand + tagline; every other page gets "Page · Cirrus" so results
-// stay readable without repeating the brand twice. Home used to fall back to
-// SITE_DESCRIPTION, which produced a 143-character title reading "Cirrus —
-// Cirrus builds..." — Google truncates around 60 and the repetition wasted the
-// most valuable words in the result.
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} · ${t.meta.tagline}`;
+// Every page is "Page · Cirrus", home included: home's page name is
+// `meta.title` ("Quit vaping app without going cold turkey"). Home used to be
+// "Cirrus · <tagline>", which spent the first word of the result on a brand
+// nobody searches yet and never said the thing was an app. Before that it fell
+// back to SITE_DESCRIPTION and produced a 143-character title — Google
+// truncates around 60.
+const pageTitle = `${title ?? t.meta.title} · ${SITE_TITLE}`;
 
 // Astro.site comes from `site` in astro.config.mjs.
 //
@@ -190,6 +191,9 @@ const graph: Record<string, unknown>[] = [org, primary];
 if (softwareApp) {
   graph.push({
     '@type': 'MobileApplication',
+    // Locale-scoped like WebSite's, so the five home pages describe one app in
+    // five languages without asserting five descriptions for a single @id.
+    '@id': `${homeUrl}#app`,
     name: SITE_TITLE,
     applicationCategory: 'HealthApplication',
     operatingSystem: 'iOS, Android',
@@ -200,6 +204,9 @@ if (softwareApp) {
     keywords:
       'quit vaping, quit vaping app, stop vaping, puff counter, vape tracker, taper off vaping, vaping cravings, vaping withdrawal, nicotine',
     description: t.meta.description,
+    // The Free-vs-Premium table's own row names, so the list a crawler reads is
+    // the list a visitor reads, in the page's language, with no new strings.
+    featureList: Object.values(t.home.plans.rows).map((row) => row.feature),
     url: homeUrl,
     publisher: { '@id': org['@id'] },
     // The two listings are this same app, so they are its sameAs: that is how
