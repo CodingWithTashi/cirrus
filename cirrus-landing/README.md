@@ -298,10 +298,12 @@ adb shell pm get-app-links com.quitvape.last_puff             # on device
 
 ## Languages
 
-The app ships en, es, fr, de and pt; the site is being brought up to match (docs/10
-§43–45). **The home page, `/download` and the 404 are written in all five. Only English
-is PUBLISHED** — es, fr, de and pt build on preview deploys and nowhere else until the
-founder has read them.
+The app ships en, es, fr, de and pt, and so does the site (docs/10 §43–46). **The home
+page, `/download` and the 404 are live in all five** since Sep 19 2026; the blog and the
+legal pages are English-only. The four translations are Claude's drafts, published on
+the founder's call: their numbers are machine-checked against English, their idiom has
+not yet been read by a native speaker — so a correction from one is welcome and is a
+one-string edit in `src/i18n/<lang>.ts`.
 
 **One list decides everything: `LIVE_LOCALES` in `src/i18n/locales.mjs`.** Routes,
 hreflang, the sitemap and the language switcher all derive from it and from nothing
