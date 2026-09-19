@@ -5377,6 +5377,8 @@ Founder ask: how is the site doing, where is it failing, and then a plan to grow
 | From search | **~20** — Google ~10, Bing ~10. 250 of 280 are direct |
 | Paths | `/` 70 · `/privacy` 70 · `/terms` 50 · the withdrawal post 20 · `/delete-account` 20. The legal pages draw as much as the home page: in-app links and store reviewers, not prospects |
 | Edge "unique visitors", 30 days | 2.5k over 24.4k requests — **a bot count**. In one day two Dutch IPs (AS48090) made 63% of all requests, and half of all requests were POSTs to a site that accepts none. The managed ruleset blocks them as `React - RCE - CVE-2025-55182`; the site is static Astro and answers POST with 405, so it is noise, not exposure |
+| Google Search Console, Aug 29 – Sep 16 | **2 clicks, 456 impressions**, CTR 0.4%, average position **38.1**, 60 queries. Impressions by country: US 265 · UK 79 · Canada 28 · India 13 · Australia 13. Nearly all of it is the withdrawal post — "how long does it take to quit vaping" 47 impressions at position 71, "how long does vaping withdrawal last" 21 at **34** — then the counter queries: "vape puff counter" 11 at **24.5**, "puff counter" 10 at 29, "vape hit counter" 4 at 27 |
+| Indexing | **13 indexed**, 5 not (3 "Page with redirect" — the `www` / `http` variants, expected; 2 "Discovered, currently not indexed"). Sitemap submitted Aug 30, last read Sep 17, *Success*, 15 pages. **Indexing is not the problem; ranking is** — a 20-day-old domain with no links in |
 | Play | **Active in 177 countries/regions, 2 installs.** Listing is `en-US` only |
 | Core Web Vitals, 21 days | all Good (LCP p75 1.6 s). One CLS sample of **0.253 on `#get`** |
 
