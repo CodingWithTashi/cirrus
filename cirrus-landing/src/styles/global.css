@@ -39,9 +39,11 @@
      CURRENTLY rendering, and the Arial fallback is 5-12% narrower than the web
      faces even with size-adjust - so every `ch` box re-wrapped on font swap and
      pushed the sections below it down (the #get layout shift). These are the
-     same measures once the fonts land: Inter 1ch = 0.631em, Space Grotesk Bold
-     1ch = 0.648em. */
-  --measure: 41.5rem;
+     same measures once the fonts land, to four decimals ON PURPOSE: Inter 1ch =
+     0.63086em, Space Grotesk Bold 1ch = 0.648em. Rounding them to a tidy 34em
+     made a box 1px narrower than the `ch` it replaced, which was enough to push
+     one FAQ answer onto an extra line. */
+  --measure: 41.6367rem;
   --gutter: 20px;
 
   /* Supplied by <Font> in BaseLayout (see astro.config.mjs `fonts`). */
@@ -86,8 +88,14 @@ p { text-wrap: pretty; }
 /* A word wider than its column breaks rather than overflowing. `body` is
    `overflow-x: hidden`, so an overflow here is CLIPPED, not scrolled — the same
    silent failure the Markdown tables hit. English rarely gets near it; a German
-   compound in a narrow card does. */
-h1, h2, h3, p, li, summary, th, td { overflow-wrap: break-word; }
+   compound in a narrow card does.
+
+   NOT th/td. The compare table is `table-layout: fixed`, so at phone width a
+   header word is already wider than its column and overhangs harmlessly into
+   the cell padding; break-word snapped it mid-word instead ("PREMIU / M") and
+   made every row taller. Tables have their own answer: .compare-wrap and
+   .table-wrap scroll sideways. */
+h1, h2, h3, p, li, summary { overflow-wrap: break-word; }
 
 /* ---------- layout primitives ---------- */
 
@@ -257,7 +265,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 
 .hero h1 {
   font-size: clamp(2.4rem, 7vw, 4rem);
-  max-width: 8.4em;
+  max-width: 8.424em;
   margin: 14px 0 0;
 }
 
@@ -270,7 +278,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .hero__sub {
   font-size: 1.15rem;
   color: var(--muted);
-  max-width: 27.75em;
+  max-width: 27.7578em;
   margin: 18px 0 28px;
 }
 
@@ -414,7 +422,7 @@ html[data-os='android'] .store--play { order: -1; }
 }
 
 .timeline h3 { font-size: 1.125rem; line-height: 1.45; }
-.timeline p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.975rem; max-width: 34em; }
+.timeline p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.975rem; max-width: 34.0664em; }
 
 .tag {
   display: inline-block;
@@ -526,7 +534,7 @@ html[data-os='android'] .store--play { order: -1; }
   font-variant-numeric: tabular-nums;
 }
 .price__list span { color: var(--muted); font-size: 0.875rem; }
-.section__head .price__note { margin: 1rem 0 0; font-size: 0.875rem; max-width: 25.25em; }
+.section__head .price__note { margin: 1rem 0 0; font-size: 0.875rem; max-width: 25.2344em; }
 .price__note b { color: var(--volt); font-weight: 600; }
 
 .compare-wrap { overflow-x: auto; }
@@ -593,7 +601,7 @@ html[data-os='android'] .store--play { order: -1; }
   border-radius: 12px;
 }
 .qr__code svg { display: block; width: 100%; height: 100%; }
-.qr__text { max-width: 9.5em; color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
+.qr__text { max-width: 9.4629em; color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
 .qr__text b { display: block; margin-bottom: 0.25rem; color: var(--text); font-family: var(--font-display); font-size: 1rem; }
 .qr__text span { display: block; }
 
@@ -856,8 +864,8 @@ html[data-os='android'] .store--play { order: -1; }
     var(--slate);
   border-block: 1px solid var(--border);
 }
-.cta-band h2 { font-size: clamp(1.9rem, 5vw, 3rem); max-width: 10.4em; }
-.cta-band p { color: var(--muted); max-width: 26.5em; margin: 14px 0 28px; }
+.cta-band h2 { font-size: clamp(1.9rem, 5vw, 3rem); max-width: 10.368em; }
+.cta-band p { color: var(--muted); max-width: 26.4961em; margin: 14px 0 28px; }
 
 /* ---------- footer ---------- */
 
@@ -913,7 +921,7 @@ html[data-os='android'] .store--play { order: -1; }
 
 .page { padding-block: clamp(40px, 7vw, 72px); }
 .page h1 { font-size: clamp(2rem, 5vw, 3rem); }
-.lede { font-size: 1.125rem; color: var(--muted); max-width: 30.25em; }
+.lede { font-size: 1.125rem; color: var(--muted); max-width: 30.2812em; }
 
 .post-list { list-style: none; padding: 0; margin: 2.5rem 0 0; max-width: 42rem; }
 .post-list li { padding: 1.75rem 0; border-bottom: 1px solid var(--border); }
@@ -1116,7 +1124,7 @@ html[data-os='android'] .store--play { order: -1; }
 .imgslot__what {
   font-size: 0.9375rem;
   color: var(--muted);
-  max-width: 21.5em;
+  max-width: 21.4492em;
   margin-inline: auto !important;
   line-height: 1.45;
 }
@@ -1329,7 +1337,7 @@ html[data-os='android'] .store--play { order: -1; }
   font-size: clamp(1.4rem, 3.6vw, 1.8rem);
   margin: 0.5rem 0 0;
 }
-.post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 27.75em; }
+.post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 27.7578em; }
 .post-cta--end .stores { margin-top: 1.2rem; }
 
 /* ---------- post layout: article + sidebar ----------
