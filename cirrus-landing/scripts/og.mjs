@@ -289,6 +289,20 @@ const POSTS = [
       { n: '15–20', label: 'min per craving', color: VOLT },
     ],
   },
+  {
+    slug: 'nicotine-withdrawal-timeline',
+    eyebrow: 'NICOTINE · THE FULL TIMELINE',
+    headline: 'Nicotine withdrawal timeline',
+    // The post's arc in four figures: the half-life that makes the crash early,
+    // when symptoms start, the peak nobody expects on day two, and when it is
+    // behind you. Ember for the drop, volt for the far side of it.
+    blocks: [
+      { n: '2 hrs', label: 'nicotine half-life', color: EMBER },
+      { n: '4–24h', label: 'symptoms start', color: EMBER },
+      { n: 'Day 2–3', label: 'the peak', color: EMBER },
+      { n: '2–4 wks', label: 'mostly over', color: VOLT },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line
