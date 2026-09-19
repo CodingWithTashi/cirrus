@@ -4,9 +4,10 @@
 	// otherwise `wrangler pages deploy` prompts interactively and fails in CI.
 	"name": "cirrus-landing",
 	"compatibility_date": "2026-08-30",
-	// Static Astro output. `wrangler pages deploy` needs no directory argument.
-	// There are no Pages Functions any more: the only one was the waitlist's
-	// /api/subscribe, removed with the waitlist when both stores went live.
+	// Static Astro output. `wrangler pages deploy` needs no directory argument,
+	// and picks up `functions/` beside it on its own. There is exactly one Pages
+	// Function: functions/get.ts, the /get smart link. The waitlist's
+	// /api/subscribe went when both stores went live.
 	"pages_build_output_dir": "./dist"
 
 	// Production domain: cirrusquit.com (+ www, which 301s to the apex via a

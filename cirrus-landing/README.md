@@ -180,7 +180,7 @@ misleading, reads as evidence unless it is labelled — which is the honest-numb
 rule (docs/02 §8) failing through a picture instead of a sentence. Where an image
 is not a photograph of a real thing, the caption opens with **Illustration only.**
 and the alt text says the same, since a screen-reader user never sees the caption
-styling. `public/blog/disposables/*` is the live example.
+styling. `src/content/blog/disposables/*` is the live example.
 
 Source files should be no wider than **2× their display size**. The prose column
 is 672px, so 1344 is the ceiling; an 1800px source only makes Astro generate
@@ -193,8 +193,10 @@ with a `<figure>` when the file lands — it is styled to look obviously
 unfinished so it cannot be published by accident.
 
 `public/og/` is written by `npm run og` and holds **generated** cards only. Photos
-go in `public/blog/<slug>/`, or the next `npm run og` leaves you unable to tell
-which files are authored and which are output.
+go beside the posts in `src/content/blog/<folder>/` and are referenced relatively
+(`./disposables/quit-vaping.jpeg`), which is also what lets Astro optimise them —
+put one in `public/og/` and the next `npm run og` leaves you unable to tell which
+files are authored and which are output.
 
 **`.prose` is the shell width; the reading measure is applied to its children,
 left-aligned.** Left, not centred: the site header, the breadcrumb and the
@@ -380,9 +382,12 @@ those questions are real search queries, they render on the home page as copy *a
 is cut to two sentences plus a `more` link to the post. `more` is visible markup only and
 is deliberately absent from the schema.
 
-Check for collisions after adding any post — parse the JSON-LD on every built page and
-assert no `FAQPage` question string appears twice. That check caught a real duplicate
-("How much nicotine is in a Geek Bar Pulse?") across two posts.
+`npm run verify` (`scripts/check-dist.mjs`) enforces it: it parses the JSON-LD on every
+built page and fails if a `FAQPage` question string appears on two pages, or appears in
+the schema without a visible `<summary>` carrying the same words. Done by hand, that check
+caught a real duplicate ("How much nicotine is in a Geek Bar Pulse?") across two posts. The
+same script checks canonicals, internal links and `#anchors`, and that the sitemap agrees
+with which pages are indexable; the deploy workflow runs it between Build and Deploy.
 
 ### Canonical host
 
@@ -399,9 +404,16 @@ Two things to know if you ever touch it:
   The TLS handshake happens before the redirect, so detaching it breaks
   `https://www` with a certificate error instead of redirecting.
 
-### Cloudflare managed robots.txt
+### robots.txt and AI crawlers
 
-The zone injects its own `robots.txt` block above the generated one, blocking
-GPTBot, ClaudeBot, Google-Extended, CCBot and others (`ai-train=no`). Search
-crawlers are explicitly allowed, so indexing is unaffected — but posts will not
-be usable as AI training data or cited in AI answers. Toggle in AI Crawl Control.
+`src/pages/robots.txt.ts` is the whole file crawlers see. Cloudflare's managed
+`robots.txt` prepend (AI Crawl Control → Signals) is **off** — verified against the
+live file on Sep 19 2026, which is byte-for-byte the generated one. If that toggle
+is ever switched back on, the zone injects its own block above ours and the two
+can disagree.
+
+The generated file says `ai-train=no` and disallows the bulk training crawlers
+(GPTBot, ClaudeBot, CCBot, Bytespider and others). It deliberately does **not**
+block the AI *search* and assistant crawlers (OAI-SearchBot, ChatGPT-User,
+PerplexityBot, Applebot) or Google-Extended: being cited in an answer is
+distribution, and it is how a new app gets found.
