@@ -273,7 +273,9 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     />
 
     <meta property="og:type" content={type} />
-    <meta property="og:title" content={title ?? SITE_TITLE} />
+    {/* Home passes no `title`, and falling back to the bare brand made every
+        shared link to the home page read "Cirrus" and nothing else. */}
+    <meta property="og:title" content={title ?? pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={SITE_TITLE} />
@@ -285,7 +287,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     {ogImage && <meta property="og:image:alt" content={ogImageAlt} />}
 
     <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
-    <meta name="twitter:title" content={title ?? SITE_TITLE} />
+    <meta name="twitter:title" content={title ?? pageTitle} />
     <meta name="twitter:description" content={description} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
     {ogImage && <meta name="twitter:image:alt" content={ogImageAlt} />}

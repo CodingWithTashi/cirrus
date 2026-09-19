@@ -48,6 +48,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Reads dist/, so it has to come after the build. Catches what the
+      # typecheck structurally cannot: a canonical that does not match its URL,
+      # one FAQ question emitted as schema on two pages, an internal link or
+      # #anchor that resolves to nothing, and a sitemap that disagrees with
+      # which pages are indexable.
+      - name: Verify built site
+        run: npm run verify
+
       # Deploy with the wrangler pinned in package-lock.json, so CI and a local
       # `npm run deploy` run the exact same version. Project name and output dir
       # come from cirrus-landing/wrangler.jsonc.
