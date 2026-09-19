@@ -1,6 +1,10 @@
 // The one door to the dictionaries: `useT(lang)` for the strings, `fmt()` for
 // placeholders, `clock()` for the example day's times.
+import { de } from './de.ts';
 import { en, type Dictionary } from './en.ts';
+import { es } from './es.ts';
+import { fr } from './fr.ts';
+import { pt } from './pt.ts';
 import { DEFAULT_LOCALE, INTL } from './locales.mjs';
 import type { Locale } from './paths.ts';
 
@@ -8,24 +12,23 @@ export type { Dictionary } from './en.ts';
 export type { Locale } from './paths.ts';
 
 /**
- * Every dictionary that has been written. A locale joins this map the moment its
- * file exists, and `LIVE_LOCALES` (locales.mjs) decides separately whether it is
- * published — so a translation can be built, previewed and spot-checked long
- * before a single URL of it is public.
- *
- * Partial on purpose for now: English only. Once es/fr/de/pt land this becomes
- * `satisfies Record<Locale, Dictionary>` and a missing file stops compiling.
+ * Every dictionary. `satisfies Record<Locale, …>` means a locale added to the
+ * registry without a file here stops compiling. Whether a locale is PUBLISHED is
+ * a separate question, answered by `LIVE_LOCALES` in locales.mjs — so a
+ * translation can be built, previewed and spot-checked long before a single URL
+ * of it is public.
  */
-const DICTS: Partial<Record<Locale, Dictionary>> = { en };
+const DICTS = { en, es, fr, de, pt } satisfies Record<Locale, Dictionary>;
 
-/** The dictionary for `lang`. Throws rather than falling back to English: a page
-    that silently renders in the wrong language is duplicate content with a
-    foreign URL, and it would pass every check that only looks for a 200. */
+/** The dictionary for `lang`. There is no fallback to English, by construction:
+    a page that silently renders in the wrong language is duplicate content with
+    a foreign URL, and it would pass every check that only looks for a 200. */
 export function useT(lang: Locale = DEFAULT_LOCALE): Dictionary {
-  const dict = DICTS[lang];
-  if (!dict) throw new Error(`i18n: no dictionary for "${lang}" — add src/i18n/${lang}.ts to DICTS`);
-  return dict;
+  return DICTS[lang];
 }
+
+/** All of them, for scripts/check-i18n.mjs. */
+export const dictionaries: Record<Locale, Dictionary> = DICTS;
 
 /**
  * Fills `{name}` placeholders. Throws on a placeholder with no value — a

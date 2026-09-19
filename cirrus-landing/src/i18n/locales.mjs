@@ -25,13 +25,42 @@ export const LOCALES = /** @type {const} */ (['en', 'es', 'fr', 'de', 'pt']);
 export const DEFAULT_LOCALE = 'en';
 
 /**
- * The locales that are PUBLISHED. Routes, hreflang, the sitemap and the language
- * switcher all read this and nothing else, so a locale goes live by being added
- * here once the founder has spot-checked it — one at a time if need be — and a
- * half-translated locale cannot leak a single URL before then.
+ * The locales that are PUBLISHED on cirrusquit.com. A locale goes live by being
+ * added HERE, once the founder has spot-checked it — one at a time if need be.
  * @type {readonly Locale[]}
  */
-export const LIVE_LOCALES = ['en'];
+const PUBLISHED = ['en'];
+
+/**
+ * Locales built for a PREVIEW deploy only, so a translation can be read on a
+ * real URL and a real phone before it is published. The deploy workflow sets
+ * CIRRUS_PREVIEW_LOCALES for the `preview` target and never for `production`;
+ * Cloudflare serves every preview deploy with `X-Robots-Tag: noindex`, so
+ * nothing built this way can reach a search index.
+ *
+ * `process` is guarded because this file is also bundled into the /get Pages
+ * Function (through lib/store.ts), and a Worker has no `process`.
+ * @type {readonly string[]}
+ */
+const PREVIEWED = (typeof process !== 'undefined' ? (process.env.CIRRUS_PREVIEW_LOCALES ?? '') : '')
+  .split(',')
+  .map((code) => code.trim())
+  .filter(Boolean);
+
+/**
+ * The locales this BUILD serves. Routes, hreflang, the sitemap and the language
+ * switcher all read this and nothing else, so a half-finished locale cannot leak
+ * a single URL. In registry order, whatever order they were asked for in.
+ * @type {readonly Locale[]}
+ */
+export const LIVE_LOCALES = LOCALES.filter((l) => PUBLISHED.includes(l) || PREVIEWED.includes(l));
+
+/**
+ * What each language calls itself — what the switcher shows. Never translated:
+ * someone looking for Deutsch is not helped by reading "German" or "Alemán".
+ * @type {Record<Locale, string>}
+ */
+export const AUTONYM = { en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português' };
 
 /**
  * hreflang values. Language-only, no region: /es is served to every Spanish

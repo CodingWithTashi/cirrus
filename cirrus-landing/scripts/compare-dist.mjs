@@ -37,7 +37,7 @@ const walk = (dir) => readdirSync(dir).flatMap((n) => {
 });
 const pagesOf = (root) => new Map(walk(root).filter((f) => f.endsWith('.html')).map((f) => [relative(root, f).split(sep).join('/'), f]));
 
-const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '·' };
+const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', middot: '·' };
 const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (w, b) =>
   b[0] !== '#' ? (ENT[b.toLowerCase()] ?? w) : String.fromCodePoint(b[1].toLowerCase() === 'x' ? parseInt(b.slice(2), 16) : parseInt(b.slice(1), 10)));
 const squash = (s) => decode(s).replace(/\s+/g, ' ').trim();

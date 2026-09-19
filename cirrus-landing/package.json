@@ -3,14 +3,14 @@
   "type": "module",
   "version": "0.0.1",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
     "preview:edge": "astro build && wrangler pages dev dist --port 8788 --ip 127.0.0.1",
-    "check": "astro check",
+    "check": "astro check && node scripts/check-i18n.mjs",
     "verify": "node scripts/check-dist.mjs",
     "compare": "node scripts/compare-dist.mjs",
     "deploy": "astro build && npm run verify && wrangler pages deploy",

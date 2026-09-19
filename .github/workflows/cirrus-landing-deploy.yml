@@ -41,12 +41,22 @@ jobs:
 
       # Catches broken links to content, bad prop types, and — via the content
       # collection schema — any blog post with a missing or over-long title or
-      # meta description, before it can reach the live site.
+      # meta description, before it can reach the live site. It also runs
+      # scripts/check-i18n.mjs over every translation: keys, placeholders, digits
+      # (a translated "76%" must still be 76), lengths and duplicate questions.
       - name: Typecheck
         run: npm run check
 
+      # A PREVIEW deploy also builds the languages that are written but not yet
+      # published, so a translation can be read on a real URL and a real phone
+      # before it goes live. Production never sets this: it serves exactly the
+      # locales listed as PUBLISHED in src/i18n/locales.mjs. Cloudflare sends
+      # `X-Robots-Tag: noindex` on every preview deploy, so nothing built here
+      # can reach a search index.
       - name: Build
         run: npm run build
+        env:
+          CIRRUS_PREVIEW_LOCALES: ${{ inputs.environment == 'preview' && 'es,fr,de,pt' || '' }}
 
       # Reads dist/, so it has to come after the build. Catches what the
       # typecheck structurally cannot: a canonical that does not match its URL,
