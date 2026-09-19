@@ -85,6 +85,8 @@ export const en = {
     // and it carries its own leading space. Empty in English, where no link does;
     // it is the one key a locale may leave empty, and only English does.
     inEnglish: '',
+    // The language switcher's accessible name.
+    language: 'Language',
   },
 
   // <title>, meta description and the default social-card alt. English reads

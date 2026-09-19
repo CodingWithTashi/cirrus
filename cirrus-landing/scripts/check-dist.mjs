@@ -17,6 +17,15 @@
 //      every #fragment to an id on the page it points at. Markdown posts link
 //      by hand, and a renamed slug breaks them without a build error.
 //   D. SITEMAP. Every indexable page is listed and no noindex page is.
+//   E. LANGUAGES. `<html lang>` matches the URL's locale. hreflang is the one
+//      piece of markup that only works when BOTH ends agree, so: a page that has
+//      alternates lists itself at its own canonical, x-default is the English
+//      one, every target exists and lists this page back under the right code,
+//      and the target really is in that language. Never on a noindex page. And
+//      the sitemap's alternates say exactly what the page's <head> says. A link
+//      from a localized page to an English URL is an error when that page
+//      exists in the reader's language — unless it carries `hreflang`, which is
+//      how i18n/paths.ts marks a deliberate hand-off (the legal pages, the blog).
 //
 // No dependencies and no HTML parser: the pages are our own build output, so a
 // tag regex plus an attribute reader is enough, and a check that needs an
@@ -24,8 +33,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_LOCALE, HREFLANG, LOCALES } from '../src/i18n/locales.mjs';
 
-const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const here =(p) => fileURLToPath(new URL(p, import.meta.url));
 const DIST = here('../dist');
 
 // Served by something other than a file in dist: /get is the Pages Function.
@@ -75,7 +85,7 @@ const htmlFiles = files.filter((f) => f.endsWith('.html'));
 
 // ---------- reading HTML ----------
 
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
 const decode = (s) =>
   s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, body) => {
     if (body[0] !== '#') return ENTITIES[body.toLowerCase()] ?? whole;
@@ -252,6 +262,83 @@ if (sitemapFiles.length === 0) {
   }
 }
 
+// ---------- E. languages ----------
+
+const otherLocales = LOCALES.filter((l) => l !== DEFAULT_LOCALE);
+/** Which locale a clean path belongs to, and the English path it translates. */
+function localeOf(path) {
+  const [, first, ...rest] = path.split('/');
+  if (!otherLocales.includes(first)) return { lang: DEFAULT_LOCALE, english: path };
+  return { lang: first, english: rest.length ? `/${rest.join('/')}` : '/' };
+}
+const codeToLocale = Object.fromEntries(LOCALES.map((l) => [HREFLANG[l], l]));
+const bareUrl = (u) => u.replace(/\/$/, '');
+
+/** hreflang → absolute URL, as the page's <head> declares it. */
+const alternatesOf = (page) =>
+  new Map(tags(page.html, 'link').filter((l) => l.rel === 'alternate' && l.hreflang).map((l) => [l.hreflang, bareUrl(l.href)]));
+
+let hreflangPages = 0;
+
+for (const page of pages) {
+  const { lang } = localeOf(page.path);
+  const declared = tags(page.html, 'html')[0]?.lang;
+  if (declared !== lang) fail(page.path, `<html lang="${declared}"> but the URL is a "${lang}" page`);
+
+  const alts = alternatesOf(page);
+  if (alts.size === 0) {
+    // A localized page only exists because it translates an English one, so it
+    // always has at least that alternate. English-only pages rightly have none.
+    if (lang !== DEFAULT_LOCALE && !page.noindex) fail(page.path, 'is a localized, indexable page with no hreflang');
+    continue;
+  }
+  hreflangPages += 1;
+  if (page.noindex) fail(page.path, 'is noindex but declares hreflang');
+
+  const self = bareUrl(urlOf(page.path));
+  if (alts.get(HREFLANG[lang]) !== self) fail(page.path, `hreflang="${HREFLANG[lang]}" is ${alts.get(HREFLANG[lang])}, expected its own URL ${self}`);
+  if (alts.get('x-default') !== alts.get(HREFLANG[DEFAULT_LOCALE])) fail(page.path, 'x-default is not the English version');
+
+  for (const [code, url] of alts) {
+    if (code === 'x-default') continue;
+    const targetLang = codeToLocale[code];
+    const target = pageByPath.get(url === SITE ? '/' : url.slice(SITE.length));
+    if (!target) { fail(page.path, `hreflang="${code}" points at ${url}, which is not a page in dist`); continue; }
+    if (tags(target.html, 'html')[0]?.lang !== targetLang) fail(page.path, `hreflang="${code}" points at ${target.path}, which is not in that language`);
+    // Reciprocity: Google ignores an hreflang pair that only one side declares.
+    if (alternatesOf(target).get(HREFLANG[lang]) !== self) fail(page.path, `${target.path} does not list this page back as hreflang="${HREFLANG[lang]}"`);
+  }
+}
+
+// The sitemap's alternates must say what the <head> says.
+for (const file of sitemapFiles) {
+  for (const [, block] of readFileSync(file, 'utf8').matchAll(/<url>([\s\S]*?)<\/url>/g)) {
+    const loc = bareUrl(decode(block.match(/<loc>([^<]+)<\/loc>/)?.[1]?.trim() ?? ''));
+    const page = pageByPath.get(loc === SITE ? '/' : loc.slice(SITE.length));
+    if (!page) continue; // already reported above
+    const inSitemap = new Map([...block.matchAll(/<xhtml:link\b[^>]*>/g)].map((m) => attrs(m[0])).map((a) => [a.hreflang, bareUrl(a.href)]));
+    const inHead = alternatesOf(page);
+    const same = inSitemap.size === inHead.size && [...inHead].every(([code, url]) => inSitemap.get(code) === url);
+    if (!same) fail(page.path, `sitemap alternates [${[...inSitemap.keys()].join(' ')}] differ from the page's hreflang [${[...inHead.keys()].join(' ')}]`);
+  }
+}
+
+// A localized page may link an English URL only on purpose.
+for (const page of pages) {
+  const { lang } = localeOf(page.path);
+  if (lang === DEFAULT_LOCALE) continue;
+  for (const a of tags(page.html, 'a')) {
+    if (!a.href || a.hreflang) continue; // a marked hand-off, or the switcher
+    let url;
+    try { url = new URL(a.href, urlOf(page.path)); } catch { continue; } // reported under C
+    if (url.origin !== SITE) continue;
+    const to = localeOf(url.pathname.length > 1 ? url.pathname.replace(/\/$/, '') : url.pathname);
+    if (to.lang !== DEFAULT_LOCALE) continue;
+    const localized = to.english === '/' ? `/${lang}` : `/${lang}${to.english}`;
+    if (pageByPath.has(localized)) fail(page.path, `links the English ${to.english} although ${localized} exists (use link() from i18n/paths.ts)`);
+  }
+}
+
 // ---------- report ----------
 
 if (errors.length > 0) {
@@ -262,5 +349,5 @@ if (errors.length > 0) {
 
 console.log(
   `check-dist: ${pages.length} pages, ${linkCount} internal links, ${questionCount} FAQ questions, ` +
-    `${sitemapFiles.length} sitemap file${sitemapFiles.length === 1 ? '' : 's'} — all consistent.`,
+    `${hreflangPages} pages with hreflang, ${sitemapFiles.length} sitemap file${sitemapFiles.length === 1 ? '' : 's'} — all consistent.`,
 );

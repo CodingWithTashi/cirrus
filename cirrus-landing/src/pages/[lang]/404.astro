@@ -1,0 +1,22 @@
+---
+// The not-found page in every live language but English, which keeps its own unprefixed
+// route file beside this folder. The page itself is components/pages/NotFoundPage.astro.
+//
+// Which languages exist is LIVE_LOCALES (i18n/locales.mjs) and nothing else: a
+// dictionary can be written, type-checked and previewed for weeks without this
+// route building a single page for it.
+//
+// Cloudflare Pages serves the nearest 404.html up the tree, so dist/es/404.html
+// answers a bad URL under /es in Spanish.
+import NotFoundPage from '../../components/pages/NotFoundPage.astro';
+import { DEFAULT_LOCALE, LIVE_LOCALES } from '../../i18n/locales.mjs';
+import type { Locale } from '../../i18n/index.ts';
+
+export function getStaticPaths() {
+  return LIVE_LOCALES.filter((lang) => lang !== DEFAULT_LOCALE).map((lang) => ({ params: { lang } }));
+}
+
+const { lang } = Astro.params as { lang: Locale };
+---
+
+<NotFoundPage lang={lang} />

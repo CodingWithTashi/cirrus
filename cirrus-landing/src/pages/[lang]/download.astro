@@ -1,0 +1,23 @@
+---
+// The install page in every live language but English, which keeps its own unprefixed
+// route file beside this folder. The page itself is components/pages/DownloadPage.astro.
+//
+// Which languages exist is LIVE_LOCALES (i18n/locales.mjs) and nothing else: a
+// dictionary can be written, type-checked and previewed for weeks without this
+// route building a single page for it.
+//
+// The Android app claims /download through App Links and deliberately does NOT
+// claim /es/download: the manifest scopes the claim, and an install page should
+// open in a browser anyway.
+import DownloadPage from '../../components/pages/DownloadPage.astro';
+import { DEFAULT_LOCALE, LIVE_LOCALES } from '../../i18n/locales.mjs';
+import type { Locale } from '../../i18n/index.ts';
+
+export function getStaticPaths() {
+  return LIVE_LOCALES.filter((lang) => lang !== DEFAULT_LOCALE).map((lang) => ({ params: { lang } }));
+}
+
+const { lang } = Astro.params as { lang: Locale };
+---
+
+<DownloadPage lang={lang} />

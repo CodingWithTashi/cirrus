@@ -5,7 +5,7 @@ import { Font, Image } from 'astro:assets';
 import mark from '../assets/mark.png';
 import { SITE_TITLE, SITE_OG_IMAGE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL, APP_STORE_ID, APP_STORE_URL, PLAY_STORE_URL } from '../consts';
 import { fmt, useT, type Locale } from '../i18n/index.ts';
-import { DEFAULT_LOCALE, HREFLANG, OG_LOCALE } from '../i18n/locales.mjs';
+import { AUTONYM, DEFAULT_LOCALE, HREFLANG, LIVE_LOCALES, OG_LOCALE } from '../i18n/locales.mjs';
 import { link, localePath } from '../i18n/paths.ts';
 import '../styles/global.css';
 
@@ -263,6 +263,20 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
 // English until a locale has posts of its own (Phase 3); link() says so in the
 // markup rather than guessing a /es/blog that does not exist.
 const blogLink = link(lang, '/blog');
+
+// The language switcher. Each entry goes to THIS page in that language when it
+// exists there, and to that language's home when it does not — never to a
+// guessed URL. Empty while only one language is live, so an English-only build
+// renders no switcher at all.
+const languages =
+  LIVE_LOCALES.length > 1
+    ? LIVE_LOCALES.map((l) => ({
+        code: l,
+        name: AUTONYM[l],
+        href: alternates?.[l] ?? localePath(l, '/'),
+        current: l === lang,
+      }))
+    : [];
 ---
 
 <!doctype html>
@@ -363,6 +377,22 @@ const blogLink = link(lang, '/blog');
         </a>
         <nav class="site-nav" aria-label={t.chrome.navLabel}>
           <a {...blogLink}>{t.chrome.blog}</a>
+          {languages.length > 0 && (
+            <details class="lang">
+              <summary aria-label={`${t.chrome.language}: ${AUTONYM[lang]}`}>{lang.toUpperCase()}</summary>
+              <ul class="lang__panel">
+                {languages.map((l) => (
+                  <li>
+                    {l.current ? (
+                      <span aria-current="true">{l.name} <small>{l.code}</small></span>
+                    ) : (
+                      <a href={l.href} hreflang={HREFLANG[l.code]} lang={l.code}>{l.name} <small>{l.code}</small></a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           {/* Home scrolls to its own closing band (badges + QR code); every other
               page goes to /download, which puts the reader's store first. "Home"
               is THIS locale's home — testing for "/" sent the Spanish home page's
@@ -412,6 +442,17 @@ const blogLink = link(lang, '/blog');
               it is the specific thing the policy exists to stop. */}
           <a {...link(lang, DELETE_ACCOUNT_URL)}>{t.chrome.deleteAccount}</a>
         </div>
+        {languages.length > 0 && (
+          <nav class="footer-langs" aria-label={t.chrome.language}>
+            {languages.map((l) =>
+              l.current ? (
+                <span aria-current="true">{l.name}</span>
+              ) : (
+                <a href={l.href} hreflang={HREFLANG[l.code]} lang={l.code}>{l.name}</a>
+              ),
+            )}
+          </nav>
+        )}
       </div>
     </footer>
 

@@ -299,23 +299,54 @@ adb shell pm get-app-links com.quitvape.last_puff             # on device
 ## Languages
 
 The app ships en, es, fr, de and pt; the site is being brought up to match (docs/10
-§43–44). **Today only English is live** — what exists is the structure every other
-language drops into, and it was landed as a refactor whose built output is
-structurally identical to the English-only site before it.
+§43–45). **The home page, `/download` and the 404 are written in all five. Only English
+is PUBLISHED** — es, fr, de and pt build on preview deploys and nowhere else until the
+founder has read them.
 
 **One list decides everything: `LIVE_LOCALES` in `src/i18n/locales.mjs`.** Routes,
 hreflang, the sitemap and the language switcher all derive from it and from nothing
-else, so a language goes live by being added there — one at a time if need be, after
-the founder's spot-check — and a half-finished one cannot leak a URL.
+else, so a half-finished language cannot leak a URL. It is two lists added together:
+
+- **`PUBLISHED`** — what cirrusquit.com serves. **A language goes live by being added
+  here**, one at a time if need be, after the founder's spot-check. While it holds only
+  `en`, the production build is structurally identical to the English-only site (no
+  switcher, no hreflang, same sitemap) — `npm run compare` proves it.
+- **`CIRRUS_PREVIEW_LOCALES`** — an environment variable the deploy workflow sets to
+  `es,fr,de,pt` for the `preview` target and never for `production`. Cloudflare sends
+  `X-Robots-Tag: noindex` on every preview deploy (checked), so nothing built this way
+  can reach a search index. Locally: `CIRRUS_PREVIEW_LOCALES=es,fr,de,pt npm run build`.
 
 | File | What it is |
 |---|---|
-| `src/i18n/locales.mjs` | The registry: locales, hreflang / `og:locale` / `Intl` tags, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
+| `src/i18n/locales.mjs` | The registry: locales, `PUBLISHED`, hreflang / `og:locale` / `Intl` tags, autonyms, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
 | `src/i18n/en.ts` | English, **and the shape**. Every other locale is declared `: Dictionary`, so a missing key (TS2741) or an extra one (TS2353) fails `npm run check` — the site's `l10n_parity_test` |
+| `src/i18n/{es,fr,de,pt}.ts` | The translations. **Drafted by Claude, spot-checked by the founder**; each file's header says which dialect it is written in and why. No translator or reviewer is ever named on a page |
+| `src/pages/[lang]/` | The localized routes — thin wrappers, like the English ones beside the folder |
+| `scripts/check-i18n.mjs` | Part of `npm run check`. What a type cannot see: `{placeholders}`, **digit parity with English** (a translated "76%" must still be 76 — the honest-numbers rule applied to a translator, with each exemption written down), empty or untranslated strings, `<title>` / description lengths, duplicate FAQ questions, invisible characters |
 | `src/i18n/index.ts` | `useT(lang)`, `fmt()` for `{placeholders}` (throws on a missing one), `clock()` for the example day |
 | `src/i18n/paths.ts` | `localePath()`, `link()`, `alternatesFor()` — URLs that know which pages exist |
 | `src/lib/content.ts` | Everything about the content that is **not** language: ids, order, tiers, tones, clock times. Words are keyed by these ids, so a locale cannot ship six timeline steps or a statistic without its `source` |
 | `src/components/pages/*.astro` | The page bodies. `src/pages/index.astro`, `download.astro` and `404.astro` are five-line wrappers and **do not move** — App Links claims `/download` |
+
+**Publishing a language**, in order:
+
+1. Run the deploy workflow with `preview`. Read the language on the preview URL, on a
+   phone as well as a desktop — the header at 360px and the calculator are where a long
+   word shows first.
+2. Add its code to `PUBLISHED` in `src/i18n/locales.mjs`. Nothing else: the routes, the
+   hreflang set on every version of the page (English included), the sitemap alternates
+   and the switcher all follow from that one line.
+3. `npm run check && npm run build && npm run verify`. `verify` fails if hreflang is not
+   reciprocal, if a target is missing or in the wrong language, if the sitemap disagrees
+   with the `<head>`, or if a localized page links an English URL that has a translation.
+4. Deploy `production`, then resubmit the sitemap in Search Console.
+
+**The language switcher** is a native `<details>` in the header (from 30rem up) plus a row
+of language names in the footer (everywhere — on a phone it *is* the switcher). No script,
+no cookie, nothing stored. It shows the language **code** in the header, because "Português"
+beside a German button crowds the header below ~560px. Each entry goes to this page in that
+language when it exists there and to that language's home when it does not. It renders
+nothing at all while one language is live.
 
 **Proving a refactor changed nothing.** `npm run compare -- <baseline dist> <new dist>`
 (`scripts/compare-dist.mjs`) reduces every page of two builds to what a browser, a reader
