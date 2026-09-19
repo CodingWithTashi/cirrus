@@ -165,7 +165,7 @@ export const de: Dictionary = {
       sub: 'Unter der Dusche. Im Auto. Direkt nach dem Aufwachen. Eine Vape hat keine Schachtel, die leer wird – also gibt sie dir nie einen Punkt zum Aufhören. Das ist keine Charakterschwäche. Das ist Nikotin.',
       hooks: {
         wake30: 'Sie ist in deiner Hand, bevor du aus dem Bett bist.',
-        failedAttempts: 'Du hast schon mal aufgehört. Bis mittags.',
+        failedAttempts: 'Du hast schon mal aufgehört. Es hat nicht gehalten.',
         cravingWindow: 'Das Craving fühlt sich endlos an. Ist es nicht.',
       },
       note: 'Jede Zahl auf dieser Seite hat eine Quelle. Andere Apps schreiben „78\u00a0% der Mitglieder hören auf“ – und zitieren niemanden.',
@@ -220,7 +220,7 @@ export const de: Dictionary = {
     },
     autoCount: {
       q: 'Zählt Cirrus die Züge automatisch?',
-      a: 'Nein. Cirrus kann deine Vape nicht sehen, also tippst du einmal pro Zug – in der App, im Homescreen-Widget oder auf deiner Apple Watch. Deshalb funktioniert es auch mit jeder Vape, Einweg-Vapes eingeschlossen. Und genau dieses Tippen ist das Nützliche: Jeden Zug festzuhalten ist eine seit Langem untersuchte Methode, schon für sich allein weniger zu vapen – weil es aus einem Reflex wieder eine Entscheidung macht, die du bemerkst.',
+      a: 'Nein. Cirrus kann deine Vape nicht sehen, also tippst du einmal pro Zug – in der App, im Homescreen-Widget oder auf deiner Apple Watch. Deshalb funktioniert es auch mit jeder Vape, Einweg-Vapes eingeschlossen. Entscheidend ist, woran die Zahl gemessen wird: Die Forschung zur Selbstbeobachtung zeigt, dass sie am meisten hilft, wenn jedes Mal erfasst, mit einem Ziel verglichen und sofort zurückgemeldet wird – und ein Tippen gegen das heutige Limit tut alle drei Dinge.',
     },
     puffsPerDay: {
       q: 'Wie viele Züge am Tag sind viel?',
@@ -287,7 +287,7 @@ export const de: Dictionary = {
     outEyebrow: 'Und das bedeutet es',
     spendLabel: 'Wenn du',
     perWeek: 'pro Woche ausgibst',
-    yearNote: 'im Jahr, jedes Jahr. Deine Rechnung, nicht unsere',
+    yearNote: 'im Jahr – bleibt dir, sobald du aufhörst. Deine Rechnung, nicht unsere',
     startSuffix: ' am Tag',
     freedom: '0 · Freiheitstag',
     curveLabel: 'Deine Reduktionskurve, die in 30 Tagen auf null fällt.',

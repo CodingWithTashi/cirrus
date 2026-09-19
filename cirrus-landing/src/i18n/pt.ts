@@ -165,7 +165,7 @@ export const pt: Dictionary = {
       sub: 'No banho. No trânsito. Assim que você acorda. Um vape não tem maço para acabar, então nunca te dá um ponto para parar. Isso não é defeito de caráter. É a nicotina.',
       hooks: {
         wake30: 'Está na sua mão antes de você sair da cama.',
-        failedAttempts: 'Você já parou antes. Até o almoço.',
+        failedAttempts: 'Você já parou antes. Não durou.',
         cravingWindow: 'A fissura parece não ter fim. Ela tem.',
       },
       note: 'Todo número desta página tem uma fonte. Outros apps para parar publicam “78% dos membros param”, sem citar ninguém.',
@@ -220,7 +220,7 @@ export const pt: Dictionary = {
     },
     autoCount: {
       q: 'Cirrus conta as tragadas do vape automaticamente?',
-      a: 'Não. Cirrus não consegue ver o seu vape, então você toca uma vez por tragada: no app, no widget da tela inicial ou no seu Apple Watch. É também por isso que funciona com qualquer vape, descartáveis incluídos. E esse toque é a parte útil: anotar cada uma é uma forma estudada há muito tempo de reduzir por si só, porque transforma um reflexo de novo em uma decisão que você percebe.',
+      a: 'Não. Cirrus não consegue ver o seu vape, então você toca uma vez por tragada: no app, no widget da tela inicial ou no seu Apple Watch. É também por isso que funciona com qualquer vape, descartáveis incluídos. O que importa é com o que a contagem é comparada: a pesquisa sobre automonitoramento mostra que ele ajuda mais quando cada vez é registrada, comparada com uma meta e mostrada de volta na hora, e um toque contra o limite de hoje faz as três coisas.',
     },
     puffsPerDay: {
       q: 'Quantas tragadas por dia é muito?',
@@ -287,7 +287,7 @@ export const pt: Dictionary = {
     outEyebrow: 'E é isto que significa',
     spendLabel: 'Se você gasta',
     perWeek: 'por semana',
-    yearNote: 'por ano, todo ano. As suas contas, não as nossas',
+    yearNote: 'por ano que ficam com você quando parar. As suas contas, não as nossas',
     startSuffix: ' por dia',
     freedom: '0 · Dia da liberdade',
     curveLabel: 'Sua curva de redução caindo a zero em 30 dias.',

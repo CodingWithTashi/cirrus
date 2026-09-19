@@ -162,7 +162,7 @@ export const es: Dictionary = {
       sub: 'En la ducha. En el tráfico. Apenas te despiertas. Un vape no tiene paquete que terminar, así que nunca te da un punto para parar. No es un defecto de carácter. Es la nicotina.',
       hooks: {
         wake30: 'Está en tu mano antes de salir de la cama.',
-        failedAttempts: 'Ya lo dejaste antes. Hasta el almuerzo.',
+        failedAttempts: 'Ya lo dejaste antes. No duró.',
         cravingWindow: 'El antojo parece eterno. No lo es.',
       },
       note: 'Cada número de esta página tiene una fuente. Otras apps para dejarlo publican «el 78% de los miembros lo deja», sin citar a nadie.',
@@ -217,7 +217,7 @@ export const es: Dictionary = {
     },
     autoCount: {
       q: '¿Cirrus cuenta las caladas del vape automáticamente?',
-      a: 'No. Cirrus no puede ver tu vape, así que tocas una vez por calada: en la app, en el widget de la pantalla de inicio o en tu Apple Watch. Por eso funciona con cualquier vape, desechables incluidos. Y ese toque es lo útil: anotar cada una es una forma estudiada desde hace mucho de reducir por sí misma, porque convierte un reflejo otra vez en una decisión que notas.',
+      a: 'No. Cirrus no puede ver tu vape, así que tocas una vez por calada: en la app, en el widget de la pantalla de inicio o en tu Apple Watch. Por eso funciona con cualquier vape, desechables incluidos. Lo que importa es contra qué se mide el conteo: la investigación sobre el autorregistro encuentra que ayuda más cuando se anota cada vez, se compara con una meta y se te muestra al instante, y un toque frente al límite de hoy hace las tres cosas.',
     },
     puffsPerDay: {
       q: '¿Cuántas caladas al día son muchas?',
@@ -284,7 +284,7 @@ export const es: Dictionary = {
     outEyebrow: 'Y esto es lo que significa',
     spendLabel: 'Si gastas',
     perWeek: 'a la semana',
-    yearNote: 'al año, cada año. Tus cuentas, no las nuestras',
+    yearNote: 'al año que te quedas cuando lo dejas. Tus cuentas, no las nuestras',
     startSuffix: ' al día',
     freedom: '0 · Día de libertad',
     curveLabel: 'Tu curva de reducción bajando a cero en 30 días.',

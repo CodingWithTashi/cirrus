@@ -237,7 +237,7 @@ export const en = {
       sub: "In the shower. In the car. The second you wake up. A vape has no pack to finish, so it never hands you a place to stop. That isn't a character flaw. That's nicotine.",
       hooks: {
         wake30: "It's in your hand before you're out of bed.",
-        failedAttempts: "You've quit before. Until lunch.",
+        failedAttempts: "You've quit before. It didn't stick.",
         cravingWindow: "The craving feels endless. It isn't.",
       },
       note: 'Every number on this page has a source. Other quit apps ship “78% of members quit”, cited to nobody.',
@@ -297,7 +297,7 @@ export const en = {
     },
     autoCount: {
       q: 'Does Cirrus count vape puffs automatically?',
-      a: "No. Cirrus can't see your vape, so you tap once per puff: in the app, on the home screen widget or on your Apple Watch. That is also why it works with any vape, disposables included. And the tap is the useful part: writing down each one is a long-studied way to cut down in its own right, because it turns a reflex back into a decision you notice.",
+      a: "No. Cirrus can't see your vape, so you tap once per puff: in the app, on the home screen widget or on your Apple Watch. That is also why it works with any vape, disposables included. What matters is what the count is measured against: research on self-monitoring finds it helps most when every one is recorded, checked against a goal and shown back to you straight away, and a tap against today's limit does all three.",
     },
     puffsPerDay: {
       q: 'How many puffs a day is a lot?',
@@ -372,7 +372,7 @@ export const en = {
     outEyebrow: "And here's what that means",
     spendLabel: 'If you spend',
     perWeek: 'a week',
-    yearNote: 'a year, every year. Your maths, not ours',
+    yearNote: 'a year you keep once you stop. Your maths, not ours',
     startSuffix: ' a day',
     freedom: '0 · Freedom Day',
     curveLabel: 'Your taper curve falling to zero over 30 days.',

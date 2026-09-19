@@ -160,7 +160,7 @@ export const fr: Dictionary = {
       sub: "Sous la douche. Dans la voiture. Dès le réveil. Une vape n'a pas de paquet à finir, alors elle ne te donne jamais de moment pour t'arrêter. Ce n'est pas un défaut de caractère. C'est la nicotine.",
       hooks: {
         wake30: 'Elle est dans ta main avant même que tu te lèves.',
-        failedAttempts: "Tu as déjà arrêté. Jusqu'au déjeuner.",
+        failedAttempts: "Tu as déjà arrêté. Ça n'a pas tenu.",
         cravingWindow: "Le craving semble sans fin. Il ne l'est pas.",
       },
       note: "Chaque chiffre de cette page a une source. D'autres apps affichent «\u00a078\u00a0% des membres arrêtent\u00a0», sans citer personne.",
@@ -215,7 +215,7 @@ export const fr: Dictionary = {
     },
     autoCount: {
       q: 'Est-ce que Cirrus compte les taffes automatiquement\u00a0?',
-      a: "Non. Cirrus ne peut pas voir ta vape, donc tu appuies une fois par taffe\u00a0: dans l'app, sur le widget de l'écran d'accueil ou sur ton Apple Watch. C'est aussi pour ça que ça marche avec n'importe quelle vape, jetables compris. Et cet appui, c'est justement ce qui sert\u00a0: noter chaque taffe est une façon étudiée depuis longtemps de réduire en soi, parce que ça transforme un réflexe en une décision que tu remarques.",
+      a: "Non. Cirrus ne peut pas voir ta vape, donc tu appuies une fois par taffe\u00a0: dans l'app, sur le widget de l'écran d'accueil ou sur ton Apple Watch. C'est aussi pour ça que ça marche avec n'importe quelle vape, jetables compris. Ce qui compte, c'est ce à quoi on compare le total\u00a0: la recherche sur l'auto-observation montre qu'elle aide le plus quand chaque fois est notée, comparée à un objectif et renvoyée tout de suite, et un appui face à la limite du jour fait les trois.",
     },
     puffsPerDay: {
       q: "Combien de taffes par jour, c'est beaucoup\u00a0?",
@@ -282,7 +282,7 @@ export const fr: Dictionary = {
     outEyebrow: 'Et voilà ce que ça veut dire',
     spendLabel: 'Si tu dépenses',
     perWeek: 'par semaine',
-    yearNote: 'par an, chaque année. Tes calculs, pas les nôtres',
+    yearNote: 'par an que tu gardes en arrêtant. Tes calculs, pas les nôtres',
     startSuffix: ' par jour',
     freedom: '0 · Jour de liberté',
     curveLabel: 'Ta courbe de diminution qui tombe à zéro en 30 jours.',
