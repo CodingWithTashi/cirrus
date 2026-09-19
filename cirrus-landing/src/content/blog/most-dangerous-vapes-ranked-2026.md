@@ -252,8 +252,8 @@ Varenicline is an old, cheap, generic prescription pill. It was well tolerated, 
 who quit vaping didn't switch to smoking instead.
 
 The useful bit is the pattern. The stack beats any single piece: medication, plus support, plus
-something keeping count for you. We've ranked every method by the evidence, next to what people
-on r/QuitVaping say about each, in
+something keeping count for you. We've ranked every method by the evidence, next to what real
+quitters say about each online, in
 [the most effective way to quit vaping](/blog/most-effective-way-to-quit-vaping).
 
 <figure>
