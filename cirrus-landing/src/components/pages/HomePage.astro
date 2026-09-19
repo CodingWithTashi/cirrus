@@ -1,0 +1,322 @@
+---
+// The home page, in whichever language it is asked for.
+//
+// This is the body that used to be src/pages/index.astro. It moved here so the
+// English route (pages/index.astro) and the localized one (pages/[lang]/
+// index.astro) can both be five-line wrappers around ONE implementation — the
+// alternative was five copies of a 350-line page drifting apart. The route files
+// themselves did not move, so `/` is still `/`.
+//
+// Nothing in here is a sentence. Words come from the dictionary (i18n/<lang>.ts);
+// order, tiers, tones and clock times come from lib/content.ts; and the two are
+// joined by id, which is what lets the compiler notice a locale that dropped a
+// step or a statistic that lost its source.
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AppDemo from '../AppDemo.astro';
+import StoreBadges from '../StoreBadges.astro';
+import qrSvg from '../../assets/qr-download.svg?raw';
+import homeShot from '../../assets/store/home.jpg';
+import logShot from '../../assets/store/log.jpg';
+import planShot from '../../assets/store/plan.jpg';
+import coachShot from '../../assets/store/coach.jpg';
+import panicShot from '../../assets/store/panic.jpg';
+import communityShot from '../../assets/store/community.jpg';
+import statsShot from '../../assets/store/stats.jpg';
+import { COMPARE_ROWS, DAY_STEPS, DEVICES, FAQ_ITEMS, PRICES, SCREENS, STATS, type DeviceId, type ScreenId } from '../../lib/content.ts';
+import { clock, fmt, useT, type Locale } from '../../i18n/index.ts';
+import { DEFAULT_LOCALE } from '../../i18n/locales.mjs';
+import { alternatesFor, link } from '../../i18n/paths.ts';
+
+interface Props { lang?: Locale }
+const { lang = DEFAULT_LOCALE } = Astro.props;
+
+const dict = useT(lang);
+const t = dict.home;
+
+// The App Store listing's own screenshots (the store's 1284×2778 renders,
+// resized to 428 wide — 2× the rail's widest card). Each headline is part of
+// the image, so the alt text carries it.
+const shots: Record<ScreenId, ImageMetadata> = {
+  home: homeShot, log: logShot, plan: planShot, coach: coachShot,
+  panic: panicShot, community: communityShot, stats: statsShot,
+};
+
+// The three strongest of the five approved stats, kept to a three-card rhythm.
+const stats = STATS.filter((s) => 'home' in s && s.home);
+
+// What the FAQ renders AND what the FAQPage schema carries — one list, so the
+// two can never disagree.
+const faq = FAQ_ITEMS.map((item) => {
+  const words = dict.faq[item.id];
+  if (!('more' in item)) return { ...words, more: undefined };
+  // Where a post owns the query, the snippet hands off to it rather than
+  // answering in full (ONE QUERY, ONE PAGE — see lib/content.ts). The post in
+  // the reader's language when it exists; the English one, labelled as such,
+  // until then.
+  const to = link(lang, `/blog/${item.more}`);
+  return { ...words, more: { ...to, label: dict.faqMore[item.id], away: to.hreflang ? dict.chrome.inEnglish : '' } };
+});
+
+const deviceIcons: Record<DeviceId, string> = {
+  iphone: '<rect x="9" y="3" width="14" height="26" rx="3.5"></rect><path d="M14 6.5h4"></path>',
+  android: '<rect x="9" y="3" width="14" height="26" rx="2.5"></rect><circle cx="16" cy="6.3" r="0.6"></circle>',
+  widget: '<rect x="4" y="7" width="24" height="18" rx="4"></rect><path d="M20 13v6M17 16h6"></path><path d="M8.5 13h6M8.5 17h4"></path>',
+  watch: '<rect x="9" y="8" width="14" height="16" rx="4"></rect><path d="M12 8l1-5h6l1 5M12 24l1 5h6l1-5"></path><path d="M16 13v6M13 16h6"></path>',
+};
+
+// The file is a whole document; only the <svg> belongs inline.
+const qr = qrSvg
+  .replace(/<\?xml[^>]*\?>/, '')
+  .replace(/<!DOCTYPE[^>]*>/, '')
+  .replace('<svg ', '<svg aria-hidden="true" focusable="false" ');
+---
+
+<BaseLayout lang={lang} alternates={alternatesFor('/')} softwareApp faq={faq}>
+  {/* ---------- 1. HERO ---------- */}
+  <section class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <p class="micro micro--volt">{t.hero.eyebrow}</p>
+        <h1>{t.hero.h1.pre}<span class="accent">{t.hero.h1.accent}</span>{t.hero.h1.post}</h1>
+        <p class="hero__sub">{t.hero.sub}</p>
+        <StoreBadges campaign="hero" lang={lang} />
+        <ul class="hero__trust">
+          {t.hero.trust.map((line) => <li>{line}</li>)}
+        </ul>
+      </div>
+
+      <AppDemo part="phone" lang={lang} />
+    </div>
+  </section>
+
+  {/* ---------- 2. WHAT YOUR NUMBER MEANS ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="number">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro micro--volt">{t.number.eyebrow}</p>
+        <h2 id="number">{t.number.h2}</h2>
+        <p>{t.number.sub}</p>
+      </div>
+
+      <AppDemo part="output" lang={lang} />
+    </div>
+  </section>
+
+  {/* ---------- 3. AN EXAMPLE DAY ---------- */}
+  <section class="section" aria-labelledby="day-h">
+    <div class="wrap day">
+      <div class="section__head section__head--left">
+        <p class="micro">{t.day.eyebrow}</p>
+        <h2 id="day-h">{t.day.h2}</h2>
+        <p>{t.day.sub}</p>
+      </div>
+
+      <ol class="timeline">
+        {
+          DAY_STEPS.map((step) => {
+            const words = t.day.steps[step.id];
+            const at = clock(step.at, lang);
+            return (
+              <li data-tone={'tone' in step ? step.tone : undefined}>
+                <span class="timeline__time">
+                  {at.time}
+                  {at.period && <small>{at.period}</small>}
+                </span>
+                <div>
+                  <h3>{words.title}</h3>
+                  <p>{words.body}</p>
+                  {'tag' in words && words.tag && (
+                    <span class:list={['tag', { 'tag--pro': 'pro' in step && step.pro }]}>{words.tag}</span>
+                  )}
+                </div>
+              </li>
+            );
+          })
+        }
+      </ol>
+    </div>
+  </section>
+
+  {/* ---------- 4. SCREENSHOTS ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="inside">
+    <div class="wrap">
+      <div class="rail-head">
+        <div class="section__head section__head--left">
+          <p class="micro">{t.screens.eyebrow}</p>
+          <h2 id="inside">{t.screens.h2}</h2>
+          <p>{t.screens.sub}</p>
+        </div>
+        <p class="micro">{fmt(t.screens.count, { n: SCREENS.length })}</p>
+      </div>
+
+      <div class="rail" tabindex="0" role="region" aria-label={t.screens.railLabel}>
+        {
+          SCREENS.map((id) => (
+            <figure>
+              <Image src={shots[id]} width={214} sizes="214px" loading="lazy" alt={t.screens.alts[id]} />
+            </figure>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- 5. DEVICES ---------- */}
+  <section class="section section--tight" aria-labelledby="where">
+    <div class="wrap">
+      <div class="section__head section__head--left">
+        <p class="micro">{t.devices.eyebrow}</p>
+        <h2 id="where">{t.devices.h2}</h2>
+      </div>
+
+      <ul class="devices">
+        {
+          DEVICES.map((id) => (
+            <li>
+              <svg viewBox="0 0 32 32" aria-hidden="true" set:html={deviceIcons[id]} />
+              <h3>{t.devices.items[id].name}</h3>
+              <p>{t.devices.items[id].body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  {/* ---------- 6. FREE VS PREMIUM ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="cost">
+    <div class="wrap plans">
+      <div class="section__head section__head--left">
+        <p class="micro micro--volt">{t.plans.eyebrow}</p>
+        <h2 id="cost">{t.plans.h2}</h2>
+        <p>{t.plans.sub}</p>
+
+        {/* The founder-locked prices (docs/08 §1, LpPricing in the app). Real
+            prices, not statistics — but US ones, and the note says so. */}
+        <div class="price">
+          <p class="micro">{t.plans.premium}</p>
+          <ul class="price__list">
+            <li><b>{PRICES.week}</b><span>{t.plans.perWeek}</span></li>
+            <li><b>{PRICES.month}</b><span>{t.plans.perMonth}</span></li>
+            <li><b>{PRICES.year}</b><span>{t.plans.perYear}</span></li>
+          </ul>
+          <p class="price__note">
+            <b>{t.plans.note.bold}</b> {t.plans.note.rest}
+          </p>
+        </div>
+      </div>
+
+      <div class="compare-wrap" tabindex="0" role="region" aria-label={t.plans.tableLabel}>
+        <table class="compare">
+          <colgroup><col class="compare__feature" /><col /><col /></colgroup>
+          <thead>
+            <tr>
+              <th scope="col">{t.plans.colFeature}</th>
+              <th scope="col">{t.plans.colFree}</th>
+              <th scope="col" class="compare__pro">{t.plans.colPremium}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              COMPARE_ROWS.map((row) => {
+                const words = t.plans.rows[row.id];
+                const cells = [
+                  { value: row.free, text: 'free' in words ? words.free : undefined },
+                  { value: row.pro, text: 'pro' in words ? words.pro : undefined },
+                ];
+                return (
+                  <tr>
+                    <th scope="row">{words.feature}</th>
+                    {cells.map((cell, i) => (
+                      <td class:list={{ compare__pro: i === 1 }}>
+                        {cell.value === true ? (
+                          <span class="compare__yes" aria-label={t.plans.included}>✓</span>
+                        ) : cell.value === false ? (
+                          <span class="compare__no" aria-label={t.plans.notIncluded}>—</span>
+                        ) : (
+                          cell.text
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- 7. CITED NUMBERS ---------- */}
+  <section class="section section--tight" aria-labelledby="honest">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro micro--ember">{t.stats.eyebrow}</p>
+        <h2 id="honest">{t.stats.h2}</h2>
+        <p>{t.stats.sub}</p>
+      </div>
+
+      <ul class="stats">
+        {
+          stats.map((s, i) => (
+            <li class="stat reveal" data-delay={i}>
+              <p class="stat__figure">{dict.stats[s.id].figure}</p>
+              <p class="stat__claim">{dict.stats[s.id].claim}</p>
+              <p class="stat__source">{dict.stats[s.id].source}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  {/* ---------- 8. FAQ ---------- */}
+  <section class="section section--lift section--rules" aria-labelledby="faq">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="micro">{t.faq.eyebrow}</p>
+        <h2 id="faq">{t.faq.h2}</h2>
+      </div>
+
+      <div class="faq">
+        {
+          faq.map((item, i) => (
+            <details open={i === 0}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+              {item.more && (
+                <p class="faq__more">
+                  <a href={item.more.href} hreflang={item.more.hreflang}>{item.more.label}</a>{item.more.away}
+                </p>
+              )}
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- 9. CLOSING ---------- */}
+  <section class="section cta-band" id="get" aria-labelledby="get-h">
+    <div class="wrap cta-band__grid">
+      <div>
+        <p class="micro micro--volt">{t.closing.eyebrow}</p>
+        <h2 id="get-h">{t.closing.h2}</h2>
+        <p>{t.closing.sub}</p>
+        <StoreBadges campaign="closing" lang={lang} />
+      </div>
+
+      {/* Desktop only (CSS): somebody reading on a computer still has to install
+          on a phone. The code points at /download, which puts their store first. */}
+      <div class="qr">
+        <div class="qr__code" role="img" aria-label={t.closing.qrLabel} set:html={qr} />
+        <div class="qr__text">
+          <b>{t.closing.qrTitle}</b>
+          <span>{t.closing.qrBody}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
