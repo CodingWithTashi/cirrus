@@ -3,6 +3,7 @@ title: The 5 most dangerous vapes in 2026, ranked by science
 description: We ranked five vape categories worst to least-bad using peer-reviewed data on heavy metals, lung injury and nicotine dose. Your device is on this list.
 standfirst: Five categories, ranked worst to least-bad on peer-reviewed data. Plus the part that matters more than where your device lands.
 publishedAt: 2026-07-05
+updatedAt: 2026-09-19
 tags: ['vape safety', 'research', '#vapesafety', '#vapedangers', '#quitvaping', '#cirrusquit']
 draft: false
 ctaAngle: "Which device is worst matters less than how much of it you actually get through."
@@ -51,12 +52,11 @@ faq:
       No. Every category we assessed carries measurable risk: heavy metals, carbonyls, or
       nicotine dependence, and usually more than one. The realistic goal isn't finding a safe
       device. It's getting your puff count down until you don't need one.
-  - q: What is the most effective way to quit vaping?
+  - q: Does switching to a less dangerous vape help you quit?
     a: >-
-      Trial evidence points to combining approaches. In a 2025 JAMA randomised trial,
-      varenicline plus counselling plus text support produced a 51% quit rate at 12 weeks,
-      against 6% for text support alone. Talk to a clinician about medication, use behavioural
-      support, and track what you actually do rather than guessing at it.
+      Not by itself. Your category decides what you inhale; your puff count decides whether
+      you can stop. A different device changes the first and leaves the second, which is why
+      the count is the number worth working on.
 
 sources:
   - text: 'Salazar MR et al. Metal emissions from disposable electronic cigarettes. ACS Central Science, 2025.'
@@ -252,7 +252,9 @@ Varenicline is an old, cheap, generic prescription pill. It was well tolerated, 
 who quit vaping didn't switch to smoking instead.
 
 The useful bit is the pattern. The stack beats any single piece: medication, plus support, plus
-something keeping count for you.
+something keeping count for you. We've ranked every method by the evidence, next to what people
+on r/QuitVaping say about each, in
+[the most effective way to quit vaping](/blog/most-effective-way-to-quit-vaping).
 
 <figure>
 
