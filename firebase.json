@@ -87,7 +87,7 @@
         "type": 301
       },
       {
-        "source": "**",
+        "source": "!/__/**",
         "destination": "https://cirrusquit.com",
         "type": 301
       }
