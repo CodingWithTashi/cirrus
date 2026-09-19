@@ -27,9 +27,15 @@ export const DEFAULT_LOCALE = 'en';
 /**
  * The locales that are PUBLISHED on cirrusquit.com. A locale goes live by being
  * added HERE, once the founder has spot-checked it — one at a time if need be.
+ *
+ * es, fr, de and pt went live together on Sep 19 2026 on the founder's call
+ * (docs/10 §46): Claude's drafts, their numbers machine-checked against English
+ * by scripts/check-i18n.mjs, their idiom not yet read by a native speaker. To
+ * take one back down, remove its code here and deploy — the routes, hreflang,
+ * sitemap alternates and switcher entry all go with it.
  * @type {readonly Locale[]}
  */
-const PUBLISHED = ['en'];
+const PUBLISHED = ['en', 'es', 'fr', 'de', 'pt'];
 
 /**
  * Locales built for a PREVIEW deploy only, so a translation can be read on a
