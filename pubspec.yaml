@@ -2,10 +2,13 @@ name: last_puff
 description: "Cirrus — the honest, AI-native quit-vaping app."
 publish_to: 'none'
 
-version: 1.0.20+21
+version: 1.0.25+25
 
 environment:
   sdk: ^3.11.4
+  # The one Flutter pin for this app: CI reads it (flutter-version-file in .github/workflows) and
+  # `flutter pub get` refuses any other local Flutter, so local and CI builds always match.
+  flutter: 3.41.6
 
 dependencies:
   flutter:

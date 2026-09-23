@@ -45,7 +45,7 @@ All of them are gitignored. `functions/.env.alastpuff` is tracked on purpose: it
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push: Flutter analyze and test (with a check that the generated localizations match the ARB files), the functions gate, and the Firestore rules and integration suites on the emulator. The landing site deploys by hand from `cirrus-landing-deploy.yml`.
+`.github/workflows/ci.yml` runs on pushes to `main` and pull requests: Flutter analyze and test, with a check that the generated localizations match the ARB files. `.github/workflows/functions.yml` runs whenever the backend changes: the functions gate, and the Firestore rules and integration suites on the emulator. The landing site deploys from the Release workflow (below), or by hand from `cirrus-landing-deploy.yml` for a preview.
 
 ## Where to read next
 
@@ -55,3 +55,37 @@ All of them are gitignored. `functions/.env.alastpuff` is tracked on purpose: it
 - `functions/README.md` — why any server code exists, and the client/server ownership rule
 - `integration_test/README.md` — running the suites on a device, and App Check
 - `cirrus-landing/README.md` — the site, its content rules and SEO
+
+## Releases (GitHub Actions + fastlane)
+
+Pushes and pull requests only run analyze and test (`ci.yml`). Nothing ships until you run **Actions → Release → Run workflow** on `main` and tick what to release:
+
+- **Android**: builds the AAB and uploads it to the chosen Play track (internal, alpha = closed testing, beta = open testing, production).
+- **iOS**: builds with the match profiles and uploads to TestFlight. Submit it for review in App Store Connect.
+- **Web**: deploys the landing site to cirrusquit.com (`cirrus-landing-deploy.yml`).
+
+Both store builds use `version:` from `pubspec.yaml`, so bump the build number before every release; each job stops before building if the Play track or TestFlight already has it. The lanes live in `fastlane/Fastfile` (`bundle exec fastlane lanes` lists them).
+
+### One-time setup
+
+Shared by every app on the team, done once:
+
+- An App Store Connect Team API key with the App Manager role.
+- A Google Play service account, `play-publisher`, with a JSON key.
+- The private match repo `CodingWithTashi/ios-certificates`, its passphrase, and a fine-grained token with Contents: Read-only on it.
+
+For this app:
+
+1. **Play Console:** Users and permissions → the `play-publisher` service account → add this app with permission to release to testing tracks and production.
+2. **iOS profiles:** on your Mac, with Homebrew Ruby on `PATH`, run `bundle install`, then `bundle exec fastlane ios certs`. Run it again when the profiles expire.
+3. **Secrets:** add these to the repo (Settings → Secrets and variables → Actions).
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Pages deploy (web) |
+| `ANDROID_KEYSTORE_BASE64` | Base64 of the upload keystore (`base64 -i <keystore>.jks`) |
+| `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | The upload keystore's passwords and alias |
+| `PLAY_STORE_JSON_KEY` | The service account's JSON key, pasted whole |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` | The Team API key's Key ID, the Issuer ID, and the `.p8` file's contents |
+| `MATCH_PASSWORD` | The match repo passphrase |
+| `IOS_CERT_TOKEN` | The `ios-certificates` token, pasted as GitHub shows it |

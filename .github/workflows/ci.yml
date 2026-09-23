@@ -1,77 +1,49 @@
-name: CI
+name: Flutter checks
 
-# Every gate that has caught a real bug in this repo, run on every push.
-# The emulator jobs matter most: the security-rules suite and the concurrency
-# tests both found live defects that unit tests could not have.
+# Analyzes and tests the app on every push and pull request. Nothing ships from here:
+# release.yml calls this workflow first, then ships to the stores by hand.
+# Commits that only touch the landing site, the docs, the Firebase Hosting page or the release
+# tooling skip it. functions/** and firestore.* still run it: the Dart tests read those files to
+# pin client/server parity. The functions gate and the emulator suites are in functions.yml.
 on:
   push:
-    branches: ['**']
+    branches: [main]
+    paths-ignore: &paths-ignore
+      - 'cirrus-landing/**'
+      - 'docs/**'
+      - 'hosting/**'
+      - '.github/workflows/functions.yml'
+      - '.github/workflows/cirrus-landing-deploy.yml'
+      - '.github/workflows/release.yml'
+      - 'fastlane/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
   pull_request:
-  workflow_dispatch:
+    branches: [main]
+    paths-ignore: *paths-ignore
+  workflow_call:
 
-concurrency:
-  # A newer push makes an in-flight run irrelevant; cancel it rather than
-  # queueing behind it.
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
 jobs:
-  app:
-    name: Flutter — analyze & test
+  test:
+    name: Analyze and test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.41.6
           channel: stable
+          flutter-version-file: pubspec.yaml # environment: flutter, the app's one pin.
           cache: true
+
       - run: flutter pub get
-      # Regenerating l10n proves the ARB files and the committed generated
-      # code have not drifted apart.
+      # The generated localizations are committed; regenerating proves they match the ARB files.
       - run: flutter gen-l10n
       - name: Fail if generated l10n is stale
         run: git diff --exit-code lib/l10n/gen
       - run: flutter analyze
       - run: flutter test
-
-  functions:
-    name: Functions — verify
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: functions
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
-      - run: npm ci
-      # typecheck + lint + the pure suite — the same gate the deploy
-      # predeploy hook runs, so a red CI means a blocked deploy.
-      - run: npm run verify
-
-  emulator:
-    name: Firestore emulator — rules & integration
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: functions
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
-      # The Firestore emulator is a Java process.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - run: npm ci
-      - run: npm install -g firebase-tools
-      - run: npm run test:rules
-      - run: npm run test:integration

@@ -60,3 +60,11 @@ app.*.map.json
 
 # Claude Code per-machine permissions and hooks (local paths, local tooling).
 **/.claude/settings.local.json
+
+# The release keystore CI decodes from a secret; keep real ones out of git too.
+*.jks
+
+# fastlane run output (fastlane/Fastfile).
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output

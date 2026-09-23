@@ -1,9 +1,16 @@
 name: Deploy cirrus-landing
 
 # Manual only. The Flutter app and the landing page share this repo, so nothing
-# here fires on push — run it from Actions -> "Deploy cirrus-landing" -> Run workflow
-# and pick the target with the dropdown.
+# here fires on push. Production ships from the Release workflow (release.yml),
+# which calls this one with the web box ticked. Run it by hand from Actions ->
+# "Deploy cirrus-landing" -> Run workflow to publish a preview of any branch, or
+# to redeploy production on its own.
 on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        default: production
   workflow_dispatch:
     inputs:
       environment:
