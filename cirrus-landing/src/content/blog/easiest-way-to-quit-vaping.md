@@ -236,7 +236,8 @@ vapers, varenicline plus counselling plus text support produced a **51% quit rat
 weeks**, against 6% for text support alone. Varenicline is an old, cheap prescription
 pill, worth a conversation with a doctor. Free text programmes with real evidence exist
 too: **This is Quitting** from Truth Initiative, and **quitSTART** from the National
-Cancer Institute.
+Cancer Institute. We've also
+[ranked every quitting method by the evidence](/blog/most-effective-way-to-quit-vaping).
 
 Sometimes the smartest move isn't trying harder. It's getting more help.
 

@@ -25,7 +25,7 @@
 // Config: none. Everything it needs comes from src/lib/store.ts, which stays
 // the only place in this repo that builds a store URL.
 
-import { resolveGet, redirectTo } from '../src/lib/platform';
+import { resolveGet, redirectTo, methodNotAllowed } from '../src/lib/platform';
 
 /**
  * One structured line per redirect, for the Pages Functions log.
@@ -56,14 +56,20 @@ function logRedirect(request: Request, platform: string, campaign: string, targe
 }
 
 /**
- * Every method, not just GET.
+ * GET and HEAD, and nothing else.
  *
  * `onRequestGet` alone would leave HEAD to fall through to the static assets
  * and 404 — and HEAD is what link checkers, Slack and half the SEO tools send
  * first. A short link that reports itself dead to the tools people use to check
  * whether links are dead is the one failure this whole path exists to prevent.
+ *
+ * So the handler stays `onRequest` and turns the other methods away itself.
+ * Nothing on this site sends a POST, and the only callers that do are scanners
+ * probing for exploits — answering those with a 302 and a log line filled the
+ * redirect log with taps nobody made.
  */
 export const onRequest: PagesFunction = async ({ request }) => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
   const { platform, campaign, target } = resolveGet(new URL(request.url), request.headers);
   logRedirect(request, platform, campaign, target);
   return redirectTo(target);

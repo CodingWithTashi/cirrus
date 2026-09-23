@@ -57,6 +57,18 @@ const related = await (async () => {
 })();
 
 const toc = headings.filter((h) => h.depth === 2);
+
+// A long source list outweighs the article above it: 21 citations under an
+// 8-minute post read as a second post. Past SOURCES_OPEN_MAX the list shows its
+// first SOURCES_PEEK entries and folds the rest into a native <details>. Every
+// citation stays in the HTML either way, so crawlers, the honest-stats rule and
+// a reader who opens it still get all of them.
+const SOURCES_OPEN_MAX = 6;
+const SOURCES_PEEK = 3;
+const foldSources = sources.length > SOURCES_OPEN_MAX;
+const shownSources = foldSources ? sources.slice(0, SOURCES_PEEK) : sources;
+const moreSources = foldSources ? sources.slice(SOURCES_PEEK) : [];
+
 const minutes = readingTime(post.body ?? '');
 const words = (post.body ?? '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
 const url = new URL(`/blog/${post.id}`, Astro.site).href;
@@ -192,13 +204,29 @@ const url = new URL(`/blog/${post.id}`, Astro.site).href;
           <h2 id="post-sources-h">Sources</h2>
           <p>Every figure above traces to one of these. In publication order.</p>
           <ol>
-            {sources.map((s) => (
+            {shownSources.map((s) => (
               <li>
                 {s.url ? <a href={s.url} rel="noopener" target="_blank">{s.text}</a> : s.text}
                 {s.id && <span class="post-sources__id">{s.id}</span>}
               </li>
             ))}
           </ol>
+          {moreSources.length > 0 && (
+            <details class="post-sources__more">
+              <summary>
+                <span class="post-sources__show">Show all {sources.length} sources</span>
+                <span class="post-sources__hide">Show fewer</span>
+              </summary>
+              <ol start={shownSources.length + 1}>
+                {moreSources.map((s) => (
+                  <li>
+                    {s.url ? <a href={s.url} rel="noopener" target="_blank">{s.text}</a> : s.text}
+                    {s.id && <span class="post-sources__id">{s.id}</span>}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
         </section>
       )
     }

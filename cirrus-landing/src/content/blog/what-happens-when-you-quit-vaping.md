@@ -280,6 +280,11 @@ chair you always vaped in, lasts longer and fades by exposure rather than by tim
 The distinction worth holding onto is that **a craving is not the same thing as needing to
 vape.** One is a signal. The other is a decision, and it stays yours.
 
+None of that shape is specific to vaping, either. The symptoms come from nicotine leaving
+rather than from the device it left, which is why
+[the nicotine withdrawal timeline](/blog/nicotine-withdrawal-timeline) runs to the same clock
+for cigarettes and pouches.
+
 ## How to make quitting vaping easier
 
 Knowing the timeline helps. Having a plan for the first week helps more.

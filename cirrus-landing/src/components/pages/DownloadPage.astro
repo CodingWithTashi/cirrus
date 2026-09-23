@@ -1,0 +1,66 @@
+---
+// The stable destination for every "get the app" link on this site and off it
+// — blog posts, a TikTok bio, a Reddit comment, the home page's QR code. Prose
+// never has to contain a store URL; this page is the indirection.
+//
+// It shows both badges and puts the reader's own store first (data-os, stamped
+// in BaseLayout), so it is right with JS off and on a computer too. It never
+// redirects: a bounce would hide the page from search, and the Android app
+// claims the ENGLISH path through App Links, so a phone that already has Cirrus
+// opens the app rather than ever landing here. The localized paths
+// (/es/download) are deliberately not claimed — the manifest scopes the claim to
+// `/download` and widening it needs an app release — so they always open in the
+// browser, which is the right behaviour for an install page.
+//
+// Indexable on purpose: "cirrus quit vaping app download" is a brand
+// navigational query and this is the page that should answer it.
+//
+// ONE QUERY, ONE PAGE: the home FAQ owns "Is Cirrus free?" and "Is Cirrus on
+// iPhone and Android?". This page summarises both in the visitor's path and
+// links home rather than re-answering them, and it deliberately emits no
+// FAQPage schema of its own.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import StoreBadges from '../StoreBadges.astro';
+import { SITE_TITLE } from '../../consts.ts';
+import { fmt, useT, type Locale } from '../../i18n/index.ts';
+import { DEFAULT_LOCALE } from '../../i18n/locales.mjs';
+import { alternatesFor, link } from '../../i18n/paths.ts';
+
+interface Props { lang?: Locale }
+const { lang = DEFAULT_LOCALE } = Astro.props;
+const t = useT(lang).download;
+---
+
+<BaseLayout
+  lang={lang}
+  alternates={alternatesFor('/download')}
+  title={t.title}
+  description={t.description}
+  breadcrumbs={[{ label: t.crumb }]}
+>
+  <div class="wrap page download">
+    <h1>{fmt(t.h1, { site: SITE_TITLE })}</h1>
+
+    <p class="lede">{t.lede}</p>
+
+    <div class="download__stores">
+      <StoreBadges campaign="download-page" lang={lang} />
+    </div>
+
+    <h2>{t.whichH2}</h2>
+    <p>{t.whichBody}</p>
+
+    <h2>{t.whatH2}</h2>
+    <p>{t.whatBody}</p>
+
+    <p>
+      {t.unsure.pre}<a href={link(lang, '/').href}>{t.unsure.link}</a>{t.unsure.post}
+    </p>
+  </div>
+</BaseLayout>
+
+<style>
+  .download h2 { font-size: 1.35rem; margin: 2.5rem 0 0; }
+  .download p { max-width: 39.1133em; }
+  .download__stores { margin: 1.75rem 0 0.5rem; }
+</style>

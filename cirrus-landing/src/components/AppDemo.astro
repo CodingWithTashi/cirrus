@@ -15,35 +15,77 @@
 //   DependenceEngine          — round(puffs / 14) cigarettes; ~600 puffs a disposable
 //   TaperEngine               — round(B * (1 - d/P)^1.5) with the <=3, <=1, 0 tail
 //   MoneyEngine               — the visitor's own spend x52. Their arithmetic, not ours.
-import { appStoreUrl, playUrl } from '../lib/store';
+//
+// LANGUAGE. The markup renders from the dictionary like any other component.
+// The script cannot: Astro bundles it once for every page, so it has no `lang`
+// and no way to import a dictionary per page. The strings it swaps at runtime
+// travel in a JSON data island beside the phone instead — NOT `define:vars`,
+// which forces the script inline and unbundled on every page that has it.
+import { appStoreUrl, campaignFor, playUrl } from '../lib/store';
+import { useT, type Locale } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, DEMO_CURRENCY, INTL } from '../i18n/locales.mjs';
 
-interface Props { part?: 'phone' | 'output' }
-const { part = 'phone' } = Astro.props;
+interface Props { part?: 'phone' | 'output'; lang?: Locale }
+const { part = 'phone', lang = DEFAULT_LOCALE } = Astro.props;
+const t = useT(lang).demo;
+
+// The currency is config, not copy (see DEMO_CURRENCY): a symbol is a guess about
+// where the reader lives, so locales that serve more than one currency zone show
+// the bare number — always honest, because the arithmetic is the visitor's own.
+const currency = DEMO_CURRENCY[lang];
+const money = currency
+  ? new Intl.NumberFormat(INTL[lang], { style: 'currency', currency, maximumFractionDigits: 0 })
+  : new Intl.NumberFormat(INTL[lang], { maximumFractionDigits: 0 });
+
+// Where the symbol sits relative to the amount ("$20" but "20 €"), read from
+// Intl rather than assumed.
+const parts = currency ? money.formatToParts(20) : [];
+const symbol = parts.find((p) => p.type === 'currency')?.value ?? '';
+const symbolFirst = parts.findIndex((p) => p.type === 'currency') < parts.findIndex((p) => p.type === 'integer');
+
+// Everything the script needs that depends on the page's language. `<` is
+// escaped so no string can ever close the <script> element it sits in.
+const island = JSON.stringify({
+  intl: INTL[lang],
+  currency,
+  askPuffs: t.askPuffs,
+  askDevices: t.askDevices,
+  toDevices: t.toDevices,
+  toPuffs: t.toPuffs,
+  bands: {
+    empty: { label: t.bandEmpty, quip: t.quipEmpty },
+    light: { label: t.bandLight, quip: t.quipLight },
+    moderate: { label: t.bandModerate, quip: t.quipModerate },
+    heavy: { label: t.bandHeavy, quip: t.quipHeavy },
+    severe: { label: t.bandSevere, quip: t.quipSevere },
+  },
+}).replace(/</g, '\\u003c');
 ---
 
 {part === 'phone' && (
   <div class="phone phone--live" data-demo>
+    <script type="application/json" id="demo-i18n" is:inline set:html={island} />
     <div class="app">
-      <p class="app__q" data-mode-label>Puffs on a normal day?</p>
+      <p class="app__q" data-mode-label>{t.askPuffs}</p>
 
       <div class="app__readout">
         <div class="app__numrow">
           <p class="app__num" data-num aria-live="polite">150</p>
           <div class="app__stepper">
-            <button type="button" data-step="up" aria-label="Increase">▲</button>
-            <button type="button" data-step="down" aria-label="Decrease">▼</button>
+            <button type="button" data-step="up" aria-label={t.increase}>▲</button>
+            <button type="button" data-step="down" aria-label={t.decrease}>▼</button>
           </div>
         </div>
-        <p class="app__badge"><span class="badge" data-badge data-level="moderate">Moderate dependence</span></p>
-        <p class="app__equiv">≈ <b data-cigs>11</b> cigarettes' worth of puffs</p>
-        <p class="app__quip" data-quip>A pack a day, in vape clothing. Extremely fixable.</p>
+        <p class="app__badge"><span class="badge" data-badge data-level="moderate">{t.bandModerate}</span></p>
+        <p class="app__equiv">{t.equivPre}<b data-cigs>11</b>{t.equivPost}</p>
+        <p class="app__quip" data-quip>{t.quipModerate}</p>
       </div>
 
       <button class="app__alt" type="button" data-toggle-mode>
-        Not sure? Use device life →
+        {t.toDevices}
       </button>
 
-      <div class="app__pad" data-pad role="group" aria-label="Number pad">
+      <div class="app__pad" data-pad role="group" aria-label={t.padLabel}>
         <button type="button" data-key="1">1</button>
         <button type="button" data-key="2">2</button>
         <button type="button" data-key="3">3</button>
@@ -55,7 +97,7 @@ const { part = 'phone' } = Astro.props;
         <button type="button" data-key="9">9</button>
         <span></span>
         <button type="button" data-key="0">0</button>
-        <button type="button" data-key="del" aria-label="Delete">⌫</button>
+        <button type="button" data-key="del" aria-label={t.del}>⌫</button>
       </div>
 
       {/* A real link, so it works with JS off: it scrolls to the badges and the
@@ -65,9 +107,9 @@ const { part = 'phone' } = Astro.props;
         href="#get"
         data-continue
         data-ios={appStoreUrl()}
-        data-android={playUrl('hero-demo')}
+        data-android={playUrl(campaignFor(lang, 'hero-demo'))}
       >
-        Continue
+        {t.cta}
       </a>
     </div>
   </div>
@@ -75,26 +117,27 @@ const { part = 'phone' } = Astro.props;
 
 {part === 'output' && (
   <div class="demo__out" data-demo-out>
-    <p class="micro micro--volt">And here's what that means</p>
+    <p class="micro micro--volt">{t.outEyebrow}</p>
 
     <div class="demo__money">
-      <label class="micro" for="demo-spend">If you spend</label>
+      <label class="micro" for="demo-spend">{t.spendLabel}</label>
       <div class="field__box">
-        <span aria-hidden="true">$</span>
+        {symbol && symbolFirst && <span aria-hidden="true">{symbol}</span>}
         <input id="demo-spend" type="number" inputmode="decimal" min="0" max="1000" step="5" value="20" data-spend />
-        <span>a week</span>
+        {symbol && !symbolFirst && <span aria-hidden="true">{symbol}</span>}
+        <span>{t.perWeek}</span>
       </div>
-      <p class="demo__year" data-year aria-live="polite">$1,040</p>
-      <p class="micro">a year. Your maths, not ours</p>
+      <p class="demo__year" data-year aria-live="polite">{money.format(20 * 52)}</p>
+      <p class="micro">{t.yearNote}</p>
     </div>
 
     <figure class="demo__curve">
       <figcaption class="curve-caption">
-        <span><b data-start>150</b> a day</span>
-        <span class="curve-freedom">0 · Freedom Day</span>
+        <span><b data-start>150</b>{t.startSuffix}</span>
+        <span class="curve-freedom">{t.freedom}</span>
       </figcaption>
       <svg viewBox="0 0 460 120" preserveAspectRatio="none" role="img"
-           aria-label="Your taper curve falling to zero over 30 days.">
+           aria-label={t.curveLabel}>
         <defs>
           <linearGradient id="d-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#c8f542" stop-opacity="0.22" />
@@ -107,15 +150,30 @@ const { part = 'phone' } = Astro.props;
         <circle data-end r="5.5" fill="#ff8a00" />
       </svg>
       <figcaption class="micro" style="text-align:center;margin-top:0.6rem">
-        Your 30-day curve · redrawn as you type
+        {t.curveCaption}
       </figcaption>
     </figure>
   </div>
 )}
 
 <script>
+  type Band = { label: string; quip: string };
+  type DemoI18n = {
+    intl: string;
+    currency: string | null;
+    askPuffs: string;
+    askDevices: string;
+    toDevices: string;
+    toPuffs: string;
+    bands: Record<'empty' | 'light' | 'moderate' | 'heavy' | 'severe', Band>;
+  };
+
   const root = document.querySelector<HTMLElement>('[data-demo]');
-  if (root) {
+  const island = document.getElementById('demo-i18n');
+  if (root && island) {
+    // The page's language, handed over by the component that rendered it.
+    const i18n = JSON.parse(island.textContent ?? '{}') as DemoI18n;
+
     // Both halves may be in different sections, so resolve against the document.
     const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
     const numEl = $<HTMLElement>('[data-num]');
@@ -132,9 +190,11 @@ const { part = 'phone' } = Astro.props;
     const area = document.querySelector<SVGPathElement>('[data-area]');
     const end = document.querySelector<SVGCircleElement>('[data-end]');
 
-    const money = new Intl.NumberFormat('en-US', {
-      style: 'currency', currency: 'USD', maximumFractionDigits: 0,
-    });
+    // A currency where the locale has exactly one to show; a bare, locale-grouped
+    // number where it does not. Same rule the server used for the first paint.
+    const money = i18n.currency
+      ? new Intl.NumberFormat(i18n.intl, { style: 'currency', currency: i18n.currency, maximumFractionDigits: 0 })
+      : new Intl.NumberFormat(i18n.intl, { maximumFractionDigits: 0 });
 
     // Two input modes, exactly like the app: type puffs directly, or estimate
     // from how many disposables you get through (~600 puffs each).
@@ -150,14 +210,14 @@ const { part = 'phone' } = Astro.props;
     // (docs/07 §2 bans shame words) — the joke is always about the vape.
     const bandFor = (p: number) =>
       p <= 0
-        ? { key: 'light', label: 'Go on, be honest', quip: "Nobody's watching. We can't do maths on an empty box." }
+        ? { key: 'light', ...i18n.bands.empty }
         : p <= 50
-          ? { key: 'light', label: 'Light dependence', quip: "Genuinely close already. This'll be quicker than you think." }
+          ? { key: 'light', ...i18n.bands.light }
           : p <= 150
-            ? { key: 'moderate', label: 'Moderate dependence', quip: 'A pack a day, in vape clothing. Extremely fixable.' }
+            ? { key: 'moderate', ...i18n.bands.moderate }
             : p <= 300
-              ? { key: 'heavy', label: 'Heavy dependence', quip: "Big number. Also a really common one — you're not an outlier." }
-              : { key: 'severe', label: 'Severe dependence', quip: 'That is a lot of nicotine. No lecture — just a plan that starts where you are.' };
+              ? { key: 'heavy', ...i18n.bands.heavy }
+              : { key: 'severe', ...i18n.bands.severe };
 
     const W = 460, H = 120, P = 30;
     const limit = (base: number, d: number) => {
@@ -221,10 +281,8 @@ const { part = 'phone' } = Astro.props;
     alt.addEventListener('click', () => {
       mode = mode === 'puffs' ? 'devices' : 'puffs';
       entry = mode === 'puffs' ? '150' : '3';
-      label.textContent = mode === 'puffs' ? 'Puffs on a normal day?' : 'Disposables a week?';
-      alt.textContent = mode === 'puffs'
-        ? 'Not sure? Use device life →'
-        : '← I know my puff count';
+      label.textContent = mode === 'puffs' ? i18n.askPuffs : i18n.askDevices;
+      alt.textContent = mode === 'puffs' ? i18n.toDevices : i18n.toPuffs;
       render();
     });
 

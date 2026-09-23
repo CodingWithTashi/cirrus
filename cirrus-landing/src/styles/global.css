@@ -35,7 +35,15 @@
   --r-xl: 28px;
 
   --shell: 1080px;
-  --measure: 66ch;
+  /* Widths are em/rem, never `ch`. `ch` is the advance of "0" in whatever font is
+     CURRENTLY rendering, and the Arial fallback is 5-12% narrower than the web
+     faces even with size-adjust - so every `ch` box re-wrapped on font swap and
+     pushed the sections below it down (the #get layout shift). These are the
+     same measures once the fonts land, to four decimals ON PURPOSE: Inter 1ch =
+     0.63086em, Space Grotesk Bold 1ch = 0.648em. Rounding them to a tidy 34em
+     made a box 1px narrower than the `ch` it replaced, which was enough to push
+     one FAQ answer onto an extra line. */
+  --measure: 41.6367rem;
   --gutter: 20px;
 
   /* Supplied by <Font> in BaseLayout (see astro.config.mjs `fonts`). */
@@ -76,6 +84,30 @@ h1, h2, h3 {
 }
 
 p { text-wrap: pretty; }
+
+/* A word wider than its column breaks rather than overflowing. `body` is
+   `overflow-x: hidden`, so an overflow here is CLIPPED, not scrolled — the same
+   silent failure the Markdown tables hit. English rarely gets near it; a German
+   compound in a narrow card does.
+
+   NOT th/td. The compare table is `table-layout: fixed`, so at phone width a
+   header word is already wider than its column and overhangs harmlessly into
+   the cell padding; break-word snapped it mid-word instead ("PREMIU / M") and
+   made every row taller. Tables have their own answer: .compare-wrap and
+   .table-wrap scroll sideways. */
+h1, h2, h3, p, li, summary { overflow-wrap: break-word; }
+
+/* German compounds. The layout was written for English; `hyphens: auto` lets a
+   long word break at a syllable instead of forcing its card wider. It needs the
+   right <html lang>, which BaseLayout sets. German only: the other four
+   languages have no such words, and auto-hyphenated English reads badly. The
+   limit keeps short words whole (10 letters before it will break one, at least
+   4 kept on each side). */
+:lang(de) :is(h1, h2, h3, p, li, summary, th, td) {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 10 4 4;
+}
 
 /* ---------- layout primitives ---------- */
 
@@ -200,6 +232,73 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .site-nav .btn-primary,
 .site-nav .btn-primary:hover { color: var(--void); }
 
+/* ---------- language switcher (header) ----------
+   A native <details>: no script, no cookie, nothing stored — so the privacy
+   page's "no cookies" stays true and it works with JS off. The panel is
+   absolutely positioned, so opening it moves nothing (zero layout shift).
+
+   Hidden below 30rem: at 360px the header already holds the brand, Blog and the
+   button, and a fourth item wraps it in German. The footer row covers phones.
+
+   It shows the language CODE, not the name: 44px wide in every language, where
+   "Português" beside a German button crowds the header below ~560px. */
+.lang { display: none; position: relative; }
+@media (min-width: 30rem) { .lang { display: block; } }
+.lang > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.875rem;
+  user-select: none;
+}
+.lang > summary::-webkit-details-marker { display: none; }
+.lang > summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.lang[open] > summary { color: var(--text); border-color: var(--muted); }
+.lang[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
+.lang__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 5;
+  min-width: 172px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.5);
+}
+.lang__panel a,
+.lang__panel span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+}
+/* `.site-nav a` paints every nav link muted and semibold; the panel is a menu. */
+.site-nav .lang__panel a { color: var(--text); font-weight: 400; }
+.site-nav .lang__panel a:hover { background: var(--lift); }
+.lang__panel span { color: var(--volt); font-weight: 600; }
+.lang__panel small { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+
 /* ---------- buttons ---------- */
 
 .btn {
@@ -245,7 +344,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 
 .hero h1 {
   font-size: clamp(2.4rem, 7vw, 4rem);
-  max-width: 13ch;
+  max-width: 8.424em;
   margin: 14px 0 0;
 }
 
@@ -258,7 +357,7 @@ html.js.motion .reveal[data-delay='3'] { transition-delay: 0.24s; }
 .hero__sub {
   font-size: 1.15rem;
   color: var(--muted);
-  max-width: 44ch;
+  max-width: 27.7578em;
   margin: 18px 0 28px;
 }
 
@@ -384,6 +483,8 @@ html[data-os='android'] .store--play { order: -1; }
   border: 2px solid var(--dot);
   box-shadow: 0 0 12px color-mix(in srgb, var(--dot) 45%, transparent);
 }
+/* The dot's fill hides the rail behind it, so it takes the section's colour. */
+.section--lift .timeline li::after { background: var(--lift); }
 
 .timeline__time {
   font-family: var(--font-display);
@@ -402,7 +503,7 @@ html[data-os='android'] .store--play { order: -1; }
 }
 
 .timeline h3 { font-size: 1.125rem; line-height: 1.45; }
-.timeline p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.975rem; max-width: 54ch; }
+.timeline p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.975rem; max-width: 34.0664em; }
 
 .tag {
   display: inline-block;
@@ -514,7 +615,7 @@ html[data-os='android'] .store--play { order: -1; }
   font-variant-numeric: tabular-nums;
 }
 .price__list span { color: var(--muted); font-size: 0.875rem; }
-.section__head .price__note { margin: 1rem 0 0; font-size: 0.875rem; max-width: 40ch; }
+.section__head .price__note { margin: 1rem 0 0; font-size: 0.875rem; max-width: 25.2344em; }
 .price__note b { color: var(--volt); font-weight: 600; }
 
 .compare-wrap { overflow-x: auto; }
@@ -581,7 +682,7 @@ html[data-os='android'] .store--play { order: -1; }
   border-radius: 12px;
 }
 .qr__code svg { display: block; width: 100%; height: 100%; }
-.qr__text { max-width: 15ch; color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
+.qr__text { max-width: 9.4629em; color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
 .qr__text b { display: block; margin-bottom: 0.25rem; color: var(--text); font-family: var(--font-display); font-size: 1rem; }
 .qr__text span { display: block; }
 
@@ -784,6 +885,13 @@ html[data-os='android'] .store--play { order: -1; }
   border-radius: var(--r-lg);
   padding: 1.25rem;
 }
+/* The moment the reader recognises, above the sourced figure. It is the card's
+   headline, so it reads first; the figure below it is the evidence. */
+.stat__hook {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  margin: 0 0 0.9rem;
+}
 .stat__figure {
   font-family: var(--font-display);
   font-weight: 700;
@@ -802,6 +910,13 @@ html[data-os='android'] .store--play { order: -1; }
   color: var(--muted);
   border-top: 1px solid var(--border);
   padding-top: 0.6rem;
+}
+.stats__note {
+  max-width: var(--measure);
+  margin: 1.5rem auto 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 /* ---------- FAQ ---------- */
@@ -844,8 +959,8 @@ html[data-os='android'] .store--play { order: -1; }
     var(--slate);
   border-block: 1px solid var(--border);
 }
-.cta-band h2 { font-size: clamp(1.9rem, 5vw, 3rem); max-width: 16ch; }
-.cta-band p { color: var(--muted); max-width: 42ch; margin: 14px 0 28px; }
+.cta-band h2 { font-size: clamp(1.9rem, 5vw, 3rem); max-width: 10.368em; }
+.cta-band p { color: var(--muted); max-width: 26.4961em; margin: 14px 0 28px; }
 
 /* ---------- footer ---------- */
 
@@ -866,10 +981,35 @@ html[data-os='android'] .store--play { order: -1; }
     grid-template-columns: auto 1fr auto;
     align-items: center;
   }
-  .site-footer .wrap > :last-child { justify-self: end; }
+  .site-footer .wrap > .footer-links { justify-self: end; }
   .site-footer .wrap > :first-child { justify-self: start; }
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 1rem; }
+/* A footer link that leaves the reader's language says so: the legal pages are
+   English-only, and the blog is until a language has posts of its own. */
+.footer-links a[hreflang]::after {
+  content: ' · ' attr(hreflang);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+
+/* The language row: every live language in its own name, on every page and at
+   every width. On a phone this IS the switcher — the header has no room for one. */
+.footer-langs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  width: 100%;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.footer-langs [aria-current] { color: var(--text); font-weight: 600; }
+@media (min-width: 45rem) {
+  .site-footer .wrap > .footer-langs { grid-column: 1 / -1; justify-self: stretch; }
+}
 .site-footer a { color: var(--muted); }
 .site-footer a:hover { color: var(--volt); }
 
@@ -901,7 +1041,7 @@ html[data-os='android'] .store--play { order: -1; }
 
 .page { padding-block: clamp(40px, 7vw, 72px); }
 .page h1 { font-size: clamp(2rem, 5vw, 3rem); }
-.lede { font-size: 1.125rem; color: var(--muted); max-width: 48ch; }
+.lede { font-size: 1.125rem; color: var(--muted); max-width: 30.2812em; }
 
 .post-list { list-style: none; padding: 0; margin: 2.5rem 0 0; max-width: 42rem; }
 .post-list li { padding: 1.75rem 0; border-bottom: 1px solid var(--border); }
@@ -1104,7 +1244,7 @@ html[data-os='android'] .store--play { order: -1; }
 .imgslot__what {
   font-size: 0.9375rem;
   color: var(--muted);
-  max-width: 34ch;
+  max-width: 21.4492em;
   margin-inline: auto !important;
   line-height: 1.45;
 }
@@ -1255,6 +1395,24 @@ html[data-os='android'] .store--play { order: -1; }
 .post-sources a { color: var(--muted); text-decoration-color: var(--border); }
 .post-sources a:hover { color: var(--volt); }
 .post-sources__id { display: block; font-size: 0.8125rem; color: #67707e; word-break: break-word; }
+/* The fold for a long list (see SOURCES_OPEN_MAX in [...slug].astro). Same
+   ▾/▴ marker as the contents toggle; the label swaps without script. */
+.post-sources__more > summary {
+  display: inline-block;
+  margin-top: 0.35rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--volt);
+}
+.post-sources__more > summary::-webkit-details-marker { display: none; }
+.post-sources__more > summary::after { content: ' ▾'; }
+.post-sources__more[open] > summary::after { content: ' ▴'; }
+.post-sources__hide,
+.post-sources__more[open] .post-sources__show { display: none; }
+.post-sources__more[open] .post-sources__hide { display: inline; }
+.post-sources__more ol { margin-top: 0.5rem; }
 
 .disclaimer {
   margin-top: 2.5rem;
@@ -1317,7 +1475,7 @@ html[data-os='android'] .store--play { order: -1; }
   font-size: clamp(1.4rem, 3.6vw, 1.8rem);
   margin: 0.5rem 0 0;
 }
-.post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 44ch; }
+.post-cta--end > p:not(.micro) { color: var(--muted); margin: 0.7rem 0 0; max-width: 27.7578em; }
 .post-cta--end .stores { margin-top: 1.2rem; }
 
 /* ---------- post layout: article + sidebar ----------

@@ -87,6 +87,10 @@ sleep that goes strange for a bit. Plus cravings, which are their own thing.
 None of that means something is wrong with you. It means a receptor system that had adapted
 to regular nicotine is readjusting to none, and that readjustment has a duration.
 
+That also means none of it is specific to vaping. If you're leaving cigarettes or pouches as
+well, [the nicotine withdrawal timeline](/blog/nicotine-withdrawal-timeline) is the same
+clock, with the dose and the ease of topping up as the only real differences.
+
 > Individual cravings last 15 to 20 minutes.
 >
 > <cite>Nicotine craving literature</cite>

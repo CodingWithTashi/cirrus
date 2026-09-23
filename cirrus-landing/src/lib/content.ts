@@ -1,8 +1,17 @@
 /**
- * Landing-page content that appears twice — once as visible markup, once inside
- * structured data. Defining it here means the FAQ a person reads and the FAQ
- * Google reads can never drift apart, which is the usual way FAQ schema turns
- * into a manual action.
+ * Everything about the landing page's content that is NOT language: which items
+ * exist, in what order, on which tier, at what clock time, linking to which
+ * post. The words live in src/i18n/<locale>.ts, keyed by the ids declared here.
+ *
+ * Splitting it this way is what makes a translation checkable. The dictionary
+ * types are `Record<StatId, …>`, `Record<FaqId, …>` and so on, so a locale that
+ * drops a timeline step, invents a seventh FAQ, or ships a statistic without a
+ * source does not compile — the structure cannot drift, only the words can.
+ *
+ * Two things still appear twice on the page — once as visible markup, once as
+ * structured data — and both render from the same dictionary entry, so the FAQ
+ * a person reads and the FAQ Google reads can never disagree. That is the usual
+ * way FAQ schema turns into a manual action.
  */
 
 /**
@@ -10,99 +19,115 @@
  *
  * docs/02 §8 bans "any uncited number" outright — it names "78% of members quit"
  * as the exact thing not to do, because a direct competitor ships it. Every row
- * below is from that spec's approved table and carries its source on screen.
- * Adding a row here is part of the same change that renders it; if there is no
- * honest number for a section, the section says nothing instead.
+ * is from that spec's approved table and carries its source on screen. Adding a
+ * row here is part of the same change that renders it; if there is no honest
+ * number for a section, the section says nothing instead.
+ *
+ * `home` marks the three shown on the home page — the strongest, kept to a
+ * three-card rhythm. All five stay available to the blog. They used to be picked
+ * by matching the English figure ("76%"), which a French "76 %" would have
+ * silently dropped.
+ *
+ * On the home page each of the three sits under a one-line moment the reader
+ * recognises (`home.stats.hooks`, keyed by `HomeStatId`), so the card reads as
+ * "this is you, and here is the source" rather than a figure on its own. The
+ * hook carries no number: the figure below it is the only claim on the card.
  */
-export const HONEST_STATS = [
-  {
-    figure: '24% vs 19%',
-    claim: 'abstinence in a randomised trial of 2,588 young adults — quit support works, but nobody is quitting nine times out of ten.',
-    source: 'This is Quitting RCT, Truth Initiative / JMIR',
-  },
-  {
-    figure: '76%',
-    claim: 'of young vapers reach for it within 30 minutes of waking. If that is you, it is a dependence pattern, not a willpower problem.',
-    source: 'Truth Initiative teen-vaper survey',
-  },
-  {
-    figure: '28% → 53%',
-    claim: 'the rise in failed quit attempts among daily young users between 2020 and 2024. Quitting got harder; you did not get weaker.',
-    source: 'JAMA Network Open',
-  },
-  {
-    figure: '15–20 min',
-    claim: 'how long most cravings actually last. That is the entire window Panic Mode has to get you through.',
-    source: 'Nicotine craving literature',
-  },
-  {
-    figure: '≈14 puffs',
-    claim: 'roughly one cigarette. Always shown with a "≈", because the honest answer is a range and anyone quoting a precise number is guessing.',
-    source: 'Research heuristic',
-  },
+export const STATS = [
+  { id: 'abstinence' },
+  { id: 'wake30', home: true },
+  { id: 'failedAttempts', home: true },
+  { id: 'cravingWindow', home: true },
+  { id: 'puffsPerCig' },
 ] as const;
+export type StatId = (typeof STATS)[number]['id'];
+export type HomeStatId = Extract<(typeof STATS)[number], { home: true }>['id'];
 
 /**
- * FAQ. Each question is one somebody actually types into Google — that is the
- * point of the section. Answers are short enough to be quoted as a snippet and
- * honest enough to survive being quoted out of context.
+ * FAQ order, and which questions hand off to a post.
  *
- * ONE QUERY, ONE PAGE. Where a blog post now owns a question, the answer here is
- * deliberately cut to a two-sentence summary with a `more` link to that post.
- * A full answer in both places puts the home page and the post in competition
- * for the same search, and Google usually resolves that by ranking neither.
- * `more` is rendered as a visible link but is NOT part of the FAQPage schema —
- * the schema carries the plain answer only.
+ * ONE QUERY, ONE PAGE. Where a blog post owns a question, the answer on the home
+ * page is deliberately a two-sentence summary with a link to that post: a full
+ * answer in both places puts them in competition for the same search, and Google
+ * usually resolves that by ranking neither.
+ *
+ * `more` is a post SLUG, not an href. The renderer resolves it to the post in
+ * the reader's language when that translation is live, and to the English post
+ * (flagged hreflang="en") when it is not — so translating a post upgrades these
+ * links with no edit here. The link is visible markup only and is NOT part of
+ * the FAQPage schema, which carries the plain answer.
  */
-export const FAQS = [
-  {
-    q: 'Is tapering better than quitting vaping cold turkey?',
-    a: 'Cold turkey works for some people and fails most. A taper lowers your nicotine slowly enough that withdrawal stays manageable, which is why Cirrus counts puffs going down instead of days going up. If cold turkey has already worked for you, you do not need an app.',
-  },
-  {
-    q: 'How many puffs a day is a lot?',
-    a: 'There is no clean line, and no health body publishes one. Roughly 14 puffs is about one cigarette, so 150 a day is in the region of ten.',
-    more: { label: 'The full answer, and the question that tells you more', href: '/blog/how-many-puffs-a-day-is-a-lot' },
-  },
-  {
-    q: 'How many puffs are in a disposable vape?',
-    a: 'Fewer than the box says. Advertised counts come from a machine taking short, even puffs, so real use commonly lands well under the number on the front.',
-    more: { label: 'Why the box number is optimistic', href: '/blog/how-many-puffs-in-a-disposable-vape' },
-  },
-  {
-    q: 'What does vaping actually cost per year?',
-    a: 'Take what you spend a week and multiply by 52. At £20 or $20 a week that is over a thousand a year. Use the calculator above with your own number; we are not going to invent one for you.',
-  },
-  {
-    q: 'What happens if I slip and go over my limit?',
-    a: 'Nothing dramatic. A repair token absorbs one over-limit day so your streak dims instead of dying, and the plan stretches your Freedom Day rather than resetting you to day one. A slip is data, not failure.',
-  },
-  {
-    q: 'How long does vaping withdrawal last?',
-    a: 'Symptoms usually start within a day and peak on day two or three, earlier than most people expect. Most of the physical side settles within about ten days.',
-    more: { label: 'The day-by-day timeline', href: '/blog/how-long-does-vaping-withdrawal-last' },
-  },
-  {
-    q: 'What are the benefits of quitting vaping?',
-    a: 'Sleep and taste tend to come back first, usually within a couple of weeks. Breathing and stamina follow. The money is immediate and often the most motivating: whatever you spend a week, multiply by 52. We will not quote you a percentage we cannot source.',
-  },
-  {
-    q: 'What quit vaping methods actually work?',
-    a: 'Broadly three: cold turkey, tapering, and nicotine replacement. Cold turkey is fastest and has the lowest success rate. Tapering trades speed for a much higher chance of it sticking. NRT can support either. Cirrus is a taper app because that is the method most people can actually hold.',
-  },
-  {
-    q: 'Is Cirrus on iPhone and Android?',
-    a: 'Yes, both. Cirrus is free on the App Store for iPhone (iOS 15 or later) and on Google Play for Android, and the iPhone version comes with an Apple Watch app.',
-  },
-  {
-    // Prices are the founder-locked US prices (docs/08 §1). "Up to 100" coach
-    // messages, never "unlimited": 100 a day is what the server enforces.
-    q: 'Is Cirrus free?',
-    a: 'Yes. The free tier keeps working forever: puff logging, the widget, streaks, money saved, your daily limit, the community and five coach messages a day. Premium adds the adaptive plan, up to 100 coach messages a day and your full history, at $2.99 a week, $7.99 a month or $39.99 a year in the US, with a 7-day free trial on every plan. We never sell your data and there are no ad trackers in the app.',
-  },
-  {
-    q: 'How is this different from Puff Count?',
-    a: 'Honesty, mostly. We publish a source for every statistic, the free tier is not a lockout, and there is a coach and a community rather than a counter on its own. Cirrus is also on both iPhone and Android; Puff Count is iPhone only.',
-    more: { label: 'What to look for in a puff counter app', href: '/blog/how-to-choose-a-puff-counter-app' },
-  },
+export const FAQ_ITEMS = [
+  { id: 'taper' },
+  // "vape puff counter", "vape hit counter", "vape counter": the product queries
+  // Search Console shows this site appearing for (Sep 2026). The honest answer
+  // to them is that no phone app can count a vape's puffs by itself.
+  { id: 'autoCount' },
+  { id: 'puffsPerDay', more: 'how-many-puffs-a-day-is-a-lot' },
+  { id: 'disposable', more: 'how-many-puffs-in-a-disposable-vape' },
+  { id: 'costPerYear' },
+  { id: 'slip' },
+  { id: 'withdrawal', more: 'how-long-does-vaping-withdrawal-last' },
+  { id: 'benefits' },
+  { id: 'methods' },
+  { id: 'platforms' },
+  { id: 'free' },
+  { id: 'puffCount', more: 'how-to-choose-a-puff-counter-app' },
 ] as const;
+export type FaqId = (typeof FAQ_ITEMS)[number]['id'];
+export type FaqWithMoreId = Extract<(typeof FAQ_ITEMS)[number], { more: string }>['id'];
+
+/**
+ * An example day. The clock times are illustrative and the page says so; every
+ * feature named is shipped (docs/13) and every tag is its real tier (docs/13 §4).
+ * No figure appears beyond the times and the cited craving window.
+ *
+ * `at` is 24-hour and formatted per locale at build time, so English keeps its
+ * "7:40 am" and everyone else gets the clock they actually use.
+ */
+export const DAY_STEPS = [
+  { id: 'first', at: '07:40' },
+  { id: 'lunch', at: '12:30', tone: 'ember' },
+  { id: 'headsUp', at: '14:50' },
+  { id: 'craving', at: '15:04', tone: 'oxygen' },
+  { id: 'passed', at: '15:19', tone: 'ember' },
+  { id: 'night', at: '23:40' },
+  { id: 'midnight', at: '00:00', pro: true },
+] as const;
+export type DayStepId = (typeof DAY_STEPS)[number]['id'];
+
+/**
+ * Free vs Premium. `true` / `false` render as a tick or a dash; `'text'` means
+ * the cell is words, which the dictionary supplies. Every value is a real
+ * allowance (docs/13 §4, LpAllowances in the app).
+ */
+export const COMPARE_ROWS = [
+  { id: 'counter', free: true, pro: true },
+  { id: 'limit', free: true, pro: true },
+  { id: 'streak', free: true, pro: true },
+  { id: 'money', free: true, pro: true },
+  { id: 'panic', free: 'text', pro: 'text' },
+  { id: 'coach', free: 'text', pro: 'text' },
+  { id: 'community', free: 'text', pro: 'text' },
+  { id: 'timeline', free: 'text', pro: 'text' },
+  { id: 'history', free: 'text', pro: 'text' },
+  { id: 'adaptive', free: false, pro: true },
+  { id: 'insight', free: false, pro: true },
+  { id: 'themes', free: false, pro: true },
+] as const;
+export type CompareRowId = (typeof COMPARE_ROWS)[number]['id'];
+
+/** The screenshot rail, in order. The images are imported where they render. */
+export const SCREENS = ['home', 'log', 'plan', 'coach', 'panic', 'community', 'stats'] as const;
+export type ScreenId = (typeof SCREENS)[number];
+
+/** The "where it lives" cards, in order. The icons are drawn where they render. */
+export const DEVICES = ['iphone', 'android', 'widget', 'watch'] as const;
+export type DeviceId = (typeof DEVICES)[number];
+
+/**
+ * The founder-locked US prices (docs/08 §1, LpPricing in the app). Real prices,
+ * not statistics — and US ones in every locale, because a store shows each
+ * reader their own and the page says so.
+ */
+export const PRICES = { week: '$2.99', month: '$7.99', year: '$39.99' } as const;

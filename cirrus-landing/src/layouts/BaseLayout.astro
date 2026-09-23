@@ -3,10 +3,21 @@
 // place: canonical URL, Open Graph, Twitter card, and the JSON-LD block.
 import { Font, Image } from 'astro:assets';
 import mark from '../assets/mark.png';
-import { SITE_TITLE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_OG_IMAGE, SITE_LOCALE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL, APP_STORE_ID, APP_STORE_URL, PLAY_STORE_URL } from '../consts';
+import { SITE_TITLE, SITE_OG_IMAGE, SOCIAL_PROFILES, PRIVACY_URL, TERMS_URL, DELETE_ACCOUNT_URL, APP_STORE_ID, APP_STORE_URL, PLAY_STORE_URL } from '../consts';
+import { fmt, useT, type Locale } from '../i18n/index.ts';
+import { AUTONYM, DEFAULT_LOCALE, HREFLANG, LIVE_LOCALES, OG_LOCALE } from '../i18n/locales.mjs';
+import { link, localePath } from '../i18n/paths.ts';
 import '../styles/global.css';
 
 interface Props {
+  /** The page's language. Everything language-shaped in <head>, the structured
+      data and the header/footer follows it. English when omitted, so every
+      page written before the site had a second language is still correct. */
+  lang?: Locale;
+  /** Every LIVE version of this page, keyed by locale, self included — the clean
+      site-relative paths from alternatesFor() in i18n/paths.ts. Becomes the
+      hreflang set. Omit on a page that exists in one language only. */
+  alternates?: Partial<Record<Locale, string>>;
   title?: string;
   description?: string;
   /** Set on blog posts so the JSON-LD switches from WebSite to BlogPosting. */
@@ -42,8 +53,10 @@ interface Props {
 }
 
 const {
+  lang = DEFAULT_LOCALE,
+  alternates,
   title,
-  description = SITE_DESCRIPTION,
+  description: descriptionProp,
   type = 'website',
   publishedAt,
   updatedAt,
@@ -60,12 +73,16 @@ const {
   blogPosts,
 } = Astro.props;
 
-// Home gets brand + tagline; every other page gets "Page · Cirrus" so results
-// stay readable without repeating the brand twice. Home used to fall back to
-// SITE_DESCRIPTION, which produced a 143-character title reading "Cirrus —
-// Cirrus builds..." — Google truncates around 60 and the repetition wasted the
-// most valuable words in the result.
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE} · ${SITE_TAGLINE}`;
+const t = useT(lang);
+const description = descriptionProp ?? t.meta.description;
+
+// Every page is "Page · Cirrus", home included: home's page name is
+// `meta.title` ("Quit vaping app without going cold turkey"). Home used to be
+// "Cirrus · <tagline>", which spent the first word of the result on a brand
+// nobody searches yet and never said the thing was an app. Before that it fell
+// back to SITE_DESCRIPTION and produced a 143-character title — Google
+// truncates around 60.
+const pageTitle = `${title ?? t.meta.title} · ${SITE_TITLE}`;
 
 // Astro.site comes from `site` in astro.config.mjs.
 //
@@ -79,7 +96,31 @@ const cleanPath = Astro.url.pathname
   .replace(/(.)\/$/, '$1');
 const canonical = new URL(cleanPath, Astro.site);
 const ogImage = image ? new URL(image, Astro.site) : null;
-const ogImageAlt = imageAlt ?? `${SITE_TITLE} — ${SITE_TAGLINE}`;
+const ogImageAlt = imageAlt ?? `${SITE_TITLE} — ${t.meta.tagline}`;
+
+// This locale's home page. `/` in English and `/es` — never `/es/` — elsewhere:
+// `build.format: 'file'` writes dist/es.html, the same shape /blog has.
+const homePath = localePath(lang, '/');
+const homeUrl = new URL(homePath, Astro.site).href;
+
+// hreflang. One <link> per live version, self included, plus x-default → English.
+// Nothing at all on a noindex page or a page with a single version: an hreflang
+// set of one is noise, and one pointing at a page Google may not index is worse.
+//
+// The self-reference is checked, not trusted. hreflang only works when both ends
+// agree, and a page whose own entry names a different URL than its canonical is
+// the classic way a whole locale gets ignored — so that is a build error here
+// rather than a Search Console warning three weeks later.
+const hreflangs =
+  !noindex && alternates && Object.keys(alternates).length > 1
+    ? (Object.entries(alternates) as [Locale, string][])
+    : [];
+if (hreflangs.length && alternates?.[lang] !== cleanPath) {
+  throw new Error(
+    `BaseLayout: alternates.${lang} is "${alternates?.[lang]}" but this page is "${cleanPath}". ` +
+      'The hreflang self-reference must equal the canonical path.',
+  );
+}
 
 // Structured data, emitted as one @graph so the page ships a single script tag
 // and the entities can cross-reference each other by @id.
@@ -114,7 +155,7 @@ const primary =
         mainEntityOfPage: { '@type': 'WebPage', '@id': canonical.href },
         datePublished: publishedAt?.toISOString(),
         dateModified: (updatedAt ?? publishedAt)?.toISOString(),
-        inLanguage: 'en',
+        inLanguage: lang,
         publisher: { '@id': org['@id'] },
         // A named human when there is one; the organisation otherwise. Never
         // absent — an article with no author at all is the single most common
@@ -131,12 +172,14 @@ const primary =
       }
     : {
         '@type': 'WebSite',
-        '@id': `${Astro.site?.href}#website`,
+        // Scoped to the locale home, so two languages never assert two different
+        // descriptions for one @id. English is unchanged: its home IS the site root.
+        '@id': `${homeUrl}#website`,
         name: SITE_TITLE,
         alternateName: 'Cirrus Quit',
-        description: SITE_DESCRIPTION,
-        url: Astro.site?.href,
-        inLanguage: 'en',
+        description: t.meta.description,
+        url: homeUrl,
+        inLanguage: lang,
         publisher: { '@id': org['@id'] },
       };
 
@@ -148,6 +191,9 @@ const graph: Record<string, unknown>[] = [org, primary];
 if (softwareApp) {
   graph.push({
     '@type': 'MobileApplication',
+    // Locale-scoped like WebSite's, so the five home pages describe one app in
+    // five languages without asserting five descriptions for a single @id.
+    '@id': `${homeUrl}#app`,
     name: SITE_TITLE,
     applicationCategory: 'HealthApplication',
     operatingSystem: 'iOS, Android',
@@ -157,8 +203,11 @@ if (softwareApp) {
     // which Google dropped in 2009 and Bing treats as a spam signal.
     keywords:
       'quit vaping, quit vaping app, stop vaping, puff counter, vape tracker, taper off vaping, vaping cravings, vaping withdrawal, nicotine',
-    description: SITE_DESCRIPTION,
-    url: Astro.site?.href,
+    description: t.meta.description,
+    // The Free-vs-Premium table's own row names, so the list a crawler reads is
+    // the list a visitor reads, in the page's language, with no new strings.
+    featureList: Object.values(t.home.plans.rows).map((row) => row.feature),
+    url: homeUrl,
     publisher: { '@id': org['@id'] },
     // The two listings are this same app, so they are its sameAs: that is how
     // a crawler joins this page to the store entries it already knows.
@@ -175,9 +224,9 @@ if (blogPosts?.length) {
   graph.push({
     '@type': 'Blog',
     '@id': `${Astro.site?.href}blog#blog`,
-    name: `${SITE_TITLE} blog`,
+    name: fmt(t.chrome.rssTitle, { site: SITE_TITLE }),
     url: new URL('/blog', Astro.site).href,
-    inLanguage: 'en',
+    inLanguage: lang,
     publisher: { '@id': org['@id'] },
     blogPost: blogPosts.map((post) => ({
       '@type': 'BlogPosting',
@@ -201,7 +250,7 @@ if (faq?.length) {
 
 // Home is always position 1 so the trail Google sees starts at the site root.
 const trail = breadcrumbs?.length
-  ? [{ label: 'Home', href: '/' }, ...breadcrumbs]
+  ? [{ label: t.chrome.home, href: homePath }, ...breadcrumbs]
   : null;
 
 if (trail) {
@@ -217,10 +266,28 @@ if (trail) {
 }
 
 const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
+
+// English until a locale has posts of its own (Phase 3); link() says so in the
+// markup rather than guessing a /es/blog that does not exist.
+const blogLink = link(lang, '/blog');
+
+// The language switcher. Each entry goes to THIS page in that language when it
+// exists there, and to that language's home when it does not — never to a
+// guessed URL. Empty while only one language is live, so an English-only build
+// renders no switcher at all.
+const languages =
+  LIVE_LOCALES.length > 1
+    ? LIVE_LOCALES.map((l) => ({
+        code: l,
+        name: AUTONYM[l],
+        href: alternates?.[l] ?? localePath(l, '/'),
+        current: l === lang,
+      }))
+    : [];
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -253,6 +320,10 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {hreflangs.map(([l, path]) => <link rel="alternate" hreflang={HREFLANG[l]} href={new URL(path, Astro.site)} />)}
+    {hreflangs.length > 0 && alternates?.[DEFAULT_LOCALE] && (
+      <link rel="alternate" hreflang="x-default" href={new URL(alternates[DEFAULT_LOCALE], Astro.site)} />
+    )}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     {/* SVG first for crisp tabs; PNGs for browsers that ignore it. Every one of
@@ -268,16 +339,19 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <link
       rel="alternate"
       type="application/rss+xml"
-      title={`${SITE_TITLE} blog`}
+      title={fmt(t.chrome.rssTitle, { site: SITE_TITLE })}
       href={new URL('rss.xml', Astro.site)}
     />
 
     <meta property="og:type" content={type} />
-    <meta property="og:title" content={title ?? SITE_TITLE} />
+    {/* Home passes no `title`, and falling back to the bare brand made every
+        shared link to the home page read "Cirrus" and nothing else. */}
+    <meta property="og:title" content={title ?? pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={SITE_TITLE} />
-    <meta property="og:locale" content={SITE_LOCALE} />
+    <meta property="og:locale" content={OG_LOCALE[lang]} />
+    {hreflangs.filter(([l]) => l !== lang).map(([l]) => <meta property="og:locale:alternate" content={OG_LOCALE[l]} />)}
     {ogImage && <meta property="og:image" content={ogImage} />}
     {/* Declared so scrapers can lay the card out before the image downloads. */}
     {ogImage && <meta property="og:image:width" content="1200" />}
@@ -285,7 +359,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     {ogImage && <meta property="og:image:alt" content={ogImageAlt} />}
 
     <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
-    <meta name="twitter:title" content={title ?? SITE_TITLE} />
+    <meta name="twitter:title" content={title ?? pageTitle} />
     <meta name="twitter:description" content={description} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
     {ogImage && <meta name="twitter:image:alt" content={ogImageAlt} />}
@@ -297,22 +371,40 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
   </head>
 
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">{t.chrome.skip}</a>
 
     <header class="site-header">
       <div class="wrap">
-        <a class="brand" href="/">
+        <a class="brand" href={homePath}>
           {/* Height only — Astro takes the width from the file, so the mark
               cannot be squashed by a hardcoded ratio that drifts when the art
               is redrawn. */}
           <Image src={mark} height={30} layout="fixed" alt="" />
           <span>{SITE_TITLE}</span>
         </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a href="/blog">Blog</a>
+        <nav class="site-nav" aria-label={t.chrome.navLabel}>
+          <a {...blogLink}>{t.chrome.blog}</a>
+          {languages.length > 0 && (
+            <details class="lang">
+              <summary aria-label={`${t.chrome.language}: ${AUTONYM[lang]}`}>{lang.toUpperCase()}</summary>
+              <ul class="lang__panel">
+                {languages.map((l) => (
+                  <li>
+                    {l.current ? (
+                      <span aria-current="true">{l.name} <small>{l.code}</small></span>
+                    ) : (
+                      <a href={l.href} hreflang={HREFLANG[l.code]} lang={l.code}>{l.name} <small>{l.code}</small></a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           {/* Home scrolls to its own closing band (badges + QR code); every other
-              page goes to /download, which puts the reader's store first. */}
-          <a class="btn btn-primary btn-sm" href={cleanPath === '/' ? '#get' : '/download'}>Get the app</a>
+              page goes to /download, which puts the reader's store first. "Home"
+              is THIS locale's home — testing for "/" sent the Spanish home page's
+              button to the English /download. */}
+          <a class="btn btn-primary btn-sm" href={cleanPath === homePath ? '#get' : link(lang, '/download').href}>{t.chrome.getApp}</a>
         </nav>
       </div>
     </header>
@@ -320,7 +412,7 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
     <main id="main">
       {
         trail && (
-          <nav class="breadcrumb wrap" aria-label="Breadcrumb">
+          <nav class="breadcrumb wrap" aria-label={t.chrome.breadcrumbLabel}>
             <ol>
               {trail.map((crumb, i) => (
                 <li>
@@ -340,20 +432,34 @@ const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
 
     <footer class="site-footer">
       <div class="wrap">
-        <a class="brand" href="/">
+        <a class="brand" href={homePath}>
           <Image src={mark} height={24} layout="fixed" alt="" />
           <span style="font-size:1rem">{SITE_TITLE}</span>
         </a>
-        <p style="margin:0">Built by someone who quit. 17+ &middot; nicotine is addictive.</p>
+        <p style="margin:0">{t.chrome.footerLine}</p>
         <div class="footer-links">
-          <a href="/blog">Blog</a>
-          <a href={PRIVACY_URL}>Privacy</a>
-          <a href={TERMS_URL}>Terms</a>
+          <a {...blogLink}>{t.chrome.blog}</a>
+          {/* The legal pages are English-only on purpose: their URLs are frozen by
+              the stores and the apps, and a translated policy is a second legal
+              text. link() flags them hreflang="en" from a localized page. */}
+          <a {...link(lang, PRIVACY_URL)}>{t.chrome.privacy}</a>
+          <a {...link(lang, TERMS_URL)}>{t.chrome.terms}</a>
           {/* Play's User Data policy wants the deletion route findable without
               a login and without the app. Last in the row, not hidden: burying
               it is the specific thing the policy exists to stop. */}
-          <a href={DELETE_ACCOUNT_URL}>Delete account</a>
+          <a {...link(lang, DELETE_ACCOUNT_URL)}>{t.chrome.deleteAccount}</a>
         </div>
+        {languages.length > 0 && (
+          <nav class="footer-langs" aria-label={t.chrome.language}>
+            {languages.map((l) =>
+              l.current ? (
+                <span aria-current="true">{l.name}</span>
+              ) : (
+                <a href={l.href} hreflang={HREFLANG[l.code]} lang={l.code}>{l.name}</a>
+              ),
+            )}
+          </nav>
+        )}
       </div>
     </footer>
 

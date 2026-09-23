@@ -274,6 +274,35 @@ const POSTS = [
       { n: '3 mths', label: 'dopamine normalises', color: VOLT },
     ],
   },
+  {
+    slug: 'most-effective-way-to-quit-vaping',
+    eyebrow: 'QUITTING VAPING · WHAT THE EVIDENCE SAYS',
+    headline: 'The most effective way to quit vaping',
+    // The post's findings in four figures: the best trial result (12 weeks,
+    // ages 16–25), the cold turkey vs taper tie across 22 smoking trials, what
+    // the quit-vaping subreddits ask for most, and the craving window. Volt for
+    // the evidence, ember for the people.
+    blocks: [
+      { n: '51%', label: 'varenicline + support', color: VOLT },
+      { n: 'Tie', label: 'in 22 smoking trials', color: VOLT },
+      { n: '2 in 3', label: 'posts about support', color: EMBER },
+      { n: '15–20', label: 'min per craving', color: VOLT },
+    ],
+  },
+  {
+    slug: 'nicotine-withdrawal-timeline',
+    eyebrow: 'NICOTINE · THE FULL TIMELINE',
+    headline: 'Nicotine withdrawal timeline',
+    // The post's arc in four figures: the half-life that makes the crash early,
+    // when symptoms start, the peak nobody expects on day two, and when it is
+    // behind you. Ember for the drop, volt for the far side of it.
+    blocks: [
+      { n: '2 hrs', label: 'nicotine half-life', color: EMBER },
+      { n: '4–24h', label: 'symptoms start', color: EMBER },
+      { n: 'Day 2–3', label: 'the peak', color: EMBER },
+      { n: '2–4 wks', label: 'mostly over', color: VOLT },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line

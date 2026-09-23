@@ -180,7 +180,7 @@ misleading, reads as evidence unless it is labelled — which is the honest-numb
 rule (docs/02 §8) failing through a picture instead of a sentence. Where an image
 is not a photograph of a real thing, the caption opens with **Illustration only.**
 and the alt text says the same, since a screen-reader user never sees the caption
-styling. `public/blog/disposables/*` is the live example.
+styling. `src/content/blog/disposables/*` is the live example.
 
 Source files should be no wider than **2× their display size**. The prose column
 is 672px, so 1344 is the ceiling; an 1800px source only makes Astro generate
@@ -193,8 +193,10 @@ with a `<figure>` when the file lands — it is styled to look obviously
 unfinished so it cannot be published by accident.
 
 `public/og/` is written by `npm run og` and holds **generated** cards only. Photos
-go in `public/blog/<slug>/`, or the next `npm run og` leaves you unable to tell
-which files are authored and which are output.
+go beside the posts in `src/content/blog/<folder>/` and are referenced relatively
+(`./disposables/quit-vaping.jpeg`), which is also what lets Astro optimise them —
+put one in `public/og/` and the next `npm run og` leaves you unable to tell which
+files are authored and which are output.
 
 **`.prose` is the shell width; the reading measure is applied to its children,
 left-aligned.** Left, not centred: the site header, the breadcrumb and the
@@ -294,6 +296,100 @@ https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=http
 adb shell pm get-app-links com.quitvape.last_puff             # on device
 ```
 
+## Languages
+
+The app ships en, es, fr, de and pt, and so does the site (docs/10 §43–46). **The home
+page, `/download` and the 404 are live in all five** since Sep 19 2026; the blog and the
+legal pages are English-only. The four translations are Claude's drafts, published on
+the founder's call: their numbers are machine-checked against English, their idiom has
+not yet been read by a native speaker — so a correction from one is welcome and is a
+one-string edit in `src/i18n/<lang>.ts`.
+
+**One list decides everything: `LIVE_LOCALES` in `src/i18n/locales.mjs`.** Routes,
+hreflang, the sitemap and the language switcher all derive from it and from nothing
+else, so a half-finished language cannot leak a URL. It is two lists added together:
+
+- **`PUBLISHED`** — what cirrusquit.com serves. **A language goes live by being added
+  here**, one at a time if need be, after the founder's spot-check. While it holds only
+  `en`, the production build is structurally identical to the English-only site (no
+  switcher, no hreflang, same sitemap) — `npm run compare` proves it.
+- **`CIRRUS_PREVIEW_LOCALES`** — an environment variable the deploy workflow sets to
+  `es,fr,de,pt` for the `preview` target and never for `production`. Cloudflare sends
+  `X-Robots-Tag: noindex` on every preview deploy (checked), so nothing built this way
+  can reach a search index. Locally: `CIRRUS_PREVIEW_LOCALES=es,fr,de,pt npm run build`.
+
+| File | What it is |
+|---|---|
+| `src/i18n/locales.mjs` | The registry: locales, `PUBLISHED`, hreflang / `og:locale` / `Intl` tags, autonyms, the calculator's currency. Plain `.mjs` so `astro.config.mjs`, `scripts/`, `functions/` and TypeScript can all import the same list |
+| `src/i18n/en.ts` | English, **and the shape**. Every other locale is declared `: Dictionary`, so a missing key (TS2741) or an extra one (TS2353) fails `npm run check` — the site's `l10n_parity_test` |
+| `src/i18n/{es,fr,de,pt}.ts` | The translations. **Drafted by Claude, spot-checked by the founder**; each file's header says which dialect it is written in and why. No translator or reviewer is ever named on a page |
+| `src/pages/[lang]/` | The localized routes — thin wrappers, like the English ones beside the folder |
+| `scripts/check-i18n.mjs` | Part of `npm run check`. What a type cannot see: `{placeholders}`, **digit parity with English** (a translated "76%" must still be 76 — the honest-numbers rule applied to a translator, with each exemption written down), empty or untranslated strings, `<title>` / description lengths, duplicate FAQ questions, invisible characters |
+| `src/i18n/index.ts` | `useT(lang)`, `fmt()` for `{placeholders}` (throws on a missing one), `clock()` for the example day |
+| `src/i18n/paths.ts` | `localePath()`, `link()`, `alternatesFor()` — URLs that know which pages exist |
+| `src/lib/content.ts` | Everything about the content that is **not** language: ids, order, tiers, tones, clock times. Words are keyed by these ids, so a locale cannot ship six timeline steps or a statistic without its `source` |
+| `src/components/pages/*.astro` | The page bodies. `src/pages/index.astro`, `download.astro` and `404.astro` are five-line wrappers and **do not move** — App Links claims `/download` |
+
+**Publishing a language**, in order:
+
+1. Run the deploy workflow with `preview`. Read the language on the preview URL, on a
+   phone as well as a desktop — the header at 360px and the calculator are where a long
+   word shows first.
+2. Add its code to `PUBLISHED` in `src/i18n/locales.mjs`. Nothing else: the routes, the
+   hreflang set on every version of the page (English included), the sitemap alternates
+   and the switcher all follow from that one line.
+3. `npm run check && npm run build && npm run verify`. `verify` fails if hreflang is not
+   reciprocal, if a target is missing or in the wrong language, if the sitemap disagrees
+   with the `<head>`, or if a localized page links an English URL that has a translation.
+4. Deploy `production`, then resubmit the sitemap in Search Console.
+
+**The language switcher** is a native `<details>` in the header (from 30rem up) plus a row
+of language names in the footer (everywhere — on a phone it *is* the switcher). No script,
+no cookie, nothing stored. It shows the language **code** in the header, because "Português"
+beside a German button crowds the header below ~560px. Each entry goes to this page in that
+language when it exists there and to that language's home when it does not. It renders
+nothing at all while one language is live.
+
+**Proving a refactor changed nothing.** `npm run compare -- <baseline dist> <new dist>`
+(`scripts/compare-dist.mjs`) reduces every page of two builds to what a browser, a reader
+and a crawler actually get — tags and attributes, decoded text, parsed JSON-LD — and fails
+on any difference. It is how the language structure was landed with English untouched, and
+it is the gate for the next change of that kind (the blog's language plumbing).
+
+Rules that are easy to get wrong:
+
+- **Locale homes are `/es`, never `/es/`.** `build.format: 'file'` writes `dist/es.html`
+  beside a `dist/es/` directory — the shape `/blog` already has — and Pages 308s the
+  slashed form. Every canonical, hreflang, sitemap entry and switcher href is slashless.
+- **Astro's own `i18n` config stays off.** Its URL helpers return `/es/privacy` without
+  checking there is one. The legal pages are English-only on purpose (their URLs are
+  frozen by the stores and the apps, and a translated policy is a second legal text), and
+  the blog is translated a few posts at a time. `link()` answers with the localized URL
+  when the page exists and the English one, flagged `hreflang="en"`, when it does not.
+  **Never set `fallback`**: it publishes English bodies under `/es/…`.
+- **No Accept-Language redirect.** Googlebot sends none and crawls from the US, so it
+  would only ever see English and every hreflang target would look like a redirect.
+  hreflang plus `x-default` is the supported mechanism.
+- **The hreflang self-reference is a build error, not a warning.** `BaseLayout` throws if
+  `alternates[lang]` is not the page's own canonical path.
+- **No HTML in a dictionary string, ever.** A sentence that needs markup is split
+  (`{ pre, accent, post }`), which also survives a language that moves the emphasis.
+- **Strings the calculator swaps at runtime travel in a JSON data island**
+  (`#demo-i18n`). Astro bundles a component's `<script>` once for every page, so it has
+  no `lang`; and `define:vars` would force it inline and unbundled.
+- **es and pt are written for the wider audience** — neutral international Spanish and
+  Brazilian Portuguese (founder decision, Sep 19 2026). That is *not* the app's dialect:
+  `app_es.arb` is Peninsular and `app_pt.arb` is European. fr and de copy the ARB wording
+  verbatim. In every language, reuse the app's feature **names** and never its allowance
+  **claims** — the ARB says "Unlimited AI coach"; the server enforces 100 a day and this
+  site says what the server does.
+- **Play campaigns take the locale as a prefix**: `es-hero`, `fr-blog-<slug>-end`
+  (`campaignFor()` in `src/lib/store.ts`). English names are untouched, because installs
+  already attributed to them cannot be re-attributed. Frozen at the first tagged install.
+- **The calculator's currency is config, not copy** (`DEMO_CURRENCY`). `/es` and `/pt`
+  serve two continents each, so they show a bare, locale-grouped number: the arithmetic
+  is the visitor's own, and a symbol would be a guess about where they live.
+
 ## SEO notes
 
 The `<head>` is owned by `src/layouts/BaseLayout.astro` — canonical, Open Graph,
@@ -380,9 +476,12 @@ those questions are real search queries, they render on the home page as copy *a
 is cut to two sentences plus a `more` link to the post. `more` is visible markup only and
 is deliberately absent from the schema.
 
-Check for collisions after adding any post — parse the JSON-LD on every built page and
-assert no `FAQPage` question string appears twice. That check caught a real duplicate
-("How much nicotine is in a Geek Bar Pulse?") across two posts.
+`npm run verify` (`scripts/check-dist.mjs`) enforces it: it parses the JSON-LD on every
+built page and fails if a `FAQPage` question string appears on two pages, or appears in
+the schema without a visible `<summary>` carrying the same words. Done by hand, that check
+caught a real duplicate ("How much nicotine is in a Geek Bar Pulse?") across two posts. The
+same script checks canonicals, internal links and `#anchors`, and that the sitemap agrees
+with which pages are indexable; the deploy workflow runs it between Build and Deploy.
 
 ### Canonical host
 
@@ -399,9 +498,16 @@ Two things to know if you ever touch it:
   The TLS handshake happens before the redirect, so detaching it breaks
   `https://www` with a certificate error instead of redirecting.
 
-### Cloudflare managed robots.txt
+### robots.txt and AI crawlers
 
-The zone injects its own `robots.txt` block above the generated one, blocking
-GPTBot, ClaudeBot, Google-Extended, CCBot and others (`ai-train=no`). Search
-crawlers are explicitly allowed, so indexing is unaffected — but posts will not
-be usable as AI training data or cited in AI answers. Toggle in AI Crawl Control.
+`src/pages/robots.txt.ts` is the whole file crawlers see. Cloudflare's managed
+`robots.txt` prepend (AI Crawl Control → Signals) is **off** — verified against the
+live file on Sep 19 2026, which is byte-for-byte the generated one. If that toggle
+is ever switched back on, the zone injects its own block above ours and the two
+can disagree.
+
+The generated file says `ai-train=no` and disallows the bulk training crawlers
+(GPTBot, ClaudeBot, CCBot, Bytespider and others). It deliberately does **not**
+block the AI *search* and assistant crawlers (OAI-SearchBot, ChatGPT-User,
+PerplexityBot, Applebot) or Google-Extended: being cited in an answer is
+distribution, and it is how a new app gets found.

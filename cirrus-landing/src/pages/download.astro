@@ -1,67 +1,10 @@
 ---
-// The stable destination for every "get the app" link on this site and off it
-// — blog posts, a TikTok bio, a Reddit comment, the home page's QR code. Prose
-// never has to contain a store URL; this page is the indirection.
-//
-// It shows both badges and puts the reader's own store first (data-os, stamped
-// in BaseLayout), so it is right with JS off and on a computer too. It never
-// redirects: a bounce would hide the page from search, and the Android app
-// claims this path through App Links, so a phone that already has Cirrus
-// opens the app rather than ever landing here.
-//
-// Indexable on purpose: "cirrus quit vaping app download" is a brand
-// navigational query and this is the page that should answer it.
-//
-// ONE QUERY, ONE PAGE: the home FAQ owns "Is Cirrus free?" and "Is Cirrus on
-// iPhone and Android?". This page summarises both in the visitor's path and
-// links home rather than re-answering them, and it deliberately emits no
-// FAQPage schema of its own.
-import BaseLayout from '../layouts/BaseLayout.astro';
-import StoreBadges from '../components/StoreBadges.astro';
-import { SITE_TITLE } from '../consts';
+// `/download` — the English install page. The page itself is
+// components/pages/DownloadPage.astro. THIS FILE MUST NOT MOVE: the Android app
+// claims exactly this path through App Links (pathPrefix="/download", pinned by
+// test/android_manifest_test.dart), and it is the URL the home page's QR code
+// encodes.
+import DownloadPage from '../components/pages/DownloadPage.astro';
 ---
 
-<BaseLayout
-  title="Get Cirrus"
-  description="Download Cirrus, the quit vaping app that counts your real puffs and tapers them to zero. Free on the App Store for iPhone and on Google Play."
-  breadcrumbs={[{ label: 'Get the app' }]}
->
-  <div class="wrap page download">
-    <h1>Get {SITE_TITLE}</h1>
-
-    <p class="lede">
-      A puff counter that tapers you down instead of demanding you stop dead. One bad Tuesday
-      shouldn't cost you three weeks.
-    </p>
-
-    <div class="download__stores">
-      <StoreBadges campaign="download-page" />
-    </div>
-
-    <h2>Which phone</h2>
-    <p>
-      Both. Cirrus is on the App Store for iPhone (iOS 15 or later), with an Apple Watch app
-      included, and on Google Play for Android. The home screen widget works on both.
-    </p>
-
-    <h2>What you get</h2>
-    <p>
-      The free tier keeps working forever: puff logging, the widget, streaks, money saved, your
-      daily limit, the community and five coach messages a day. Premium adds the adaptive plan,
-      up to 100 coach messages a day and your full history, with a 7-day free trial on every
-      plan. There's no lockout, we never sell your data, and there are no ad trackers in the app
-      — we removed the advertising ID rather than switching it off.
-    </p>
-
-    <p>
-      Not sure yet? <a href="/">See what a year of vaping is costing you</a> — it takes about ten
-      seconds and it needs no signup.
-    </p>
-  </div>
-</BaseLayout>
-
-<style>
-  .download h2 { font-size: 1.35rem; margin: 2.5rem 0 0; }
-  .download p { max-width: 62ch; }
-  .download__stores { margin: 1.75rem 0 0.5rem; }
-</style>
+<DownloadPage lang="en" />

@@ -123,6 +123,24 @@ export function resolveGet(
   return { platform, campaign, target };
 }
 
+// RESTATED HERE BECAUSE public/_headers CANNOT REACH A FUNCTION'S RESPONSE.
+// Cloudflare is explicit that custom headers in `_headers` are not applied to
+// anything a Pages Function generates, even when the URL matches a rule — so
+// the `/*` block that gives every other URL on this site HSTS and nosniff stops
+// at the one path that is a Function. Left alone, /get would have been the
+// single response on cirrusquit.com served without them, which is the kind of
+// hole nobody finds by looking at the file that is supposed to contain the
+// answer.
+//
+// Referrer-Policy is not only consistency: it is what decides that Play and the
+// App Store are told the visitor came from cirrusquit.com and not which page
+// they were reading when they tapped.
+const FUNCTION_SECURITY_HEADERS = {
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+} as const;
+
 /**
  * The redirect itself, identical in dev and in production.
  *
@@ -154,22 +172,26 @@ export function redirectTo(target: string): Response {
       // is the indexable answer to "cirrus download" and carries the copy, the
       // schema and the internal links.
       'x-robots-tag': 'noindex',
+      ...FUNCTION_SECURITY_HEADERS,
+    },
+  });
+}
 
-      // RESTATED HERE BECAUSE public/_headers CANNOT REACH THIS RESPONSE.
-      // Cloudflare is explicit that custom headers in `_headers` are not
-      // applied to anything a Pages Function generates, even when the URL
-      // matches a rule — so the `/*` block that gives every other URL on this
-      // site HSTS and nosniff stops at the one path that is a Function. Left
-      // alone, /get would have been the single response on cirrusquit.com
-      // served without them, which is the kind of hole nobody finds by looking
-      // at the file that is supposed to contain the answer.
-      //
-      // Referrer-Policy is not only consistency: it is what decides that Play
-      // and the App Store are told the visitor came from cirrusquit.com and
-      // not which page they were reading when they tapped.
-      'strict-transport-security': 'max-age=31536000; includeSubDomains',
-      'x-content-type-options': 'nosniff',
-      'referrer-policy': 'strict-origin-when-cross-origin',
+/**
+ * The answer to anything that is not a GET or a HEAD.
+ *
+ * Nothing on this site sends another method, so whatever does is a scanner. It
+ * gets a 405 rather than a redirect: a 302 told the prober the path was alive
+ * and wrote a `get_redirect` line for a tap nobody made.
+ */
+export function methodNotAllowed(): Response {
+  return new Response(null, {
+    status: 405,
+    headers: {
+      allow: 'GET, HEAD',
+      'cache-control': 'no-store',
+      'x-robots-tag': 'noindex',
+      ...FUNCTION_SECURITY_HEADERS,
     },
   });
 }

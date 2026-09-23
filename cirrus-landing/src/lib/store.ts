@@ -6,6 +6,7 @@
 // because nothing could tell it the store was still closed.
 
 import { APP_STORE_URL, PLAY_STORE_URL } from '../consts';
+import { DEFAULT_LOCALE } from '../i18n/locales.mjs';
 
 /**
  * The page that always exists and always puts the reader's own store first.
@@ -50,6 +51,26 @@ export function playUrl(campaign: string): string {
   }).toString();
   const sep = PLAY_STORE_URL.includes('?') ? '&' : '?';
   return `${PLAY_STORE_URL}${sep}referrer=${encodeURIComponent(referrer)}`;
+}
+
+/**
+ * The campaign name for a tap on a page in `lang`.
+ *
+ * English names are EXACTLY what they were before the site had a second
+ * language — `hero`, `closing`, `blog-<slug>` — because installs already
+ * attributed to them cannot be re-attributed. Every other locale gets its code
+ * as a prefix: `es-hero`, `fr-blog-<slug>-end`.
+ *
+ * A prefix rather than a suffix, for three reasons: it is one mechanical rule
+ * at one position; Play Console's acquisition report then sorts by language;
+ * and it cannot collide with an English campaign, since none starts with a
+ * locale code. The longest today is 48 characters with its prefix, inside the
+ * 80 that /get's allow-list accepts (see CAMPAIGN_RE in platform.ts).
+ *
+ * FROZEN AT THE FIRST TAGGED INSTALL, like the referrer format above.
+ */
+export function campaignFor(lang: string, base: string): string {
+  return lang === DEFAULT_LOCALE ? base : `${lang}-${base}`;
 }
 
 /**

@@ -3,7 +3,7 @@ title: 'Best quit vaping apps 2026: Cirrus vs Puff Count vs Kwit'
 description: We make one of these three, so here is the comparison with the prices attached — what each app counts, what the free tier does, and what a year costs.
 standfirst: Three apps, checked on the stores this week. We build one of them, so the prices and the platforms are all here rather than a feature list you have to take on trust.
 publishedAt: 2026-09-06
-updatedAt: 2026-09-13
+updatedAt: 2026-09-19
 tags: ['puff count', 'quitting vaping', '#puffcounter', '#quitvapingapp', '#quitvaping', '#cirrusquit']
 draft: false
 ctaAngle: "Most quit apps decide what a bad day costs you. Cirrus bends the plan instead of resetting your streak."
@@ -48,12 +48,6 @@ faq:
       No. Kwit logs cravings, consumption entries and e-cigarette dosage rather than a tap
       per puff. That is a deliberate design, not an oversight, and it suits someone quitting
       cigarettes. If you want a per-puff number, Puff Count and Cirrus are the two built for it.
-  - q: Do puff counter apps actually work?
-    a: >-
-      Tracking is one layer, not a cure. The strongest trial evidence in vaping cessation
-      combines medication, behavioural support and tracking - a 2025 JAMA trial found
-      varenicline plus counselling plus texts produced a 51% quit rate at 12 weeks against 6%
-      for text support alone. An app is the tracking layer and the between-cravings layer.
 
 sources:
   - text: 'Puff Count: Quit Vaping Now, Rodger Studio. App Store listing, ratings and in-app purchase list, checked 6 September 2026.'

@@ -61,7 +61,8 @@
 # Two more things this file depends on, neither of them expressible here:
 #   1. The verifier does NOT follow redirects, and www.cirrusquit.com 301s to
 #      the apex — so the app's intent-filter declares the apex host ONLY.
-#   2. The app claims /download and /go/* and nothing else. An unscoped claim
+#   2. The app claims /download and nothing else (/go/* is reserved for later
+#      and deliberately NOT claimed until the site serves it). An unscoped claim
 #      would make the in-app "Privacy" link re-open the app, and would hijack
 #      every shared blog URL away from the site.
 #

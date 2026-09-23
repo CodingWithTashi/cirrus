@@ -7,8 +7,10 @@
 
 export const SITE_TITLE = 'Cirrus';
 export const SITE_TAGLINE = 'Quit vaping without going cold turkey';
+// "Counts your real puffs" read as automatic counting, which no phone app can do
+// (a Reddit reviewer called it out, Sep 2026). The tap is the product; say so.
 export const SITE_DESCRIPTION =
-  'The quit vaping app that counts your real puffs and tapers them down to zero. No cold turkey, no day-one resets, and not a single invented statistic.';
+  'Free quit vaping app for iPhone and Android. One tap logs a puff, and your daily limit tapers to zero. No cold turkey, no day-one resets, no invented stats.';
 
 export const SITE_OG_IMAGE = '/og.png';
 export const SITE_LOCALE = 'en_US';

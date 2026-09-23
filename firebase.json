@@ -75,6 +75,21 @@
         "source": "/terms",
         "destination": "https://cirrusquit.com/terms",
         "type": 301
+      },
+      {
+        "source": "/privacy.html",
+        "destination": "https://cirrusquit.com/privacy",
+        "type": 301
+      },
+      {
+        "source": "/terms.html",
+        "destination": "https://cirrusquit.com/terms",
+        "type": 301
+      },
+      {
+        "source": "!/__/**",
+        "destination": "https://cirrusquit.com",
+        "type": 301
       }
     ]
   }
