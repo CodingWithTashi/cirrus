@@ -1,28 +1,28 @@
 name: Cloud Functions checks
 
-# The Cloud Functions gate and the Firestore rules and integration suites, on every push and pull
-# request that touches the backend. The emulator jobs matter most: the security-rules suite and the
-# concurrency tests both found live defects that unit tests could not have. Deploys stay manual.
+# The Cloud Functions gate and the Firestore rules and integration suites, once per pull request
+# that touches the backend: when it is opened or reopened, not on later pushes or the merge (see
+# ci.yml). Run it by hand from Actions to check a branch again. The emulator jobs matter most: the
+# security-rules suite and the concurrency tests both found live defects that unit tests could not
+# have. Deploys stay manual.
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: &backend-paths
+    types: [opened, reopened]
+    paths:
       - functions/**
       - firestore.rules
       - firestore.indexes.json
       - firebase.json
       - .github/workflows/functions.yml
-  pull_request:
-    branches: [main]
-    paths: *backend-paths
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push makes an in-flight run irrelevant; cancel it rather than
-  # queueing behind it.
+  # A newer run for the same ref (a reopened pull request, or a second manual run on a branch) makes
+  # an in-flight one irrelevant; cancel it rather than queueing behind it.
   group: functions-${{ github.ref }}
   cancel-in-progress: true
 
@@ -30,6 +30,7 @@ jobs:
   functions:
     name: Functions — verify
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: functions
@@ -48,6 +49,7 @@ jobs:
   emulator:
     name: Firestore emulator — rules & integration
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: functions

@@ -1,14 +1,17 @@
 name: Flutter checks
 
-# Analyzes and tests the app on every push and pull request. Nothing ships from here:
-# release.yml calls this workflow first, then ships to the stores by hand.
-# Commits that only touch the landing site, the docs, the Firebase Hosting page or the release
+# Analyzes and tests the app once, when a pull request to main is opened. Later pushes to the
+# pull request and the merge to main don't run it again; close and reopen the pull request to
+# check its latest commit. Nothing ships from here: release.yml calls this workflow first, then
+# ships to the stores by hand.
+# Pull requests that only touch the landing site, the docs, the Firebase Hosting page or the release
 # tooling skip it. functions/** and firestore.* still run it: the Dart tests read those files to
 # pin client/server parity. The functions gate and the emulator suites are in functions.yml.
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths-ignore: &paths-ignore
+    types: [opened, reopened]
+    paths-ignore:
       - 'cirrus-landing/**'
       - 'docs/**'
       - 'hosting/**'
@@ -18,9 +21,6 @@ on:
       - 'fastlane/**'
       - 'Gemfile'
       - 'Gemfile.lock'
-  pull_request:
-    branches: [main]
-    paths-ignore: *paths-ignore
   workflow_call:
 
 permissions:

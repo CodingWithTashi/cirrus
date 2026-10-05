@@ -226,6 +226,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.premiumWelcome,
         pageBuilder: (_, state) => CustomTransitionPage(
+          name: state.path,
           child: PremiumWelcomeScreen(
             onboarding: state.uri.queryParameters['next'] == 'day1',
           ),
@@ -299,9 +300,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             PostDetailScreen(postId: state.pathParameters['id']!),
       ),
       // Panic takeover: fast fade-in, no slide (≤400ms, docs/03 §7).
+      //
+      // `name: state.path` on every hand-built page below is not decoration.
+      // go_router names only the pages it builds itself, and
+      // `LpAnalyticsObserver` drops a page with no name — so the takeover,
+      // the arena and the Survived screen reported no screen view at all, for
+      // anyone, until Oct 5 2026. It is the path PATTERN, never the filled
+      // URL, so the arena's `?g=` stays out of the dimension.
       GoRoute(
         path: Routes.panic,
-        pageBuilder: (_, _) => CustomTransitionPage(
+        pageBuilder: (_, state) => CustomTransitionPage(
+          name: state.path,
           child: const PanicFlow(),
           transitionDuration: const Duration(milliseconds: 250),
           transitionsBuilder: (_, animation, _, child) =>
@@ -317,6 +326,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               .where((g) => g.name == state.uri.queryParameters['g'])
               .firstOrNull;
           return CustomTransitionPage(
+            name: state.path,
             child: GameArenaScreen(key: ValueKey(id), initial: id),
             transitionDuration: const Duration(milliseconds: 250),
             transitionsBuilder: (_, animation, _, child) =>
@@ -329,6 +339,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // The game hands its result over in the query string
         // (`GameOutcome.toQuery`); "it passed" arrives with none.
         pageBuilder: (_, state) => CustomTransitionPage(
+          name: state.path,
           child: SurvivedScreen(
             game: GameOutcome.fromQuery(state.uri.queryParameters),
           ),

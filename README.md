@@ -58,7 +58,7 @@ All of them are gitignored. `functions/.env.alastpuff` is tracked on purpose: it
 
 ## Releases (GitHub Actions + fastlane)
 
-Pushes and pull requests only run analyze and test (`ci.yml`). Nothing ships until you run **Actions → Release → Run workflow** on `main` and tick what to release:
+Opening a pull request to `main` runs analyze and test once (`ci.yml`); later pushes and the merge don't run it again. Nothing ships until you run **Actions → Release → Run workflow** on `main` and tick what to release:
 
 - **Android**: builds the AAB and uploads it to the chosen Play track (internal, alpha = closed testing, beta = open testing, production).
 - **iOS**: builds with the match profiles and uploads to TestFlight. Submit it for review in App Store Connect.

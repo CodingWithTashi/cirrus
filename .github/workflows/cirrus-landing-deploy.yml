@@ -34,6 +34,7 @@ jobs:
   deploy:
     name: Build and deploy (${{ inputs.environment }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 

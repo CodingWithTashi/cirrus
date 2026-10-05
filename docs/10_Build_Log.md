@@ -5509,3 +5509,41 @@ The founder posted the pitch to a Reddit feedback thread and brought back five r
 - **Logging helps when it is measured against something.** Self-recording alone is a "fairly small and transient" effect (Korotitsch & Nelson-Gray 1999); monitoring toward a goal with immediate feedback is where the larger effects are (Harkin 2016, 138 trials). Passive and active monitoring did not differ there, so the FAQ does not claim a tap beats an automatic count; it says what the count is measured against.
 
 **Also in this change:** the Puff Count FAQ now says what the two apps share before what differs (Puff Count is a manual logger with daily limits too; Apple devices only, its Android page still "coming soon" on Sep 19 2026). `MobileApplication` gained an `@id` and a `featureList` built from the comparison table's own row names. All four translations follow English; the new strings are Claude's drafts like the rest.
+
+## 48. THE DASHBOARD READ AS PEOPLE, NOT AS USERS (Oct 5) — 168 "users" were 32, and the hero flow had never reported a screen view
+
+The first read of the Amplitude project before any marketing spend (90 days to Oct 5, app id 857852). Nothing was saved there — no chart, cohort or dashboard — so every figure below was queried fresh.
+
+**Four in five "users" were not people.** 168 active users, 158 installs. 73 were US / no city / Android with no device model (Play pre-launch), 46 were Toronto and Oshawa (the founder's own devices), and the rest of the noise was Cupertino, Mountain View, Boardman, Ashburn and Council Bluffs. Excluding those cities and `device_type = (none)` leaves **32 people**, first seen Sep 4 to Oct 4, 26 of them on iOS. Every number read off this project without that filter is a number about robots.
+
+| Step (32 real people) | People | Of previous |
+|---|---|---|
+| Opened the app | 32 | |
+| Reached the sign-in screen (`/auth`) | 27 | 84% |
+| Started onboarding | 23 | 85% |
+| Held to commit (end of the quiz) | 20 | 87% |
+| Saw the paywall | 20 | 100% |
+| Took the free plan / tapped the trial / bought | 17 / 2 / 1 | |
+| Saw the Day-1 checklist | 18 | |
+| Finished it / skipped it | 9 / 7 | |
+| Logged a puff | 15 | |
+| Came back on a later day | 8 | |
+| Still active a week later | 3 | |
+
+Onboarding itself holds 87% of the people who start it across 19 screens; nothing in it loses more than two people. The losses are on either side of it: nine people never started (four never got past the splash, four stopped at the sign-in wall), and two in three who finished never opened the app a second day. 11 of 20 declined notifications, and no real user has ever opened a push. Three people logged 1,225 of the 1,549 puffs. The panic flow was finished by three people, once each; nobody finished a game round.
+
+**Two holes in the screen dimension, both found from the data rather than the code.**
+
+- Across all 168 accounts there was not one `/panic` or `/panic/survived` view. Those routes, the arena and `/premium/welcome` build their own `CustomTransitionPage`, go_router names only the pages it builds itself, and `LpAnalyticsObserver` drops a page with no name. Each now passes `name: state.path` — the pattern, so the arena's `?g=` stays out of the dimension.
+- `/home` had 9 real viewers against 18 for the Day-1 checklist that leads to it. `StatefulShellRoute` hands the root navigator one page for the whole shell, and it has no path; the tab bar's `onTap` was the only reporter, so an arrival by `go` — which is how every account reaches Home — reported nothing. `AppShell` now reports the visible tab from `initState` and `didUpdateWidget`, and the tap no longer reports at all.
+
+`test/widgets/screen_view_test.dart` pins both, and that a tab already showing is not a second view. Neither fix reaches a user until the next store build.
+
+**Closed the same day, on the founder's go:**
+
+- **Six events for the three places that only ever said "the screen was opened".** `sign_in_completed` (`method`, `returning`), `sign_in_cancelled` and `sign_in_failed` (`method`, `code`) fire from one `_signIn` wrapper in `JourneyStore` — the three sign-in paths were three copies of the same four lines — plus `register`. A dismissed Apple or Google sheet is a cancel, never a failure, for the reason `purchase_cancelled` is its own event. `coach_message_sent` (`kind`, `panic`) counts the ask, not the answer, and a retry is not a second ask. `community_post_created` (`tag`) and `community_reply_created` (`sos`) fire on the backend's acknowledgement, never on the tap: a refused post is a `limit_reached` or a moderation matter, and one that never left the phone reached nobody. `test/data/usage_events_test.dart` is the wiring; `analytics_test.dart` pins the names.
+- **One link per marketing channel, and it now tags both stores.** `cirrusquit.com/get?c=<channel>` already sent Android to Play with a referrer; it sent iPhone to the App Store with nothing, on purpose, because Apple ignores a campaign token without the provider token and the privacy policy said only Play links were tagged. Four real installs in five are iPhone. `appStoreUrl(campaign)` now writes exactly what App Store Connect's own generator writes (`pt=127600889&ct=<campaign>&mt=8`), the policy's "Store links" line names both stores, and `LEGAL_LAST_UPDATED` moved to Oct 5. Apple cuts `ct` at 30 characters and shows a campaign only after five installs.
+- **A saved segment in Amplitude**, "Real users (no test traffic)": the two-rule filter above, so a chart can be read as people with one click. It is not the default segment — that is the founder's switch to flip.
+- **RevenueCat → Amplitude** was connected by the founder. Unverified until the first `rc_*` event arrives.
+
+**Still dark:** the channel is known to each store's own console and not to Amplitude — nothing in the app captures a campaign or a referrer — so "which channel's users stay" cannot be answered yet, only "which channel's users install". And none of the app-side changes reach a user until the next store build.

@@ -175,6 +175,7 @@ class CoachStore extends Notifier<CoachState> {
     await _handle(
       userText: chip == null ? asked.text : null,
       chip: chip == null ? null : CoachChip.values[chip],
+      retry: true,
     );
   }
 
@@ -182,8 +183,16 @@ class CoachStore extends Notifier<CoachState> {
     String? userText,
     CoachChip? chip,
     int? panicIntensity,
+    bool retry = false,
   }) async {
     if (userText != null && userText.trim().isEmpty) return;
+    // One event per thing said. A retry re-asks the message a failure line
+    // answered, and that message was already counted when it was first sent.
+    if (!retry) {
+      ref
+          .read(analyticsProvider)
+          .coachMessageSent(chip: chip != null, panic: panicIntensity != null);
+    }
     final capped = freeMessagesLeftToday <= 0;
 
     final sentAt = DateTime.now();

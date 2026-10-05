@@ -14,6 +14,7 @@ import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
+import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/repositories/repositories.dart';
 import '../dto/journey_codec.dart';
@@ -372,32 +373,64 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Returns true when the account had a journey to restore; false → the
   /// account registered but never onboarded — route to onboarding. Throws
   /// [InvalidCredentialsException] on a wrong password.
-  Future<bool> logIn({required String email, required String password}) async {
-    final restored = await _auth.signInWithEmail(
-      email: email,
-      password: password,
-    );
-    if (restored != null) state = restored;
-    _onSessionEstablished();
-    return restored != null;
-  }
+  Future<bool> logIn({required String email, required String password}) =>
+      _signIn(
+        LpSignInMethod.email,
+        () => _auth.signInWithEmail(email: email, password: password),
+      );
 
   /// Returns true when the Apple account already had a journey to restore;
   /// false → route to onboarding.
-  Future<bool> signInWithApple() async {
-    final restored = await _auth.signInWithApple();
-    if (restored != null) state = restored;
-    _onSessionEstablished();
-    return restored != null;
-  }
+  Future<bool> signInWithApple() =>
+      _signIn(LpSignInMethod.apple, _auth.signInWithApple);
 
   /// Returns true when the Google account already had a journey to restore;
   /// false → route to onboarding.
-  Future<bool> signInWithGoogle() async {
-    final restored = await _auth.signInWithGoogle();
+  Future<bool> signInWithGoogle() =>
+      _signIn(LpSignInMethod.google, _auth.signInWithGoogle);
+
+  /// One attempt at a session, reported with how it ended.
+  ///
+  /// The three sign-in paths were three copies of the same four lines, and
+  /// none of them told the funnel anything: a dismissed sheet, a wrong
+  /// password and a provider that refused all looked like a person who saw
+  /// the sign-in screen and left. The sink is captured before the await, as
+  /// everywhere else in this store, and the error is rethrown untouched — the
+  /// views own what the person is told.
+  Future<bool> _signIn(
+    LpSignInMethod method,
+    Future<JourneyState?> Function() attempt,
+  ) async {
+    final analytics = ref.read(analyticsProvider);
+    final JourneyState? restored;
+    try {
+      restored = await attempt();
+    } on Object catch (error) {
+      _reportSignInMiss(analytics, method, error);
+      rethrow;
+    }
     if (restored != null) state = restored;
     _onSessionEstablished();
+    analytics.signInCompleted(method, returning: restored != null);
     return restored != null;
+  }
+
+  static void _reportSignInMiss(
+    AnalyticsSink analytics,
+    LpSignInMethod method,
+    Object error,
+  ) {
+    if (error is SignInCancelledException) {
+      analytics.signInCancelled(method);
+      return;
+    }
+    analytics.signInFailed(method, switch (error) {
+      NoConnectionException() => 'offline',
+      InvalidCredentialsException() => 'invalid_credentials',
+      EmailAlreadyInUseException() => 'email_in_use',
+      WeakPasswordException() => 'weak_password',
+      _ => 'other',
+    });
   }
 
   /// Throws [EmailAlreadyInUseException].
@@ -417,8 +450,15 @@ class JourneyStore extends Notifier<JourneyState?> {
     required String email,
     required String password,
   }) async {
-    await _auth.register(email: email, password: password);
+    final analytics = ref.read(analyticsProvider);
+    try {
+      await _auth.register(email: email, password: password);
+    } on Object catch (error) {
+      _reportSignInMiss(analytics, LpSignInMethod.register, error);
+      rethrow;
+    }
     _onSessionEstablished();
+    analytics.signInCompleted(LpSignInMethod.register, returning: false);
   }
 
   Future<void> requestPasswordReset(String email) =>

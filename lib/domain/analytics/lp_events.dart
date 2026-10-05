@@ -29,6 +29,25 @@ enum LpLimit {
   final String wire;
 }
 
+/// How a session was asked for on the sign-in screens.
+///
+/// Explicit wire values for the same reason as [LpLimit]: `register` is the
+/// email form's other half, and its dashboard name should say so.
+enum LpSignInMethod {
+  apple('apple'),
+  google('google'),
+
+  /// Email and password, an existing account.
+  email('email'),
+
+  /// Email and password, a new account.
+  register('email_register');
+
+  const LpSignInMethod(this.wire);
+
+  final String wire;
+}
+
 /// The funnel instrumentation from docs/02 §7.
 ///
 /// The point of this file is a single alert: **any onboarding screen losing
@@ -51,6 +70,38 @@ enum LpLimit {
 /// the whole vocabulary for free, and no vendor implementation ever learns
 /// that `paywall_viewed` exists.
 extension LpEvents on AnalyticsSink {
+  // --- the front door ------------------------------------------------------
+  // Not in docs/02 §7, whose funnel opens at `onboarding_start`. An account is
+  // asked for BEFORE the first question, so everything between the first app
+  // open and that event was two screen views: the Oct 5 2026 read found nine
+  // of thirty-two real people gone before it, five of them on Android, and
+  // nothing that could say whether they left or were turned away.
+
+  /// A session was established from the sign-in screens.
+  ///
+  /// [returning] is true when the account already had a journey — a person
+  /// coming back on a new phone, not a new person. Never fired by a launch
+  /// that restores a session: that is not a sign-in.
+  void signInCompleted(LpSignInMethod method, {required bool returning}) =>
+      track(
+        AnalyticsEvent('sign_in_completed', {
+          'method': method.wire,
+          'returning': returning.toString(),
+        }),
+      );
+
+  /// The native Apple or Google sheet was dismissed. Its own event for the
+  /// reason `purchase_cancelled` is: the person chose it, and nothing broke.
+  void signInCancelled(LpSignInMethod method) =>
+      track(AnalyticsEvent('sign_in_cancelled', {'method': method.wire}));
+
+  /// [code] is the exception's taxonomy name (`offline`,
+  /// `invalid_credentials`, `email_in_use`, `weak_password`, `other`) — never
+  /// the provider's own message, and never the address that was typed.
+  void signInFailed(LpSignInMethod method, String code) => track(
+    AnalyticsEvent('sign_in_failed', {'method': method.wire, 'code': code}),
+  );
+
   // --- onboarding funnel ---------------------------------------------------
 
   void onboardingStart() => track(const AnalyticsEvent('onboarding_start'));
@@ -332,5 +383,37 @@ extension LpEvents on AnalyticsSink {
   /// The arena's pills swapped games mid-session.
   void gameSwitched({required GameId from, required GameId to}) => track(
     AnalyticsEvent('game_switched', {'from': from.name, 'to': to.name}),
+  );
+
+  // --- the coach and the community -----------------------------------------
+  // Two of the four tabs, and until Oct 5 2026 neither said anything but
+  // "this screen was opened". Opening the coach and talking to it are not the
+  // same thing, and only one of them costs a model call.
+
+  /// Something was said to the coach. Counts the ask, not the answer, so a
+  /// turn the connection lost is still a person who tried.
+  ///
+  /// [chip] is one of the four static chips rather than typed words; [panic]
+  /// is a turn sent from inside the craving flow. The words themselves never
+  /// leave the device through this door.
+  void coachMessageSent({required bool chip, required bool panic}) => track(
+    AnalyticsEvent('coach_message_sent', {
+      'kind': chip ? 'chip' : 'typed',
+      'panic': panic.toString(),
+    }),
+  );
+
+  /// The backend accepted a post. [tag] is the `PostTag` name.
+  ///
+  /// Fired on the acknowledgement, not on the tap: a post the server refused
+  /// is a `limit_reached` or a moderation matter, and one that never left the
+  /// phone reached nobody.
+  void communityPostCreated(String tag) =>
+      track(AnalyticsEvent('community_post_created', {'tag': tag}));
+
+  /// The backend accepted a reply. [toSos] is whether the thread is somebody's
+  /// SOS — the loop docs/03 §7 calls someone else pulling you out.
+  void communityReplyCreated({required bool toSos}) => track(
+    AnalyticsEvent('community_reply_created', {'sos': toSos.toString()}),
   );
 }

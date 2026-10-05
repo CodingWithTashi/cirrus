@@ -33,6 +33,13 @@ export const PLAY_STORE_URL =
 export const APP_STORE_ID = '6806871144';
 export const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 
+// The provider token App Store Connect writes into its own campaign links
+// (Analytics → Acquisition → Campaigns → +). It names the developer account,
+// not a visitor, and it is not a secret: it is in every link Apple generates.
+// Apple ignores a campaign token that arrives without it, which is the whole
+// reason `appStoreUrl()` needs it.
+export const APP_STORE_PROVIDER_TOKEN = '127600889';
+
 // Official profiles, emitted as Organization.sameAs. This is how Google ties
 // the domain to a known entity rather than treating it as an anonymous site,
 // so fill it in the moment the accounts exist. Deliberately empty for now: a
@@ -70,4 +77,9 @@ export const LEGAL_CONTACT_EMAIL = 'support@cirrusquit.com';
 // did not say that deletion leaves a store subscription running — the one thing
 // about deletion that costs a person money if we stay quiet about it. Both
 // fixed, and the section now links to /delete-account for the steps.
-export const LEGAL_LAST_UPDATED = '2026-09-06';
+//
+// 2026-10-05: App Store links carry the same kind of page tag Play links
+// always have, so "Store links" now names both stores. The first read of the
+// app's own analytics found four real installs in five on iPhone and nothing
+// that could say which page or post had sent them.
+export const LEGAL_LAST_UPDATED = '2026-10-05';

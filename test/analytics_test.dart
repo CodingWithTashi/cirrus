@@ -73,7 +73,13 @@ void main() {
           bestCombo: 40,
           misses: 3,
         )
-        ..gameSwitched(from: GameId.tiles, to: GameId.blocks);
+        ..gameSwitched(from: GameId.tiles, to: GameId.blocks)
+        ..signInCompleted(LpSignInMethod.register, returning: false)
+        ..signInCancelled(LpSignInMethod.google)
+        ..signInFailed(LpSignInMethod.email, 'invalid_credentials')
+        ..coachMessageSent(chip: false, panic: true)
+        ..communityPostCreated('sos')
+        ..communityReplyCreated(toSos: true);
 
       expect(a.names, [
         'onboarding_start',
@@ -120,7 +126,29 @@ void main() {
         'craving_outcome',
         'game_finished',
         'game_switched',
+        // The front door. An account is asked for before the first question,
+        // and until Oct 5 2026 nothing between the app opening and
+        // `onboarding_start` was an event at all.
+        'sign_in_completed',
+        'sign_in_cancelled',
+        'sign_in_failed',
+        // Two of the four tabs, which only ever said "this screen was opened".
+        'coach_message_sent',
+        'community_post_created',
+        'community_reply_created',
       ]);
+      expect(a.propsOf('sign_in_completed'), {
+        'method': 'email_register',
+        'returning': 'false',
+      });
+      expect(a.propsOf('sign_in_cancelled'), {'method': 'google'});
+      expect(a.propsOf('sign_in_failed'), {
+        'method': 'email',
+        'code': 'invalid_credentials',
+      });
+      expect(a.propsOf('coach_message_sent'), {'kind': 'typed', 'panic': 'true'});
+      expect(a.propsOf('community_post_created'), {'tag': 'sos'});
+      expect(a.propsOf('community_reply_created'), {'sos': 'true'});
       expect(a.propsOf('purchase_completed'), {
         'plan': 'yearly',
         'trial': 'true',

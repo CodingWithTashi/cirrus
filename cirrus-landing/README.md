@@ -48,10 +48,12 @@ is `src/components/StoreBadges.astro`.
   recoloured. Apple's SVG is inlined. Google's PNG carries its own clear space,
   so `.store--play img` scales it by 250/168 and pulls the margin back in until
   both badges share one visible height.
-- **Play links carry a campaign tag** (`playUrl('hero')`, `blog-<slug>`, …) for
-  Play Console's acquisition report. **App Store links carry none**: Apple only
-  attributes `ct` together with a `pt` provider token, and the privacy policy
-  says only Play links are tagged — change both together or neither.
+- **Both stores' links carry a campaign tag** (`hero`, `blog-<slug>`, …):
+  `playUrl()` for Play Console's acquisition report, `appStoreUrl()` for App
+  Store Connect's Campaigns report. Apple only attributes `ct` together with
+  the `pt` provider token (`APP_STORE_PROVIDER_TOKEN`), cuts the name at 30
+  characters, and shows a campaign only after five installs. The privacy policy
+  says both stores' links are tagged — change the two together or neither.
 - **The reader's store goes first.** BaseLayout stamps `data-os` on `<html>`
   before first paint; CSS moves Play first on Android, and the hero demo's
   Continue button opens that phone's store. With JS off both badges still show.
@@ -259,8 +261,12 @@ long as four published posts pointed their promo card at it.
   explicit about this, so the `/*` block's HSTS and `nosniff` are restated inside
   `redirectTo()`. Without that, `/get` would be the one URL on the site served
   without them.
-- **`?c=<slug>`** tags the Play referrer, same `blog-<slug>` vocabulary the post
-  CTAs use. Validated against an allow-list; anything else falls back to `get`.
+- **`?c=<slug>`** tags the store link for whichever phone taps it — the Play
+  referrer or the App Store campaign token — in the same `blog-<slug>`
+  vocabulary the post CTAs use. Validated against an allow-list; anything else
+  falls back to `get`. **This is the link to hand to a marketing channel:** one
+  per channel (`/get?c=reddit`, `/get?c=tiktok`), 30 characters or fewer so
+  Apple does not cut it.
 - Each redirect logs one `get_redirect` line (platform, campaign, destination
   host, country, referer host) — same no-vendor, no-cookie story as
   `waitlist_submit`.

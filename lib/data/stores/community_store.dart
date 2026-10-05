@@ -499,6 +499,9 @@ class CommunityStore extends Notifier<CommunityState> {
   }
 
   Future<void> _syncPost(Post local) async {
+    // Before the await: this store can be invalidated mid-flight, and the
+    // acknowledgement is reported whether or not anything is left to update.
+    final analytics = ref.read(analyticsProvider);
     final String? serverId;
     try {
       serverId = await _repo.addPost(local);
@@ -540,6 +543,7 @@ class CommunityStore extends Notifier<CommunityState> {
       _setStatus(local.id, PostStatus.failed);
       return;
     }
+    analytics.communityPostCreated(local.tag.name);
     if (!_alive()) return;
     final id = serverId ?? local.id;
     if (id != local.id) {
@@ -678,6 +682,8 @@ class CommunityStore extends Notifier<CommunityState> {
             ),
       ],
     );
+    final analytics = ref.read(analyticsProvider);
+    var landed = true;
     try {
       await _repo.addReply(postId, reply);
     } on ContentRefusedException {
@@ -705,8 +711,12 @@ class CommunityStore extends Notifier<CommunityState> {
       return false;
     } on Exception {
       // Offline, or a cold start that timed out. Not a verdict on the reply.
+      landed = false;
     }
     final post = state.posts.firstWhere((p) => p.id == postId);
+    // Only a reply the backend took: one kept on this phone alone answered
+    // nobody.
+    if (landed) analytics.communityReplyCreated(toSos: post.tag == PostTag.sos);
     if (post.tag == PostTag.sos && !post.isMine) {
       ref.read(quitStoreProvider.notifier).awardBadge('helpedSos');
     }

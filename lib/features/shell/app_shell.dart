@@ -35,6 +35,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
+    _reportTab();
     try {
       ShowcaseView.register(
         // A stray tap must not end a lesson that has not been learned yet.
@@ -54,6 +55,30 @@ class _AppShellState extends ConsumerState<AppShell> {
       // A stale scope from a shell still animating out. The walkthrough is a
       // courtesy; it must never take the tab scaffold down with it.
     }
+  }
+
+  @override
+  void didUpdateWidget(AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.shell.currentIndex != widget.shell.currentIndex) _reportTab();
+  }
+
+  /// The visible tab is a screen view — however it became visible.
+  ///
+  /// `StatefulShellRoute` gives the root navigator one page for the whole
+  /// shell, and that page has no path, so `LpAnalyticsObserver` sees neither
+  /// the arrival nor a switch. This used to be reported from the tab bar's
+  /// `onTap` alone, which missed every arrival by `go` — and that is how
+  /// each account reaches Home, from the Day-1 checklist, the splash or a
+  /// notification. On the production dashboard Home had fewer viewers than
+  /// the checklist in front of it.
+  ///
+  /// The path is read back off the branch rather than listed here, so a
+  /// reordered tab bar cannot start mislabelling screen views.
+  void _reportTab() {
+    final shell = widget.shell;
+    final path = shell.route.branches[shell.currentIndex].defaultRoute?.path;
+    if (path != null) ref.read(analyticsProvider).screenViewed(path);
   }
 
   @override
@@ -120,13 +145,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       return Expanded(
         child: PressScale(
           onTap: () {
-            // `goBranch` swaps the IndexedStack branch without pushing a
-            // route, so LpAnalyticsObserver never sees a tab change — these
-            // four are the only screens it cannot report for itself. The path
-            // is read back off the branch rather than listed here, so a
-            // reordered tab bar cannot start mislabelling screen views.
-            final path = shell.route.branches[branch].defaultRoute?.path;
-            if (path != null) ref.read(analyticsProvider).screenViewed(path);
+            // The screen view is reported by `_reportTab` when the branch
+            // actually changes, not here — a tap is only one of the ways a
+            // tab becomes visible.
             shell.goBranch(branch, initialLocation: selected);
           },
           child: Padding(

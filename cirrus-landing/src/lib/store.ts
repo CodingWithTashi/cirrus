@@ -5,7 +5,7 @@
 // play.google.com link before the listing was public, and it sat there dead
 // because nothing could tell it the store was still closed.
 
-import { APP_STORE_URL, PLAY_STORE_URL } from '../consts';
+import { APP_STORE_ID, APP_STORE_PROVIDER_TOKEN, PLAY_STORE_URL } from '../consts';
 import { DEFAULT_LOCALE } from '../i18n/locales.mjs';
 
 /**
@@ -74,14 +74,38 @@ export function campaignFor(lang: string, base: string): string {
 }
 
 /**
- * The App Store link, deliberately untagged.
- *
- * Apple only attributes a campaign token (`ct`) sent together with the provider
- * token (`pt`) from App Store Connect, and the privacy policy tells readers that
- * only Play links carry a tag. Tag this and that sentence has to change with it.
+ * Apple's campaign field stops at 30 characters — the generator in App Store
+ * Connect counts them down as you type. A longer name is cut, never dropped:
+ * the front of a name is the locale and the post, which is the part worth
+ * keeping, so `blog-<slug>` and `blog-<slug>-end` may land in one row on a long
+ * slug while Play still tells them apart.
  */
-export function appStoreUrl(): string {
-  return APP_STORE_URL;
+const APP_STORE_CAMPAIGN_MAX = 30;
+
+/**
+ * An App Store link tagged exactly the way App Store Connect's own campaign
+ * generator tags one, so its Campaigns report can attribute the install — the
+ * counterpart of [playUrl], and like it: no SDK, no advertising ID, no third
+ * party.
+ *
+ * It was deliberately untagged until Oct 5 2026. Apple only counts a campaign
+ * token (`ct`) sent together with the provider token (`pt`), and the privacy
+ * policy told readers that only Play links carried a tag. The policy now names
+ * both stores; change the two together or neither.
+ *
+ * Two things Apple does that Play does not: a campaign appears in the report
+ * only once five Apple Accounts have installed from it, and the name is cut at
+ * [APP_STORE_CAMPAIGN_MAX].
+ *
+ * @param campaign where the tap happened — the same vocabulary as [playUrl]
+ */
+export function appStoreUrl(campaign: string): string {
+  const params = new URLSearchParams({
+    pt: APP_STORE_PROVIDER_TOKEN,
+    ct: campaign.slice(0, APP_STORE_CAMPAIGN_MAX),
+    mt: '8',
+  });
+  return `https://apps.apple.com/app/apple-store/id${APP_STORE_ID}?${params}`;
 }
 
 /**
@@ -98,6 +122,6 @@ export function appStoreUrl(): string {
  */
 export function storeUrlFor(platform: Platform, campaign: string): string | null {
   if (platform === 'android') return playUrl(campaign);
-  if (platform === 'ios') return appStoreUrl();
+  if (platform === 'ios') return appStoreUrl(campaign);
   return null;
 }
