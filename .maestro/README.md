@@ -9,9 +9,9 @@ replace, `flutter test integration_test` (which runs inside the app).
 
 | File | Covers | Ends on |
 | --- | --- | --- |
-| `flows/01_sign_in.yaml` | Continue with email → Log in link → wrong password shakes → right password | Home (day line, SOS, LOG PUFF) |
+| `flows/01_sign_in.yaml` | Welcome screen's "Log in" → Continue with email → Log in link → wrong password shakes → right password | Home (day line, SOS, LOG PUFF) |
 | `flows/02_register.yaml` | Fresh email, short password refused in place, account created | Onboarding welcome |
-| `flows/03_onboarding.yaml` | Register, then all 12 questions, coach name, hold-to-commit, push declined (no rating step: App Store 5.6.3) | Paywall (“Your plan is ready.”) |
+| `flows/03_onboarding.yaml` | All 12 questions, coach name, hold-to-commit, THEN the account (the quiz comes first since Oct 5 2026), push declined (no rating step: App Store 5.6.3) | Paywall (“Your plan is ready.”) |
 | `flows/04_home.yaml` | Header, ring, money and cravings cards, quick links, the four shell tabs | Home |
 | `flows/05_puff_logging.yaml` | One tap = one puff, Undo, three taps = three puffs, press-and-hold ticks | Home |
 | `flows/06_panic.yaml` | SOS → breathe → why → loop breakers → it passed → survived, count +1 | Home |

@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'Start my check-up'**
   String get obWelcomeCta;
 
+  /// No description provided for @obWelcomeHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get obWelcomeHaveAccount;
+
   /// No description provided for @obResumeTitle.
   ///
   /// In en, this message translates to:

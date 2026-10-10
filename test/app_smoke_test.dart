@@ -16,7 +16,7 @@ void main() {
   // never wait out simulated latency or hit real DNS.
   final overrides = fastBackendOverrides();
 
-  testWidgets('boots to splash and lands on sign-in when signed out', (
+  testWidgets('boots to splash and lands on the quiz when signed out', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -27,9 +27,26 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.appName), findsWidgets);
 
-    // Splash auto-advances after 1.5s.
+    // Splash auto-advances after 1.5s. Bounded pumps: the welcome step
+    // animates forever, so pumpAndSettle would never return.
     await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // The first question comes before the account now (docs/10 §49): nine of
+    // the first thirty-two real people left at the sign-in screen this used
+    // to land on, before the app had shown them anything.
+    expect(find.byType(OnboardingFlow), findsOneWidget);
+    expect(find.text(l10n.obWelcomeCta), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsNothing);
+  });
+
+  testWidgets('sign-in shows the device\'s own identity button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(overrides: overrides, child: const LastPuffApp()),
+    );
+    await parkOnSignIn(tester);
     // The test platform reports android: Google shows, Apple stays hidden.
     expect(find.text('Sign in with Google'), findsOneWidget);
     expect(find.text('Sign in with Apple'), findsNothing);
@@ -41,8 +58,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(overrides: overrides, child: const LastPuffApp()),
       );
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+      await parkOnSignIn(tester);
       expect(find.text('Sign in with Apple'), findsOneWidget);
       expect(find.text('Sign in with Google'), findsNothing);
 

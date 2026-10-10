@@ -86,6 +86,7 @@
   "obWelcomeTitle": "How dependent are you, really?",
   "obWelcomeSubtitle": "2-minute check-up. Brutally honest results. A plan built for you.",
   "obWelcomeCta": "Start my check-up",
+  "obWelcomeHaveAccount": "Already have an account?",
   "obResumeTitle": "Pick up where you left off?",
   "obResumeBody": "You'd answered {answered} of {total} questions. Nothing's lost.",
   "@obResumeBody": {

@@ -55,6 +55,7 @@
   "obWelcomeTitle": "¿Cuánto dependes de verdad?",
   "obWelcomeSubtitle": "Chequeo de 2 minutos. Resultados brutalmente honestos. Un plan hecho para ti.",
   "obWelcomeCta": "Empezar mi chequeo",
+  "obWelcomeHaveAccount": "¿Ya tienes una cuenta?",
   "obResumeTitle": "¿Seguimos donde lo dejaste?",
   "obResumeBody": "Habías respondido {answered} de {total} preguntas. No se ha perdido nada.",
   "obResumeCta": "Seguir",

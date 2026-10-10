@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router/app_router.dart';
 import '../../../app/theme/lp_colors.dart';
 import '../../../app/theme/lp_typography.dart';
 import '../../../core/utils/l10n_ext.dart';
 import '../../../core/widgets/lp_buttons.dart';
 import '../../../core/widgets/lp_card.dart';
 import '../../../core/widgets/lp_misc.dart';
+import '../../../core/widgets/press_scale.dart';
 import '../onboarding_view_model.dart';
 import 'step_body.dart';
 
@@ -113,6 +116,35 @@ class WelcomeStep extends ConsumerWidget {
               const SizedBox(height: 14),
             ],
             LpButton(l10n.obWelcomeCta, onTap: vm.next),
+            // The quiz is the first thing a new person sees now, so this is
+            // the door for everyone who is not new: a reinstall, a second
+            // phone. Signing in to an account that already has a plan goes
+            // straight to Home — nobody answers these questions twice.
+            // Pushed, so the sign-in screen gets a way back here.
+            const SizedBox(height: 6),
+            Center(
+              child: PressScale(
+                onTap: () => context.push(Routes.auth),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text.rich(
+                    TextSpan(
+                      text: '${l10n.obWelcomeHaveAccount} ',
+                      style: LpType.body13(lp.textSecondary),
+                      children: [
+                        TextSpan(
+                          text: l10n.authLogIn,
+                          style: LpType.body13(
+                            lp.voltText,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             // "Restore purchase" lived here and only showed a snack. There is
             // no billing SDK to restore from (docs/08 B4), so it was claiming
             // to restore purchases that cannot exist. It returns with

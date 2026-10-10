@@ -1,4 +1,5 @@
-# Register, then answer all onboarding questions through to the paywall.
+# Answer all onboarding questions, create the account when the commit asks for
+# one, and go on to the paywall. The quiz comes BEFORE the account (Oct 5 2026).
 # Answers: woman, born 1985, tried 2–5 times, always in hand, 200 puffs/day,
 # 50 mg, $25/week, first puff within 5 min, why health+money, worries
 # cravings+failing, taper over 30 days, coach named Koda, why-words skipped,
@@ -12,7 +13,6 @@ tags:
   - onboarding
 ---
 - runFlow: ../shared/launch.yaml
-- runFlow: ../shared/register.yaml
 
 # A1 welcome
 - tapOn: 'Start my check-up'
@@ -122,9 +122,15 @@ tags:
 # D2 hold to commit (1.8s hold, then a 1.4s celebration before advancing)
 - assertVisible: 'Make it real.'
 - longPressOn: 'Hold to commit'
+
+# The account, asked for by someone who has just committed to a plan.
+- extendedWaitUntil:
+    visible: '(?s)Let''s keep your.*plan safe\.'
+    timeout: 15000
+- runFlow: ../shared/register.yaml
 - extendedWaitUntil:
     visible: 'Backup, exactly when you cave.'
-    timeout: 15000
+    timeout: 30000
 
 # D4 notifications — declined, so no OS sheet is involved
 - tapOn: 'Maybe later'

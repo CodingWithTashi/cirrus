@@ -12,13 +12,16 @@ import 'harness.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('cold start lands on sign-in with no session', (tester) async {
+  testWidgets('cold start lands on the quiz with no session', (tester) async {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
     await e2e.settle();
 
-    expect(e2e.showing(e2e.l10n.authSignInTitle), isTrue,
+    // The first question comes before the account (docs/10 §49); the sign-in
+    // screen is behind the welcome screen's "Log in".
+    expect(e2e.showing(e2e.l10n.obWelcomeCta), isTrue,
         reason: 'on screen: ${e2e.texts()}');
+    expect(e2e.showing(e2e.l10n.authSignInTitle), isFalse);
     expect(e2e.container.read(quitStoreProvider), isNull);
   });
 
@@ -26,7 +29,7 @@ void main() {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
 
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     // Continue-with-email opens Register; Log in is a span on that screen.
     await e2e.tapSpan(e2e.l10n.authLogIn);
     await e2e.enterField(e2e.l10n.authEmailLabel, 'maya@quitmail.com');
@@ -46,7 +49,7 @@ void main() {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
 
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.tapSpan(e2e.l10n.authLogIn);
     await e2e.enterField(e2e.l10n.authEmailLabel, 'someone@example.com');
     await e2e.enterField(e2e.l10n.authPasswordLabel, '123');
@@ -66,7 +69,7 @@ void main() {
     final e2e = await E2E.boot(tester, online: false);
     await e2e.waitFor(const Duration(seconds: 2));
 
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.tapSpan(e2e.l10n.authLogIn);
     await e2e.enterField(e2e.l10n.authEmailLabel, 'maya@quitmail.com');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret1');
@@ -84,7 +87,7 @@ void main() {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
 
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.enterField(e2e.l10n.authEmailLabel, 'maya@quitmail.com');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
     await e2e.tapText(e2e.l10n.authCreateAccount);

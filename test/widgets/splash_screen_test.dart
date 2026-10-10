@@ -70,9 +70,12 @@ void main() {
         (tester.getTopLeft(mark).dy + tester.getBottomLeft(tagline).dy) / 2;
     expect(groupMid, closeTo(screen.height / 2, screen.height * 0.15));
 
-    // Drain the auto-advance and the navigation it ends in.
+    // Drain the auto-advance and the navigation it ends in. Bounded pumps:
+    // signed out, that navigation lands on the quiz's welcome screen, whose
+    // shimmer never settles.
     await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(splash, findsNothing);
   });
 

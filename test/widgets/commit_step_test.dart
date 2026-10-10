@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
 import 'package:last_puff/core/widgets/progress_ring.dart';
+import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 import 'package:last_puff/features/onboarding/steps/payoff_steps.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
@@ -36,6 +37,14 @@ void main() {
 
     final container = ProviderContainer(overrides: fastBackendOverrides());
     addTearDown(container.dispose);
+    // Signed in, the way everybody reached this step until the quiz moved in
+    // front of the account (docs/10 §49). This suite is about the hold; what
+    // a commit with NO account does next is `quiz_first_test.dart`.
+    // `runAsync`: the fake backend answers on a real timer, and awaiting one
+    // inside the widget binding's fake clock never returns.
+    await tester.runAsync(
+      container.read(quitStoreProvider.notifier).signInWithApple,
+    );
     container.read(onboardingProvider.notifier).previewStep(ObStep.commit);
 
     await tester.pumpWidget(

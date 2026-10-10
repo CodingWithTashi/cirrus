@@ -7,6 +7,7 @@ import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/models/models.dart';
+import 'package:last_puff/features/onboarding/onboarding_flow.dart';
 
 import '../helpers.dart';
 
@@ -28,8 +29,7 @@ void main() {
         child: const LastPuffApp(),
       ),
     );
-    await tester.pump(const Duration(seconds: 2)); // splash beat
-    await tester.pumpAndSettle();
+    await parkOnSignIn(tester);
     return container;
   }
 
@@ -117,10 +117,16 @@ void main() {
     expect(find.text("This page doesn't exist"), findsOneWidget);
 
     await tester.tap(find.text('Take me home'));
+    // Home is the splash, and signed out the splash leads to the quiz now
+    // (docs/10 §49) — it used to be sign-in. Bounded pumps, because the
+    // quiz's welcome screen never settles: one frame to mount the splash, its
+    // 1.5s beat, then the navigation it ends in.
+    await tester.pump();
     await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
-    // Signed out → sign-in; the test platform (android) shows Google.
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byType(RouteNotFoundScreen), findsNothing);
+    expect(find.byType(OnboardingFlow), findsOneWidget);
   });
 
   testWidgets('a crashed subtree renders the friendly crash screen', (

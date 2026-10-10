@@ -283,7 +283,41 @@ class _CommitStepState extends ConsumerState<CommitStep>
       // The header chevron works during the celebration too. If they used it,
       // this timer must not advance whatever step they went back to.
       if (ref.read(onboardingProvider).step != ObStep.commit) return;
+      unawaited(_leave());
+    });
+  }
+
+  /// On to the notifications ask — by way of an account, when there is none.
+  ///
+  /// The quiz used to sit behind the sign-in screen, and nine of the first
+  /// thirty-two real people left there before answering a question. Now the
+  /// account is asked for here, by the person who has just seen their plan and
+  /// held to commit to it, on a screen whose title was always "Let's keep your
+  /// plan safe." Somebody who signed in first (the welcome screen's "Log in",
+  /// or an earlier launch) is not asked twice.
+  ///
+  /// The step does not advance until the account exists: the sign-in screens
+  /// call `accountReady()` on the way back. So leaving that screen — or
+  /// killing the app on it — returns to a commit that can be held again,
+  /// never to a later step with nobody signed in.
+  Future<void> _leave() async {
+    final signedIn = await ref.read(quitStoreProvider.notifier).hasSession();
+    if (!mounted) return;
+    if (ref.read(onboardingProvider).step != ObStep.commit) return;
+    if (signedIn) {
       ref.read(onboardingProvider.notifier).next();
+      return;
+    }
+    await context.push(Routes.auth);
+    // Back without an account. Re-arm the ring: a finished hold with nothing
+    // left to press is a dead end, and this is the one screen that has no
+    // other control.
+    if (!mounted) return;
+    if (ref.read(onboardingProvider).step != ObStep.commit) return;
+    _hold.value = 0;
+    setState(() {
+      _done = false;
+      _hapticStage = 0;
     });
   }
 
@@ -538,9 +572,10 @@ class NotificationsStep extends ConsumerWidget {
             final granted = await PushService.requestPermission();
             ref.read(analyticsProvider).notifPrompt(granted: granted);
             // Register the freshly minted token NOW. The session already
-            // exists (startJourney ran before this step), and the only other
-            // registration points are the next resume or the next cold start
-            // — a grant that waits for those loses the first day of pushes.
+            // exists (the commit step does not let anyone through to this one
+            // without an account), and the only other registration points are
+            // the next resume or the next cold start — a grant that waits for
+            // those loses the first day of pushes.
             //
             // Through the registrar rather than a bare `sync()`: on iOS the
             // OS sheet returns while `registerForRemoteNotifications` is

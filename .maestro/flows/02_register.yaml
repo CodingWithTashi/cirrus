@@ -9,4 +9,8 @@ tags:
 ---
 - runFlow: ../shared/launch.yaml
 - runFlow: ../shared/register.yaml
+# An account made before any answers is handed back to the top of the quiz.
+- extendedWaitUntil:
+    visible: 'How dependent are you, really\?'
+    timeout: 30000
 - assertVisible: 'Start my check-up'

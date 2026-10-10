@@ -114,9 +114,26 @@ class JourneyStore extends Notifier<JourneyState?> {
     _auth.currentUserId().then(session.bind).ignore();
   }
 
+  /// A sign-in, a registration, a restore or a created journey has opened a
+  /// session in this process. Cleared by the two things that end one.
+  bool _sessionOpen = false;
+
+  /// Whether somebody is signed in — with or without a journey yet.
+  ///
+  /// Onboarding asks this once, after the hold-to-commit, to decide whether
+  /// the plan already has an account to live in (docs/10 §49). Two sources,
+  /// because neither backend answers alone: the flag covers the fake, whose
+  /// `currentUserId()` is always null, and the repository covers a real
+  /// account that signed in on an earlier launch and never finished the quiz
+  /// — `restoreSession` reports that one as signed out, since it has no
+  /// journey to restore.
+  Future<bool> hasSession() async =>
+      _sessionOpen || await _auth.currentUserId() != null;
+
   /// Everything a freshly-established session should pull from the server.
   /// One call so a new session path cannot wire half of it.
   void _onSessionEstablished() {
+    _sessionOpen = true;
     _syncUserContext();
     pullPlanAdvice();
     _identifyForAnalytics();
@@ -478,6 +495,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Optimistic: signed out locally at once, the API ack is write-behind.
   void signOut() {
     state = null;
+    _sessionOpen = false;
     // The undo trail names this account's puffs (docs/10 §41).
     _anchorTrail.clear();
     // Before the sign-out call, so the identity is unbound even if the ack
@@ -549,6 +567,7 @@ class JourneyStore extends Notifier<JourneyState?> {
     ref.read(pushTokenRegistrarProvider).forget();
     ref.read(userContextRepositoryProvider).unregister().ignore();
     _anchorTrail.clear();
+    _sessionOpen = false;
     state = null;
   }
 

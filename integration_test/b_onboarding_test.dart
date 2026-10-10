@@ -46,19 +46,13 @@ void main() {
     }
   }
 
-  testWidgets('a guest walks all 21 steps to a created journey', (
-    tester,
-  ) async {
+  testWidgets('a new person walks the quiz, makes the account at the commit, '
+      'and gets a journey', (tester) async {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
 
-    // Guest onboarding straight off the sign-in screen (no account first).
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
-    await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-guest@cirrus.app');
-    await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
-    await e2e.tapText(e2e.l10n.authCreateAccount);
-    await e2e.waitFor(const Duration(seconds: 2));
-
+    // No account yet: the quiz is the first screen (docs/10 §49). The account
+    // is made further down, when the commit asks for one.
     final vm = e2e.container.read(onboardingProvider.notifier);
     expect(e2e.container.read(onboardingProvider).step, ObStep.welcome,
         reason: 'on screen: ${e2e.texts()}');
@@ -137,18 +131,27 @@ void main() {
       await e2e.settle();
     } else {
       vm.markCommitted();
-      vm.next();
       await e2e.settle();
     }
     expect(e2e.container.read(onboardingProvider).committed, isTrue,
         reason: 'hold-to-commit did not register');
 
-    // Skip past rating + notifications without triggering the OS prompt.
-    while (e2e.container.read(onboardingProvider).step !=
-        ObStep.notifications) {
-      vm.next();
-      await e2e.settle(frames: 10);
-    }
+    // The commit has nowhere to keep the plan yet, so it asks for an account
+    // — and holds the quiz on the commit step until there is one.
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(e2e.showing(e2e.l10n.authContinueWithEmail), isTrue,
+        reason: 'the account ask never arrived; on screen: ${e2e.texts()}');
+    expect(e2e.container.read(onboardingProvider).step, ObStep.commit);
+    await e2e.emailDoor();
+    await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-guest@cirrus.app');
+    await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
+    await e2e.tapText(e2e.l10n.authCreateAccount);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    // Back in the quiz at the step the commit was on its way to — not at the
+    // top, and not at the paywall with nobody signed in.
+    expect(e2e.container.read(onboardingProvider).step, ObStep.notifications,
+        reason: 'on screen: ${e2e.texts()}');
     await e2e.tapText(e2e.l10n.commonMaybeLater);
     await e2e.waitFor(const Duration(seconds: 2));
 
@@ -175,7 +178,7 @@ void main() {
   ) async {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-minor@cirrus.app');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
     await e2e.tapText(e2e.l10n.authCreateAccount);
@@ -204,7 +207,7 @@ void main() {
     // closing the app.
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-typo@cirrus.app');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
     await e2e.tapText(e2e.l10n.authCreateAccount);
@@ -251,7 +254,7 @@ void main() {
   ) async {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.enterField(e2e.l10n.authEmailLabel, 'e2e-back@cirrus.app');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret123');
     await e2e.tapText(e2e.l10n.authCreateAccount);

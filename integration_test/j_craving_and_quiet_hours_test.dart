@@ -22,7 +22,7 @@ void main() {
   Future<E2E> signedIn(WidgetTester tester) async {
     final e2e = await E2E.boot(tester);
     await e2e.waitFor(const Duration(seconds: 2));
-    await e2e.tapText(e2e.l10n.authContinueWithEmail);
+    await e2e.emailDoor();
     await e2e.tapSpan(e2e.l10n.authLogIn);
     await e2e.enterField(e2e.l10n.authEmailLabel, 'maya@quitmail.com');
     await e2e.enterField(e2e.l10n.authPasswordLabel, 'secret1');

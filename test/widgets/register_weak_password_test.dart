@@ -43,8 +43,7 @@ void main() {
         child: const LastPuffApp(),
       ),
     );
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    await parkOnSignIn(tester);
     container.read(routerProvider).go(Routes.register);
     await tester.pumpAndSettle();
     expect(find.text(l10n.authRegisterTitle), findsOneWidget);

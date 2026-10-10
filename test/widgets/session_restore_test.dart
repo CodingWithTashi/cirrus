@@ -98,11 +98,15 @@ void main() {
       expect(path(container), Routes.home);
     });
 
-    testWidgets('nobody signed in and offline: sign-in, as before', (
+    testWidgets('nobody signed in and offline: the quiz, never a retry', (
       tester,
     ) async {
+      // Signed out is still not a failure to recover from. Where it lands
+      // moved: the quiz comes before the account now (docs/10 §49), and the
+      // quiz needs no connection until the account is asked for.
       final container = await launch(tester, online: false, signedIn: false);
-      expect(path(container), Routes.auth);
+      expect(path(container), Routes.onboarding);
+      expect(find.text(l10n.splashJourneyUnavailableTitle), findsNothing);
     });
 
     testWidgets('signed in and online: straight to Home', (tester) async {

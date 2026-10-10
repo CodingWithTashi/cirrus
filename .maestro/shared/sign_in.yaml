@@ -1,7 +1,19 @@
-# From the sign-in screen: log into the existing account and land on Home.
+# From the welcome screen or the sign-in screen: log into the existing account
+# and land on Home.
 # Happy path only — 01_sign_in.yaml covers the wrong-password branch.
 appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
 ---
+# A cold start lands on the quiz now, so the sign-in screen is one tap further:
+# the welcome screen's "Log in". Skipped when this runs from the sign-in screen
+# itself (after a sign-out, or at the account ask that follows the commit).
+- runFlow:
+    when:
+      visible: 'Start my check-up'
+    commands:
+      - tapOn: 'Already have an account\? Log in'
+      - extendedWaitUntil:
+          visible: 'Continue with email'
+          timeout: 10000
 - tapOn: 'Continue with email'
 - assertVisible: 'Create your account'
 - runFlow: dismiss_keyboard.yaml

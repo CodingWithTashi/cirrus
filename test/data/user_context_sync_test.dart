@@ -299,8 +299,7 @@ void main() {
           child: const LastPuffApp(),
         ),
       );
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+      await parkOnSignIn(tester);
       return container;
     }
 

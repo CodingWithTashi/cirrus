@@ -74,7 +74,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
     final journey = ref.read(quitStoreProvider);
     if (journey == null) {
-      context.go(Routes.auth);
+      // The quiz, not the sign-in screen (docs/10 §49). An account used to be
+      // asked for before the first question; it is asked for after the
+      // commit now, and the welcome screen carries "Log in" for the people
+      // who already have one. This covers both readings of "no journey":
+      // nobody signed in, and an account that never finished the quiz.
+      context.go(Routes.onboarding);
       return;
     }
     // The once-a-day launch paywall for free users (LaunchPaywallPolicy).

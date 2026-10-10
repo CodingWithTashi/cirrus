@@ -5547,3 +5547,29 @@ Onboarding itself holds 87% of the people who start it across 19 screens; nothin
 - **RevenueCat → Amplitude** was connected by the founder. Unverified until the first `rc_*` event arrives.
 
 **Still dark:** the channel is known to each store's own console and not to Amplitude — nothing in the app captures a campaign or a referrer — so "which channel's users stay" cannot be answered yet, only "which channel's users install". And none of the app-side changes reach a user until the next store build.
+
+## 49. THE QUIZ BEFORE THE ACCOUNT (Oct 5) — sign-in moves from the first screen to the moment after the commit
+
+§48's funnel lost nine of thirty-two real people before the first question, and what stood there was a sign-in wall: an account asked for by an app that had shown nothing yet. The founder's brief was one line — let people start first, break nothing, and never make someone who already has an account answer twice.
+
+**The order now.** Splash → quiz → hold to commit → *account* → notifications → paywall → Day 1. The account is asked for by someone who has just seen their plan and committed to it, on the sign-in screen that was always titled "Let's keep your plan safe."
+
+| Who | What they meet |
+|---|---|
+| A new person | The quiz. After the hold, the sign-in screen; an account made there carries on to notifications. |
+| An existing account, reinstalling | *Already have an account? Log in* on the welcome screen → sign-in → Home. No question is asked. |
+| An existing account that took the quiz again anyway | Signs in at the commit's ask → Home, on the plan it had. The new answers are discarded, not merged and not left on the phone. |
+| Someone who signs in first (the only order there was) | Unchanged: back to the top of the quiz, and the commit does not ask again. |
+| Someone signed out from Settings | Unchanged: the sign-in screen. |
+
+**What makes it safe is one invariant: `notifications` is only ever entered with a session.** The commit step does not advance by itself any more — `_leave()` asks `JourneyStore.hasSession()`, and with nobody signed in it pushes `/auth` and leaves the quiz on `commit`. The three sign-in paths now share `_enterWithSession`, which calls `OnboardingViewModel.accountReady()` (a held commit moves on; anything else is a no-op) before handing a new account back to `/onboarding`. So backing out of the ask, or killing the app on it, returns to a commit that can be held again — the ring is re-armed — and never to a later step with nobody signed in. That is also what keeps the notifications step's own promise true: it registers a push token the instant the OS says yes, which needs an account to register it to.
+
+Three decisions that are not obvious from the diff:
+
+- **`hasSession()` has two sources because neither backend answers alone.** The fake's `currentUserId()` is always null, so the store keeps its own flag; a real account that signed in on an earlier launch and never finished the quiz is reported by `restoreSession` as signed out (it has no journey), so the store asks the repository too. Without the second, that person would be asked to sign in to an account they are already in.
+- **No new `ObStep`.** A step would have rippled into the draft codec, the progress count, `screen_completed` and every test that walks the enum. The existing `/auth` screens are reused whole; the only change to them is the shared exit and a back chevron when the screen was pushed.
+- **A restored account discards the quiz draft.** The answers were typed by somebody who turned out to have a plan already; left on disk they would be offered to the next person who opens the quiz on that phone.
+
+**The cost was in the tests, and it is worth knowing why.** Thirty-seven failed, almost all for one reason: they boot the app signed out and `pumpAndSettle`, and the welcome screen's shimmer never settles. `parkOnSignIn(tester)` in `test/helpers.dart` gives a suite that is not about the first screen the still screen it used to get by accident. The three whose expectation really changed say so in place (`app_smoke_test`, `session_restore_test`, `error_handling_test`). `test/widgets/quiz_first_test.dart` pins the table above; the device suites follow the new order (`E2E.emailDoor()`, `.maestro/shared/launch.yaml`).
+
+One new string, `obWelcomeHaveAccount`, in five languages. The guest fallback in `startJourney` (an anonymous account) is still there underneath as the thing that must never strand anyone; nothing in the app routes to it now.

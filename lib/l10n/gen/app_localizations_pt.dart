@@ -189,6 +189,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get obWelcomeCta => 'Começar o meu check-up';
 
   @override
+  String get obWelcomeHaveAccount => 'Já tens uma conta?';
+
+  @override
   String get obResumeTitle => 'Continuamos onde ficaste?';
 
   @override

@@ -23,6 +23,37 @@ import 'login_defaults.dart';
 import '../../domain/repositories/repositories.dart';
 import '../onboarding/onboarding_view_model.dart';
 
+/// Where a session that has just opened goes — the one rule all three
+/// sign-in paths share.
+///
+/// An account that already has a journey goes Home, and whatever quiz answers
+/// are sitting on this device go with nothing: they were typed by somebody
+/// who turned out to have a plan already, and leaving them on disk would
+/// offer them to the next person who opens the quiz on this phone.
+///
+/// A new account goes to onboarding, exactly as it always has. What is new
+/// is where that lands: the quiz now comes first and the account after the
+/// hold-to-commit, so `accountReady()` moves a held commit on to the next
+/// step. For an account made BEFORE any answers it does nothing, and the
+/// quiz starts from the top as before.
+void _enterWithSession(
+  BuildContext context,
+  WidgetRef ref, {
+  required bool restored,
+  String? email,
+}) {
+  final onboarding = ref.read(onboardingProvider.notifier);
+  if (restored) {
+    onboarding.discardDraft();
+    context.go(Routes.home);
+    return;
+  }
+  // An account that registered but never onboarded has no journey yet either.
+  if (email != null) onboarding.setEmail(email);
+  onboarding.accountReady();
+  context.go(Routes.onboarding);
+}
+
 /// Frame 26 — Apple primary, email second-class but never hidden.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -90,7 +121,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     if (failure != null) {
       await showLpErrorDialog(context, error: failure, onRetry: retry);
     } else if (restored != null) {
-      context.go(restored ? Routes.home : Routes.onboarding);
+      _enterWithSession(context, ref, restored: restored);
     }
   }
 
@@ -106,7 +137,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Align(alignment: Alignment.centerLeft, child: Wordmark()),
+              // This screen is the root for someone who signed out, and a
+              // pushed screen for someone who came from the quiz — its
+              // welcome link, or the account ask after the commit. Only the
+              // second has anywhere to go back to.
+              Row(
+                children: [
+                  // The Navigator, not the router: this screen is also
+                  // mounted bare in tests, where there is no router to ask.
+                  if (Navigator.of(context).canPop()) ...[
+                    const BackChevron(),
+                    const SizedBox(width: 4),
+                  ],
+                  const Wordmark(),
+                ],
+              ),
               const Spacer(),
               Text(
                 l10n.authSignInTitle,
@@ -276,8 +321,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     if (!mounted) return;
-    ref.read(onboardingProvider.notifier).setEmail(email);
-    context.go(Routes.onboarding);
+    _enterWithSession(context, ref, restored: false, email: email);
   }
 
   int get _strength {
@@ -455,13 +499,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     if (!mounted) return;
-    if (restored) {
-      context.go(Routes.home);
-    } else {
-      // Registered but never onboarded — the backend has no journey yet.
-      ref.read(onboardingProvider.notifier).setEmail(email);
-      context.go(Routes.onboarding);
-    }
+    _enterWithSession(context, ref, restored: restored, email: email);
   }
 
   @override

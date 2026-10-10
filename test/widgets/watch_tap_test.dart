@@ -43,7 +43,7 @@ void main() {
         child: const LastPuffApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await parkOnSignIn(tester);
     container.read(quitStoreProvider.notifier).seedDemoJourney();
     await tester.pumpAndSettle();
     return (container, store);

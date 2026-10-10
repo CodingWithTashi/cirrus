@@ -108,6 +108,18 @@ class E2E {
 
   Future<void> tapText(String label) => tap(find.text(label), why: '"$label"');
 
+  /// From wherever a signed-out app is standing to the email forms.
+  ///
+  /// A cold start lands on the quiz's welcome screen (docs/10 §49), so the
+  /// sign-in screen is one tap further than it was: the welcome screen's
+  /// "Log in". After a sign-out, or at the account ask that follows the
+  /// commit, the app is already on sign-in and this is the one tap every
+  /// suite always made.
+  Future<void> emailDoor() async {
+    if (!showing(l10n.authContinueWithEmail)) await tapSpan(l10n.authLogIn);
+    await tapText(l10n.authContinueWithEmail);
+  }
+
   /// Taps a [TextSpan] inside a rich text — the "Already have one? **Log in**"
   /// idiom the auth screens use. `find.text` cannot see these: the span is not
   /// its own Text widget, which is exactly how the first run of this suite

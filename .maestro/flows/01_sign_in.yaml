@@ -12,6 +12,8 @@ tags:
   - smoke
 ---
 - runFlow: ../shared/launch.yaml
+# The quiz is the first screen; an existing account goes in by its "Log in".
+- tapOn: 'Already have an account\? Log in'
 - tapOn: 'Continue with email'
 - assertVisible: 'Create your account'
 # The register screen autofocuses its email field; the "Log in" link sits

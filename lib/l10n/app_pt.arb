@@ -55,6 +55,7 @@
   "obWelcomeTitle": "Quão dependente és, na verdade?",
   "obWelcomeSubtitle": "Check-up de 2 minutos. Resultados brutalmente honestos. Um plano feito para ti.",
   "obWelcomeCta": "Começar o meu check-up",
+  "obWelcomeHaveAccount": "Já tens uma conta?",
   "obResumeTitle": "Continuamos onde ficaste?",
   "obResumeBody": "Tinhas respondido a {answered} de {total} perguntas. Não se perdeu nada.",
   "obResumeCta": "Continuar",

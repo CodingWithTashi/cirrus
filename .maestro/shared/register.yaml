@@ -1,9 +1,23 @@
-# From the sign-in screen: create a fresh account and land on onboarding.
+# From the welcome screen or the sign-in screen: create a fresh account.
+# Where that lands is the caller's to wait for: the top of the quiz when the
+# account comes first (02_register), the notifications ask when it comes after
+# the commit (03_onboarding).
 # EMAIL is minted per run so the flow never collides with an earlier account
 # (the fake backend forgets everything on restart; Firebase would not).
 # The email field autofocuses, so the keyboard is already up when we type.
 appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
 ---
+# A cold start lands on the quiz now, so the sign-in screen is one tap further:
+# the welcome screen's "Log in". Skipped when this runs from the sign-in screen
+# itself (after a sign-out, or at the account ask that follows the commit).
+- runFlow:
+    when:
+      visible: 'Start my check-up'
+    commands:
+      - tapOn: 'Already have an account\? Log in'
+      - extendedWaitUntil:
+          visible: 'Continue with email'
+          timeout: 10000
 - tapOn: 'Continue with email'
 - assertVisible: 'Create your account'
 # Wait for the autofocus keyboard before typing. iOS exposes its return key
@@ -36,6 +50,3 @@ appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitva
 - inputText: ${PASSWORD}
 - assertVisible: '(decent|strong) password'
 - tapOn: 'Create account'
-- extendedWaitUntil:
-    visible: 'How dependent are you, really\?'
-    timeout: 30000

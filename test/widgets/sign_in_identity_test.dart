@@ -53,8 +53,7 @@ void main() {
         child: const LastPuffApp(),
       ),
     );
-    await tester.pump(const Duration(seconds: 2)); // splash beat
-    await tester.pumpAndSettle();
+    await parkOnSignIn(tester);
     expect(find.text(l10n.authSignInWithApple), findsOneWidget);
   }
 

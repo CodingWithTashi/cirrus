@@ -574,8 +574,7 @@ void main() {
           child: const LastPuffApp(),
         ),
       );
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+      await parkOnSignIn(tester);
 
       for (final label in [l10n.authTerms, l10n.authPrivacy]) {
         final text = tester.widget<Text>(find.text(label));

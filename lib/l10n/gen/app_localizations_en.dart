@@ -189,6 +189,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obWelcomeCta => 'Start my check-up';
 
   @override
+  String get obWelcomeHaveAccount => 'Already have an account?';
+
+  @override
   String get obResumeTitle => 'Pick up where you left off?';
 
   @override

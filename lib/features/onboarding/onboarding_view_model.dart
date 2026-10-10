@@ -224,6 +224,19 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
 
   /// Frame-map preview: seed the draft with the demo answers every design
   /// frame depicts (200/day, $25/wk, 30-day taper) and jump straight to [step].
+  /// The account the plan will live in exists now.
+  ///
+  /// The quiz comes before the account (docs/10 §49), so a held commit waits
+  /// on this screen until there is one: `notifications` is only ever entered
+  /// with a session, which is what lets that step register a push token the
+  /// moment the OS says yes. Called by every sign-in path that hands a NEW
+  /// account back to onboarding. A no-op anywhere else — signing in from the
+  /// welcome screen, or before the quiz as every account did until now, just
+  /// carries on from where the answers are.
+  void accountReady() {
+    if (state.step == ObStep.commit && state.committed) next();
+  }
+
   void previewStep(ObStep step) {
     // Sticky for the life of this notifier, not scoped to the assignment: a
     // session that has jumped into a Frame Map frame is a design session, not

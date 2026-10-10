@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/last_puff_app.dart';
+import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/dto/entitlement_codec.dart';
@@ -12,6 +15,24 @@ import 'package:last_puff/domain/logic/taper_engine.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
+
+/// Takes a signed-out app past the splash and parks it on the sign-in screen.
+///
+/// A signed-out launch lands on the quiz's welcome screen (docs/10 §49), and
+/// that screen's shimmer never stops — so a `pumpAndSettle` there runs to the
+/// ten-minute timeout. Every suite that boots signed out and is not ABOUT the
+/// first screen used to settle on sign-in without having asked for it; this
+/// asks for it. Bounded pumps through the splash, for the same reason.
+///
+/// Call it straight after `pumpWidget`, in place of the first settle.
+Future<void> parkOnSignIn(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 2)); // the splash's branding beat
+  await tester.pump(); // and the navigation it ends in
+  ProviderScope.containerOf(
+    tester.element(find.byType(LastPuffApp)),
+  ).read(routerProvider).go(Routes.auth);
+  await tester.pumpAndSettle();
+}
 
 /// Standard test overrides for anything that pumps the app or wires the fake
 /// backend: pinned to the fake backend (the test platform reports android,

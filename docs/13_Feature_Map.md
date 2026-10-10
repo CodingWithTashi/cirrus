@@ -36,9 +36,9 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
-| 1 | **Splash / session restore** | The launcher tile (the same rounded art the home screen shows) over a breathing Volt glow, wordmark and tagline beneath, the group centred on the screen; ~1.5s while the backend session is restored. Routes to Home (has journey) or sign-in (nobody signed in). A signed-in account whose journey is slow to arrive restores from the copy on the phone, and with no copy the splash offers Retry — never sign-in (docs/10 §40). | Cold-start. The tile, "Cirrus" and the tagline sit stacked in the middle of the screen, never in a corner. Kill and reopen while signed in → lands on Home, never on a stuck splash. Cut only the app's network (`adb shell cmd connectivity set-chain3-enabled true`, then `set-package-networking-enabled false com.quitvape.last_puff`) and reopen → still Home; turn both back afterwards. |
+| 1 | **Splash / session restore** | The launcher tile (the same rounded art the home screen shows) over a breathing Volt glow, wordmark and tagline beneath, the group centred on the screen; ~1.5s while the backend session is restored. Routes to Home (has journey) or the quiz's welcome screen (no journey — nobody signed in, or an account that never finished the quiz; since Oct 5 2026, docs/10 §49). A signed-in account whose journey is slow to arrive restores from the copy on the phone, and with no copy the splash offers Retry — never sign-in (docs/10 §40). | Cold-start. The tile, "Cirrus" and the tagline sit stacked in the middle of the screen, never in a corner. Kill and reopen while signed in → lands on Home, never on a stuck splash. Cut only the app's network (`adb shell cmd connectivity set-chain3-enabled true`, then `set-package-networking-enabled false com.quitvape.last_puff`) and reopen → still Home; turn both back afterwards. |
 | 2 | **Launch paywall** | Once per day, free accounts only, pushed over Home after the splash. Never shown while the tier is still unknown. | Free account, cold start → paywall over Home. Restart the same day → it does not return. Premium → never. |
-| 3 | **Sign in with Google** (Android) | Native Google sheet → Firebase account. An existing journey restores to Home; a new account goes to onboarding. | Android only. Dismiss the sheet → nothing happens (a dismissal is not an error). |
+| 3 | **Sign in with Google** (Android) | Native Google sheet → Firebase account. An existing journey restores to Home; a new account goes to onboarding — to the top of the quiz when the account came first, on to the notifications step when it was made at the commit's ask (row 19b). Reached from the welcome screen's *Log in* or from that ask; pushed, so it has a back chevron. | Android only. Dismiss the sheet → nothing happens (a dismissal is not an error). |
 | 4 | **Sign in with Apple** (iOS/macOS) | Same flow, Apple sheet. Hidden on Android. | iOS only; check the Google button is absent. |
 | 5 | **Register with email** | Email + password (min 6), live 3-bar strength meter, then onboarding. | Try `abc` with no `@` → snack. 3-char password → snack. `maya@quitmail.com` on fake → "already in use". |
 | 6 | **Log in with email** | Restores the journey. A wrong password shakes the field 2px with kind copy — never a red alarm. | Wrong password → shake + inline message; typing clears it. |
@@ -53,7 +53,7 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
-| 11 | **Welcome + resume draft** | Step 1. An unexpired draft offers to resume where you stopped, showing how far you got. | Answer 4 questions, kill the app, return → *Resume* with the right count. |
+| 11 | **Welcome + resume draft** | Step 1, and the first screen a signed-out launch shows. An unexpired draft offers to resume where you stopped, showing how far you got. *Already have an account? Log in* opens sign-in for everyone who is not new. | Answer 4 questions, kill the app, return → *Resume* with the right count. Fresh install → the quiz, not sign-in. *Log in* with an account that has a plan → Home, no questions. |
 | 12 | **Identity** | Gender, birth year. | — |
 | 13 | **Age gate** | Under 18 routes to a dead end. Not skippable. | Enter a year making you 17 → the flow stops. |
 | 14 | **Habit quiz** (the 12 counted steps) | Tried before · frequency · puffs/day · nicotine strength · weekly spend · first puff after waking · why (multi) · worries (multi) · method (taper vs cold turkey) · pace (days). Progress reads 1/12…12/12 and Back always works. | Walk all twelve; back out and forward again — answers persist. |
@@ -62,9 +62,10 @@
 | 17 | **Coach name** | Names your coach; defaults to Ember, CTA reads *Keep Ember* until you type. | Type `Koda` → every later screen says Koda, including the Day-1 tour and chat header. |
 | 18 | **Why words** | One line in your own words. The placeholder is tailored to a *why* you actually picked (Family > Fitness > Health > Freedom > Money > Appearance). | Pick only Money → the money hint. A hint is never stored as your words. |
 | 19 | **Commit** | Press-and-hold commitment beat. | Release early → it does not advance. |
+| 19b | **The account, after the commit** | With nobody signed in, a held commit opens the sign-in screen ("Let's keep your plan safe.") instead of advancing; the quiz waits on the commit step until an account exists, then carries on to notifications. Signing in to an account that already has a plan goes Home with THAT plan and discards the new answers. Someone already signed in is not asked. | Fresh install → whole quiz → hold → sign-in appears. Back → the ring is re-armed. Create an account → notifications step. Repeat with an existing account → Home on its old day number. |
 | 20 | **~~Rating~~ — removed from onboarding Sep 11 2026** | App Store review rejected 1.0.16 under Guideline 5.6.3 for asking here. The ask is row 98b now: the Survived screen, day 3+, three cravings beaten. Onboarding goes commit → notifications. | There is no rating screen between hold-to-commit and the push pre-permission. `test/review_ask_placement_test.dart` reads the sources to keep it that way. |
 | 21 | **Notifications permission** | The one place the OS permission is asked for. Copy names danger-hour nudges, the trial reminder and milestone celebrations — all three exist. | Deny → the app continues; the Settings toggle reflects reality. |
-| 22 | **→ Paywall → Day 1** | Onboarding ends on the paywall (`source=onboarding`), then the Day-1 checklist. | — |
+| 22 | **→ Paywall → Day 1** | Onboarding ends on the paywall (`source=onboarding`), then the Day-1 checklist. Nobody reaches it without an account: the step before it is only entered with a session (row 19b). | — |
 
 ---
 
@@ -321,8 +322,8 @@ you. The two halves obey different rules and are configured in different places.
 
 ## 17. FASTEST FULL PASS — ~25 min, real Firebase, Android
 
-1. `./tool/device.ps1` → splash → **register** a fresh email.
-2. Onboarding: all 21 steps, rename the coach to `Koda`, deny notifications → paywall → *see what Free gets* → back → continue on Free.
+1. `./tool/device.ps1` → splash → the quiz opens with no account asked for.
+2. Onboarding: every step, rename the coach to `Koda`, hold to commit → **register** a fresh email when the commit asks → deny notifications → paywall → *see what Free gets* → back → continue on Free.
 3. Day-1 checklist: complete all three tour steps.
 4. Home: LOG PUFF ×5, undo, hold to ~20, correct via the ring sheet, then log past the limit.
 5. Free gates: Stats Month · Health node 8 · Insight · Plan adaptive · Home nudge — each must open the paywall.

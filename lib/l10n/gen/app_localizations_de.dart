@@ -190,6 +190,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get obWelcomeCta => 'Check-up starten';
 
   @override
+  String get obWelcomeHaveAccount => 'Schon ein Konto?';
+
+  @override
   String get obResumeTitle => 'Da weitermachen, wo du aufgehört hast?';
 
   @override

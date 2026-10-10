@@ -1,9 +1,12 @@
-# Cold start with no session: lands on the sign-in screen.
+# Cold start with no session: lands on the quiz's welcome screen. The account
+# is asked for after the hold-to-commit, not before the first question; an
+# existing account gets in through the welcome screen's "Log in" link, which
+# shared/sign_in.yaml and shared/register.yaml tap for themselves.
 appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
 ---
 - launchApp:
     clearState: true
     stopApp: true
 - extendedWaitUntil:
-    visible: 'Continue with email'
+    visible: 'Start my check-up'
     timeout: 30000

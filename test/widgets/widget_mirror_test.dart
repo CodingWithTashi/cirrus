@@ -72,7 +72,7 @@ void main() {
         child: const LastPuffApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await parkOnSignIn(tester);
     return (container, store);
   }
 
