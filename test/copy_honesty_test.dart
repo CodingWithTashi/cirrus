@@ -13,7 +13,7 @@ import 'package:last_puff/l10n/gen/app_localizations.dart';
 /// the paywall sold "Panic Button + buddy ping". Copy that names a feature
 /// the app does not have is a claim the app cannot keep, in five languages.
 void main() {
-  const locales = ['en', 'es', 'fr', 'de', 'pt'];
+  const locales = ['en', 'es', 'fr', 'de', 'it', 'pt'];
 
   /// The word for "buddy" in each locale's own copy, as it was written.
   const buddyWords = ['buddy', 'buddies', 'binôme', 'aliado', 'parceiro'];
@@ -56,6 +56,7 @@ void main() {
         'es': 'hito',
         'fr': 'étape',
         'de': 'meilenstein',
+        'it': 'traguardo',
         'pt': 'marco',
       },
       'streakRisk': {
@@ -63,6 +64,7 @@ void main() {
         'es': 'racha',
         'fr': 'série',
         'de': 'serie',
+        'it': 'serie',
         'pt': 'sequência',
       },
     };
@@ -101,6 +103,7 @@ void main() {
         line.contains('double') ||
             line.contains('doble') ||
             line.contains('doppelt') ||
+            line.contains('doppio') ||
             line.contains('dobro'),
         isFalse,
         reason: '$locale: $line',

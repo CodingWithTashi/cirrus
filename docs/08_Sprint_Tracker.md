@@ -99,7 +99,7 @@ Doc 6 §1 treats **10–20K downloads in January alone** as the peak-effort targ
 | **Theming** — 3 palette families × dark/light (Ember free; **Hearth + Tide Premium**), clamped on render so a lapse re-themes itself | `lib/app/theme/lp_palette.dart`, `test/app/lp_palette_test.dart` (docs/10 §24) |
 | **Domain engines** — Taper, Money, Streak, DangerHours, Dependence, InitialJourney; unit-tested | `lib/domain/logic/`, `test/domain/` |
 | **19-step onboarding** — full A1→D6 flow, exhaustive switch, age gate at 18 | `lib/features/onboarding/` |
-| **Localization** — 5 locales at **646/646 key parity**, zero gaps | `lib/l10n/app_{en,es,fr,de,pt}.arb` |
+| **Localization** — 6 locales at **944/944 key parity**, zero gaps (Italian added Oct 11 2026, docs/10 §50; the site and both store listings have no Italian yet) | `lib/l10n/app_{en,es,fr,de,it,pt}.arb` |
 | **Auth + Journey on Firebase** (Android) | `firebase_auth_repository.dart`, `firebase_journey_repository.dart` |
 | **Error/offline handling** — banner, dialogs, crash screen, retry | `lib/core/widgets/lp_error.dart`, `test/widgets/error_handling_test.dart` |
 | **Firestore** — `(default)` database live, NATIVE mode; hosting site `alastpuff` provisioned | `firebase firestore:databases:list` |

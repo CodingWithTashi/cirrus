@@ -41,6 +41,12 @@ class LpCrashScreen extends StatelessWidget {
           'dieser Screen ist gerade abgestürzt — liegt an uns, nicht an dir. '
           'geh zurück oder starte die App neu, dann renkt sich das ein.',
     ),
+    'it': (
+      title: 'ecco, che figura.',
+      body:
+          'questa schermata si è appena inceppata — colpa nostra, non tua. '
+          'torna indietro o riavvia l\'app e dovrebbe sistemarsi da sola.',
+    ),
     'pt': (
       title: 'ok, que vergonha.',
       body:

@@ -174,8 +174,8 @@ void main() {
 
     test('no locale still counts three days', () {
       // The trial length was 3 days in the copy alone — nothing computed it —
-      // so the only thing that can drift is a string. Pinned in all five.
-      for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
+      // so the only thing that can drift is a string. Pinned in every locale.
+      for (final locale in ['en', 'es', 'fr', 'de', 'it', 'pt']) {
         final arb =
             jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
                 as Map<String, dynamic>;

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The five ARB files must stay one file in five languages.
+/// The six ARB files must stay one file in six languages.
 ///
 /// 646 keys held parity by discipline alone until now — there was no test.
 /// A rename or a new placeholder is exactly the kind of change that lands in
@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// as much in its own docstring), and a translator dropping a `{placeholder}`
 /// compiles perfectly and silently renders a sentence with a hole in it.
 void main() {
-  const locales = ['en', 'es', 'fr', 'de', 'pt'];
+  const locales = ['en', 'es', 'fr', 'de', 'it', 'pt'];
   final placeholder = RegExp(r'\{(\w+)\}');
 
   Map<String, dynamic> load(String locale) =>

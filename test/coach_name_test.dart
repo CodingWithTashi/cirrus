@@ -22,7 +22,7 @@ import 'package:last_puff/l10n/gen/app_localizations.dart';
 /// elided to "qu'Ember" in three places and called the coach "il". Those are
 /// the failures the probes below are chosen to expose.
 void main() {
-  const locales = ['en', 'es', 'fr', 'de', 'pt'];
+  const locales = ['en', 'es', 'fr', 'de', 'it', 'pt'];
 
   /// Every key that interpolates the coach's name.
   const renamed = [
@@ -83,7 +83,7 @@ void main() {
 
   /// The 2am line is the joke that makes the invitation land, and a joke is
   /// the first thing a translator drops when a sentence gets long. Every
-  /// locale writes the hour with a digit, so this holds across all five.
+  /// locale writes the hour with a digit, so this holds across all six.
   test('the 2am beat survives every translation', () {
     for (final locale in locales) {
       expect(
@@ -121,7 +121,7 @@ void main() {
     }
   });
 
-  test('a chosen name renders cleanly in all five languages', () async {
+  test('a chosen name renders cleanly in every language', () async {
     // The probes are picked to break a specific leftover:
     //   'Ana'    — a French elision (qu'Ana) or a Portuguese article (A Ana)
     //   'Élodie' — accented and vowel-initial, the elision trap again

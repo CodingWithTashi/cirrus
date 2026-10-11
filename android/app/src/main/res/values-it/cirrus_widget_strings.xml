@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cw_picker_label">Cirrus</string>
+    <string name="cw_picker_description">Segna un tiro e guarda la tua giornata, senza aprire l’app.</string>
+    <string name="cw_preview_day">giorno 12</string>
+    <string name="cw_preview_count">52</string>
+    <string name="cw_preview_of">/ 98</string>
+    <string name="cw_preview_left">ancora 46 · sei avanti sulla curva</string>
+    <string name="cw_plus_label">+</string>
+    <string name="cw_minus_label">−</string>
+    <string name="cw_plus_a11y">Segna un tiro</string>
+    <string name="cw_minus_a11y">Togli l’ultimo tiro</string>
+    <string name="cw_minus_off_a11y">Niente da togliere</string>
+    <string name="cw_empty_title">Inizia il tuo piano</string>
+    <string name="cw_empty_body">Tocca per aprire Cirrus</string>
+</resources>

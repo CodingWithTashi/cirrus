@@ -289,14 +289,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Tägliche Nachrichten von Leuten, die es verstehen. Über 500.000 junge Menschen dabei.';
 
   @override
-  String get obUnder18TiqCta => 'Texte DITCHVAPE an 88709';
+  String get obUnder18TiqCta => 'Schick DITCHVAPE per SMS an 88709';
 
   @override
   String get obUnder18MlmqTitle => 'My Life, My Quit';
 
   @override
   String get obUnder18MlmqBody =>
-      'Kostenloses Coaching per Text oder Anruf, gemacht für Teens. Keine Vorträge.';
+      'Kostenloses Coaching per SMS oder Anruf, gemacht für Teens. Keine Vorträge.';
 
   @override
   String get obUnder18MlmqCta => 'mylifemyquit.org';
@@ -546,7 +546,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obFactTried =>
-      'Bei täglich Dampfenden stiegen gescheiterte Aufhörversuche zwischen 2020 und 2024 von 28% auf 53%. Die Geräte sind besser in ihrem Job geworden. Nicht du wirst schwächer — das ist ein Wettrüsten, zu dem dich niemand angemeldet hat.';
+      'Bei jungen Leuten, die täglich vapen, stiegen gescheiterte Aufhörversuche zwischen 2020 und 2024 von 28% auf 53%. Die Geräte sind besser in ihrem Job geworden. Nicht du wirst schwächer — das ist ein Wettrüsten, zu dem dich niemand angemeldet hat.';
 
   @override
   String obFactStrength(int mg) {
@@ -555,7 +555,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obFactWorryCravings =>
-      'Die meisten Cravings steigen und vergehen in 15–20 Minuten. Kürzer als Warten auf einen Tisch. Der Panikknopf ist genau für dieses Fenster gebaut.';
+      'Die meisten Cravings steigen und vergehen in 15–20 Minuten. Kürzer als Warten auf einen Tisch. Der Panik-Button ist genau für dieses Fenster gebaut.';
 
   @override
   String get obFactWorrySocial =>
@@ -642,7 +642,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obMethodColdSub =>
-      'Ein harter Stopp. Raue erste Woche, dafür schneller durch.';
+      'Ein harter Stopp. Zähe erste Woche, dafür schneller durch.';
 
   @override
   String get obMethodColdReco => 'Machbar auf deinem Level — deine Wahl';
@@ -763,7 +763,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obCommitPrivacy =>
-      '🔒 Wir verkaufen nie deine Daten. Keine Tracker. Niemals.';
+      '🔒 Wir verkaufen nie deine Daten. Keine Werbe-Tracker. Niemals.';
 
   @override
   String get reviewAskTitle =>
@@ -784,7 +784,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String obCoachNameAsk(String name) {
-    return 'Wir nennen es $name. Es hört auf jeden Namen — nimm den, den du um 2 Uhr nachts wirklich tippen würdest.';
+    return 'Bei uns heißt dein Coach $name, hört aber auf jeden Namen — nimm den, dem du um 2 Uhr nachts wirklich schreiben würdest.';
   }
 
   @override
@@ -897,7 +897,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Kein Spam. Ein Hinweis vor deinen kritischen Stunden, einer vor Ende der Testphase, und ein Wort bei jedem Meilenstein.';
+      'Kein Spam. Ein Hinweis vor deinen Gefahrenstunden, einer vor Ende der Testphase, und ein Wort bei jedem Meilenstein.';
 
   @override
   String get obNotifPreviewTime => 'Fr 21:54';
@@ -936,11 +936,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get paywallFeatPlan =>
-      'Ein Plan, der sich anpasst, wenn du rückfällig wirst';
+      'Ein Plan, der sich anpasst, wenn du ausrutschst';
 
   @override
   String get paywallFeatForecasts =>
-      'Verlangens-Prognosen für deine Risikostunden';
+      'Craving-Prognosen für deine Gefahrenstunden';
 
   @override
   String get paywallFeatCommunity =>
@@ -969,7 +969,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get paywallTrialReminder =>
-      '🔔 Wir erinnern dich, bevor dein Test endet';
+      '🔔 Wir erinnern dich, bevor deine Testphase endet';
 
   @override
   String get paywallCancelAnytime => 'Jederzeit kündbar';
@@ -1157,7 +1157,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get premiumPitchForecast =>
-      'Verlangens-Vorhersagen für die Stunden, in denen du sonst zugreifst.';
+      'Craving-Prognosen für die Stunden, in denen du sonst zugreifst.';
 
   @override
   String premiumFreeHistoryNote(int days) {
@@ -1175,12 +1175,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String premiumPitchHealth(String from) {
-    return 'Der Rest deiner Zeitleiste: ab $from bis zu einem Jahr.';
+    return 'Der Rest deines Zeitstrahls: ab $from bis zu einem Jahr.';
   }
 
   @override
   String premiumPitchNudge(String hour) {
-    return 'Dein Hoch um $hour steht an. Premium sagt deine Risikostunden voraus, bevor sie da sind.';
+    return 'Dein Hoch um $hour steht an. Premium sagt deine Gefahrenstunden voraus, bevor sie da sind.';
   }
 
   @override
@@ -1190,7 +1190,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get freePlanColPro => 'PRO';
 
   @override
-  String get freeCompareLog => 'Zug-Protokoll + Serien';
+  String get freeCompareLog => 'Zug-Log + Serien';
 
   @override
   String get freeCompareMoney => 'Sparzähler';
@@ -1331,14 +1331,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get day1TourLogBody =>
-      'Jeder Zug, hier getippt. Nur ehrliche Zahlen machen den Plan echt — leg jetzt einen an.';
+      'Jeder Zug, hier getippt. Nur ehrliche Zahlen machen den Plan echt — na los, logg jetzt einen.';
 
   @override
   String get day1TourCoachTitle => 'Sag irgendwas.';
 
   @override
   String day1TourCoachBody(String name) {
-    return '$name hat deinen Plan schon gelesen — deine Zahlen, deine Auslöser, deine schweren Stunden. Schreib mal Hallo.';
+    return '$name hat deinen Plan schon gelesen — deine Zahlen, deine Trigger, deine schweren Stunden. Schreib mal Hallo.';
   }
 
   @override
@@ -1386,7 +1386,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get homeFreedomDayBody =>
-      'Der Plan endet heute, und die Linie bleibt ab jetzt bei null. Jeder dampffreie Tag, den du ab jetzt bestätigst, ist Erhaltung – gleiche Flamme, gleiche Serie.';
+      'Der Plan endet heute, und die Linie bleibt ab jetzt bei null. Jeder vape-freie Tag, den du ab jetzt bestätigst, ist Erhaltung – gleiche Flamme, gleiche Serie.';
 
   @override
   String get homeTitle => 'Heute';
@@ -1412,7 +1412,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String homeLeftAhead(int count) {
-    return '$count unter deiner heutigen Linie. Du bist deiner Kurve voraus.';
+    return 'Noch $count auf deiner heutigen Linie. Du bist deiner Kurve voraus.';
   }
 
   @override
@@ -1470,7 +1470,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get savingsInfoWhyNotCounted =>
-      'Heute zählt ab deinem ersten eingetragenen Zug — oder sobald du einen dampffreien Tag bestätigst. Bis dahin kommt nichts dazu.';
+      'Heute zählt ab deinem ersten geloggten Zug — oder sobald du einen vape-freien Tag bestätigst. Bis dahin kommt nichts dazu.';
 
   @override
   String savingsInfoWhyKept(int usual, String perPuff, num notTaken) {
@@ -1513,7 +1513,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String homeCoachNudgeBody(String hour) {
-    return 'Dein $hour-Hoch steht an — Plan gefällig?';
+    return 'Dein Hoch um $hour steht an — Plan gefällig?';
   }
 
   @override
@@ -1526,29 +1526,29 @@ class AppLocalizationsDe extends AppLocalizations {
   String get homeVapeFreeTitle => 'Heute keine Züge?';
 
   @override
-  String get homeVapeFreeCta => 'Dampffreien Tag bestätigen ✓';
+  String get homeVapeFreeCta => 'Vape-freien Tag bestätigen ✓';
 
   @override
   String get homeVapeFreeDone =>
-      'Dampffreier Tag gesichert. Das ist das ganze Spiel. 🔥';
+      'Vape-freier Tag gesichert. Das ist das ganze Spiel. 🔥';
 
   @override
-  String get homeYesterdayTitle => 'War gestern dampffrei?';
+  String get homeYesterdayTitle => 'War gestern vape-frei?';
 
   @override
   String homeYesterdayBody(String date) {
-    return 'Für $date wurde nichts eingetragen. Nur du weißt es – wir fragen, statt zu raten.';
+    return 'Für $date ist nichts geloggt. Nur du weißt es – wir fragen, statt zu raten.';
   }
 
   @override
-  String get homeYesterdayYes => 'Dampffrei ✓';
+  String get homeYesterdayYes => 'Vape-frei ✓';
 
   @override
-  String get homeYesterdayNo => 'Ich habe gedampft';
+  String get homeYesterdayNo => 'Ich habe gevapt';
 
   @override
   String get homeYesterdayDone =>
-      'Gestern ist eingetragen. Deine Serie kennt die Wahrheit. 🔥';
+      'Gestern ist gesichert. Deine Serie kennt die Wahrheit. 🔥';
 
   @override
   String homeLoggedSnackCount(num count) {
@@ -1639,7 +1639,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String panicWhyLine(String why, String amount) {
-    return 'Du machst das für deine $why und die $amount pro Jahr, die du dir zurückholst.';
+    return 'Du machst das für: $why — und für die $amount pro Jahr, die du dir zurückholst.';
   }
 
   @override
@@ -1683,7 +1683,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String panicLoopCoachSub(String hour) {
-    return 'er kennt dein $hour-Stressmuster';
+    return 'er kennt dein Stressmuster um $hour';
   }
 
   @override
@@ -1955,8 +1955,8 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Gratis-Nachrichten heute',
-      one: '$count Gratis-Nachricht heute',
+      other: 'Noch $count Gratis-Nachrichten heute',
+      one: 'Noch $count Gratis-Nachricht heute',
     );
     return '$_temp0';
   }
@@ -2033,7 +2033,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorRejectedBody =>
-      'Deine Verbindung ist okay — unsere Seite hat die App nur nicht erkannt. Kannst du nicht beheben, und nichts Protokolliertes geht verloren.';
+      'Deine Verbindung ist okay — unsere Seite hat die App nur nicht erkannt. Kannst du nicht beheben, und nichts, was du geloggt hast, geht verloren.';
 
   @override
   String get errorRetry => 'Nochmal';
@@ -2056,7 +2056,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Was du gesucht hast, ist nicht hier. Zurück zum Wesentlichen.';
 
   @override
-  String get errorRouteCta => 'Bring mich nach Hause';
+  String get errorRouteCta => 'Zurück zum Start';
 
   @override
   String get errorBackstage =>
@@ -2104,12 +2104,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String coachReplySlip1(int count) {
-    return 'Ein Ausrutscher ist Information, keine Niederlage. Was war der Auslöser — Stress, Leute, Langeweile? Der Plan hat sich schon gebogen, um dich aufzufangen. Deine $count Tage zählen weiter.';
+    return 'Ein Ausrutscher ist Information, keine Niederlage. Was war der Trigger — Stress, Leute, Langeweile? Der Plan hat sich schon gebogen, um dich aufzufangen. Deine $count Tage zählen weiter.';
   }
 
   @override
   String coachReplySlip2(String amount) {
-    return 'Null Scham hier. Die meisten, die es endgültig schaffen, sind unterwegs ausgerutscht. Ehrlich loggen, Auslöser finden, weiter. Deine Bilanz bleibt deine: $amount gespart, längste Serie intakt.';
+    return 'Null Scham hier. Die meisten, die es endgültig schaffen, sind unterwegs ausgerutscht. Ehrlich loggen, Trigger finden, weiter. Deine Bilanz bleibt deine: $amount gespart, längste Serie intakt.';
   }
 
   @override
@@ -2137,7 +2137,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get coachReplyGeneric4 =>
-      'Okay. Kleine Züge gewinnen das hier. Was kannst du in den nächsten 10 Minuten tun, das kein Vapen ist?';
+      'Okay. Kleine Schritte gewinnen das hier. Was kannst du in den nächsten 10 Minuten tun, das nicht Vapen ist?';
 
   @override
   String coachReplyParty(int count) {
@@ -2146,7 +2146,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String coachSafetyNote(String name) {
-    return '$name ist ein KI-Unterstützungstool, kein Arzt. Deine Nachrichten werden von Google Gemini verarbeitet. In einer Krise? Ruf die 988 an oder texte ihr (USA & Kanada), jederzeit.';
+    return '$name ist ein KI-Unterstützungstool, kein Arzt. Deine Nachrichten werden von Google Gemini verarbeitet. In einer Krise? Ruf die 988 an oder schreib ihr eine SMS (USA & Kanada), jederzeit.';
   }
 
   @override
@@ -2262,7 +2262,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statsPuffsToday => 'ZÜGE HEUTE · PRO STUNDE';
 
   @override
-  String get statsDayNoPuffs => 'Heute keine Züge eingetragen';
+  String get statsDayNoPuffs => 'Heute keine Züge geloggt';
 
   @override
   String get statsPuffsThisMonth => 'ZÜGE · LETZTE 30 TAGE';
@@ -2302,7 +2302,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get statsWindowNoPuffs => 'keine Züge in diesem Zeitraum eingetragen';
+  String get statsWindowNoPuffs => 'keine Züge in diesem Zeitraum geloggt';
 
   @override
   String get statsTriggerHours => 'TRIGGER-STUNDEN';
@@ -2417,7 +2417,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get communityComposerHint => 'Was passiert in deinem Quit?';
+  String get communityComposerHint => 'Wie läuft\'s gerade mit dem Aufhören?';
 
   @override
   String get communityTagIt => 'TAGGE ES';
@@ -2453,7 +2453,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get communityTagRequired =>
-      'Wähl einen Tag — er bringt deinen Post zu den richtigen Leuten.';
+      'Tagge deinen Post — so landet er bei den richtigen Leuten.';
 
   @override
   String communitySosBanner(int count) {
@@ -2660,7 +2660,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get healthM1yBody =>
-      'Dein Risikoprofil sieht aus wie das von jemandem, der nie täglich gedampft hat.';
+      'Dein Risikoprofil sieht aus wie das von jemandem, der nie täglich gevapt hat.';
 
   @override
   String get healthUnlockNote =>
@@ -2668,7 +2668,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get healthSourceNote =>
-      'Basiert auf Rauchstopp-Forschung — die Evidenz zum Dampfen entsteht noch.';
+      'Basiert auf Rauchstopp-Forschung — die Evidenz zum Vapen entsteht noch.';
 
   @override
   String get milestonesTitle => 'Meilensteine';
@@ -2756,7 +2756,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get moodSubtitle => '10 Sekunden. Zählt mehr, als du denkst.';
 
   @override
-  String get moodRough => 'rau';
+  String get moodRough => 'mies';
 
   @override
   String get moodMeh => 'meh';
@@ -2812,7 +2812,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get insightCravingsChartLabel =>
-      'ÜBERSTANDENE VERLANGEN, LETZTE 7 TAGE';
+      'ÜBERSTANDENE CRAVINGS, LETZTE 7 TAGE';
 
   @override
   String get insightHoursChartLabel => 'ZÜGE NACH STUNDE, LETZTE 14 TAGE';
@@ -2822,7 +2822,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String insightPendingBody(String name) {
-    return '$name schreibt jeden Sonntag einen — aus der Woche, die du wirklich protokolliert hast: deine Stunden, deine Stimmungen, deine Erfolge. Bis es eine Woche zu lesen gibt, gibt es nichts zu zeigen.';
+    return '$name schreibt jeden Sonntag einen — aus der Woche, die du wirklich geloggt hast: deine Stunden, deine Stimmungen, deine Erfolge. Bis es eine Woche zu lesen gibt, gibt es nichts zu zeigen.';
   }
 
   @override
@@ -3043,7 +3043,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get memoriesKindPerson => 'Jemand in deinem Leben';
 
   @override
-  String get memoriesKindTrigger => 'Ein Auslöser';
+  String get memoriesKindTrigger => 'Ein Trigger';
 
   @override
   String get memoriesKindMotivation => 'Warum du das machst';
@@ -3084,7 +3084,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get moderationSubjectGone =>
-      'Der Beitrag ist weg; nur die Meldung ist geblieben.';
+      'Der Post ist weg; nur die Meldung ist geblieben.';
 
   @override
   String get moderationAllow => 'Freigeben';
@@ -3097,7 +3097,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get moderationResolveFailed =>
-      'Das ging nicht durch. Der Beitrag ist unverändert.';
+      'Das ging nicht durch. Der Post ist unverändert.';
 
   @override
   String moderationFlaggedAs(String action, String reason) {
@@ -3143,7 +3143,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Verwalte dieses Abo über das Store-Konto, mit dem es gekauft wurde.';
 
   @override
-  String get settingsNotifications => 'Mitteilungen';
+  String get settingsNotifications => 'Benachrichtigungen';
 
   @override
   String get settingsDangerHours => 'Gefahrenstunden';
@@ -3158,7 +3158,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsPrivacyNote =>
-      'Wir verkaufen nie deine Daten. Keine Tracker. Niemals.';
+      'Wir verkaufen nie deine Daten. Keine Werbe-Tracker. Niemals.';
 
   @override
   String get settingsWebsite => 'Website';
@@ -3241,7 +3241,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine Daten bleiben auf deinem Konto. Die Serie brennt weiter.';
 
   @override
-  String get settingsDangerHoursTitle => 'Wann ist das Verlangen am stärksten?';
+  String get settingsDangerHoursTitle =>
+      'Wann treffen dich die Cravings am härtesten?';
 
   @override
   String get settingsDangerHoursNote =>
@@ -3290,10 +3291,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trialEndingPush =>
-      'dein Test endet morgen — wie versprochen, hier die Erinnerung. Keine Überraschungsabbuchung.';
+      'deine Testphase endet morgen — wie versprochen, hier die Erinnerung. Keine Überraschungsabbuchung.';
 
   @override
-  String get trialEndingTitle => 'Der Test endet morgen.';
+  String get trialEndingTitle => 'Die Testphase endet morgen.';
 
   @override
   String get trialEndingBody =>
@@ -3366,7 +3367,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Update: Gatorade gekauft. laufe nach Hause. danke, ehrlich 💙';
 
   @override
-  String get dangerReminderTitle => 'Deine kritische Stunde kommt';
+  String get dangerReminderTitle => 'Deine Gefahrenstunde kommt';
 
   @override
   String get dangerReminderBody =>
@@ -3396,7 +3397,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get slipCurveNoteBoredom =>
-      'Zwei Extra-Tage, gleiches Ziel. Für die leeren Minuten ist das Spiel im Panikmodus einen Tipp entfernt.';
+      'Zwei Extra-Tage, gleiches Ziel. Für die leeren Minuten ist das Spiel im Panik-Modus einen Tipp entfernt.';
 
   @override
   String get slipCurveNoteDrinking =>
@@ -3408,7 +3409,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get slipCurveNoteJustHappened =>
-      'Zwei Extra-Tage, gleiches Ziel. Passiert. Das Log bleibt ehrlich, und morgen ist ein sauberer Tag.';
+      'Zwei Extra-Tage, gleiches Ziel. Passiert. Das Log bleibt ehrlich, und morgen ist ein cleaner Tag.';
 
   @override
   String get widgetDay => 'Tag %1\$d';
@@ -3445,7 +3446,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get milestoneNotifSpark =>
-      'Drei saubere Tage. Das Schwerste liegt hinter dir — deine Flamme brennt.';
+      'Drei cleane Tage. Das Schwerste liegt hinter dir — deine Flamme brennt.';
 
   @override
   String get milestoneNotifWeekFlame =>
@@ -3461,7 +3462,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get milestoneNotifFreedomDay =>
-      'Tag der Freiheit. Der Plan ist durch — und du hast ihn durchgezogen.';
+      'Freiheitstag. Der Plan ist durch — und du hast ihn durchgezogen.';
 
   @override
   String get communityThreadGoneTitle => 'Dieser Thread ist weg';
@@ -3491,7 +3492,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Benachrichtigungen für Cirrus sind in den Einstellungen deines Telefons aus. Schalte sie dort wieder ein, dann funktioniert das hier.';
 
   @override
-  String get settingsPushReplies => 'Antworten auf meine Beiträge';
+  String get settingsPushReplies => 'Antworten auf meine Posts';
 
   @override
   String get settingsPushRepliesNote =>
@@ -3505,7 +3506,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wenn dich jemand in einer Antwort nennt.';
 
   @override
-  String get settingsPushWeekly => 'Wochenrückblick';
+  String get settingsPushWeekly => 'Wochenbericht';
 
   @override
   String get settingsPushWeeklyNote =>
@@ -3519,7 +3520,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pushAskBody =>
-      'Wir melden uns nur zu deinen eigenen Beiträgen. Nie zu denen anderer.';
+      'Wir melden uns nur zu deinen eigenen Posts. Nie zu denen anderer.';
 
   @override
   String get pushAskCta => 'Benachrichtigungen an';
@@ -3532,7 +3533,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationsEmptyBody =>
-      'Wenn jemand auf einen deiner Beiträge antwortet, landet es hier.';
+      'Wenn jemand auf einen deiner Posts antwortet, landet es hier.';
 
   @override
   String notificationsBadgeLabel(int count) {

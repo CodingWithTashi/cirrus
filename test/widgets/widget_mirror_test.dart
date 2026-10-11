@@ -166,7 +166,7 @@ void main() {
   ) async {
     // Kotlin formats these with String.format; a template that lost its %1$d
     // in translation would render a sentence with a hole in it, or throw.
-    for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
+    for (final locale in ['en', 'es', 'fr', 'de', 'it', 'pt']) {
       final (_, store) = await open(tester, locale: Locale(locale));
       final copy = mirrorIn(store)['copy'] as Map<String, dynamic>;
       for (final key in ['day', 'dayPastOne', 'dayPastOther', 'leftAhead', 'leftTight']) {
@@ -364,6 +364,7 @@ void main() {
         'es': 'Abre Cirrus en tu iPhone',
         'fr': 'Ouvre Cirrus sur ton iPhone',
         'de': 'Öffne Cirrus auf deinem iPhone',
+        'it': 'Apri Cirrus sul tuo iPhone',
         'pt': 'Abra o Cirrus no seu iPhone',
       };
       for (final locale in expected.keys) {
@@ -500,8 +501,8 @@ void main() {
     ) async {
       // `String(format:)` reads garbage off the stack for a stray `%`, so a
       // translator who writes "%1$@ %" turns a wrist screen into a memory
-      // bug. Exactly one placeholder, and no other percent, in all five.
-      for (final locale in ['en', 'es', 'fr', 'de', 'pt']) {
+      // bug. Exactly one placeholder, and no other percent, in every locale.
+      for (final locale in ['en', 'es', 'fr', 'de', 'it', 'pt']) {
         final (_, store) = await open(tester, locale: Locale(locale));
         final copy = mirrorIn(store)['copy'] as Map<String, dynamic>;
         for (final key in ['vsLast', 'cravingTimer', 'cravingTimerLate']) {

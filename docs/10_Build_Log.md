@@ -5573,3 +5573,45 @@ Three decisions that are not obvious from the diff:
 **The cost was in the tests, and it is worth knowing why.** Thirty-seven failed, almost all for one reason: they boot the app signed out and `pumpAndSettle`, and the welcome screen's shimmer never settles. `parkOnSignIn(tester)` in `test/helpers.dart` gives a suite that is not about the first screen the still screen it used to get by accident. The three whose expectation really changed say so in place (`app_smoke_test`, `session_restore_test`, `error_handling_test`). `test/widgets/quiz_first_test.dart` pins the table above; the device suites follow the new order (`E2E.emailDoor()`, `.maestro/shared/launch.yaml`).
 
 One new string, `obWelcomeHaveAccount`, in five languages. The guest fallback in `startJourney` (an anonymous account) is still there underneath as the thing that must never strand anyone; nothing in the app routes to it now.
+
+## 50. A SIXTH LANGUAGE, AND GERMAN HELD TO ITS OWN WORDS (Oct 11) — Italian in the app, 63 German strings brought into line
+
+The founder had store screenshots in five languages on the desk — en, es, fr, de and **it** — and the app could not show a word of Italian. Asked for German and Italian, "accurate and consistent", spoken rather than formal. German was already there (944 of 944 keys), so this is two jobs: write Italian, and audit German against the same bar.
+
+### 50.1 Italian
+
+`lib/l10n/app_it.arb`, 944 keys, **Claude's draft, not yet read by an Italian speaker** — the same caveat §45.2 carried for the site. Its vocabulary is the store art's, read off the eight `it/` screenshots before a string was written: **tiro**, **SEGNA UN TIRO**, **voglie** (battute), **diario**, **svapo / svapare**, **tasto panico**, **A scalare**, **metà strada**, **zona rossa**, **Ci sono io**. Where the screenshots and the app's own English disagree (a community filter chip reads *Mete*; the app's tag is a milestone), the app says **Traguardo** and the art is the outlier.
+
+Four decisions that are not obvious from the file:
+
+- **Nobody is addressed with a gender.** Italian agrees participles and adjectives with the person, and the app does not know who it is talking to. So: *avere* verbs, nouns and adverbs. "Ci sono" for *I'm ready*, "Rieccoti" for *Welcome back*, "hai ripreso il ritmo" for *you recovered*, "Blocco attivo" for *Blocked*.
+- **Nothing is put in front of an interpolated word.** `{why}` arrives as *salute*, *soldi* or *forma fisica*, so `panicWhyLine` reads "Lo fai per questo: {why}". A date arrives as *8 ott* or *1 set*, which take different articles, so dates sit after a colon or a dot. `{period}` follows "ogni". The weekday is never first in its sentence, because `DateFormat` hands it over in lower case: "Che {weekday} pesante, eh?".
+- **Freedom Day stays English**, as the store art has it. es/fr/de/pt translate it; Italian takes *X Day* as readily as it takes *weekend*.
+- **Two plurals English does not have.** `communityRepliedCount` and `communitySosBanner` are plain strings in the template and ICU plurals in Italian ("1 ha già risposto" / "12 hanno già risposto"). gen-l10n parses each locale on its own, the parity test compares placeholder names, and both placeholders are `int`.
+
+`DateFormat.j('it')` gives a bare, zero-padded hour (`15`, `01`), which is what lets "il tuo picco delle {hour}" stand for every hour without an *ore*. Checked by running it.
+
+The seven places a locale lives are in CLAUDE.md now. All seven are done: the ARB, the language picker, the crash screen, `pushCopy.ts` (4 kinds + `PUSH_LOCALES`), `values-it/cirrus_widget_strings.xml`, and the six tests whose locale lists decide what gets checked at all.
+
+### 50.2 German
+
+Sixty-three strings, every one of them an edit to copy that already shipped. Read against English and against itself:
+
+- **One word per thing.** `Verlangen` / `Cravings`, `kritische Stunden` / `Risikostunden` / `Gefahrenstunden`, `Test` / `Testphase`, `Beitrag` / `Post`, `Auslöser` / `Trigger`, `sauber` / `clean`, `Panikknopf` / `Panik-Button`, `Wochenrückblick` / `Wochenbericht`, `eingetragen` / `protokolliert` / `geloggt` — each pair or triple was the same English word. The one the main surfaces already used wins.
+- **vapen, not dampfen.** The app said *dampffrei* and *gedampft*; cirrusquit.com/de says *vapen* seventeen times and the store art says *vape-frei*.
+- **Three that were wrong, not merely uneven.** "Keine Tracker." where English says *No ad trackers* — a larger promise than the app keeps, in two places. "Kleine **Züge** gewinnen das hier" for *small moves*, in an app where *Zug* is a puff. And `{hour}` arrives as `15 Uhr`, so "Dein {hour}-Hoch" rendered "Dein 15 Uhr-Hoch"; it is "Dein Hoch um {hour}" now, and the panic flow's line the same.
+- **A tag is not a day.** "Wähl einen Tag" in an app that says *Tag 1*, *Tag 12*. "Tagge deinen Post".
+- `obFactTried` had lost *young* from the cited statistic. `coachFreeCounter` had lost *left*.
+
+### 50.3 Left alone, deliberately
+
+- **German keeps `Freiheitstag`.** The German store art says *Freedom Day*; the app and the live site say *Freiheitstag* on 28 lines between them (22 in the ARB, 6 on the site). One line of artwork is the cheaper side to change — founder's call.
+- **`Free` and `Gratis` are both the name of the free plan** in es, fr, de and pt alike ("Du bist auf Free." / "Gratis-Plan"). It is one pattern in four languages, so it is not a German fix. Italian says *Free* throughout.
+- **Two call sites lowercase a label for the middle of a sentence** — `panic_screens.dart:545` and `profile_screen.dart:67`. Right for five languages and wrong for German, whose nouns keep their capital: "für: gesundheit", "· reduktion ·". Not a string, so not fixed here.
+- **`Info.plist` declares no `CFBundleLocalizations`**, for any language. The app follows the phone regardless; the App Store's *Languages* line is what reads the binary.
+- **The crisis line in `coachSafetyNote` is 988 (US & Canada) in every language**, Italian included. Faithful to English, and no use to someone in Milan.
+- **The site and both store listings have no Italian.** `cirrus-landing` is five languages; the registry and the checks are built for a sixth.
+
+### 50.4 Gates
+
+`flutter analyze` clean · `flutter test` **1978 passed** · `functions`: `npm run verify` **326 passed** · every Italian string with a count, a name, a date, an hour or a period rendered through the generated class with real values and read (1 and many; *Ana*, *Élodie*, *Zyx*; `01` and `15`). Not driven on a device: nothing here has been seen in the app on a phone, and Italian is 15–40% longer than English in exactly the short slots. The commit button, the mood row, the badge names and the profile tiles were shortened for it by arithmetic, not by eye.

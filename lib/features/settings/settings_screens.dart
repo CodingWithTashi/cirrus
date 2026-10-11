@@ -446,6 +446,7 @@ class SettingsScreen extends ConsumerWidget {
     'es': 'Español',
     'fr': 'Français',
     'de': 'Deutsch',
+    'it': 'Italiano',
     'pt': 'Português',
   };
 

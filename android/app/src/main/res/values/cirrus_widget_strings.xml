@@ -5,7 +5,7 @@
      text baked into previewLayout (API 31+ inflates the layout with its XML
      defaults, with no RemoteViews action applied). Everything the widget shows
      in use is pushed from Dart, pre-localized, so ARB stays the single source
-     for the rest. test/android_widget_test.dart pins these five locales in
+     for the rest. test/android_widget_test.dart pins these six locales in
      parity, exactly as l10n_parity_test.dart does for the ARBs. -->
 <resources>
     <string name="cw_picker_label">Cirrus</string>

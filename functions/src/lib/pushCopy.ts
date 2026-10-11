@@ -1,5 +1,5 @@
 /**
- * Push copy, in the five languages the app ships.
+ * Push copy, in the six languages the app ships.
  *
  * The app's rule is zero hardcoded UI strings, and a push notification is UI —
  * arguably the most exposed UI there is, since the OS draws it before the app
@@ -35,9 +35,9 @@ export interface Copy {
  * One or two forms per language.
  *
  * `other` carries `{count}` and is used from two upwards; a key without one
- * never counts. English, Spanish, French, German and Portuguese all take the
- * same plain one/other split, so this needs no CLDR machinery — but it does
- * need the placeholder present in every `other`, which a test pins.
+ * never counts. English, Spanish, French, German, Italian and Portuguese all
+ * take the same plain one/other split, so this needs no CLDR machinery — but
+ * it does need the placeholder present in every `other`, which a test pins.
  */
 interface Forms {
   readonly one: Copy;
@@ -67,8 +67,15 @@ const COPY: Record<PushKey, Record<string, Forms>> = {
     de: {
       one: {title: 'Jemand hat geantwortet', body: 'Schau, was geschrieben wurde.'},
       other: {
-        title: 'Dein Beitrag bekommt Antworten',
+        title: 'Dein Post bekommt Antworten',
         body: '{count} neue Antworten.',
+      },
+    },
+    it: {
+      one: {title: 'Qualcuno ha risposto', body: 'Vai a vedere cosa ti hanno scritto.'},
+      other: {
+        title: 'Il tuo post sta ricevendo risposte',
+        body: '{count} nuove risposte.',
       },
     },
     pt: {
@@ -89,6 +96,9 @@ const COPY: Record<PushKey, Record<string, Forms>> = {
     de: {
       one: {title: 'Jemand hat dich erwähnt', body: 'Du wurdest in einer Antwort erwähnt.'},
     },
+    it: {
+      one: {title: 'Qualcuno ti ha menzionato', body: 'Ti hanno menzionato in una risposta.'},
+    },
     pt: {one: {title: 'Alguém mencionou-te', body: 'Foste mencionado numa resposta.'}},
   },
 
@@ -97,6 +107,12 @@ const COPY: Record<PushKey, Record<string, Forms>> = {
     es: {one: {title: 'Alguien te cubrió', body: 'Alguien respondió a tu SOS. Ve a verlo.'}},
     fr: {one: {title: "Quelqu'un t'a soutenu", body: 'Un quitteur a répondu à ton SOS. Va voir.'}},
     de: {one: {title: 'Jemand war für dich da', body: 'Jemand hat auf dein SOS geantwortet. Schau mal.'}},
+    it: {
+      one: {
+        title: 'Qualcuno ti ha coperto le spalle',
+        body: 'Qualcuno ha risposto al tuo SOS. Vai a vedere.',
+      },
+    },
     pt: {one: {title: 'Alguém apoiou-te', body: 'Alguém respondeu ao teu SOS. Vai ver.'}},
   },
 
@@ -104,13 +120,14 @@ const COPY: Record<PushKey, Record<string, Forms>> = {
     en: {one: {title: 'Your week, read back to you', body: 'This week’s insight is ready.'}},
     es: {one: {title: 'Tu semana, contada', body: 'Tu resumen de la semana está listo.'}},
     fr: {one: {title: 'Ta semaine, racontée', body: 'Ton bilan de la semaine est prêt.'}},
-    de: {one: {title: 'Deine Woche, zurückgespiegelt', body: 'Dein Wochenrückblick ist da.'}},
+    de: {one: {title: 'Deine Woche, zurückgespiegelt', body: 'Dein Wochenbericht ist da.'}},
+    it: {one: {title: 'La tua settimana, raccontata', body: 'Il tuo report settimanale è pronto.'}},
     pt: {one: {title: 'A tua semana, contada', body: 'O teu resumo da semana está pronto.'}},
   },
 };
 
 /** Every language this table is expected to carry. Pinned by a test. */
-export const PUSH_LOCALES: readonly string[] = ['en', 'es', 'fr', 'de', 'pt'];
+export const PUSH_LOCALES: readonly string[] = ['en', 'es', 'fr', 'de', 'it', 'pt'];
 
 /**
  * Copy for [key] in the closest language we have, for [count] items.

@@ -237,14 +237,14 @@ void main() {
       expect(read('$androidRes/values/styles.xml').contains('CirrusWidget'), isFalse);
     });
 
-    test('the launcher-visible strings exist in all five locales', () {
+    test('the launcher-visible strings exist in all six locales', () {
       // The picker label, its description and the previewLayout placeholders
       // are read out of our resources by the launcher before a line of our code
       // runs. They are the only user-visible strings in this app that cannot
       // come from an ARB, so they get the same parity gate the ARBs do.
       final en = namesIn('$androidRes/values/cirrus_widget_strings.xml', 'string');
       expect(en, contains('cw_picker_label'));
-      for (final locale in ['es', 'fr', 'de', 'pt']) {
+      for (final locale in ['es', 'fr', 'de', 'it', 'pt']) {
         expect(
           namesIn('$androidRes/values-$locale/cirrus_widget_strings.xml', 'string'),
           en,

@@ -8,7 +8,7 @@
  * call entirely, so the worst content is also the cheapest to refuse.
  *
  * Precision over recall, deliberately:
- * - Every entry must be unambiguous in ALL five app locales (en/es/fr/de/pt).
+ * - Every entry must be unambiguous in ALL six app locales (en/es/fr/de/it/pt).
  *   Cross-language false friends are real ("dick" is German for "thick",
  *   "retard" is French for "delay", "fag" is British for cigarette — none of
  *   them are on these lists). The model remains the multilingual, contextual
