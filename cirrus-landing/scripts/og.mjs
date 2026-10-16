@@ -303,6 +303,20 @@ const POSTS = [
       { n: '2–4 wks', label: 'mostly over', color: VOLT },
     ],
   },
+  {
+    slug: 'is-vaping-worse-than-smoking',
+    eyebrow: 'VAPING VS SMOKING · WHAT THE EVIDENCE SAYS',
+    headline: 'Is vaping worse than smoking?',
+    // The post's three answers in four figures: what burning makes (red), the
+    // quit evidence that makes switching worth it (volt), and the two places a
+    // vape comes out worse than the shop admits (ember).
+    blocks: [
+      { n: '69', label: 'carcinogens in smoke', color: '#ff5c5c' },
+      { n: '9 vs 6', label: 'quit per 100, vs NRT', color: VOLT },
+      { n: '20 packs', label: 'lead, one disposable', color: EMBER },
+      { n: '2.29×', label: 'COPD rate, vapers', color: EMBER },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line
