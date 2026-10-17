@@ -325,6 +325,34 @@ final class SignInCancelledException extends AuthException {
   const SignInCancelledException();
 }
 
+/// The native sheet ended without an answer either way: Apple's
+/// `ASAuthorizationError.unknown` (1000), which is what it returns when no
+/// Apple ID is signed in on the device. Nothing broke on our side and a retry
+/// will end the same way, so it gets copy that points at email rather than the
+/// generic "that one's on us".
+///
+/// [detail] carries the provider's code for the funnel, like
+/// [AuthProviderException]'s.
+final class SignInUnavailableException extends AuthException {
+  const SignInUnavailableException(this.detail);
+
+  final String detail;
+}
+
+/// A provider failure the taxonomy above has no name for. The views treat it
+/// exactly like any other unexpected error; it exists so `sign_in_failed` can
+/// say WHICH one. Until Oct 16 2026 every such failure arrived as
+/// `code: other`, and thirteen Apple failures in a row could not be told
+/// apart from each other.
+///
+/// [detail] is the provider's own code (`unknown/1000`,
+/// `cloud_firestore/permission-denied`), sanitized — never its message.
+final class AuthProviderException extends AuthException {
+  const AuthProviderException(this.detail);
+
+  final String detail;
+}
+
 /// The store said no. Each case has its own copy in `lpErrorCopy`, because
 /// they ask different things of the user; none of them charged anything.
 sealed class BillingException implements Exception {

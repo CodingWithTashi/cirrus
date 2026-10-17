@@ -59,6 +59,15 @@ void main() {
         'it': 'traguardo',
         'pt': 'marco',
       },
+      // The evening check-in, in each locale's own word for it.
+      'checkin': {
+        'en': 'check-in',
+        'es': 'repaso',
+        'fr': 'point du soir',
+        'de': 'check-in',
+        'it': 'punto della sera',
+        'pt': 'balanço',
+      },
       'streakRisk': {
         'en': 'streak',
         'es': 'racha',

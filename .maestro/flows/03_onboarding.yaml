@@ -1,5 +1,6 @@
 # Answer all onboarding questions, create the account when the commit asks for
-# one, and go on to the paywall. The quiz comes BEFORE the account (Oct 5 2026).
+# one, and land on the Day-1 checklist. The quiz comes BEFORE the account
+# (Oct 5 2026), and onboarding ends on Day 1, never on a paywall (Oct 16 2026).
 # Answers: woman, born 1985, tried 2–5 times, always in hand, 200 puffs/day,
 # 50 mg, $25/week, first puff within 5 min, why health+money, worries
 # cravings+failing, taper over 30 days, coach named Koda, why-words skipped,
@@ -8,7 +9,7 @@
 appId: "${maestro.platform == 'android' ? 'com.quitvape.last_puff' : 'com.quitvape.lastPuff'}"
 env:
   PASSWORD: cirrus-demo
-name: 'Onboarding questions through to the paywall'
+name: 'Onboarding questions through to Day 1'
 tags:
   - onboarding
 ---
@@ -135,7 +136,8 @@ tags:
 # D4 notifications — declined, so no OS sheet is involved
 - tapOn: 'Maybe later'
 
-# D5 paywall: the end of the questions
+# The end of the questions is the app: Day 1, with no paywall in between.
 - extendedWaitUntil:
-    visible: 'Your plan is ready.'
+    visible: 'Day 1. Let''s go.'
     timeout: 30000
+- assertNotVisible: 'Continue with Free plan →'

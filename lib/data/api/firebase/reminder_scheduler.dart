@@ -93,6 +93,7 @@ class ReminderScheduler implements ReminderSink {
   static const _channelId = 'danger_hours';
   static const _trialChannelId = 'trial_reminders';
   static const _milestoneChannelId = 'milestone_celebrations';
+  static const _checkinChannelId = 'evening_checkins';
 
   Future<void> _ensureReady() async {
     if (_ready) return;
@@ -274,6 +275,16 @@ class ReminderScheduler implements ReminderSink {
   /// two above them. A celebration gets its own channel so someone who wants
   /// the danger-hour nudge but not the confetti can say so in system settings.
   NotificationDetails _oneShotDetails(ReminderKind kind) => switch (kind) {
+    ReminderKind.checkin => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _checkinChannelId,
+        'Evening check-ins',
+        channelDescription: 'One nudge an evening to log how the day went.',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      ),
+      iOS: DarwinNotificationDetails(),
+    ),
     ReminderKind.milestone => const NotificationDetails(
       android: AndroidNotificationDetails(
         _milestoneChannelId,

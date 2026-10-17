@@ -47,4 +47,31 @@ void main() {
   test('garbage that does not parse as a URI is refused', () {
     expect(PushService.routeFor(msg('::not a uri::'), allowed), isNull);
   });
+
+  // Found on a Pixel 8 read of firebase_messaging 16.6.0's Android plugin
+  // (Oct 16 2026): Android 13+ reports a permanent refusal as its own value,
+  // and the old wildcard filed it under "never asked" — so the second-chance
+  // ask offered a button the OS ignores to exactly the people who said no.
+  test('the OS answer maps to our three words, refusals as refusals', () {
+    expect(
+      PushService.permissionFrom(AuthorizationStatus.authorized),
+      PushPermission.granted,
+    );
+    expect(
+      PushService.permissionFrom(AuthorizationStatus.provisional),
+      PushPermission.granted,
+    );
+    expect(
+      PushService.permissionFrom(AuthorizationStatus.denied),
+      PushPermission.denied,
+    );
+    expect(
+      PushService.permissionFrom(AuthorizationStatus.deniedPermanently),
+      PushPermission.denied,
+    );
+    expect(
+      PushService.permissionFrom(AuthorizationStatus.notDetermined),
+      PushPermission.notAsked,
+    );
+  });
 }

@@ -100,6 +100,9 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
     super.initState();
     _router = ref.read(routerProvider)..routerDelegate.addListener(_flush);
     _taps = ref.read(reminderCoordinatorProvider)?.opened.listen((kind) {
+      // Counted on arrival, before any routing decision: a tap that lands on
+      // a signed-out phone still says the reminder brought somebody back.
+      ref.read(analyticsProvider).reminderOpened(kind.name);
       _pending = kind;
       _flush();
     });
@@ -127,6 +130,10 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
       case ReminderKind.danger:
         // The nudge is about the hour ahead; Home is where it is lived. The
         // redirect still sends a signed-out phone to sign-in.
+        _router.go(Routes.home);
+      case ReminderKind.checkin:
+        // At the check-in hour Home is already showing the cards it asks
+        // about: "No puffs today?" and the evening mood.
         _router.go(Routes.home);
       case ReminderKind.milestone:
         // The badge it is about lives on the milestones grid, which is a
@@ -181,6 +188,7 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
               onMilestonesAdopted: ref
                   .read(settingsStoreProvider.notifier)
                   .adoptMilestones,
+              checkinCopy: (checkin) => _checkinCopy(l10n, checkin),
               now: now,
             )
             .ignore();
@@ -189,6 +197,22 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
     return child;
   }
 }
+
+/// The evening check-in's words for one day. Past Freedom Day the title drops
+/// the number: Home stops counting "Day N" there and says how far past the day
+/// it is instead, and a notification that disagreed with it would be a second
+/// count of the same thing.
+({String title, String body}) _checkinCopy(
+  AppLocalizations l10n,
+  CheckinReminder checkin,
+) => (
+  title: checkin.planDay <= checkin.totalDays
+      ? l10n.checkinNotifTitle(checkin.planDay)
+      : l10n.checkinNotifTitlePast,
+  body: checkin.limit == 0
+      ? l10n.checkinNotifBodyZero
+      : l10n.checkinNotifBody(checkin.limit),
+);
 
 /// The celebration copy for one badge.
 ///

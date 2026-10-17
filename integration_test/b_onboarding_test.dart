@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/core/widgets/lp_selectables.dart';
 import 'package:last_puff/core/widgets/numeric_keypad.dart';
 import 'package:last_puff/data/stores/providers.dart';
@@ -153,16 +154,15 @@ void main() {
     expect(e2e.container.read(onboardingProvider).step, ObStep.notifications,
         reason: 'on screen: ${e2e.texts()}');
     await e2e.tapText(e2e.l10n.commonMaybeLater);
-    await e2e.waitFor(const Duration(seconds: 2));
-
-    // Paywall, and the free path must be visible, never hidden (docs/02 §4).
-    expect(e2e.showing(e2e.l10n.paywallFreeLink), isTrue,
-        reason: 'on screen: ${e2e.texts()}');
-
-    await e2e.tapText(e2e.l10n.paywallFreeLink);
-    await e2e.waitFor(const Duration(seconds: 1));
-    await e2e.tapText(e2e.l10n.freePlanCta);
     await e2e.waitFor(const Duration(seconds: 3));
+
+    // Onboarding ends on Day 1 — never on a paywall (Oct 16 2026, free first).
+    expect(
+      e2e.container.read(routerProvider).state.uri.path,
+      Routes.day1,
+      reason: 'on screen: ${e2e.texts()}',
+    );
+    expect(e2e.showing(e2e.l10n.paywallFreeLink), isFalse);
 
     // The backend minted a real day-1 journey from the answers above.
     final journey = e2e.container.read(quitStoreProvider);

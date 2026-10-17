@@ -10,13 +10,25 @@ import '../../data/api/firebase/push_service.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
 
-/// Asks for notification permission at the one moment it obviously pays.
+/// Why this ask is happening — which decides the words on the sheet.
 ///
-/// Somebody has just put something into the community and is, right now, the
-/// most likely they will ever be to want to hear back about it. Onboarding's
-/// D4 screen asks earlier and keeps asking earlier — this is the second
-/// chance for the people who tapped "Maybe later" there, which never opened
-/// the OS dialog at all.
+/// [community]: they just posted or replied, and want to hear back.
+/// [dayOne]: they just finished the Day-1 checklist, and the evening
+/// check-in is tonight. [survived]: they just beat a craving, and the next
+/// one is coming.
+enum PushAskReason { community, dayOne, survived }
+
+/// Asks for notification permission at the moments it obviously pays.
+///
+/// Somebody has just put something into the community, finished their first
+/// day's setup, or beaten a craving — and is, right now, the most likely they
+/// will ever be to want what notifications bring. Onboarding's D4 screen asks
+/// earlier and keeps asking earlier — this is the second chance for the people
+/// who tapped "Maybe later" there, which never opened the OS dialog at all.
+/// 11 of 20 real people declined at D4 in the Oct 5 2026 read, and until
+/// Oct 16 the community was the only second chance, so somebody who never
+/// posted never got one (docs/03 §8's re-ask after a survived craving was
+/// documented and not built).
 ///
 /// Three rules, and each one exists because breaking it makes things worse:
 ///
@@ -24,7 +36,8 @@ import '../../domain/analytics/lp_events.dart';
 ///   `requestPermission()` after two dismissals without showing anything, so
 ///   asking a refused user is a button that visibly does nothing. Their route
 ///   back is system settings, which the notifications sheet says.
-/// * **Only once, ever.** Tracked in `SettingsState`, so it survives a
+/// * **Only once, ever** — across every [PushAskReason]: whichever moment
+///   comes first is the one. Tracked in `SettingsState`, so it survives a
 ///   restart. A prompt that returns after every post is how an app teaches
 ///   people to refuse it.
 /// * **After the content is away.** The post is already published and the
@@ -32,27 +45,35 @@ import '../../domain/analytics/lp_events.dart';
 ///   something standing between a person and posting.
 Future<void> maybeAskPushPermission(
   BuildContext context,
-  WidgetRef ref,
-) async {
+  WidgetRef ref, {
+  PushAskReason reason = PushAskReason.community,
+}) async {
   final settings = ref.read(settingsStoreProvider);
   // Nothing to gain from asking somebody who has switched notifications off
   // in our own settings — they have already answered this question.
   if (settings.pushPromptShown || !settings.notificationsOn) return;
-  if (await PushService.permissionStatus() != PushPermission.notAsked) return;
+  // No OS to ask: the fake backend, desktop and web.
+  final permissions = ref.read(pushPermissionsProvider);
+  if (permissions == null) return;
+  if (await permissions.status() != PushPermission.notAsked) return;
   if (!context.mounted) return;
 
   ref.read(settingsStoreProvider.notifier).markPushPromptShown();
   final accepted = await showModalBottomSheet<bool>(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _AskSheet(),
+    // Its own height, not the default 9/16 of the screen: the Day-1 and
+    // Survived copy run longer than the community line did, and on a small
+    // phone the capped sheet pushed "Maybe later" off the bottom.
+    isScrollControlled: true,
+    builder: (_) => _AskSheet(reason),
   );
   if (accepted != true) {
     ref.read(analyticsProvider).notifPrompt(granted: false);
     return;
   }
 
-  final granted = await PushService.requestPermission();
+  final granted = await permissions.request();
   ref.read(analyticsProvider).notifPrompt(granted: granted);
   // Register the freshly minted token now: the alternative is waiting for the
   // next resume or cold start, which loses the first day of replies — exactly
@@ -61,7 +82,9 @@ Future<void> maybeAskPushPermission(
 }
 
 class _AskSheet extends StatelessWidget {
-  const _AskSheet();
+  const _AskSheet(this.reason);
+
+  final PushAskReason reason;
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +99,21 @@ class _AskSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.pushAskTitle, style: LpType.title(lp.textPrimary)),
+              Text(
+                switch (reason) {
+                  PushAskReason.community => l10n.pushAskTitle,
+                  PushAskReason.dayOne => l10n.pushAskDayOneTitle,
+                  PushAskReason.survived => l10n.pushAskSurvivedTitle,
+                },
+                style: LpType.title(lp.textPrimary),
+              ),
               const SizedBox(height: 8),
               Text(
-                l10n.pushAskBody,
+                switch (reason) {
+                  PushAskReason.community => l10n.pushAskBody,
+                  PushAskReason.dayOne => l10n.pushAskDayOneBody,
+                  PushAskReason.survived => l10n.pushAskSurvivedBody,
+                },
                 style: LpType.body14(lp.textSecondary),
               ),
               const SizedBox(height: 18),

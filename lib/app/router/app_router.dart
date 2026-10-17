@@ -56,10 +56,6 @@ abstract final class Routes {
   /// The beat after a completed purchase (`PremiumWelcomeScreen`), shown
   /// with `pushReplacement` over whichever screen sold it.
   static const premiumWelcome = '/premium/welcome';
-
-  /// The same screen on the way out of onboarding: its CTA carries on to the
-  /// Day-1 checklist instead of popping, and its rows are not doors.
-  static const premiumWelcomeDay1 = '$premiumWelcome?next=day1';
   static const day1 = '/day1';
   static const home = '/home';
   static const stats = '/stats';
@@ -167,12 +163,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith(Routes.moderation) ||
           path.startsWith(Routes.memories) ||
           path.startsWith(Routes.slip) ||
-          path.startsWith(Routes.day1);
+          path.startsWith(Routes.day1) ||
+          // Every paywall sells against a plan the person already has. Since
+          // onboarding stopped ending on one (Oct 16 2026, free first), no
+          // route reaches a paywall without a journey — this makes that a
+          // rule rather than a coincidence, so the paywall needs no
+          // "create the journey here" branch.
+          path.startsWith(Routes.paywall) ||
+          path.startsWith(Routes.premiumWelcome);
       if (!authed && needsJourney) return Routes.auth;
       // Day one, checklist unfinished, not skipped: the shell tabs land on
       // the checklist instead. This is what lets the walkthrough survive an
       // app kill — the tour store is session-local and `/day1` is otherwise
-      // reachable only from the paywall, so a force-quit mid-tour used to
+      // reachable only from the end of onboarding, so a force-quit mid-tour used to
       // strand a partly ticked checklist with no route back to it. Root tab
       // paths only: deep routes (panic, compose, settings) stay untouched,
       // and while the tour is actually running the user is on those tabs on
@@ -227,9 +230,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.premiumWelcome,
         pageBuilder: (_, state) => CustomTransitionPage(
           name: state.path,
-          child: PremiumWelcomeScreen(
-            onboarding: state.uri.queryParameters['next'] == 'day1',
-          ),
+          child: const PremiumWelcomeScreen(),
           transitionDuration: const Duration(milliseconds: 300),
           transitionsBuilder: (_, animation, _, child) =>
               FadeTransition(opacity: animation, child: child),

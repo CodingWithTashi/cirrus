@@ -25,8 +25,8 @@ import '../helpers.dart';
 /// The contract under test: a free account sees the real surface — dimmed,
 /// never mocked — with one lock card that names what Premium adds *here* and
 /// opens the paywall tagged with that surface's `source`; a paying account
-/// sees no gate anywhere; and the launch paywall shows a known-free user once
-/// a day, never a paying one, never anyone whose tier is unknown.
+/// sees no gate anywhere; and the day-3 offer card shows a known-free user on
+/// a milestone day, never a paying one, never anyone whose tier is unknown.
 void main() {
   late AppLocalizations l10n;
   setUpAll(() async {
@@ -560,7 +560,7 @@ void main() {
     });
   });
 
-  group('the launch paywall', () {
+  group('the day-3 offer', () {
     // The seeded fixture is a day-12 journey and 12 is not a milestone day,
     // so the clock seam moves the account onto one. Two days on is day 14.
     //
@@ -577,11 +577,17 @@ void main() {
       WidgetTester tester, {
       required Map<String, dynamic>? entitlement,
       String? shownDay,
+      String? closedDay,
       DateTime? now,
+      RecordingAnalytics? analytics,
     }) async {
       ignoreFontWidthOverflow();
       final container = ProviderContainer(
-        overrides: fastBackendOverrides(premium: false, now: now ?? milestone),
+        overrides: fastBackendOverrides(
+          premium: false,
+          now: now ?? milestone,
+          analytics: analytics,
+        ),
       );
       addTearDown(container.dispose);
       final fake = container.read(fakeServerProvider)..signIn('launch@test');
@@ -604,11 +610,9 @@ void main() {
       } else {
         fake.putEntitlement(entitlement);
       }
-      if (shownDay != null) {
-        container
-            .read(settingsStoreProvider.notifier)
-            .markLaunchPaywallShown(shownDay);
-      }
+      final settings = container.read(settingsStoreProvider.notifier);
+      if (shownDay != null) settings.markLaunchPaywallShown(shownDay);
+      if (closedDay != null) settings.closeOfferCard(closedDay);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -621,28 +625,106 @@ void main() {
       return container;
     }
 
-    testWidgets('a known-free user sees it on a milestone day, over Home, '
-        'and it is remembered', (tester) async {
-      final container = await launch(tester, entitlement: null);
-      expectPaywallFrom(container, 'launch');
+    // Below the fold on Home, so built but offstage until scrolled to:
+    // [offerAnywhere] is for presence, [offerCard] for what is on screen.
+    Finder offerAnywhere() =>
+        find.text(l10n.homeOfferTitle(14), skipOffstage: false);
+    Finder offerCard() => find.text(l10n.homeOfferTitle(14));
+
+    testWidgets('a known-free user gets a card on Home — never a paywall '
+        'over it — and it is counted', (tester) async {
+      final analytics = RecordingAnalytics();
+      final container = await launch(
+        tester,
+        entitlement: null,
+        analytics: analytics,
+      );
+
+      // Oct 16 2026, free first: the launch no longer pushes a paywall.
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(analytics.names, isNot(contains('paywall_viewed')));
+      await reveal(tester, offerAnywhere());
+      expect(offerCard(), findsOneWidget);
       expect(
         container.read(settingsStoreProvider).launchPaywallShownDay,
         today,
       );
-
-      // Home is underneath: closing the paywall lands there, not on splash.
-      container.read(routerProvider).pop();
-      await tester.pumpAndSettle();
-      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(container.read(settingsStoreProvider).launchPaywallShownCount, 1);
+      expect(
+        analytics.propsOfAll('gate_shown'),
+        anyElement(equals({'source': 'offer_card', 'plan_day': 14})),
+      );
     });
 
-    testWidgets('not twice in one day', (tester) async {
+    testWidgets('it opens the paywall it names, which closes back onto Home '
+        'with the card gone for the day', (tester) async {
+      final analytics = RecordingAnalytics();
+      final container = await launch(
+        tester,
+        entitlement: null,
+        analytics: analytics,
+      );
+      await reveal(tester, offerAnywhere());
+
+      await tester.tap(offerCard());
+      await tester.pumpAndSettle();
+      expectPaywallFrom(container, 'offer_card');
+      expect(analytics.propsOfAll('gate_tapped'), [
+        {'source': 'offer_card'},
+      ]);
+
+      // Every paywall has a visible way out now.
+      await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+      await tester.pumpAndSettle();
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(
+        analytics.propsOfAll('paywall_dismissed').single['source'],
+        'offer_card',
+      );
+      expect(offerAnywhere(), findsNothing);
+      expect(container.read(settingsStoreProvider).offerCardClosedDay, today);
+    });
+
+    testWidgets('its close button closes it, and the close outlasts the '
+        'session', (tester) async {
+      final container = await launch(tester, entitlement: null);
+      await reveal(tester, offerAnywhere());
+
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: offerCard(),
+            matching: find.byType(Dismissible),
+          ),
+          matching: find.bySemanticsLabel(l10n.commonClose),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(offerAnywhere(), findsNothing);
+      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(container.read(settingsStoreProvider).offerCardClosedDay, today);
+    });
+
+    testWidgets('a second launch the same day shows the same card, and does '
+        'not count it twice', (tester) async {
       final container = await launch(
         tester,
         entitlement: null,
         shownDay: today,
       );
-      expect(container.read(routerProvider).state.uri.path, Routes.home);
+      await reveal(tester, offerAnywhere());
+      expect(offerCard(), findsOneWidget);
+      expect(container.read(settingsStoreProvider).launchPaywallShownCount, 1);
+    });
+
+    testWidgets('a card closed earlier today stays closed', (tester) async {
+      await launch(
+        tester,
+        entitlement: null,
+        shownDay: today,
+        closedDay: today,
+      );
+      expect(offerAnywhere(), findsNothing);
     });
 
     testWidgets('never for a paying account', (tester) async {
@@ -652,6 +734,7 @@ void main() {
       );
       expect(container.read(isPremiumProvider), isTrue);
       expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(offerAnywhere(), findsNothing);
       expect(
         container.read(settingsStoreProvider).launchPaywallShownDay,
         isNull,
@@ -659,14 +742,18 @@ void main() {
     });
 
     testWidgets('nothing on an ordinary day', (tester) async {
-      // This is the change. It used to fire on EVERY launch-day of a free
-      // account's life — the interstitial docs/02 §5 forbids in its own words.
+      // It used to fire on EVERY launch-day of a free account's life — the
+      // interstitial docs/02 §5 forbids in its own words.
       final container = await launch(
         tester,
         entitlement: null,
         now: LpDate.addDays(DateTime.now(), 3), // plan day 15
       );
       expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(
+        find.text(l10n.homeOfferTitle(15), skipOffstage: false),
+        findsNothing,
+      );
       expect(
         container.read(settingsStoreProvider).launchPaywallShownDay,
         isNull,
@@ -720,6 +807,7 @@ void main() {
         },
       );
       expect(container.read(routerProvider).state.uri.path, Routes.home);
+      expect(offerAnywhere(), findsNothing);
     });
   });
 }

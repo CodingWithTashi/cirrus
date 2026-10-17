@@ -768,11 +768,10 @@ void main() {
   });
 
   group('what the cards may claim', () {
-    testWidgets('a returning user reads the upgrade framing, not "your plan '
-        'is ready"', (tester) async {
+    testWidgets('a paywall always reads the upgrade framing — onboarding no '
+        'longer ends on one', (tester) async {
       await open(tester, Routes.paywall);
       expect(find.text(l10n.paywallTitleUpgrade), findsOneWidget);
-      expect(find.text(l10n.paywallTitle), findsNothing);
     });
 
     testWidgets('the founding-price line is off while the offer is', (

@@ -14,6 +14,7 @@ import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 import 'package:last_puff/features/onboarding/steps/payoff_steps.dart';
 import 'package:last_puff/features/onboarding/steps/welcome_step.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers.dart';
 
@@ -29,8 +30,9 @@ import '../helpers.dart';
 /// - Nobody who already has a plan answers the quiz twice. The welcome screen
 ///   carries "Log in", and signing in to an account with a journey goes Home
 ///   from either door.
-/// - Nobody reaches the notifications ask, the paywall or a created journey
-///   without an account. The step after the commit is only ever entered with
+/// - Nobody reaches the notifications ask or a created journey without an
+///   account, and onboarding ends on Day 1 — never on a paywall (Oct 16
+///   2026, free first). The step after the commit is only ever entered with
 ///   a session.
 /// - Nobody who signed in FIRST — the only order there was until now — is
 ///   asked a second time.
@@ -49,9 +51,13 @@ void main() {
   Future<ProviderContainer> launch(
     WidgetTester tester, {
     List<Override> extra = const [],
+    RecordingAnalytics? analytics,
   }) async {
     final container = ProviderContainer(
-      overrides: [...fastBackendOverrides(premium: false), ...extra],
+      overrides: [
+        ...fastBackendOverrides(premium: false, analytics: analytics),
+        ...extra,
+      ],
     );
     addTearDown(container.dispose);
     await tester.pumpWidget(
@@ -153,6 +159,50 @@ void main() {
         await container.read(quitStoreProvider.notifier).hasSession(),
         isTrue,
       );
+    });
+
+    testWidgets('finishes onboarding on Day 1 — never on a paywall', (
+      tester,
+    ) async {
+      // Oct 16 2026, free first: the notifications step used to hand every
+      // new person to the D5 paywall, a full screen of price with no close
+      // button. Both of its answers now create the plan and open Day 1.
+      // `complete()` clears the draft through SharedPreferences, which a
+      // widget test only answers once it is mocked.
+      SharedPreferences.setMockInitialValues({});
+      final analytics = RecordingAnalytics();
+      final container = await launch(tester, analytics: analytics);
+      await holdToCommit(tester, container);
+      await tester.tap(find.text(l10n.authSignInWithGoogle));
+      await beat(tester);
+      expect(find.byType(NotificationsStep), findsOneWidget);
+
+      await tester.ensureVisible(find.text(l10n.commonMaybeLater));
+      await tester.tap(find.text(l10n.commonMaybeLater));
+      await beat(tester);
+
+      expect(path(container), Routes.day1);
+      expect(container.read(quitStoreProvider), isNotNull);
+      expect(analytics.names, contains('onboarding_completed'));
+      expect(analytics.names, isNot(contains('paywall_viewed')));
+    });
+
+    testWidgets('cannot be shown a paywall before there is a plan', (
+      tester,
+    ) async {
+      // Every paywall sells against a plan the person already has, and the
+      // paywall no longer carries a "create the journey here" branch — so a
+      // deep link or a stale push to one, mid-quiz, must not land there.
+      final container = await launch(tester);
+      for (final route in [
+        Routes.paywall,
+        Routes.paywallFree,
+        Routes.premiumWelcome,
+      ]) {
+        container.read(routerProvider).go(route);
+        await beat(tester);
+        expect(path(container), Routes.auth, reason: route);
+      }
     });
 
     testWidgets('can register by email at that ask and lands in the same place', (

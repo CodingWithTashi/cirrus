@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/models/journey_state.dart';
@@ -80,3 +82,65 @@ Exception? _mapAuthCode(String code) => switch (code) {
   'web-context-cancelled' => const SignInCancelledException(),
   _ => null,
 };
+
+/// [guardAuth] for the sign-in paths, plus one rule: nothing leaves unnamed.
+///
+/// What [guardAuth] rethrows untouched used to reach `JourneyStore` raw and be
+/// reported as `sign_in_failed{code: other}` — thirteen Apple failures in the
+/// Oct 2026 funnel said that and nothing else. Every leftover now leaves as an
+/// [AuthProviderException] carrying the provider's own code, and Apple's
+/// "the sheet ended with no answer" (`ASAuthorizationError.unknown`, 1000) as
+/// a [SignInUnavailableException] whose copy points at email.
+///
+/// [stage] prefixes the detail. The journey read after a sign-in passes
+/// `journey`, so a Firestore refusal after a GOOD Apple sign-in can no longer
+/// pass for an Apple failure.
+Future<T> guardSignIn<T>(Future<T> Function() op, {String? stage}) async {
+  try {
+    return await guardAuth(op);
+  } on FirebaseAuthException catch (e) {
+    final native = _nativeAppleCode(e.message);
+    final detail = signInDetail(
+      native == null ? e.code : '${e.code}/$native',
+      stage: stage,
+    );
+    if (e.code == 'unknown' && native == '1000') {
+      throw SignInUnavailableException(detail);
+    }
+    throw AuthProviderException(detail);
+  } on GoogleSignInException catch (e) {
+    throw AuthProviderException(
+      signInDetail('google/${e.code.name}', stage: stage),
+    );
+  } on FirebaseException catch (e) {
+    throw AuthProviderException(
+      signInDetail('${e.plugin}/${e.code}', stage: stage),
+    );
+  } on PlatformException catch (e) {
+    throw AuthProviderException(
+      signInDetail('platform/${e.code}', stage: stage),
+    );
+  }
+}
+
+/// The native code firebase_auth's iOS plugin folds into the message of an
+/// Apple sheet failure it has no name for —
+/// `"… (Domain=com.apple.AuthenticationServices.AuthorizationError Code=1000)"`
+/// — and only that one domain, so no other number is mistaken for it.
+String? _nativeAppleCode(String? message) {
+  if (message == null) return null;
+  final match = RegExp(
+    r'Domain=com\.apple\.AuthenticationServices\.AuthorizationError Code=(-?\d+)',
+  ).firstMatch(message);
+  return match?.group(1);
+}
+
+/// The analytics-safe form of a provider code: lower case, `[a-z0-9_/-]`
+/// only, at most 64 characters. A code, never a message — messages can carry
+/// an email address.
+@visibleForTesting
+String signInDetail(String raw, {String? stage}) {
+  final joined = stage == null ? raw : '$stage/$raw';
+  final safe = joined.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_/-]'), '_');
+  return safe.length <= 64 ? safe : safe.substring(0, 64);
+}

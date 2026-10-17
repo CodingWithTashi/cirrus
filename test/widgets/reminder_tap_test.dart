@@ -25,11 +25,12 @@ void main() {
     WidgetTester tester, {
     Map<String, dynamic>? entitlement,
     bool viaSplash = false,
+    RecordingAnalytics? analytics,
   }) async {
     final sink = _TapSink();
     final container = ProviderContainer(
       overrides: [
-        ...fastBackendOverrides(premium: false),
+        ...fastBackendOverrides(premium: false, analytics: analytics),
         reminderCoordinatorProvider.overrideWithValue(
           ReminderCoordinator(sink),
         ),
@@ -102,6 +103,24 @@ void main() {
     sink.taps.add(ReminderKind.danger);
     await tester.pumpAndSettle();
     expect(path(container), Routes.home);
+  });
+
+  testWidgets('an evening check-in lands on Home, and is counted', (
+    tester,
+  ) async {
+    // At the check-in hour Home is showing the two cards the check-in asks
+    // about. And until Oct 16 2026 a reminder tap reported nothing at all, so
+    // whether any reminder ever brought somebody back was unknowable.
+    final analytics = RecordingAnalytics();
+    final (container, sink) = await open(tester, analytics: analytics);
+    container.read(routerProvider).go(Routes.stats);
+    await tester.pumpAndSettle();
+    sink.taps.add(ReminderKind.checkin);
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+    expect(analytics.propsOfAll('reminder_opened'), [
+      {'kind': 'checkin'},
+    ]);
   });
 
   testWidgets('a milestone celebration opens the badge grid', (tester) async {

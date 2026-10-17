@@ -17,6 +17,7 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../community/push_permission_ask.dart';
 
 /// Frame 24 — Day-1 checklist: three setup moves, CTA always points at the
 /// next unchecked item.
@@ -268,10 +269,20 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
                   2 => l10n.day1Task3,
                   _ => l10n.day1CtaHome,
                 },
-                onTap: () {
+                onTap: () async {
                   if (nextTask == -1) {
-                    // All three done. The gate is already open; hand over.
-                    context.go(Routes.home);
+                    // All three done. The gate is already open; hand over —
+                    // after the second notification ask, for anyone who said
+                    // "Maybe later" at D4: the evening check-in is tonight,
+                    // and this is the moment they have just set it up. Asked
+                    // here, before leaving, because the sheet needs this
+                    // screen (and its `ref`) still mounted.
+                    await maybeAskPushPermission(
+                      context,
+                      ref,
+                      reason: PushAskReason.dayOne,
+                    );
+                    if (context.mounted) context.go(Routes.home);
                     return;
                   }
                   LpHaptics.medium();

@@ -609,4 +609,120 @@ void main() {
       });
     });
   });
+  // The evening check-in (docs/10 §51): seven one-shots on their own ids, so
+  // nothing else's schedule is touched by re-arming them.
+  group('the evening check-in', () {
+    ({String title, String body}) copy(CheckinReminder c) =>
+        (title: 'Day ${c.planDay} check-in', body: 'limit ${c.limit}');
+    final morning = DateTime(2026, 8, 20, 9);
+
+    /// The fixture with today unlogged — a confirmed today has no check-in,
+    /// and these cases are about the whole week.
+    JourneyState unloggedToday() {
+      final journey = journeyWith({10: 30});
+      return journey.copyWith(
+        days: {...journey.days}..remove(JourneyState.dateKey(morning)),
+      );
+    }
+
+    Future<void> sync(
+      ReminderCoordinator coordinator, {
+      JourneyState? journey,
+      SettingsState settings = const SettingsState(),
+      DateTime? now,
+    }) => coordinator.sync(
+      journey: journey ?? unloggedToday(),
+      settings: settings,
+      title: title,
+      body: body,
+      checkinCopy: copy,
+      now: () => now ?? morning,
+    );
+
+    test('arms a week of evenings, through its own ids only', () async {
+      final sink = _FakeSink();
+      await sync(ReminderCoordinator(sink));
+
+      final checkins = [
+        for (final (i, kind) in sink.kinds.indexed)
+          if (kind == ReminderKind.checkin) sink.scheduledOnce[i],
+      ];
+      expect(checkins, hasLength(CheckinReminderPlanner.window));
+      expect(checkins.map((r) => r.id), CheckinReminderPlanner.ids);
+      expect(checkins.every((r) => r.at.hour == 20), isTrue);
+      // Re-armed over its own seven ids — never `cancelAll`, which would take
+      // the trial reminder and an armed milestone down with it.
+      expect(sink.cancelled, containsAll(CheckinReminderPlanner.ids));
+      expect(sink.cancels, 0);
+    });
+
+    test('an unchanged week is not re-armed on the next puff', () async {
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+      await sync(coordinator);
+      final armed = sink.scheduledOnce.length;
+      await sync(coordinator);
+      expect(sink.scheduledOnce.length, armed);
+    });
+
+    test('switched off, it withdraws its own week and nothing else', () async {
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+      await sync(coordinator);
+      sink.cancelled.clear();
+      final armed = sink.scheduledOnce.length;
+
+      await sync(
+        coordinator,
+        settings: const SettingsState(checkinReminderOn: false),
+      );
+      expect(sink.cancelled, CheckinReminderPlanner.ids);
+      expect(sink.scheduledOnce.length, armed);
+      expect(sink.cancels, 0);
+    });
+
+    test('a refused schedule is tried again on the next sync', () async {
+      final sink = _FakeSink()..arms = false;
+      final coordinator = ReminderCoordinator(sink);
+      await sync(coordinator);
+      expect(sink.scheduledOnce, isEmpty);
+
+      sink.arms = true;
+      await sync(coordinator);
+      expect(sink.kinds.where((k) => k == ReminderKind.checkin), isNotEmpty);
+    });
+
+    test('an evening danger hour does not silence it', () async {
+      // The first cut skipped any day a danger nudge used the same hour. The
+      // most common evening danger hour, 21:00, is nudged at 20:50 — so the
+      // check-in never fired for those people while Settings read "20:00".
+      final sink = _FakeSink();
+      final journey = journeyWith({21: 30});
+      await ReminderCoordinator(sink).sync(
+        journey: journey.copyWith(
+          days: {...journey.days}..remove(JourneyState.dateKey(morning)),
+        ),
+        settings: const SettingsState(),
+        title: title,
+        body: body,
+        checkinCopy: copy,
+        now: () => morning,
+      );
+      expect(sink.applied.single.single.hour, 20); // the 20:50 nudge
+      expect(
+        sink.kinds.where((k) => k == ReminderKind.checkin),
+        hasLength(CheckinReminderPlanner.window),
+      );
+    });
+
+    test('nothing before the stored settings have been read', () async {
+      final sink = _FakeSink();
+      await sync(
+        ReminderCoordinator(sink),
+        settings: const SettingsState(hydrated: false),
+      );
+      expect(sink.scheduledOnce, isEmpty);
+      expect(sink.cancelled, isEmpty);
+    });
+  });
 }
