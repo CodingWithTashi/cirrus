@@ -447,6 +447,7 @@ These rows belong in `docs/08 §7`.
 | `docs/02 §4` feature checklist "Panic Button + buddy ping" | Buddy is descoped (`docs/08 §7 #13`); the panic **AI** never routes to the paywall (§4.1) |
 | `docs/08 §2` lever 2 ("$3.99/wk test") | **Annual price first** — $59.99/yr for new users (§4.3) |
 | `docs/06 §3` "50 free lifetime spots" + the recruited beta cohort | **Descoped Sep 3 2026 (founder).** No cohort was recruited and none will be; Cirrus ships direct to production. Everything downstream of it goes too — `S1-12` (founder grant), `S2-10` (closed testing), `S3-12` (tester-seeded feed), `S5-8` (cohort crash-free), `S6-2` (tester testimonials), `S6-4` (thank-you post) |
+| §1 / §4.2 "the D5 hard paywall is untouched" and `launch` | **Free first** (founder, Oct 16 2026 — `docs/08 §7 #32`, `docs/10 §51`): onboarding ends on Day 1 with no paywall; the launch paywall is a dismissible Home card (`offer_card`) on the same days and caps; every paywall has a close. §3.3's placement data still stands — this is the decision to give that slot up for retention, not a finding that it converts badly |
 
 ---
 

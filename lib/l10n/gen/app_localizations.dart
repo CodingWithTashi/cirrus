@@ -1639,7 +1639,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.'**
+  /// **'Not spam. A nudge before your danger hours, an evening check-in on your plan, and a word when you hit a milestone.'**
   String get obNotifSubtitle;
 
   /// No description provided for @obNotifPreviewTime.
@@ -1663,7 +1663,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet2.
   ///
   /// In en, this message translates to:
-  /// **'A heads-up before your trial ends, and a milestone celebration'**
+  /// **'An evening check-in, and a milestone celebration'**
   String get obNotifBullet2;
 
   /// No description provided for @obNotifBullet3.
@@ -1677,12 +1677,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn on backup'**
   String get obNotifCta;
-
-  /// No description provided for @paywallTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Your plan is ready.'**
-  String get paywallTitle;
 
   /// No description provided for @paywallTitleUpgrade.
   ///
@@ -2012,12 +2006,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let\'s go'**
   String get premiumWelcomeCta;
-
-  /// No description provided for @premiumWelcomeCtaDay1.
-  ///
-  /// In en, this message translates to:
-  /// **'Set up my day 1'**
-  String get premiumWelcomeCtaDay1;
 
   /// No description provided for @premiumLockTitle.
   ///
@@ -2402,6 +2390,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.'**
   String get homeFreedomDayBody;
+
+  /// No description provided for @homeOfferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day}. Want more in your corner?'**
+  String homeOfferTitle(int day);
+
+  /// No description provided for @homeOfferBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium adds the whole health timeline, a month of stats, every panic game and more coach messages. Free stays free.'**
+  String get homeOfferBody;
 
   /// No description provided for @homeTitle.
   ///
@@ -3260,6 +3260,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That one\'s on us, not you. Give it another shot in a sec.'**
   String get errorGenericBody;
+
+  /// No description provided for @errorSignInUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in didn\'t finish'**
+  String get errorSignInUnavailableTitle;
+
+  /// No description provided for @errorSignInUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'That usually means no Apple Account is signed in on this phone. You can keep your plan safe with email instead.'**
+  String get errorSignInUnavailableBody;
 
   /// No description provided for @errorPurchaseNotAllowedTitle.
   ///
@@ -5109,6 +5121,36 @@ abstract class AppLocalizations {
   /// **'Danger hours'**
   String get settingsDangerHours;
 
+  /// No description provided for @settingsCheckin.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening check-in'**
+  String get settingsCheckin;
+
+  /// No description provided for @settingsCheckinOff.
+  ///
+  /// In en, this message translates to:
+  /// **'off · edit ›'**
+  String get settingsCheckinOff;
+
+  /// No description provided for @settingsCheckinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'One notification an evening with today\'s limit, so you can log how it went. It stops by itself after a week without you opening Cirrus.'**
+  String get settingsCheckinBody;
+
+  /// No description provided for @settingsCheckinToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me each evening'**
+  String get settingsCheckinToggle;
+
+  /// No description provided for @settingsCheckinTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get settingsCheckinTime;
+
   /// No description provided for @settingsDangerHoursEdit.
   ///
   /// In en, this message translates to:
@@ -5487,6 +5529,30 @@ abstract class AppLocalizations {
   /// **'This is usually when it hits. You\'ve got a plan — and 15 minutes beats it.'**
   String get dangerReminderBody;
 
+  /// No description provided for @checkinNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day} check-in'**
+  String checkinNotifTitle(int day);
+
+  /// No description provided for @checkinNotifTitlePast.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening check-in'**
+  String get checkinNotifTitlePast;
+
+  /// No description provided for @checkinNotifBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{limit, plural, =1{Today\'s limit is 1 puff. Tap to log how it\'s going.} other{Today\'s limit is {limit} puffs. Tap to log how it\'s going.}}'**
+  String checkinNotifBody(int limit);
+
+  /// No description provided for @checkinNotifBodyZero.
+  ///
+  /// In en, this message translates to:
+  /// **'A zero day. Tap to confirm it stayed vape-free.'**
+  String get checkinNotifBodyZero;
+
   /// No description provided for @communityLoading.
   ///
   /// In en, this message translates to:
@@ -5750,6 +5816,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn on notifications'**
   String get pushAskCta;
+
+  /// No description provided for @pushAskDayOneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Want a nudge tonight?'**
+  String get pushAskDayOneTitle;
+
+  /// No description provided for @pushAskDayOneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'An evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.'**
+  String get pushAskDayOneBody;
+
+  /// No description provided for @pushAskSurvivedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Want backup next time?'**
+  String get pushAskSurvivedTitle;
+
+  /// No description provided for @pushAskSurvivedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A heads-up just before your danger hours, so the next craving doesn\'t catch you off guard.'**
+  String get pushAskSurvivedBody;
 
   /// In-app notification inbox.
   ///

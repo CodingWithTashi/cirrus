@@ -441,13 +441,22 @@ class JourneyStore extends Notifier<JourneyState?> {
       analytics.signInCancelled(method);
       return;
     }
-    analytics.signInFailed(method, switch (error) {
-      NoConnectionException() => 'offline',
-      InvalidCredentialsException() => 'invalid_credentials',
-      EmailAlreadyInUseException() => 'email_in_use',
-      WeakPasswordException() => 'weak_password',
-      _ => 'other',
-    });
+    analytics.signInFailed(
+      method,
+      switch (error) {
+        NoConnectionException() => 'offline',
+        InvalidCredentialsException() => 'invalid_credentials',
+        EmailAlreadyInUseException() => 'email_in_use',
+        WeakPasswordException() => 'weak_password',
+        SignInUnavailableException() => 'provider_unavailable',
+        _ => 'other',
+      },
+      detail: switch (error) {
+        SignInUnavailableException(:final detail) => detail,
+        AuthProviderException(:final detail) => detail,
+        _ => null,
+      },
+    );
   }
 
   /// Throws [EmailAlreadyInUseException].

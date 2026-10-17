@@ -388,6 +388,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// may touch `state`/`ref` after [Ref.invalidateSelf], which must stay the
   /// final statement.
   Future<void> complete() async {
+    // Captured before the await, like every sink in the stores.
+    final analytics = ref.read(analyticsProvider);
     final (alias, emoji) = _randomAlias();
     final profile = UserProfile(
       alias: alias,
@@ -407,6 +409,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     await ref
         .read(quitStoreProvider.notifier)
         .startJourney(profile: profile, plan: plan);
+    analytics.onboardingCompleted();
     // Ember's first memory, from the one thing they wrote in their own words.
     // After `startJourney` because the server reads the sentence out of the
     // journey document this just created — and fire-and-forget because a
@@ -421,7 +424,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     //
     // Placed AFTER the await on purpose: if `startJourney` throws, neither
     // this nor the invalidation runs, so the draft survives in memory and on
-    // disk and the paywall's retry path still has something to retry with.
+    // disk and the notifications step's retry still has something to retry
+    // with.
     await OnboardingDraftPersistence.clear();
     ref.invalidateSelf();
   }

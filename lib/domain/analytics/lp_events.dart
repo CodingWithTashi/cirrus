@@ -96,11 +96,24 @@ extension LpEvents on AnalyticsSink {
       track(AnalyticsEvent('sign_in_cancelled', {'method': method.wire}));
 
   /// [code] is the exception's taxonomy name (`offline`,
-  /// `invalid_credentials`, `email_in_use`, `weak_password`, `other`) — never
-  /// the provider's own message, and never the address that was typed.
-  void signInFailed(LpSignInMethod method, String code) => track(
-    AnalyticsEvent('sign_in_failed', {'method': method.wire, 'code': code}),
-  );
+  /// `invalid_credentials`, `email_in_use`, `weak_password`,
+  /// `provider_unavailable`, `other`) — never the provider's own message, and
+  /// never the address that was typed.
+  ///
+  /// [detail] is the provider's own CODE behind `other` and
+  /// `provider_unavailable` (`unknown/1000`, `journey/cloud_firestore/
+  /// permission-denied`), sanitized to `[a-z0-9_/-]` by the repository. It is
+  /// absent for the named codes, which already say everything. Without it,
+  /// the first funnel read after launch held thirteen Apple failures that all
+  /// said `other` and nothing else.
+  void signInFailed(LpSignInMethod method, String code, {String? detail}) =>
+      track(
+        AnalyticsEvent('sign_in_failed', {
+          'method': method.wire,
+          'code': code,
+          'detail': ?detail,
+        }),
+      );
 
   // --- onboarding funnel ---------------------------------------------------
 
@@ -139,8 +152,30 @@ extension LpEvents on AnalyticsSink {
 
   void commitHeld() => track(const AnalyticsEvent('commit_held'));
 
+  /// The journey exists: onboarding is over and Day 1 is next.
+  ///
+  /// The funnel used to end on `paywall_viewed`, because the D5 paywall was
+  /// the last onboarding screen and the free path ended there. Since Oct 16
+  /// 2026 onboarding no longer passes through a paywall at all, so without
+  /// this the funnel would stop at `notif_prompt` with no way to tell a
+  /// finished onboarding from an abandoned one. Fired once, by
+  /// `OnboardingViewModel.complete` after the backend has the journey.
+  void onboardingCompleted() =>
+      track(const AnalyticsEvent('onboarding_completed'));
+
   void notifPrompt({required bool granted}) =>
       track(AnalyticsEvent('notif_prompt', {'granted': granted.toString()}));
+
+  /// A reminder the DEVICE scheduled was tapped — the danger-hour nudge, the
+  /// trial heads-up, a milestone, the evening check-in. [kind] is the
+  /// `ReminderKind` name.
+  ///
+  /// `push_opened` covers what the server sends and nothing here did: until
+  /// Oct 16 2026 a reminder tap reported nothing at all, so whether any of
+  /// them ever brought somebody back was unknowable — the very question the
+  /// evening check-in was added to answer.
+  void reminderOpened(String kind) =>
+      track(AnalyticsEvent('reminder_opened', {'kind': kind}));
 
   /// A push was tapped, and where it went.
   ///
@@ -174,28 +209,31 @@ extension LpEvents on AnalyticsSink {
   /// is a bare `String` at every call site — so THIS COMMENT IS THE ONLY
   /// REGISTRY, and it has already been stale once. The full list:
   ///
-  /// `onboarding` · `launch` · `settings` · `coach_cap` · `insight` ·
-  /// `forecast` · `health` · `plan` · `history` · `compose` · `nudge` ·
-  /// `panic_game` · `theme` · `push` · `free_plan` · `direct`
+  /// `offer_card` · `settings` · `coach_cap` · `insight` · `forecast` ·
+  /// `health` · `plan` · `history` · `compose` · `nudge` · `panic_game` ·
+  /// `theme` · `push` · `free_plan` · `direct`
   ///
   /// (`direct` is the fallback when a `/paywall` route carries no `?source=`;
   /// `push` is stamped on by `taggedPushRoute()`.) Add a door, add it here.
   ///
+  /// Retired Oct 16 2026, and still in the history: `onboarding` (the D5
+  /// paywall at the end of the quiz, gone with "free first") and `launch`
+  /// (the paywall pushed on a day-3/7/14/30 launch, now the Home card that
+  /// reports `offer_card`).
+  ///
   /// [planDay] is where they were in their own quit when the door opened. A
   /// day-3 gate and a day-40 gate are different products of different
-  /// motivations, and they used to be the same row. Null before a journey
-  /// exists (the D5 paywall, which every account meets at the same moment).
-  void paywallViewed(
-    String variant, {
-    required String source,
-    int? planDay,
-  }) => track(
-    AnalyticsEvent('paywall_viewed', {
-      'variant': variant,
-      'source': source,
-      'plan_day': ?planDay,
-    }),
-  );
+  /// motivations, and they used to be the same row. Every paywall has a
+  /// journey under it now (the router enforces it), so it is null only in
+  /// events recorded before that.
+  void paywallViewed(String variant, {required String source, int? planDay}) =>
+      track(
+        AnalyticsEvent('paywall_viewed', {
+          'variant': variant,
+          'source': source,
+          'plan_day': ?planDay,
+        }),
+      );
 
   /// A plan card was chosen on the paywall. [period] is `weekly`/`monthly`/
   /// `yearly`.

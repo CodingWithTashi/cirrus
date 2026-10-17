@@ -119,7 +119,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
     if (!mounted) return;
     if (failure != null) {
-      await showLpErrorDialog(context, error: failure, onRetry: retry);
+      await showLpErrorDialog(
+        context,
+        error: failure,
+        onRetry: retry,
+        // The account is required to go on, so the sheet that just failed
+        // must not be the only door left. Pushed exactly as the screen's own
+        // email button pushes it.
+        alternative: (
+          label: context.l10n.authContinueWithEmail,
+          onTap: () => context.push(Routes.register),
+        ),
+      );
     } else if (restored != null) {
       _enterWithSession(context, ref, restored: restored);
     }

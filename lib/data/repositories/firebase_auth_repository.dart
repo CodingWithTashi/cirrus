@@ -73,13 +73,12 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<JourneyState?> signInWithEmail({
     required String email,
     required String password,
-  }) => guardAuth(() async {
-    final cred = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
+  }) async {
+    final cred = await guardSignIn(
+      () => _auth.signInWithEmailAndPassword(email: email, password: password),
     );
-    return fetchJourney(_db, cred.user!.uid);
-  });
+    return _journeyAfterSignIn(cred);
+  }
 
   /// Apple hands over the name and email ONLY on the first authorization for
   /// this app, and only for the scopes asked for. A provider with no scopes
@@ -93,33 +92,44 @@ class FirebaseAuthRepository implements AuthRepository {
   /// so Firebase sets `displayName` itself. A dismissed sheet arrives as
   /// `canceled`, which [guardAuth] maps to [SignInCancelledException].
   @override
-  Future<JourneyState?> signInWithApple() => guardAuth(() async {
+  Future<JourneyState?> signInWithApple() async {
     final provider = AppleAuthProvider()
       ..addScope('email')
       ..addScope('name');
-    final cred = await _linkOrSignIn(
-      link: (guest) => guest.linkWithProvider(provider),
-      signIn: () => _auth.signInWithProvider(provider),
+    final cred = await guardSignIn(
+      () => _linkOrSignIn(
+        link: (guest) => guest.linkWithProvider(provider),
+        signIn: () => _auth.signInWithProvider(provider),
+      ),
     );
-    return fetchJourney(_db, cred.user!.uid);
-  });
+    return _journeyAfterSignIn(cred);
+  }
 
   @override
-  Future<JourneyState?> signInWithGoogle() => guardAuth(() async {
-    final google = GoogleSignIn.instance;
-    await (_googleInit ??= google.initialize(
-      serverClientId: _googleServerClientId,
-    ));
-    final account = await google.authenticate();
-    final credential = GoogleAuthProvider.credential(
-      idToken: account.authentication.idToken,
-    );
-    final cred = await _linkOrSignIn(
-      link: (guest) => guest.linkWithCredential(credential),
-      signIn: () => _auth.signInWithCredential(credential),
-    );
-    return fetchJourney(_db, cred.user!.uid);
-  });
+  Future<JourneyState?> signInWithGoogle() async {
+    final cred = await guardSignIn(() async {
+      final google = GoogleSignIn.instance;
+      await (_googleInit ??= google.initialize(
+        serverClientId: _googleServerClientId,
+      ));
+      final account = await google.authenticate();
+      final credential = GoogleAuthProvider.credential(
+        idToken: account.authentication.idToken,
+      );
+      return _linkOrSignIn(
+        link: (guest) => guest.linkWithCredential(credential),
+        signIn: () => _auth.signInWithCredential(credential),
+      );
+    });
+    return _journeyAfterSignIn(cred);
+  }
+
+  /// The read that follows a sign-in, guarded on its own so its failures are
+  /// reported as `journey/…` rather than as the provider's. The identity is
+  /// already established when this runs; folding the two into one guard made
+  /// a Firestore refusal after a good Apple sign-in read as an Apple failure.
+  Future<JourneyState?> _journeyAfterSignIn(UserCredential cred) =>
+      guardSignIn(() => fetchJourney(_db, cred.user!.uid), stage: 'journey');
 
   /// Upgrades a guest to the identity rather than replacing them — the same
   /// rule [register] applies to email, for the same reason: guest onboarding
@@ -155,7 +165,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> register({required String email, required String password}) =>
-      guardAuth(() async {
+      guardSignIn(() async {
         // Upgrade the guest rather than replacing them.
         //
         // Guest onboarding runs on an anonymous account (`create()` mints one

@@ -37,9 +37,9 @@
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
 | 1 | **Splash / session restore** | The launcher tile (the same rounded art the home screen shows) over a breathing Volt glow, wordmark and tagline beneath, the group centred on the screen; ~1.5s while the backend session is restored. Routes to Home (has journey) or the quiz's welcome screen (no journey — nobody signed in, or an account that never finished the quiz; since Oct 5 2026, docs/10 §49). A signed-in account whose journey is slow to arrive restores from the copy on the phone, and with no copy the splash offers Retry — never sign-in (docs/10 §40). | Cold-start. The tile, "Cirrus" and the tagline sit stacked in the middle of the screen, never in a corner. Kill and reopen while signed in → lands on Home, never on a stuck splash. Cut only the app's network (`adb shell cmd connectivity set-chain3-enabled true`, then `set-package-networking-enabled false com.quitvape.last_puff`) and reopen → still Home; turn both back afterwards. |
-| 2 | **Launch paywall** | Once per day, free accounts only, pushed over Home after the splash. Never shown while the tier is still unknown. | Free account, cold start → paywall over Home. Restart the same day → it does not return. Premium → never. |
+| 2 | **Day-3 offer card** | On plan days 3, 7, 14 and 30 (four times ever), free accounts only: a dismissible Premium card on Home — never a paywall pushed over it (docs/10 §51). Decided on the splash, so never while the tier is still unknown; stays for that day until closed, swiped or tapped. | Free account on day 3, cold start → Home with the card. Close it → restart the same day → it stays gone. Tap it → paywall (`offer_card`) → X → Home, card gone. Premium/trial → never. |
 | 3 | **Sign in with Google** (Android) | Native Google sheet → Firebase account. An existing journey restores to Home; a new account goes to onboarding — to the top of the quiz when the account came first, on to the notifications step when it was made at the commit's ask (row 19b). Reached from the welcome screen's *Log in* or from that ask; pushed, so it has a back chevron. | Android only. Dismiss the sheet → nothing happens (a dismissal is not an error). |
-| 4 | **Sign in with Apple** (iOS/macOS) | Same flow, Apple sheet. Hidden on Android. | iOS only; check the Google button is absent. |
+| 4 | **Sign in with Apple** (iOS/macOS) | Same flow, Apple sheet. Hidden on Android. A sheet that ends with no answer (no Apple Account on the phone, Apple's 1000) says so and offers email; every Apple/Google failure dialog carries **Continue with email** beside the retry, because the account is required to go on (docs/10 §51). | iOS only; check the Google button is absent. Sign the phone out of its Apple Account → tap Apple → "Apple sign-in didn't finish" → Continue with email → register. |
 | 5 | **Register with email** | Email + password (min 6), live 3-bar strength meter, then onboarding. | Try `abc` with no `@` → snack. 3-char password → snack. `maya@quitmail.com` on fake → "already in use". |
 | 6 | **Log in with email** | Restores the journey. A wrong password shakes the field 2px with kind copy — never a red alarm. | Wrong password → shake + inline message; typing clears it. |
 | 7 | **Forgot password** | Sends a reset link, shows an inline ✓ banner, disables *Resend* for 30s with a live countdown. | `/auth/forgot` → Continue → watch 30 → 0. |
@@ -64,8 +64,8 @@
 | 19 | **Commit** | Press-and-hold commitment beat. | Release early → it does not advance. |
 | 19b | **The account, after the commit** | With nobody signed in, a held commit opens the sign-in screen ("Let's keep your plan safe.") instead of advancing; the quiz waits on the commit step until an account exists, then carries on to notifications. Signing in to an account that already has a plan goes Home with THAT plan and discards the new answers. Someone already signed in is not asked. | Fresh install → whole quiz → hold → sign-in appears. Back → the ring is re-armed. Create an account → notifications step. Repeat with an existing account → Home on its old day number. |
 | 20 | **~~Rating~~ — removed from onboarding Sep 11 2026** | App Store review rejected 1.0.16 under Guideline 5.6.3 for asking here. The ask is row 98b now: the Survived screen, day 3+, three cravings beaten. Onboarding goes commit → notifications. | There is no rating screen between hold-to-commit and the push pre-permission. `test/review_ask_placement_test.dart` reads the sources to keep it that way. |
-| 21 | **Notifications permission** | The one place the OS permission is asked for. Copy names danger-hour nudges, the trial reminder and milestone celebrations — all three exist. | Deny → the app continues; the Settings toggle reflects reality. |
-| 22 | **→ Paywall → Day 1** | Onboarding ends on the paywall (`source=onboarding`), then the Day-1 checklist. Nobody reaches it without an account: the step before it is only entered with a session (row 19b). | — |
+| 21 | **Notifications permission** | The one place the OS permission is first asked for. Copy names danger-hour nudges, the evening check-in and milestone celebrations — all three exist. A "Maybe later" gets one more ask, at the first of: finishing the Day-1 checklist, leaving the Survived screen, or posting (rows 31, 96). | Deny → the app continues; the Settings toggle reflects reality. |
+| 22 | **→ Day 1** | Onboarding ends on the Day-1 checklist — **no paywall** since Oct 16 2026 (docs/10 §51, free first). Nobody gets there without an account: the step before is only entered with a session (row 19b). No paywall route opens without a journey. | Deny notifications → Day 1. Deep-link `/paywall` mid-quiz → sign-in, never a paywall. |
 
 ---
 
@@ -73,10 +73,10 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
-| 23 | **Paywall (D5)** | Your own plan reveal, then the trial timeline (today → reminder → first charge), then plan cards. **Every price is the store's**; the typed fallbacks appear only when no offering loads, under a caption that says so. The trial-reminder toggle ships ON. | Open from any lock. A period the store does not offer gets **no card** — two cards on the Test Store is correct, not a bug. |
+| 23 | **Paywall** | Reached only from a door (a lock, the day-3 card, Settings) and always closable (X, top right). Your own plan reveal, then the trial timeline (today → reminder → first charge), then plan cards. **Every price is the store's**; the typed fallbacks appear only when no offering loads, under a caption that says so. The trial-reminder toggle ships ON. | Open from any lock. A period the store does not offer gets **no card** — two cards on the Test Store is correct, not a bug. |
 | 24 | **Free plan comparison** (D5b) | Side-by-side Free vs Pro with real numbers (5/day vs 100/day, 7 days vs Forever) read from `LpAllowances`. Pro is the button, Free is a link — one tap away, never hidden. | Paywall → *see what Free gets*. The numbers must match §4 below. |
 | 25 | **Purchase** | Opens the store's own sheet. A sheet that closes without the entitlement is **Pending**, not success (Play deferred payments, Ask to Buy). | Sandbox purchase → gates unlock with no restart. |
-| 25b | **"You're in."** (post-purchase) | The screen after every **completed** purchase — paywall CTA, win-back card, onboarding, or a pending payment settling under an open paywall: confetti, the trial's days and first-charge date (the store's own end, the one the trial reminder is planned from) or the plain "yours from this second", the paywall's seven feature lines ticking in, each a door into that feature. Replaces the paywall, so back never returns to it; the CTA pops to where the paywall came from (Day 1 from onboarding, where the rows are not doors). Never for Pending; Restore keeps its "welcome back" snack (docs/10 §28). | Sandbox purchase from Settings → "You're in." → tap the themes row → Settings › Theme, back → still there → **Let's go** → Settings. |
+| 25b | **"You're in."** (post-purchase) | The screen after every **completed** purchase — paywall CTA, win-back card, or a pending payment settling under an open paywall: confetti, the trial's days and first-charge date (the store's own end, the one the trial reminder is planned from) or the plain "yours from this second", the paywall's seven feature lines ticking in, each a door into that feature. Replaces the paywall, so back never returns to it; the CTA pops to where the paywall came from. Never for Pending; Restore keeps its "welcome back" snack (docs/10 §28). | Sandbox purchase from Settings → "You're in." → tap the themes row → Settings › Theme, back → still there → **Let's go** → Settings. |
 | 26 | **Restore purchases** | Real restore, on the paywall and in Settings (the Settings row shows only while unsubscribed). Says plainly when there was nothing to restore. | Reinstall → Settings → Restore. |
 | 27 | **Manage subscription** | Opens the store's manage page. When the store gives none (family-shared or promo grant) it says where to manage instead of faking a page. | Settings → Subscription while subscribed. |
 | 28 | **Trial-ending screen** | Reached from the Subscription row during a trial and from the trial reminder's tap. Shows your own first-week wins; keeping Premium needs no action. | Settings → Subscription (trial). |
@@ -103,7 +103,7 @@
 
 | # | Feature | What it does | Manual test |
 |---|---|---|---|
-| 31 | **Day-1 checklist** | Three setup moves; the CTA always points at the next unchecked one. A row **navigates** — it never ticks itself. | A fresh account lands here after the paywall. |
+| 31 | **Day-1 checklist** | Three setup moves; the CTA always points at the next unchecked one. A row **navigates** — it never ticks itself. | A fresh account lands here straight from onboarding. **Go to Today** with all three done → the second notification ask, if the OS was never asked. |
 | 32 | **Day-1 walkthrough** | Holds the rest of the app closed while it teaches three real moves: log one puff on Home, say something to the coach, set your danger hour. The tab bar becomes a single *back to checklist* control. | Do all three. Force-quit mid-tour → you return to the checklist, not a stranded app. Skip is available. |
 
 ---
@@ -213,7 +213,7 @@
 | 93 | **Orbs** (Free) | The free game, and always the landing game: a stored or deep-linked locked game is clamped to it, so nobody meets a lock mid-craving. | Free account → open the arena → Orbs. |
 | 94 | **Tiles / Blocks** (Pro) | Two more games. A locked pill shows a card that leads with **Play Orbs**; *See Premium* is the secondary text link. The lock never appears mid-round. | Free → tap Tiles. |
 | 95 | **Personal bests** | Per game, recorded only when a round ran to the end. | Beat a best; then abandon a round → nothing recorded. |
-| 96 | **Survived screen** | Confetti, rolling craving counter, the game result, and *share the W* (copies to the clipboard). | Tap share → the snack confirms the copy. |
+| 96 | **Survived screen** | Confetti, rolling craving counter, the game result, and *share the W* (copies to the clipboard). Leaving it is the second notification ask's moment for anyone who said "Maybe later" at onboarding — never on a visit where the rating card is showing (docs/10 §51). | Tap share → the snack confirms the copy. With notifications never asked, *Back* → "Want backup next time?" → either answer → Home. |
 
 ---
 
@@ -242,7 +242,8 @@
 | 105 | **Danger-hour nudge** | One local push, 10 minutes before your chosen hour, daily, never inside quiet hours. Free for everyone. Inexact — it may run late, never early. | Set the hour a few minutes out, background the app, wait. |
 | 106 | **Trial-ending reminder** | The day before the first charge. Scheduled on-device because no store sends this event. | Start a sandbox trial. |
 | 107 | **Milestone celebration** | Five moments across a 30-day plan (badges at 3, 7, 14 and 30 days, plus Freedom Day), at 08:00. Only ever celebrates a badge **already earned** — it cannot congratulate a streak that might still break tonight. | Drive the device clock. |
-| 108 | **Tap routing** | Every reminder carries its kind: trial → trial-ending (or Settings once it is over), danger-hour → Home. Works from cold start, after the splash has chosen the first screen. | Kill the app, tap a notification. |
+| 107b | **Evening check-in** | One local notification at 20:00 (Settings → Notifications → Evening check-in: on/off and the hour) naming that day's plan day and limit — "Day 4 check-in · Today's limit is 9 puffs". Seven evenings ahead, re-armed each time the app is used, so it stops by itself a week after the last visit. Skips a day already confirmed and quiet hours; a danger nudge in the same hour does not silence it, and the Settings row reads *off* if quiet hours cover the chosen hour. Free for everyone (docs/10 §51). | Set the hour to the next one, background the app, wait → tap → Home. Kill the app overnight → the next evening still arrives. |
+| 108 | **Tap routing** | Every reminder carries its kind: trial → trial-ending (or Settings once it is over), danger-hour and evening check-in → Home. Works from cold start, after the splash has chosen the first screen. Each tap reports `reminder_opened`. | Kill the app, tap a notification. |
 
 The rows above are **scheduled on the device**: they work offline, cost nothing,
 and are inexact by design. Everything below is **sent from the server**, because
@@ -323,7 +324,7 @@ you. The two halves obey different rules and are configured in different places.
 ## 17. FASTEST FULL PASS — ~25 min, real Firebase, Android
 
 1. `./tool/device.ps1` → splash → the quiz opens with no account asked for.
-2. Onboarding: every step, rename the coach to `Koda`, hold to commit → **register** a fresh email when the commit asks → deny notifications → paywall → *see what Free gets* → back → continue on Free.
+2. Onboarding: every step, rename the coach to `Koda`, hold to commit → **register** a fresh email when the commit asks → deny notifications → **Day 1, no paywall**.
 3. Day-1 checklist: complete all three tour steps.
 4. Home: LOG PUFF ×5, undo, hold to ~20, correct via the ring sheet, then log past the limit.
 5. Free gates: Stats Month · Health node 8 · Insight · Plan adaptive · Home nudge — each must open the paywall.
@@ -345,3 +346,4 @@ you. The two halves obey different rules and are configured in different places.
 | Sep 13, 2026 | Rows 1, 45, 51, 57, 61, 83 and 114 updated and 51a added (docs/10 §40): the savings (i), Stats from the first puff with bars that never stretch, no reacting to your own post, a signed-in relaunch that never lands on sign-in, and a notification thread that keeps its reply. |
 | Sep 13, 2026 | Rows 36, 45, 55, 63, 80 and 83 updated (docs/10 §41): Undo takes "last puff" back, the savings note prices ten puffs when one is pennies, an honest nicotine card, no "I got you" on your own SOS, and the rules-side reaction guard. |
 | Sep 13, 2026 | Row 82 updated (docs/10 §42): the reply you send glides into view, and nothing but your own send moves the thread. |
+| Oct 16, 2026 | Rows 2, 4, 21, 22, 23, 25b, 31, 96 and 108 updated and 107b added (docs/10 §51): onboarding ends on Day 1 with no paywall, the launch paywall became the day-3 offer card, every paywall closes, sign-in failures offer email, the evening check-in, and the second notification ask. |

@@ -40,6 +40,8 @@ void main() {
       quietStartHour: 22,
       quietEndHour: 7,
       trialReminderOn: false,
+      checkinReminderOn: false,
+      checkinHour: 19,
       pushRepliesOn: false,
       pushMentionsOn: false,
       pushWeeklyOn: false,
@@ -47,6 +49,7 @@ void main() {
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
       launchPaywallShownCount: 3,
+      offerCardClosedDay: '2026-09-02',
       celebratedMilestones: {'spark', 'weekFlame'},
       armedMilestone: 'weekFlame',
       armedMilestoneAt: DateTime(2026, 9, 6, 8),
@@ -88,7 +91,11 @@ void main() {
     expect(loaded.quietStartHour, 22);
     expect(loaded.quietEndHour, 7);
     expect(loaded.trialReminderOn, isFalse);
+    expect(loaded.checkinReminderOn, isFalse);
+    expect(loaded.checkinHour, 19);
     expect(loaded.winbackShown, isTrue);
+    // A close that a restart forgets is a card that comes back the same day.
+    expect(loaded.offerCardClosedDay, '2026-09-02');
     // A lifetime counter that resets on every launch would hand out an
     // unlimited number of "four times, ever" paywalls.
     expect(loaded.launchPaywallShownCount, 3);
@@ -130,6 +137,9 @@ void main() {
       'quietStartHour',
       'quietEndHour',
       'trialReminderOn',
+      // The evening check-in (`CheckinReminderPlanner`).
+      'checkinReminderOn',
+      'checkinHour',
       // Server-decided notifications. Stored locally for an instant UI, and
       // mirrored to `users/{uid}.pushPrefs` because the server is what
       // actually sends them.
@@ -140,6 +150,7 @@ void main() {
       'winbackShown',
       'launchPaywallShownDay',
       'launchPaywallShownCount',
+      'offerCardClosedDay',
       'celebratedMilestones',
       'armedMilestone',
       'armedMilestoneAt',

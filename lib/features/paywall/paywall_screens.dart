@@ -33,10 +33,14 @@ import '../../domain/logic/billing_catalog.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/pricing_math.dart';
 import '../../domain/models/models.dart';
-import '../onboarding/onboarding_view_model.dart';
 
-/// D5 — hard-converting layout, honest mechanics: reminder toggle ships ON,
-/// the Free path is visible, never hidden (docs/02 §4).
+/// The paywall — honest mechanics: reminder toggle ships ON, the Free path is
+/// visible, never hidden (docs/02 §4), and it can always be closed.
+///
+/// Reached only by a tap since Oct 16 2026 (docs/10 §51, free first): a lock
+/// door, the day-3 offer card on Home, Settings. Onboarding used to end here
+/// (D5) and no longer does — a journey always exists by the time anyone sees
+/// it, and the router enforces that, so this screen has no onboarding branch.
 ///
 /// Every price on this screen is the store's (`offeringsProvider`), and the
 /// CTA opens the store's own payment sheet through `EntitlementStore`. The
@@ -84,10 +88,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   /// Where this reader was in their own quit when the paywall opened. Read
   /// once, for the same reason — and it cannot meaningfully change while a
-  /// paywall is on screen. Null before a journey exists (the D5 paywall).
+  /// paywall is on screen.
   int? _planDay;
-
-  bool get _fromOnboarding => ref.read(quitStoreProvider) == null;
 
   @override
   void initState() {
@@ -173,18 +175,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     // a snack. The Restore button keeps its own "welcome back" snack: that
     // path sets `_restoring` and never reaches here.
     _resolved = true;
-    if (_fromOnboarding) {
-      setState(() => _busy = true);
-      unawaited(_finishOnboarding(celebrate: true));
-    } else {
-      router.pushReplacement(Routes.premiumWelcome);
-    }
+    router.pushReplacement(Routes.premiumWelcome);
   }
 
-  /// Purchase first, journey second. A cancelled sheet leaves a guest on the
-  /// paywall with the plan cards, the Free path and the onboarding draft all
-  /// intact — no orphaned free journey, no `trial_started` followed by an
-  /// unexplained free account.
+  /// A cancelled sheet leaves the person on the paywall with the plan cards,
+  /// the Free path and the close button all where they were.
   Future<void> _startTrial() {
     unawaited(LpHaptics.celebrate());
     // Reported at the moment of intent, before the store sheet, so the
@@ -204,7 +199,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     // Captured before any await: the router must not be looked up through a
     // context that may be gone (paywall_test pins this).
     final router = GoRouter.of(context);
-    final fromOnboarding = _fromOnboarding;
     final l10n = context.l10n;
     setState(() => _busy = true);
     final PurchaseOutcome outcome;
@@ -234,51 +228,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         setState(() => _busy = false);
         showLpSnack(context, l10n.paywallPurchasePending);
       case PurchaseCompleted():
-        // Bought. Leaving now is the screen finishing, not a dismissal.
+        // Bought. Leaving now is the screen finishing, not a dismissal. The
+        // welcome replaces this screen — leave FIRST, see `leavePaywall` —
+        // and its CTA pops to whatever was under here.
         _resolved = true;
-        if (fromOnboarding) {
-          await _finishOnboarding(celebrate: true);
-        } else {
-          // The welcome replaces this screen — leave FIRST, see
-          // `leavePaywall` — and its CTA pops to whatever was under here.
-          unawaited(router.pushReplacement(Routes.premiumWelcome));
-        }
+        unawaited(router.pushReplacement(Routes.premiumWelcome));
     }
-  }
-
-  /// The journey, once the store has said yes. Retried on its own: a journey
-  /// that failed to create must never re-open the sheet — the entitlement is
-  /// already held, and `EntitlementStore.purchase` answers it without a sheet
-  /// on the next tap anyway.
-  ///
-  /// [celebrate] is a purchase just made: the welcome screen comes before
-  /// the checklist. A restore is not one, and goes straight on.
-  Future<void> _finishOnboarding({bool celebrate = false}) async {
-    // Busy for the whole of it, including a retry from the dialog: a live
-    // CTA here would answer the held entitlement without a sheet and run a
-    // second `complete()` alongside this one.
-    if (!_busy) setState(() => _busy = true);
-    try {
-      await ref.read(onboardingProvider.notifier).complete();
-    } on Exception catch (error) {
-      // Onboarding draft survives a failed start — retry loses nothing.
-      if (!mounted) return;
-      setState(() => _busy = false);
-      await showLpErrorDialog(
-        context,
-        error: error,
-        onRetry: () => _finishOnboarding(celebrate: celebrate),
-      );
-      return;
-    }
-    if (!mounted) return;
-    context.go(celebrate ? Routes.premiumWelcomeDay1 : Routes.day1);
   }
 
   Future<void> _restore() async {
     if (_restoring) return;
     final router = GoRouter.of(context);
-    final fromOnboarding = _fromOnboarding;
     final l10n = context.l10n;
     setState(() => _restoring = true);
     try {
@@ -290,11 +250,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         return;
       }
       showLpSnack(context, l10n.paywallRestored);
-      if (fromOnboarding) {
-        await _finishOnboarding();
-      } else {
-        leavePaywall(router);
-      }
+      leavePaywall(router);
     } on Exception catch (error) {
       if (!mounted) return;
       await showLpErrorDialog(context, error: error);
@@ -601,19 +557,42 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Every paywall is somewhere a person chose to go, so every one
+            // can be left the same way. Before Oct 16 2026 there was no close
+            // at all — the free link and the system back gesture were the only
+            // ways out — which on the launch paywall meant a full screen of
+            // price, on opening the app, with no visible exit. Leaving here is
+            // a dismissal and reports as one (`dispose`).
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 4, 8, 0),
+                child: Semantics(
+                  button: true,
+                  label: l10n.commonClose,
+                  child: PressScale(
+                    onTap: () => leavePaywall(GoRouter.of(context)),
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                        color: lp.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // "Your plan is ready" is the end of onboarding; a
-                    // returning free user (launch, a gate, Settings) gets the
-                    // upgrade framing instead.
                     Text(
-                      _fromOnboarding
-                          ? l10n.paywallTitle
-                          : l10n.paywallTitleUpgrade,
+                      l10n.paywallTitleUpgrade,
                       style: LpType.title(lp.textPrimary, size: 26),
                     ),
                     const SizedBox(height: 4),
@@ -821,18 +800,12 @@ class _PlanRevealCard extends ConsumerWidget {
     final l10n = context.l10n;
     final locale = context.localeTag;
 
-    // A returning free user has a real journey. During onboarding the journey
-    // does not exist yet — it is created by `complete()` on this very screen —
-    // so the draft is the only source there is. The `??` is lazy, so a signed-in
-    // user never touches the onboarding provider at all.
+    // The router keeps every paywall behind a journey, so this is the plan
+    // the person is living. The guard stays: an empty state beats a Freedom
+    // Day derived from nothing, which would be inventing the user's own data.
     final journey = ref.watch(quitStoreProvider);
-    final plan =
-        journey?.plan ?? ref.read(onboardingProvider.notifier).draftPlan();
-    final reveal = PlanReveal.of(plan, now: ref.read(nowProvider)());
-
-    // Nothing honest to show: the launch paywall can open before any journey
-    // or any answers exist. An empty state beats a Freedom Day derived from a
-    // baseline of zero, which would be inventing the user's own data.
+    if (journey == null) return const SizedBox.shrink();
+    final reveal = PlanReveal.of(journey.plan, now: ref.read(nowProvider)());
     if (reveal == null) return const SizedBox.shrink();
 
     return Padding(
@@ -1065,8 +1038,6 @@ class FreePlanScreen extends ConsumerStatefulWidget {
 }
 
 class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
-  bool _busy = false;
-
   /// This screen is the app's thirteenth door, and the first one that
   /// measures the people who reach Free and come back. Captured in
   /// [initState] alongside the sink, because Riverpod forbids `ref` on the
@@ -1097,11 +1068,6 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
   /// one already underneath; the `go` is the fallback for a direct arrival
   /// at `/paywall/free`, where pushing would stack a second paywall.
   void _seePro() {
-    // Not while `_continueFree` is in flight. Onboarding's `complete()` is an
-    // await, and popping this screen underneath it means the `context.go` to
-    // day 1 never runs against a mounted tree — the account is created and
-    // the user is left sitting on the paywall.
-    if (_busy) return;
     _analytics.gateTapped(_source);
     final router = GoRouter.of(context);
     if (router.canPop()) {
@@ -1111,26 +1077,11 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
     }
   }
 
-  Future<void> _continueFree() async {
+  void _continueFree() {
     _analytics.freeContinued();
-    final fromOnboarding = ref.read(quitStoreProvider) == null;
-    if (fromOnboarding) {
-      setState(() => _busy = true);
-      try {
-        await ref.read(onboardingProvider.notifier).complete();
-      } on Exception catch (error) {
-        if (!mounted) return;
-        setState(() => _busy = false);
-        await showLpErrorDialog(context, error: error, onRetry: _continueFree);
-        return;
-      }
-      if (!mounted) return;
-      context.go(Routes.day1);
-    } else {
-      // Nothing to write: "free" is the absence of an entitlement, and the
-      // entitlement is the store's to grant.
-      context.go(Routes.home);
-    }
+    // Nothing to write: "free" is the absence of an entitlement, and the
+    // entitlement is the store's to grant.
+    context.go(Routes.home);
   }
 
   @override
@@ -1316,21 +1267,13 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
                         ? l10n.paywallCtaSubscribe
                         : l10n.freePlanProCta(trialDays),
                     height: 54,
-                    // Carries the spinner for the Free path below it, which is
-                    // now a text link and has nowhere to show one. Without
-                    // this, `complete()` runs with no sign on screen that
-                    // anything is happening.
-                    busy: _busy,
                     onTap: _seePro,
                   ),
                   const SizedBox(height: 4),
                   // Still one tap, still plainly labelled. Demoted, never
                   // hidden: this screen exists because somebody chose Free,
                   // and taking that away would be the dark pattern.
-                  LpTextButton(
-                    l10n.freePlanCta,
-                    onTap: _busy ? null : _continueFree,
-                  ),
+                  LpTextButton(l10n.freePlanCta, onTap: _continueFree),
                 ],
               ),
             ),

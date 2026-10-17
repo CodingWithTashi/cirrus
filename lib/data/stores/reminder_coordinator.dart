@@ -12,11 +12,11 @@ import 'settings_store.dart';
 /// not re-hit the OS scheduler, or a heavy logging day would cancel and
 /// rebuild the same alarms hundreds of times.
 ///
-/// Three independent schedules live here, each with its own fingerprint: the
+/// Four independent schedules live here, each with its own fingerprint: the
 /// repeating danger-hour nudges (ids 1000–1023), the one-shot trial-ending
-/// reminder (id 2000), and the milestone celebration (3000+). Independent on
-/// purpose — a puff tap must never wipe the trial reminder, which is exactly
-/// what a shared cancel-all used to do.
+/// reminder (id 2000), the milestone celebration (3000+) and the evening
+/// check-ins (4000–4006). Independent on purpose — a puff tap must never wipe
+/// the trial reminder, which is exactly what a shared cancel-all used to do.
 class ReminderCoordinator {
   ReminderCoordinator(this._sink);
 
@@ -32,6 +32,9 @@ class ReminderCoordinator {
 
   /// Fingerprint of the last scheduled milestone celebration.
   String? _milestoneApplied;
+
+  /// Fingerprint of the last applied check-in window.
+  String? _checkinApplied;
 
   /// Reminder taps, for the app to route on. See [ReminderSink.opened].
   Stream<ReminderKind> get opened => _sink.opened;
@@ -50,6 +53,8 @@ class ReminderCoordinator {
         onMilestoneScheduled,
     void Function(DateTime now)? onMilestonesWithdrawn,
     void Function(Set<String> earned)? onMilestonesAdopted,
+    ({String title, String body}) Function(CheckinReminder checkin)?
+        checkinCopy,
     DateTime Function() now = DateTime.now,
   }) async {
     // Not until the stored settings have been read. Before that [settings] is
@@ -65,10 +70,12 @@ class ReminderCoordinator {
     if (journey == null || !settings.notificationsOn) {
       if (_applied != _cleared ||
           _trialApplied != _cleared ||
-          _milestoneApplied != _cleared) {
+          _milestoneApplied != _cleared ||
+          _checkinApplied != _cleared) {
         _applied = _cleared;
         _trialApplied = _cleared;
         _milestoneApplied = _cleared;
+        _checkinApplied = _cleared;
         await _sink.cancelAll();
         // `cancelAll` takes the milestone ids with it, and the badge is marked
         // settled at scheduling time — so without this the celebration is not
@@ -98,6 +105,60 @@ class ReminderCoordinator {
         onScheduled: onMilestoneScheduled,
         onAdopted: onMilestonesAdopted,
       );
+    }
+    if (checkinCopy != null) {
+      await _syncCheckins(journey, settings, now: now(), copy: checkinCopy);
+    }
+  }
+
+  /// Re-arms the evening check-ins: the next seven days from [now].
+  ///
+  /// Cancel-then-schedule over its own seven ids, like the danger-hour apply.
+  /// The window slides forward on every sync that changes it, which is what
+  /// makes it stop by itself a week after the last one — see
+  /// `CheckinReminderPlanner`. The fingerprint carries each day's copy inputs
+  /// as well as its instant, so a limit the nightly plan bends is re-armed
+  /// with the number Home will show.
+  Future<void> _syncCheckins(
+    JourneyState journey,
+    SettingsState settings, {
+    required DateTime now,
+    required ({String title, String body}) Function(CheckinReminder) copy,
+  }) async {
+    final checkins = CheckinReminderPlanner.plan(
+      journey: journey,
+      now: now,
+      hour: settings.checkinHour,
+      quietStartHour: settings.quietStartHour,
+      quietEndHour: settings.quietEndHour,
+      enabled: settings.checkinReminderOn,
+    );
+    final fingerprint = checkins.isEmpty
+        ? _cleared
+        : checkins
+              .map(
+                (c) =>
+                    '${c.reminder.id}@${c.reminder.at.toIso8601String()}'
+                    '#${c.planDay}/${c.limit}',
+              )
+              .join(',');
+    if (fingerprint == _checkinApplied) return;
+    _checkinApplied = fingerprint;
+
+    for (final id in CheckinReminderPlanner.ids) {
+      await _sink.cancel(id);
+    }
+    for (final checkin in checkins) {
+      final text = copy(checkin);
+      final armed = await _sink.scheduleOnce(
+        checkin.reminder,
+        kind: ReminderKind.checkin,
+        title: text.title,
+        body: text.body,
+      );
+      // A refused schedule is not an applied one: forget the fingerprint so
+      // the next sync tries the whole window again.
+      if (!armed) _checkinApplied = null;
     }
   }
 

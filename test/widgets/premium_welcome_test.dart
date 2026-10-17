@@ -195,18 +195,4 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text(l10n.premiumWelcomeTitle), findsNothing);
   });
-
-  testWidgets('from onboarding the rows are not doors and the CTA opens '
-      'day 1', (tester) async {
-    final container = await open(tester, trial);
-    container.read(routerProvider).go(Routes.premiumWelcomeDay1);
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
-    expect(find.text(l10n.premiumWelcomeCta), findsNothing);
-    await tester.tap(find.text(l10n.premiumWelcomeCtaDay1));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(container.read(routerProvider).state.uri.path, Routes.day1);
-  });
 }

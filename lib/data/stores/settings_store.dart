@@ -20,6 +20,8 @@ class SettingsState {
     this.quietStartHour = 23,
     this.quietEndHour = 8,
     this.trialReminderOn = true,
+    this.checkinReminderOn = true,
+    this.checkinHour = 20,
     this.pushRepliesOn = true,
     this.pushMentionsOn = true,
     this.pushWeeklyOn = true,
@@ -27,6 +29,7 @@ class SettingsState {
     this.winbackShown = false,
     this.launchPaywallShownDay,
     this.launchPaywallShownCount = 0,
+    this.offerCardClosedDay,
     this.celebratedMilestones = const {},
     this.armedMilestone,
     this.armedMilestoneAt,
@@ -70,6 +73,16 @@ class SettingsState {
   final int quietEndHour;
   final bool trialReminderOn;
 
+  /// The evening check-in (`CheckinReminderPlanner`): on by default, at
+  /// [checkinHour] local. The one reminder that reaches somebody who has not
+  /// opened the app today — which, for two in three people who finished
+  /// onboarding before Oct 16 2026, was every day after the first.
+  ///
+  /// Forgotten on sign-out with the push flags below: the evening a person
+  /// chose to be asked about is theirs, not the phone's.
+  final bool checkinReminderOn;
+  final int checkinHour;
+
   /// Server-decided notifications, one flag per category.
   ///
   /// These are the only settings on this screen the SERVER has to know about,
@@ -103,7 +116,16 @@ class SettingsState {
   /// (`LaunchPaywallPolicy.lifetimeCap`). Counted, not derived from the day
   /// key: a Comeback restarts the plan and would bring the milestone days
   /// round again.
+  ///
+  /// Since Oct 16 2026 both of these count the day-3 OFFER CARD on Home, not
+  /// a pushed paywall — the keys kept their names so nobody who has already
+  /// seen one is shown four more.
   final int launchPaywallShownCount;
+
+  /// The local day key on which the offer card was closed or tapped. The card
+  /// stays on Home for the day it is offered (`launchPaywallShownDay`) until
+  /// one of those happens; this is what makes a close outlast a restart.
+  final String? offerCardClosedDay;
 
   /// Badge ids whose celebration has already been SCHEDULED.
   ///
@@ -184,6 +206,8 @@ class SettingsState {
     int? quietStartHour,
     int? quietEndHour,
     bool? trialReminderOn,
+    bool? checkinReminderOn,
+    int? checkinHour,
     bool? pushRepliesOn,
     bool? pushMentionsOn,
     bool? pushWeeklyOn,
@@ -191,6 +215,7 @@ class SettingsState {
     bool? winbackShown,
     String? launchPaywallShownDay,
     int? launchPaywallShownCount,
+    String? offerCardClosedDay,
     Set<String>? celebratedMilestones,
     String? Function()? armedMilestone,
     DateTime? Function()? armedMilestoneAt,
@@ -209,6 +234,8 @@ class SettingsState {
     quietStartHour: quietStartHour ?? this.quietStartHour,
     quietEndHour: quietEndHour ?? this.quietEndHour,
     trialReminderOn: trialReminderOn ?? this.trialReminderOn,
+    checkinReminderOn: checkinReminderOn ?? this.checkinReminderOn,
+    checkinHour: checkinHour ?? this.checkinHour,
     pushRepliesOn: pushRepliesOn ?? this.pushRepliesOn,
     pushMentionsOn: pushMentionsOn ?? this.pushMentionsOn,
     pushWeeklyOn: pushWeeklyOn ?? this.pushWeeklyOn,
@@ -217,6 +244,7 @@ class SettingsState {
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
     launchPaywallShownCount:
         launchPaywallShownCount ?? this.launchPaywallShownCount,
+    offerCardClosedDay: offerCardClosedDay ?? this.offerCardClosedDay,
     celebratedMilestones: celebratedMilestones ?? this.celebratedMilestones,
     armedMilestone: armedMilestone != null
         ? armedMilestone()
@@ -396,6 +424,14 @@ class SettingsStore extends Notifier<SettingsState> {
   void setTrialReminder(bool on) =>
       _commit(state.copyWith(trialReminderOn: on));
 
+  void setCheckinReminder(bool on) =>
+      _commit(state.copyWith(checkinReminderOn: on));
+
+  /// [hour] is a local hour of the day; the sheet offers only hours outside
+  /// quiet hours, and the planner refuses one inside them regardless.
+  void setCheckinHour(int hour) =>
+      _commit(state.copyWith(checkinHour: hour % 24));
+
   void markWinbackShown() => _commit(state.copyWith(winbackShown: true));
 
   /// Records that [armed]'s celebration is on the clock for [at] and that
@@ -486,17 +522,25 @@ class SettingsStore extends Notifier<SettingsState> {
       pushMentionsOn: true,
       pushWeeklyOn: true,
       pushPromptShown: false,
+      checkinReminderOn: true,
+      checkinHour: const SettingsState().checkinHour,
     ),
   );
 
-  /// Records that today's launch paywall was shown, so it is not shown again
-  /// before the next local day.
+  /// Records that today's offer was made (the Home card since Oct 16 2026,
+  /// a pushed paywall before), so it is not made again before the next local
+  /// day and counts toward the lifetime cap.
   void markLaunchPaywallShown(String dayKey) => _commit(
     state.copyWith(
       launchPaywallShownDay: dayKey,
       launchPaywallShownCount: state.launchPaywallShownCount + 1,
     ),
   );
+
+  /// The offer card was closed or opened today: it stays off Home until the
+  /// next offer day, across restarts.
+  void closeOfferCard(String dayKey) =>
+      _commit(state.copyWith(offerCardClosedDay: dayKey));
 
   /// Records that the store-rating ask was shown and answered — "Rate Cirrus"
   /// and "Not now" both count, because both are the person's answer to being

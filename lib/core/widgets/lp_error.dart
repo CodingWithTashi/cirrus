@@ -41,6 +41,13 @@ import 'lp_buttons.dart';
       title: l10n.errorStoreTitle,
       body: l10n.errorStoreBody,
     ),
+    // Apple's sheet ended with no answer — no Apple Account on the phone, most
+    // often. "That one's on us" would be untrue, and "run it back" ends the
+    // same way, so this one names the way through instead.
+    SignInUnavailableException() => (
+      title: l10n.errorSignInUnavailableTitle,
+      body: l10n.errorSignInUnavailableBody,
+    ),
     _ => (title: l10n.errorGenericTitle, body: l10n.errorGenericBody),
   };
 }
@@ -120,10 +127,17 @@ class LpErrorState extends StatelessWidget {
 
 /// Blocking-failure dialog for an action the user explicitly asked for
 /// (log in, start plan…). Same visual language as the settings dialogs.
+///
+/// [alternative] is a second way to the same goal, offered beside the retry —
+/// the sign-in screen passes "Continue with email" for a failed Apple or
+/// Google sheet. An account is required to continue past the commit, so a
+/// failure there must never leave the person with only "try the thing that
+/// just failed".
 Future<void> showLpErrorDialog(
   BuildContext context, {
   required Object error,
   VoidCallback? onRetry,
+  ({String label, VoidCallback onTap})? alternative,
 }) {
   final copy = lpErrorCopy(context, error);
   final l10n = context.l10n;
@@ -134,10 +148,29 @@ Future<void> showLpErrorDialog(
       title: Text(copy.title),
       content: Text(copy.body),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: Text(l10n.errorGotIt, style: LpType.body14(lp.textSecondary)),
-        ),
+        // With a second way through, "Got it" is the one action that leads
+        // nowhere — and on a real phone a third button no longer fits the
+        // row, so Material stacks all three with it on top (seen on a Pixel 8,
+        // Oct 16 2026). Tapping outside or back still closes the dialog.
+        if (alternative == null)
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              l10n.errorGotIt,
+              style: LpType.body14(lp.textSecondary),
+            ),
+          ),
+        if (alternative != null)
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              alternative.onTap();
+            },
+            child: Text(
+              alternative.label,
+              style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+            ),
+          ),
         if (onRetry != null)
           TextButton(
             onPressed: () {

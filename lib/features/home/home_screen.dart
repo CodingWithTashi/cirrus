@@ -22,6 +22,7 @@ import '../notifications/notifications_screen.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
 import '../../domain/logic/billing_catalog.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
@@ -200,6 +201,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final settings = ref.watch(settingsStoreProvider);
+    // The day-3/7/14/30 offer (LaunchPaywallPolicy). The splash decides it
+    // and counts it; Home shows it for the rest of that day until it is
+    // closed or opened, and never to anyone already on Premium or a trial.
+    final todayKey = LpDate.dayKey(now);
+    final showOffer =
+        !ref.watch(isPremiumProvider) &&
+        settings.launchPaywallShownDay == todayKey &&
+        settings.offerCardClosedDay != todayKey;
+    void closeOffer() =>
+        ref.read(settingsStoreProvider.notifier).closeOfferCard(todayKey);
     // Docs/02 §4's founding offer. Off until its store offer exists and is
     // tagged so it cannot leak into the main paywall (tracker S4-7).
     final showFoundingOffer =
@@ -715,6 +726,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                        // The day-3/7/14/30 offer. Outside the one-card chain
+                        // above on purpose: that slot belongs to the person's
+                        // own day (a slip, the evening mood, their risky
+                        // hour), and an offer that waited behind it would be
+                        // counted on days it was never seen.
+                        if (showOffer) ...[
+                          Dismissible(
+                            key: const ValueKey('offer_card'),
+                            onDismissed: (_) => closeOffer(),
+                            child: _OfferCard(
+                              day: journey.plan.dayNumber(now),
+                              // Leave first, then mutate — the
+                              // `leavePaywall` rule: the card is gone by the
+                              // time the paywall closes back onto Home.
+                              onOpen: () {
+                                context.push(
+                                  Routes.paywallFrom(_OfferCard.source),
+                                );
+                                closeOffer();
+                              },
+                              onClose: closeOffer,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         // One-time founding offer — the spec's in-app win-back card
                         // (docs/02 §4), shown to Free users until opened.
                         if (showFoundingOffer) ...[
@@ -935,6 +971,112 @@ class _CoachNudgeCard extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right_rounded, color: lp.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium, offered — on plan days 3, 7, 14 and 30, once each, as a card the
+/// person can close (docs/10 §51). Until Oct 16 2026 this was a paywall
+/// pushed over Home on launch, with no close button.
+///
+/// Reports itself as a door like every `LpPremiumGate`: `gate_shown` once
+/// per mount, `gate_tapped` on the way to the paywall.
+class _OfferCard extends ConsumerStatefulWidget {
+  const _OfferCard({
+    required this.day,
+    required this.onOpen,
+    required this.onClose,
+  });
+
+  /// The `source` on `gate_shown`, `gate_tapped` and the paywall it opens.
+  static const source = 'offer_card';
+
+  final int day;
+  final VoidCallback onOpen;
+  final VoidCallback onClose;
+
+  @override
+  ConsumerState<_OfferCard> createState() => _OfferCardState();
+}
+
+class _OfferCardState extends ConsumerState<_OfferCard> {
+  @override
+  void initState() {
+    super.initState();
+    // Deferred a frame, like `LpPremiumGate`: `build` stays side-effect free.
+    final analytics = ref.read(analyticsProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) analytics.gateShown(_OfferCard.source, planDay: widget.day);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    return PressScale(
+      onTap: () {
+        ref.read(analyticsProvider).gateTapped(_OfferCard.source);
+        widget.onOpen();
+      },
+      child: LpCard(
+        borderColor: lp.voltFocus,
+        glowColor: lp.volt,
+        padding: const EdgeInsets.fromLTRB(16, 12, 6, 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.premiumLockTitle,
+                    style: LpType.caption(
+                      lp.voltText,
+                      weight: FontWeight.w700,
+                    ).copyWith(letterSpacing: 1),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.homeOfferTitle(widget.day),
+                    style: LpType.body14(
+                      lp.textPrimary,
+                      weight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.homeOfferBody,
+                    style: LpType.caption(lp.textSecondary),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.premiumLockCta,
+                    style: LpType.body13(lp.voltText, weight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            Semantics(
+              button: true,
+              label: l10n.commonClose,
+              child: PressScale(
+                onTap: widget.onClose,
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: lp.textSecondary,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

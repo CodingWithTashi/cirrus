@@ -29,6 +29,8 @@ abstract final class SettingsPersistence {
   static const _quietStart = 'settings.quietStartHour';
   static const _quietEnd = 'settings.quietEndHour';
   static const _trialReminderOn = 'settings.trialReminderOn';
+  static const _checkinReminderOn = 'settings.checkinReminderOn';
+  static const _checkinHour = 'settings.checkinHour';
   static const _pushReplies = 'settings.pushRepliesOn';
   static const _pushMentions = 'settings.pushMentionsOn';
   static const _pushWeekly = 'settings.pushWeeklyOn';
@@ -36,6 +38,7 @@ abstract final class SettingsPersistence {
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
+  static const _offerCardClosedDay = 'settings.offerCardClosedDay';
   static const _celebrated = 'settings.celebratedMilestones';
   static const _armedMilestone = 'settings.armedMilestone';
   static const _armedMilestoneAt = 'settings.armedMilestoneAt';
@@ -70,11 +73,15 @@ abstract final class SettingsPersistence {
         pushPromptShown: prefs.getBool(_pushPrompt) ?? defaults.pushPromptShown,
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
+        checkinReminderOn:
+            prefs.getBool(_checkinReminderOn) ?? defaults.checkinReminderOn,
+        checkinHour: _hourOr(prefs.getInt(_checkinHour), defaults.checkinHour),
         winbackShown: prefs.getBool(_winbackShown) ?? defaults.winbackShown,
         launchPaywallShownDay: prefs.getString(_launchPaywallDay),
         launchPaywallShownCount:
             prefs.getInt(_launchPaywallCount) ??
             defaults.launchPaywallShownCount,
+        offerCardClosedDay: prefs.getString(_offerCardClosedDay),
         celebratedMilestones:
             prefs.getStringList(_celebrated)?.toSet() ??
             defaults.celebratedMilestones,
@@ -114,6 +121,8 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_pushWeekly, state.pushWeeklyOn);
       await prefs.setBool(_pushPrompt, state.pushPromptShown);
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
+      await prefs.setBool(_checkinReminderOn, state.checkinReminderOn);
+      await prefs.setInt(_checkinHour, state.checkinHour);
       await prefs.setBool(_winbackShown, state.winbackShown);
       await prefs.setBool(_milestonesAdopted, state.milestonesAdopted);
       await prefs.setInt(_launchPaywallCount, state.launchPaywallShownCount);
@@ -139,6 +148,12 @@ abstract final class SettingsPersistence {
       } else {
         await prefs.setString(_launchPaywallDay, day);
       }
+      final closed = state.offerCardClosedDay;
+      if (closed == null) {
+        await prefs.remove(_offerCardClosedDay);
+      } else {
+        await prefs.setString(_offerCardClosedDay, closed);
+      }
       await prefs.setInt(_reviewAskedCount, state.reviewAskedCount);
       final askedAt = state.reviewAskedAt;
       if (askedAt == null) {
@@ -151,6 +166,11 @@ abstract final class SettingsPersistence {
       // already saw the change take effect.
     }
   }
+
+  /// An hour of the day, or [fallback] for anything a newer build or a
+  /// corrupt store could have left there.
+  static int _hourOr(int? hour, int fallback) =>
+      hour != null && hour >= 0 && hour < 24 ? hour : fallback;
 
   static ThemeMode _themeFromName(String? name) => switch (name) {
     'light' => ThemeMode.light,

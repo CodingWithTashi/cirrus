@@ -14,6 +14,31 @@ enum PushPermission {
   granted,
 }
 
+/// The OS permission, behind a seam — the half of [PushService] the
+/// second-chance asks (`maybeAskPushPermission`) need.
+///
+/// Exists so those asks can be tested. On the fake backend the provider
+/// supplies none (there is no FCM to ask), and a widget test injects one that
+/// says `notAsked` to see the sheet — the same arrangement `PushMessages` has
+/// for the tap path.
+abstract interface class PushPermissions {
+  Future<PushPermission> status();
+
+  /// Shows the OS prompt; answers whether we ended up authorized.
+  Future<bool> request();
+}
+
+/// The real one: the device's own answer.
+class PlatformPushPermissions implements PushPermissions {
+  const PlatformPushPermissions();
+
+  @override
+  Future<PushPermission> status() => PushService.permissionStatus();
+
+  @override
+  Future<bool> request() => PushService.requestPermission();
+}
+
 /// FCM registration.
 ///
 /// `firebase_messaging` has been a declared dependency that no Dart file ever
@@ -210,17 +235,31 @@ abstract final class PushService {
     try {
       final settings = await FirebaseMessaging.instance
           .getNotificationSettings();
-      return switch (settings.authorizationStatus) {
-        AuthorizationStatus.authorized ||
-        AuthorizationStatus.provisional => PushPermission.granted,
-        AuthorizationStatus.denied => PushPermission.denied,
-        _ => PushPermission.notAsked,
-      };
+      return permissionFrom(settings.authorizationStatus);
     } on Object catch (error) {
       debugPrint('push: permission read failed — $error');
       return PushPermission.notAsked;
     }
   }
+
+  /// The plugin's answer in this app's three words.
+  ///
+  /// Exhaustive on purpose, with no wildcard. firebase_messaging 16 added
+  /// `deniedPermanently` for Android 13+ (asked before, and the OS will not
+  /// prompt again), and the wildcard this replaced filed it under
+  /// [PushPermission.notAsked] — so a person who had refused for good was
+  /// offered the contextual ask, whose button Android then silently ignores,
+  /// and Settings showed them a "Turn on" button instead of the "blocked"
+  /// note. A future value now fails to compile here instead of guessing.
+  @visibleForTesting
+  static PushPermission permissionFrom(AuthorizationStatus status) =>
+      switch (status) {
+        AuthorizationStatus.authorized ||
+        AuthorizationStatus.provisional => PushPermission.granted,
+        AuthorizationStatus.denied ||
+        AuthorizationStatus.deniedPermanently => PushPermission.denied,
+        AuthorizationStatus.notDetermined => PushPermission.notAsked,
+      };
 
   /// What the server records alongside the token, for debugging a delivery
   /// problem that only affects one platform. Anything unrecognised becomes

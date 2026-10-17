@@ -893,7 +893,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Um aviso antes das suas horas de risco, outro antes de a avaliação acabar, e uma palavra quando você bate um marco.';
+      'Nada de spam. Um aviso antes das tuas horas de risco, um balanço ao fim do dia, e uma palavra quando bates um marco.';
 
   @override
   String get obNotifPreviewTime => 'Sex 21:54';
@@ -907,16 +907,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'Um aviso antes de a avaliação acabar, e uma comemoração de cada marco';
+      'Um balanço ao fim do dia, e uma comemoração de cada marco';
 
   @override
   String get obNotifBullet3 => 'Mais nada — marketing nunca';
 
   @override
   String get obNotifCta => 'Ativar reforços';
-
-  @override
-  String get paywallTitle => 'O teu plano está pronto.';
 
   @override
   String get paywallTitleUpgrade => 'Vai mais longe com o Premium.';
@@ -1135,9 +1132,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get premiumWelcomeCta => 'Vamos lá';
-
-  @override
-  String get premiumWelcomeCtaDay1 => 'Preparar o meu dia 1';
 
   @override
   String get premiumLockTitle => 'Premium';
@@ -1381,6 +1375,15 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get homeFreedomDayBody =>
       'O plano termina hoje e a linha fica em zero daqui em diante. Cada dia sem vape que você confirmar agora é manutenção — mesma chama, mesma sequência.';
+
+  @override
+  String homeOfferTitle(int day) {
+    return 'Dia $day. Queres mais apoio?';
+  }
+
+  @override
+  String get homeOfferBody =>
+      'O Premium junta toda a linha da saúde, um mês de stats, todos os jogos de pânico e mais mensagens ao coach. O Free continua grátis.';
 
   @override
   String get homeTitle => 'Hoje';
@@ -1998,6 +2001,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'A culpa é nossa, não tua. Tenta outra vez daqui a nada.';
+
+  @override
+  String get errorSignInUnavailableTitle =>
+      'O início de sessão com a Apple não terminou';
+
+  @override
+  String get errorSignInUnavailableBody =>
+      'Normalmente quer dizer que não há nenhuma Conta Apple com sessão iniciada neste telemóvel. Podes pôr o teu plano em segurança com email.';
 
   @override
   String get errorPurchaseNotAllowedTitle =>
@@ -3138,6 +3149,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsDangerHours => 'Horas de perigo';
 
   @override
+  String get settingsCheckin => 'Balanço do dia';
+
+  @override
+  String get settingsCheckinOff => 'desligado · editar ›';
+
+  @override
+  String get settingsCheckinBody =>
+      'Uma notificação por noite com o limite de hoje, para registares como correu. Se passares uma semana sem abrir a app, para sozinha.';
+
+  @override
+  String get settingsCheckinToggle => 'Lembra-me todas as noites';
+
+  @override
+  String get settingsCheckinTime => 'Hora';
+
+  @override
   String settingsDangerHoursEdit(String range) {
     return '$range · editar ›';
   }
@@ -3362,6 +3389,30 @@ class AppLocalizationsPt extends AppLocalizations {
       'É normalmente agora que aperta. Tens um plano, e 15 minutos chegam.';
 
   @override
+  String checkinNotifTitle(int day) {
+    return 'Dia $day: balanço do dia';
+  }
+
+  @override
+  String get checkinNotifTitlePast => 'Balanço do dia';
+
+  @override
+  String checkinNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'O limite de hoje é $limit passas. Toca para registar como está a correr.',
+      one: 'O limite de hoje é 1 passa. Toca para registar como está a correr.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get checkinNotifBodyZero =>
+      'Hoje é dia zero. Toca para confirmar o teu dia sem vape.';
+
+  @override
   String get communityLoading => 'A carregar o feed…';
 
   @override
@@ -3512,6 +3563,20 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pushAskCta => 'Ativar notificações';
+
+  @override
+  String get pushAskDayOneTitle => 'Queres um aviso esta noite?';
+
+  @override
+  String get pushAskDayOneBody =>
+      'Um balanço ao fim do dia com o teu limite, um aviso antes das tuas horas de risco e uma palavra quando bates um marco.';
+
+  @override
+  String get pushAskSurvivedTitle => 'Reforços para a próxima?';
+
+  @override
+  String get pushAskSurvivedBody =>
+      'Um aviso mesmo antes das tuas horas de risco, para a próxima vontade não te apanhar de surpresa.';
 
   @override
   String get notificationsTitle => 'Notificações';

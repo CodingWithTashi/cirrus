@@ -17,6 +17,7 @@ import '../../../core/utils/lp_haptics.dart';
 import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/lp_buttons.dart';
 import '../../../core/widgets/lp_card.dart';
+import '../../../core/widgets/lp_error.dart';
 import '../../../core/widgets/lp_charts.dart';
 import '../../../core/widgets/lp_misc.dart';
 import '../../../core/widgets/progress_ring.dart';
@@ -510,12 +511,46 @@ class _CommitStepState extends ConsumerState<CommitStep>
 /// the Survived screen — `features/panic/panic_screens.dart`, behind
 /// `ReviewAskPolicy` — where the person has just used the feature the review
 /// would be about.
-/// D4 — notification pre-permission with a real push preview.
-class NotificationsStep extends ConsumerWidget {
+/// D4 — notification pre-permission with a real push preview, and the last
+/// screen of onboarding.
+///
+/// Both answers end onboarding here: the journey is created and Day 1 opens.
+/// Until Oct 16 2026 both went to the D5 paywall first, a full screen of price
+/// with no close button, where "Free" was a 12-point link to a second screen
+/// that offered Pro again. The founder's call that day was users before money
+/// (docs/10 §51): Premium is offered later, from the lock doors and a day-3
+/// card on Home, and never stands between a person and the plan they just
+/// committed to.
+class NotificationsStep extends ConsumerStatefulWidget {
   const NotificationsStep({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsStep> createState() => _NotificationsStepState();
+}
+
+class _NotificationsStepState extends ConsumerState<NotificationsStep> {
+  bool _busy = false;
+
+  /// Creates the journey and opens Day 1. The draft survives a failed start
+  /// (`complete()` clears it only after the backend answers), so the retry
+  /// loses nothing. Busy for the whole of it, retry included, so a second
+  /// tap can never run a second `complete()` beside the first.
+  Future<void> _finish() async {
+    if (!_busy) setState(() => _busy = true);
+    try {
+      await ref.read(onboardingProvider.notifier).complete();
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await showLpErrorDialog(context, error: error, onRetry: _finish);
+      return;
+    }
+    if (!mounted) return;
+    context.go(Routes.day1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final lp = context.lp;
     final l10n = context.l10n;
 
@@ -564,7 +599,12 @@ class NotificationsStep extends ConsumerWidget {
         const Spacer(),
         LpButton(
           l10n.obNotifCta,
+          busy: _busy,
           onTap: () async {
+            // Busy from the first tap: the OS sheet and the journey's creation
+            // are both awaits, and a second tap would start a second of each.
+            if (_busy) return;
+            setState(() => _busy = true);
             // The screen above IS the pre-permission ask (docs/02 D4), so the
             // OS prompt only ever fires from this tap — never cold. A denial
             // is not a dead end: the flow continues either way, and docs/03
@@ -586,18 +626,20 @@ class NotificationsStep extends ConsumerWidget {
             if (granted) {
               ref.read(pushTokenRegistrarProvider).onPermissionGranted();
             }
-            if (context.mounted) context.go(Routes.paywallFrom('onboarding'));
+            if (mounted) await _finish();
           },
         ),
         const SizedBox(height: 4),
         LpTextButton(
           l10n.commonMaybeLater,
-          onTap: () {
-            // Skipping never opens the OS dialog, so this is a decline we
-            // made ourselves — still a denied outcome for the funnel.
-            ref.read(analyticsProvider).notifPrompt(granted: false);
-            context.go(Routes.paywallFrom('onboarding'));
-          },
+          onTap: _busy
+              ? null
+              : () {
+                  // Skipping never opens the OS dialog, so this is a decline
+                  // we made ourselves — still a denied outcome for the funnel.
+                  ref.read(analyticsProvider).notifPrompt(granted: false);
+                  _finish();
+                },
         ),
       ],
     );
