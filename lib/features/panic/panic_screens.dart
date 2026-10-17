@@ -28,6 +28,7 @@ import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/games/games.dart';
 import '../../domain/logic/review_ask_policy.dart';
 import '../../domain/models/models.dart';
+import '../community/push_permission_ask.dart';
 import 'breath_pacer.dart';
 import 'breath_ring.dart';
 import 'games/game_outcome.dart';
@@ -859,12 +860,43 @@ class SurvivedScreen extends ConsumerStatefulWidget {
 class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
   late final int _lineIndex;
 
+  /// Whether the store-rating card is due on this visit. Read once, on the
+  /// way in: the notification ask on the way out yields to it, so nobody is
+  /// asked two things after one craving.
+  late final bool _reviewDue;
+
   @override
   void initState() {
     super.initState();
     // Variable reward: rotate through celebration lines (docs/03 §7).
     _lineIndex = math.Random().nextInt(8);
     LpHaptics.celebrate();
+    final snap = ref.read(todayProvider);
+    final settings = ref.read(settingsStoreProvider);
+    _reviewDue =
+        snap != null &&
+        ReviewAskPolicy.shouldAsk(
+          planDay: snap.dayNumber,
+          cravingsSurvived: snap.cravingsSurvivedTotal,
+          askedCount: settings.reviewAskedCount,
+          lastAskedAt: settings.reviewAskedAt,
+          now: snap.now,
+        );
+  }
+
+  /// Home — after docs/03 §8's re-ask for anyone who said "Maybe later" at D4.
+  /// They have just beaten a craving, which is when "a heads-up before the
+  /// next one" means the most. Asked before leaving, while this screen and
+  /// its `ref` are still mounted to show the sheet.
+  Future<void> _leave() async {
+    if (!_reviewDue) {
+      await maybeAskPushPermission(
+        context,
+        ref,
+        reason: PushAskReason.survived,
+      );
+    }
+    if (mounted) context.go(Routes.home);
   }
 
   @override
@@ -1031,10 +1063,7 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
                           ),
                           const _ReviewAsk(),
                           const Spacer(),
-                          LpButton(
-                            l10n.survivedBack,
-                            onTap: () => context.go(Routes.home),
-                          ),
+                          LpButton(l10n.survivedBack, onTap: _leave),
                         ],
                       ),
                     ),

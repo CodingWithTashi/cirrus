@@ -34,6 +34,10 @@ flutter test integration_test/f_firebase_backend_test.dart \
 | `h_panic_games` | The panic arcade — a real round, drags, flicks, pill swaps and a mid-round exit; disposal and the router are what only a device sees |
 | `i_monetisation` | The free/premium surfaces: every door opens a real paywall and closes back, the panic flow never reaches one, and a purchase lands on "You're in." then pops to where the paywall came from |
 | `j_craving_and_quiet_hours` | A craving closed with back starts the next one clean (clock, step, intensity), and the quiet-hours rail drags inside the real sheet — a horizontal drag through the modal's own dismiss-drag and scroll view |
+| `k_retention` | The REAL notification scheduler and OS permission on the fake backend's data (docs/10 §51.5): the second notification ask against the OS's own answer and its system dialog, a week of evening check-ins on the device clock, one delivered and tapped through the shade, and the day-3 offer card with a closable paywall. Needs a never-asked install (`adb uninstall com.quitvape.last_puff` first) and an adb driver for the dialog and the shade — the test prints `E2E-MARKER:` lines and waits |
+| `l_sign_in_fallback` | A failed identity sheet on a real font: "Continue with email" and the retry share one row, and email is one tap away |
+
+`j_widget_session_test.dart` is **not** part of a fake-backend run: it is a `flutter run` entrypoint that leaves a signed-in production account on the device for the widget and watch passes, and it refuses to start on the fake backend.
 
 ## App Check
 

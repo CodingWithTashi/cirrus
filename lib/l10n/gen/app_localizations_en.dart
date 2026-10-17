@@ -889,7 +889,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.';
+      'Not spam. A nudge before your danger hours, an evening check-in on your plan, and a word when you hit a milestone.';
 
   @override
   String get obNotifPreviewTime => 'Fri 9:54 PM';
@@ -903,16 +903,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'A heads-up before your trial ends, and a milestone celebration';
+      'An evening check-in, and a milestone celebration';
 
   @override
   String get obNotifBullet3 => 'Nothing else — no marketing, ever';
 
   @override
   String get obNotifCta => 'Turn on backup';
-
-  @override
-  String get paywallTitle => 'Your plan is ready.';
 
   @override
   String get paywallTitleUpgrade => 'Go further with Premium.';
@@ -1129,9 +1126,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get premiumWelcomeCta => 'Let\'s go';
-
-  @override
-  String get premiumWelcomeCtaDay1 => 'Set up my day 1';
 
   @override
   String get premiumLockTitle => 'Premium';
@@ -1373,6 +1367,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeFreedomDayBody =>
       'The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.';
+
+  @override
+  String homeOfferTitle(int day) {
+    return 'Day $day. Want more in your corner?';
+  }
+
+  @override
+  String get homeOfferBody =>
+      'Premium adds the whole health timeline, a month of stats, every panic game and more coach messages. Free stays free.';
 
   @override
   String get homeTitle => 'Today';
@@ -1986,6 +1989,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorGenericBody =>
       'That one\'s on us, not you. Give it another shot in a sec.';
+
+  @override
+  String get errorSignInUnavailableTitle => 'Apple sign-in didn\'t finish';
+
+  @override
+  String get errorSignInUnavailableBody =>
+      'That usually means no Apple Account is signed in on this phone. You can keep your plan safe with email instead.';
 
   @override
   String get errorPurchaseNotAllowedTitle => 'Purchases are off on this device';
@@ -3122,6 +3132,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDangerHours => 'Danger hours';
 
   @override
+  String get settingsCheckin => 'Evening check-in';
+
+  @override
+  String get settingsCheckinOff => 'off · edit ›';
+
+  @override
+  String get settingsCheckinBody =>
+      'One notification an evening with today\'s limit, so you can log how it went. It stops by itself after a week without you opening Cirrus.';
+
+  @override
+  String get settingsCheckinToggle => 'Remind me each evening';
+
+  @override
+  String get settingsCheckinTime => 'Time';
+
+  @override
   String settingsDangerHoursEdit(String range) {
     return '$range · edit ›';
   }
@@ -3346,6 +3372,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is usually when it hits. You\'ve got a plan — and 15 minutes beats it.';
 
   @override
+  String checkinNotifTitle(int day) {
+    return 'Day $day check-in';
+  }
+
+  @override
+  String get checkinNotifTitlePast => 'Evening check-in';
+
+  @override
+  String checkinNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: 'Today\'s limit is $limit puffs. Tap to log how it\'s going.',
+      one: 'Today\'s limit is 1 puff. Tap to log how it\'s going.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get checkinNotifBodyZero =>
+      'A zero day. Tap to confirm it stayed vape-free.';
+
+  @override
   String get communityLoading => 'Pulling in the feed…';
 
   @override
@@ -3495,6 +3544,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pushAskCta => 'Turn on notifications';
+
+  @override
+  String get pushAskDayOneTitle => 'Want a nudge tonight?';
+
+  @override
+  String get pushAskDayOneBody =>
+      'An evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.';
+
+  @override
+  String get pushAskSurvivedTitle => 'Want backup next time?';
+
+  @override
+  String get pushAskSurvivedBody =>
+      'A heads-up just before your danger hours, so the next craving doesn\'t catch you off guard.';
 
   @override
   String get notificationsTitle => 'Notifications';

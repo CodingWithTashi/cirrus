@@ -122,6 +122,37 @@ void main() {
       ]);
       expect(analytics.names, isNot(contains('sign_in_failed')));
     });
+
+    test('a provider failure carries its code, never just "other"', () async {
+      final analytics = RecordingAnalytics();
+      final c = container(
+        analytics,
+        extra: [authRepositoryProvider.overrideWithValue(_FailingSheets())],
+      );
+      final store = c.read(quitStoreProvider.notifier);
+
+      await expectLater(
+        store.signInWithApple(),
+        throwsA(isA<SignInUnavailableException>()),
+      );
+      await expectLater(
+        store.signInWithGoogle(),
+        throwsA(isA<AuthProviderException>()),
+      );
+
+      expect(analytics.propsOfAll('sign_in_failed'), [
+        {
+          'method': 'apple',
+          'code': 'provider_unavailable',
+          'detail': 'unknown/1000',
+        },
+        {
+          'method': 'google',
+          'code': 'other',
+          'detail': 'journey/cloud_firestore/permission-denied',
+        },
+      ]);
+    });
   });
 
   group('the coach', () {
@@ -235,6 +266,21 @@ void main() {
 }
 
 /// A native Apple/Google sheet the person closed.
+class _FailingSheets implements AuthRepository {
+  @override
+  Future<JourneyState?> signInWithApple() async =>
+      throw const SignInUnavailableException('unknown/1000');
+
+  @override
+  Future<JourneyState?> signInWithGoogle() async =>
+      throw const AuthProviderException(
+        'journey/cloud_firestore/permission-denied',
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _DismissedSheet implements AuthRepository {
   @override
   Future<JourneyState?> signInWithGoogle() async =>

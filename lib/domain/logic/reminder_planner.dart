@@ -1,3 +1,4 @@
+import '../models/journey_state.dart';
 import '../models/models.dart';
 import 'danger_hours.dart';
 
@@ -140,8 +141,9 @@ abstract final class ReminderPlanner {
 /// these values and stops forbidding the word in the notification-permission
 /// copy the day a value called exactly that exists. The permission screen sold
 /// "milestone celebrations" in five languages while seventeen badges unlocked
-/// in silence; this is the value that makes the promise true.
-enum ReminderKind { danger, trial, milestone }
+/// in silence; this is the value that makes the promise true. `checkin` is the
+/// same arrangement for the evening check-in.
+enum ReminderKind { danger, trial, milestone, checkin }
 
 /// One nudge at one instant — the trial-ending reminder and the milestone
 /// celebration. Unlike a [ReminderSlot] it does not repeat, so it is an
@@ -341,4 +343,95 @@ abstract final class MilestoneReminderPlanner {
 
   static DateTime _at(DateTime day, int hour, {bool tomorrow = false}) =>
       DateTime(day.year, day.month, day.day + (tomorrow ? 1 : 0), hour);
+}
+
+/// One evening check-in: when it fires, and the plan day and limit it names.
+class CheckinReminder {
+  const CheckinReminder({
+    required this.reminder,
+    required this.planDay,
+    required this.totalDays,
+    required this.limit,
+  });
+
+  final OneShotReminder reminder;
+
+  /// 1-based, as Home counts it; above [totalDays] means past Freedom Day.
+  final int planDay;
+  final int totalDays;
+
+  /// `JourneyState.limitOn` for that day — the number Home will show.
+  final int limit;
+
+  @override
+  String toString() =>
+      'CheckinReminder(${reminder.id}, ${reminder.at.toIso8601String()}, '
+      'day $planDay, limit $limit)';
+}
+
+/// Decides when the evening check-in fires (docs/10 §51).
+///
+/// The Oct 5 2026 read found two in three people who finished onboarding never
+/// opened the app a second day, and nothing in the app could reach them: the
+/// danger-hour nudge needs three confirmed days of data, its onboarding
+/// fallback lands inside the default quiet hours for most early-morning
+/// answers, and every other reminder waits on something the person has done.
+/// This is the one that only needs a plan.
+///
+/// The rules:
+///   * one a day at `hour` (20:00 by default — when Home already
+///     shows "No puffs today?" and the mood card, so a tap lands on the cards
+///     that confirm the day)
+///   * the next seven calendar days, never more. Every sync — every app open
+///     and every puff — re-arms the window, so it reaches a week past the last
+///     time the person was here and then STOPS by itself. Somebody who has
+///     gone for good stops hearing from us within a week, without a server
+///     ever deciding they have
+///   * not today once today is confirmed: they have been here today
+///   * nothing inside quiet hours
+///   * NOT skipped for a danger-hour nudge in the same hour. The first cut
+///     did skip it, and the most common evening danger hour (21:00, nudged
+///     at 20:50) then silenced the check-in on every day of the plan while
+///     Settings still read "20:00 · edit" — a switch that says on and does
+///     nothing. The two say different things fifty minutes apart, and the
+///     hour on the screen is the hour it fires
+///   * fire times are calendar arithmetic (`DateTime(y, m, d + i, hour)`),
+///     never `Duration(days: i)`, which lands an hour off across DST
+abstract final class CheckinReminderPlanner {
+  /// Ids [firstId] … [firstId] + [window] − 1, clear of the danger-hour slots
+  /// (1000–1023), the trial reminder (2000) and the milestones (3000+).
+  static const int firstId = 4000;
+  static const int window = 7;
+
+  static List<int> get ids => [for (var i = 0; i < window; i++) firstId + i];
+
+  static List<CheckinReminder> plan({
+    required JourneyState journey,
+    required DateTime now,
+    required int hour,
+    required int quietStartHour,
+    required int quietEndHour,
+    required bool enabled,
+  }) {
+    if (!enabled) return const [];
+    if (ReminderPlanner.isQuiet(hour, quietStartHour, quietEndHour)) {
+      return const [];
+    }
+
+    final out = <CheckinReminder>[];
+    for (var i = 0; i < window; i++) {
+      final at = DateTime(now.year, now.month, now.day + i, hour);
+      if (!at.isAfter(now)) continue;
+      if (i == 0 && (journey.logFor(now)?.isConfirmed ?? false)) continue;
+      out.add(
+        CheckinReminder(
+          reminder: OneShotReminder(id: firstId + i, at: at),
+          planDay: journey.plan.dayNumber(at),
+          totalDays: journey.plan.totalDays,
+          limit: journey.limitOn(at),
+        ),
+      );
+    }
+    return out;
+  }
 }

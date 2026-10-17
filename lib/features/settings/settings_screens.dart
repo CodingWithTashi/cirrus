@@ -12,6 +12,7 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/billing_catalog.dart';
+import '../../domain/logic/reminder_planner.dart';
 import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
@@ -25,6 +26,7 @@ import '../../core/widgets/press_scale.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/models/models.dart';
 import 'danger_hours_sheet.dart';
+import 'checkin_sheet.dart';
 import 'push_categories_sheet.dart';
 import '../../domain/logic/coach_name.dart';
 
@@ -250,6 +252,52 @@ class SettingsScreen extends ConsumerWidget {
                                 locale,
                               ),
                             ),
+                            style: LpType.caption(
+                              lp.emberText,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // The evening check-in: a device reminder like danger
+                  // hours, so it sits beside them rather than on the
+                  // server-decided categories sheet.
+                  PressScale(
+                    onTap: () => showCheckinSheet(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: lp.surfaceInset,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: lp.border),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.settingsCheckin,
+                            style: LpType.caption(lp.textSecondary),
+                          ),
+                          Text(
+                            // Off when quiet hours have since swallowed the
+                            // chosen hour: the planner will not fire it, and
+                            // the row must not say it will.
+                            settings.checkinReminderOn &&
+                                    !ReminderPlanner.isQuiet(
+                                      settings.checkinHour,
+                                      settings.quietStartHour,
+                                      settings.quietEndHour,
+                                    )
+                                ? l10n.settingsDangerHoursEdit(
+                                    LpFormat.hour(settings.checkinHour, locale),
+                                  )
+                                : l10n.settingsCheckinOff,
                             style: LpType.caption(
                               lp.emberText,
                               weight: FontWeight.w600,

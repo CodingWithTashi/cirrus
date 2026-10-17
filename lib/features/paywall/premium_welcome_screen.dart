@@ -24,8 +24,7 @@ import '../../domain/logic/games/game_id.dart';
 /// door into it (docs/10 §28).
 ///
 /// Shown for every COMPLETED purchase — the paywall's CTA, the win-back
-/// card, an onboarding purchase, and a pending payment that settles while
-/// the paywall is still up — and never for `PurchasePending`, whose honest
+/// card, and a pending payment that settles while the paywall is still up — and never for `PurchasePending`, whose honest
 /// "payment is pending" snack stays. A restore keeps its "welcome back" snack:
 /// nothing new was bought, and a fanfare would be wrong.
 ///
@@ -38,13 +37,7 @@ import '../../domain/logic/games/game_id.dart';
 /// reminder is planned from), and the reminder sentence only when that
 /// toggle — and the master switch — are on. No new numbers.
 class PremiumWelcomeScreen extends ConsumerStatefulWidget {
-  const PremiumWelcomeScreen({super.key, this.onboarding = false});
-
-  /// Reached on the way out of onboarding: the Day-1 checklist is next, and
-  /// the rows are not doors — the router sends the shell tabs back to the
-  /// checklist until it is done, so a door here would open onto the wrong
-  /// screen.
-  final bool onboarding;
+  const PremiumWelcomeScreen({super.key});
 
   @override
   ConsumerState<PremiumWelcomeScreen> createState() =>
@@ -109,10 +102,6 @@ class _PremiumWelcomeScreenState extends ConsumerState<PremiumWelcomeScreen>
   }
 
   void _leave() {
-    if (widget.onboarding) {
-      context.go(Routes.day1);
-      return;
-    }
     final router = GoRouter.of(context);
     // Same fallback as `leavePaywall`: a paywall reached by a deep link had
     // nothing beneath it, and neither does its welcome.
@@ -199,9 +188,7 @@ class _PremiumWelcomeScreenState extends ConsumerState<PremiumWelcomeScreen>
                                     unlock: unlock,
                                     label: unlock.label(l10n),
                                     animation: _rows[i],
-                                    door: widget.onboarding
-                                        ? null
-                                        : () => unlock.open(context),
+                                    door: () => unlock.open(context),
                                   ),
                               ],
                             ),
@@ -249,12 +236,7 @@ class _PremiumWelcomeScreenState extends ConsumerState<PremiumWelcomeScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  LpButton(
-                    widget.onboarding
-                        ? l10n.premiumWelcomeCtaDay1
-                        : l10n.premiumWelcomeCta,
-                    onTap: _leave,
-                  ),
+                  LpButton(l10n.premiumWelcomeCta, onTap: _leave),
                   const SizedBox(height: 10),
                   Text(
                     l10n.paywallCancelAnytime,

@@ -534,14 +534,13 @@
   "obWhyWordsCta": "That's why",
   "obWhyWordsSkip": "Skip this",
   "obNotifTitle": "Backup, exactly when you cave.",
-  "obNotifSubtitle": "Not spam. A nudge before your danger hours, one before your trial ends, and a word when you hit a milestone.",
+  "obNotifSubtitle": "Not spam. A nudge before your danger hours, an evening check-in on your plan, and a word when you hit a milestone.",
   "obNotifPreviewTime": "Fri 9:54 PM",
   "obNotifPreviewBody": "heads up — Friday nights are your spike. Plan's ready 💪",
   "obNotifBullet1": "Danger-hour heads-up (you set the hours)",
-  "obNotifBullet2": "A heads-up before your trial ends, and a milestone celebration",
+  "obNotifBullet2": "An evening check-in, and a milestone celebration",
   "obNotifBullet3": "Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
-  "paywallTitle": "Your plan is ready.",
   "paywallTitleUpgrade": "Go further with Premium.",
   "paywallRevealLabel": "YOUR PLAN",
   "paywallFeatCoach": "Unlimited AI coach that remembers your why",
@@ -705,7 +704,6 @@
   },
   "premiumWelcomeReminder": "We'll remind you the day before.",
   "premiumWelcomeCta": "Let's go",
-  "premiumWelcomeCtaDay1": "Set up my day 1",
   "premiumLockTitle": "Premium",
   "premiumLockCta": "See Premium",
   "premiumPitchInsight": "Your weekly report, written from your own numbers.",
@@ -880,6 +878,15 @@
   },
   "homeFreedomDayTitle": "Freedom Day. You picked this date.",
   "homeFreedomDayBody": "The plan ends today and the line stays at zero from here. Every vape-free day you confirm now is maintenance — same flame, same streak.",
+  "homeOfferTitle": "Day {day}. Want more in your corner?",
+  "@homeOfferTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "homeOfferBody": "Premium adds the whole health timeline, a month of stats, every panic game and more coach messages. Free stays free.",
   "homeTitle": "Today",
   "homeStreakChip": "{count, plural, one{🔥 {count} day} other{🔥 {count} days}}",
   "@homeStreakChip": {
@@ -1323,6 +1330,8 @@
   "splashJourneyUnavailableBody": "You're still signed in and nothing is lost. Check your connection and try again.",
   "errorGenericTitle": "Well, that glitched",
   "errorGenericBody": "That one's on us, not you. Give it another shot in a sec.",
+  "errorSignInUnavailableTitle": "Apple sign-in didn't finish",
+  "errorSignInUnavailableBody": "That usually means no Apple Account is signed in on this phone. You can keep your plan safe with email instead.",
   "errorPurchaseNotAllowedTitle": "Purchases are off on this device",
   "errorPurchaseNotAllowedBody": "This device or account can't buy subscriptions right now — usually parental controls or a store restriction. Nothing was charged.",
   "errorStoreTitle": "The store didn't answer",
@@ -2239,6 +2248,11 @@
   "settingsManageUnavailable": "Manage this subscription from the store account that bought it.",
   "settingsNotifications": "Notifications",
   "settingsDangerHours": "Danger hours",
+  "settingsCheckin": "Evening check-in",
+  "settingsCheckinOff": "off · edit ›",
+  "settingsCheckinBody": "One notification an evening with today's limit, so you can log how it went. It stops by itself after a week without you opening Cirrus.",
+  "settingsCheckinToggle": "Remind me each evening",
+  "settingsCheckinTime": "Time",
   "settingsDangerHoursEdit": "{range} · edit ›",
   "@settingsDangerHoursEdit": {
     "placeholders": {
@@ -2337,6 +2351,24 @@
   "seedReplyUpdate": "update: bought the gatorade. walking home. thank you, i mean it 💙",
   "dangerReminderTitle": "Your danger hour is coming up",
   "dangerReminderBody": "This is usually when it hits. You've got a plan — and 15 minutes beats it.",
+  "checkinNotifTitle": "Day {day} check-in",
+  "@checkinNotifTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "checkinNotifTitlePast": "Evening check-in",
+  "checkinNotifBody": "{limit, plural, =1{Today's limit is 1 puff. Tap to log how it's going.} other{Today's limit is {limit} puffs. Tap to log how it's going.}}",
+  "@checkinNotifBody": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "checkinNotifBodyZero": "A zero day. Tap to confirm it stayed vape-free.",
   "@dangerReminderTitle": {
     "description": "Local notification fired 10 min before a predicted danger hour (docs/03 §8)."
   },
@@ -2496,6 +2528,10 @@
   "@pushAskCta": {
     "description": "Contextual notification permission ask, after a first post or reply."
   },
+  "pushAskDayOneTitle": "Want a nudge tonight?",
+  "pushAskDayOneBody": "An evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.",
+  "pushAskSurvivedTitle": "Want backup next time?",
+  "pushAskSurvivedBody": "A heads-up just before your danger hours, so the next craving doesn't catch you off guard.",
   "notificationsTitle": "Notifications",
   "@notificationsTitle": {
     "description": "In-app notification inbox."

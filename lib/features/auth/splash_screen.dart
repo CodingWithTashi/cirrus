@@ -82,10 +82,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       context.go(Routes.onboarding);
       return;
     }
-    // The once-a-day launch paywall for free users (LaunchPaywallPolicy).
-    // The billing backend gets a short, bounded wait to answer for this
-    // session; if it has not, the policy treats the tier as unknown and shows
-    // nothing — a paying user must never see a paywall for their own plan.
+    // The once-a-day offer for free users (LaunchPaywallPolicy). Since Oct 16
+    // 2026 it is a card on Home, never a paywall pushed over it: a full
+    // screen of price on opening the app, with no close button, was the one
+    // unrequested prompt in the product (docs/10 §51). The decision stays
+    // here because this is the one place that waits for the billing backend
+    // to answer: if it has not, the policy treats the tier as unknown and
+    // offers nothing — a paying user must never be sold their own plan.
     final entitlements = ref.read(entitlementProvider.notifier);
     await entitlements.settled.timeout(
       const Duration(milliseconds: 2500),
@@ -94,11 +97,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     final now = ref.read(nowProvider)();
     final today = LpDate.dayKey(now);
-    // A tapped notification is waiting for this navigation to happen so it
-    // can land on top. Showing the paywall would spend one of its
-    // lifetime-capped slots on an impression the push immediately covers.
-    final pushPending = ref.read(pushPendingProvider);
-    final show = !pushPending && LaunchPaywallPolicy.shouldShow(
+    final offer = LaunchPaywallPolicy.shouldShow(
       hasJourney: true,
       planDay: journey.plan.dayNumber(now),
       settled: entitlements.isSettled,
@@ -107,11 +106,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       shownCount: ref.read(settingsStoreProvider).launchPaywallShownCount,
       today: today,
     );
-    context.go(Routes.home);
-    if (show) {
+    // Armed BEFORE the navigation, so Home's first frame already has it.
+    if (offer) {
       ref.read(settingsStoreProvider.notifier).markLaunchPaywallShown(today);
-      unawaited(context.push(Routes.paywallFrom('launch')));
     }
+    context.go(Routes.home);
   }
 
   /// Back to the breathing mark while it asks again, so a retry reads as the

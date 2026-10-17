@@ -45,9 +45,10 @@ void main() {
         ..planRevealed()
         ..commitHeld()
         ..notifPrompt(granted: true)
-        ..paywallViewed('d5_default', source: 'onboarding', planDay: 12)
-        ..planSelected('yearly', source: 'onboarding')
-        ..paywallDismissed(source: 'launch', plan: 'weekly')
+        ..onboardingCompleted()
+        ..paywallViewed('d5_default', source: 'offer_card', planDay: 12)
+        ..planSelected('yearly', source: 'offer_card')
+        ..paywallDismissed(source: 'offer_card', plan: 'weekly')
         ..trialStarted('yearly')
         ..freeContinued()
         ..winbackShown()
@@ -79,7 +80,8 @@ void main() {
         ..signInFailed(LpSignInMethod.email, 'invalid_credentials')
         ..coachMessageSent(chip: false, panic: true)
         ..communityPostCreated('sos')
-        ..communityReplyCreated(toSos: true);
+        ..communityReplyCreated(toSos: true)
+        ..reminderOpened('checkin');
 
       expect(a.names, [
         'onboarding_start',
@@ -93,6 +95,10 @@ void main() {
         'plan_revealed',
         'commit_held',
         'notif_prompt',
+        // The journey exists. Onboarding used to end on the D5 paywall, so
+        // `paywall_viewed` was the funnel's last step; since Oct 16 2026 it
+        // passes through no paywall at all, and this is where it ends.
+        'onboarding_completed',
         'paywall_viewed',
         // What people CONSIDER vs what they buy, and leaving the paywall
         // itself — `purchase_cancelled` only ever saw the store sheet.
@@ -136,6 +142,9 @@ void main() {
         'coach_message_sent',
         'community_post_created',
         'community_reply_created',
+        // Reminder taps reported nothing until Oct 16 2026, so no reminder
+        // could ever be shown to have brought anybody back.
+        'reminder_opened',
       ]);
       expect(a.propsOf('sign_in_completed'), {
         'method': 'email_register',
@@ -149,6 +158,7 @@ void main() {
       expect(a.propsOf('coach_message_sent'), {'kind': 'typed', 'panic': 'true'});
       expect(a.propsOf('community_post_created'), {'tag': 'sos'});
       expect(a.propsOf('community_reply_created'), {'sos': 'true'});
+      expect(a.propsOf('reminder_opened'), {'kind': 'checkin'});
       expect(a.propsOf('purchase_completed'), {
         'plan': 'yearly',
         'trial': 'true',
@@ -157,15 +167,15 @@ void main() {
       expect(a.propsOf('gate_shown'), {'source': 'insight', 'plan_day': 3});
       expect(a.propsOf('paywall_viewed'), {
         'variant': 'd5_default',
-        'source': 'onboarding',
+        'source': 'offer_card',
         'plan_day': 12,
       });
       expect(a.propsOf('plan_selected'), {
         'period': 'yearly',
-        'source': 'onboarding',
+        'source': 'offer_card',
       });
       expect(a.propsOf('paywall_dismissed'), {
-        'source': 'launch',
+        'source': 'offer_card',
         'plan': 'weekly',
       });
       expect(a.propsOf('gate_tapped'), {'source': 'insight'});

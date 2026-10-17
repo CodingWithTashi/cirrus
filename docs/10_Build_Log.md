@@ -5615,3 +5615,78 @@ Sixty-three strings, every one of them an edit to copy that already shipped. Rea
 ### 50.4 Gates
 
 `flutter analyze` clean · `flutter test` **1978 passed** · `functions`: `npm run verify` **326 passed** · every Italian string with a count, a name, a date, an hour or a period rendered through the generated class with real values and read (1 and many; *Ana*, *Élodie*, *Zyx*; `01` and `15`). Not driven on a device: nothing here has been seen in the app on a phone, and Italian is 15–40% longer than English in exactly the short slots. The commit button, the mood row, the badge names and the profile tiles were shortened for it by arithmetic, not by eye.
+
+## 51. USERS BEFORE MONEY (Oct 16) — no paywall in onboarding, an evening check-in, and sign-in failures that say why
+
+The founder asked Amplitude's agent for "hidden performance and friction areas" and got three: **15 `sign_in_failed` against 4 `sign_in_completed`**, 13 of them Apple with `code: other`; **48 paywall views, 8 trial starts, 3 purchases, 5 cancelled store sheets** (all yearly); and **46 onboarding starts against 13 finished Day-1 checklists**. The brief was one line: fix these, bring people back, "do not let user drop by paywall … focus on users rather than money for now".
+
+**Read the agent's numbers as users, not as people.** It does not apply the "Real users (no test traffic)" segment, and §48 found 32 people among 168 "users" — Play pre-launch robots walk the quiz, and Cupertino is App Review, which tests Sign in with Apple. Through that segment the Oct 5 funnel already said where people go: onboarding held 87% and lost no more than two people on any screen; 17 of the 20 who saw the D5 paywall took Free; and **two in three who finished never opened the app on a second day**. So the work below goes where that read points, and the founder's three decisions bound it:
+
+| Decision (Oct 16 2026) | |
+|---|---|
+| **Free first** | No paywall in onboarding. Premium is offered from day 3 through the lock doors and a card on Home, never blocking. Reverses docs/12 §4.2 ("keep D5 exactly as is") knowingly: the onboarding slot is the best-converting placement in docs/12 §3.3, and that is the trade. |
+| **The account stays mandatory** | No "skip for now". So a failed sign-in has to have a way through. |
+| **The free tier and the onboarding steps are unchanged** | Stats 7 days, Health 4 nodes, Orbs only, 5 coach messages; all 20 `ObStep`s as they were. |
+
+### 51.1 Sign-in: every failure names itself, and none is a dead end
+
+`code: other` was `JourneyStore._reportSignInMiss`'s catch-all for whatever `guardAuth` rethrew raw. Two causes hid there that the code can prove:
+
+- **firebase_auth 6.6.1's iOS plugin maps only `ASAuthorizationError.canceled`.** Apple's `unknown` (1000) — what the sheet returns when no Apple Account is signed in on the phone, and on some dismissals — arrives as code `unknown` with the native code folded into the message (`AuthErrors.swift:52`), and the person was shown "Well, that glitched — that one's on us" with a retry that ends the same way.
+- **The journey read after a GOOD Apple sign-in shared its guard.** `guardAuth` maps only `unavailable`/`deadline-exceeded` for Firestore, so a refusal there was also an "Apple failure".
+
+`guardSignIn` (`firebase_common.dart`) now wraps the sign-in paths and lets nothing leave unnamed: leftovers become `AuthProviderException(detail)` and `sign_in_failed` carries that sanitized code as `detail` (`unknown/1006`, `journey/cloud_firestore/permission-denied`; `[a-z0-9_/-]`, ≤64, never a message — messages carry email addresses). Apple 1000 is `SignInUnavailableException` → `code: provider_unavailable`, with copy that says what it is and points at email. And because the account is required to go on, **every non-cancel Apple or Google failure dialog offers "Continue with email"** beside the retry (`showLpErrorDialog(alternative:)`). The thirteen turned out to be App Review, not people (§51.4) — which makes them a review risk rather than a funnel leak — and the next submission's `detail` says which failure the reviewer hit.
+
+### 51.2 Free first
+
+- **Onboarding ends on Day 1.** Both buttons on the notifications step run `complete()` and `go(Routes.day1)` — busy while it runs, the error dialog's retry on a failure, the draft intact until the backend answers. `onboarding_completed` is the funnel's new last step; it used to end on `paywall_viewed`.
+- **No paywall without a journey.** The router sends `/paywall…` and `/premium/welcome` to `/auth` when there is no journey, so the paywall's onboarding branch (`_fromOnboarding`, `_finishOnboarding`, the "Your plan is ready." title, `FreePlanScreen`'s `complete()`, `PremiumWelcomeScreen(onboarding:)` and `Routes.premiumWelcomeDay1`) could be deleted rather than left as a path nothing reaches. Two retired strings went with it.
+- **Every paywall can be closed.** There was no close at all — the 12-point Free link and the system back gesture were the only ways out — so the launch paywall was a full screen of price on opening the app with no visible exit. An X now calls `leavePaywall()`, and leaving reports `paywall_dismissed` as before.
+- **The launch paywall is a card on Home.** `LaunchPaywallPolicy`'s rules are untouched (days 3/7/14/30, once a day, four ever, never Premium/trial, never an unsettled tier) and the splash still decides and counts it — it is the one place that waits for the billing backend. What a `true` puts on screen changed: `_OfferCard` ("Day {n}. Want more in your corner?" — what Premium adds, and that Free stays free), dismissible, `gate_shown`/`gate_tapped` with `source: offer_card`, closed for the day by its X, a swipe or a tap (`offerCardClosedDay`). **It sits outside Home's one-card chain**: on the day-14 fixture the nudge lock owned that slot, and after 18:00 the mood card would, so an offer that had already been counted would never have been seen.
+
+### 51.3 Day two: the evening check-in, and a second chance at notifications
+
+Nothing in the app reached somebody who did not come back. The danger-hour nudge needs three confirmed days; its onboarding fallback (the first-puff answer) lands at 06:50 or 07:50, inside the default 23→8 quiet hours, so most new people got no reminder at all. Every other reminder waits on something the person has done.
+
+- **`CheckinReminderPlanner`**: one notification an evening at 20:00 (`checkinHour`), for the next seven calendar days, re-armed on every sync — so the window reaches a week past the last time the person was here and **then stops by itself**, without a server deciding they have gone. It names that day's number from `journey.limitOn` and `plan.dayNumber` ("Day 4 check-in · Today's limit is 9 puffs"), drops the number past Freedom Day as Home does, skips a confirmed today and quiet hours, and builds every fire time as `DateTime(y, m, d + i, hour)`. Ids 4000–4006, re-armed through its own ids only; Android channel `evening_checkins`; a tap lands on Home, where 20:00 is already showing "No puffs today?" and the mood card. On by default, with a switch and an hour (17–22, quiet hours removed) beside danger hours in Settings — a device reminder, so not on the server-decided categories sheet.
+- **`reminder_opened{kind}`.** A reminder tap reported nothing until now, so whether any reminder ever brought anyone back was unknowable.
+- **The permission screen says it.** `obNotifSubtitle` and `obNotifBullet2` name the evening check-in in six languages (and lose the trial line: onboarding no longer offers one). `copy_honesty_test` now forbids the check-in word wherever `ReminderKind` lacks the value. pt's subtitle also stops mixing *você* and *tu* in the one sentence it was rewritten for.
+- **A second notification ask at two more moments.** 11 of 20 declined at D4 on Oct 5, and "Maybe later" never opens the OS dialog. The only second chance was after a community post; docs/03 §8's re-ask after a survived craving was documented (the comment at `payoff_steps.dart`) and never built. `maybeAskPushPermission(reason:)` now also runs when the Day-1 checklist is finished and on the way out of the Survived screen — never in the same visit as the rating card — with its own words for each, still once ever and only while the OS has never been asked. It reads the OS through `pushPermissionsProvider` (null on the fake backend), which is what lets `push_ask_test.dart` reach a sheet no widget test could reach before. The sheet is `isScrollControlled` now: the capped default height pushed "Maybe later" off the bottom.
+
+### 51.4 The same three findings, read as people
+
+Queried the same day through the "Real users (no test traffic)" segment (last 30 days unless said):
+
+| Finding | What the agent saw | Real people |
+|---|---|---|
+| Sign-in | 15 failed / 4 completed | **0 failed / 2 completed.** All 15 failures were review and robot traffic: 13 Apple on US iPhones (16 Pro Max, SE 2nd gen, 11 Pro) on builds **1.0.26 and 1.0.27** — 5 tagged Cupertino, 8 with no city — which is App Review reviewing those builds; the 2 email failures were Android with no device model, Play's pre-launch robots |
+| Paywall | 48 views · 8 trials · 3 bought · 5 cancelled | **19 saw it (18 at onboarding) · 14 took Free · 4 started a trial · 3 bought · 1 cancelled a sheet.** All 3 purchases are trials (London and Riyadh yearly, Lancaster monthly) and came through the D5 slot. At most two people were lost on the paywall itself |
+| Onboarding → Day 1 | 46 started · 13 finished Day 1 | **23 started · 19 committed · 15 reached Day 1 · 11 finished it · 4 skipped** |
+
+**Retention baseline** (N-day, cohort = `onboarding_start`, returning on any active event): **Day 1 21% (4/19) · Day 3 22% (4/18) · Day 7 20% (3/15)** over 30 days; Day 1 21% (6/28) and Day 7 13% (3/24) over 90. The gates are D1 ≥ 45% and D7 ≥ 25%. This release is read against these.
+
+Two things follow that change how §51.1–§51.2 should be read. **Sign-in was not losing real people — it was failing App Review**, every time a reviewer tapped Apple, on the two builds most recently reviewed; that is a rejection risk under Guideline 2.1 as much as a funnel problem, and the `detail` this build adds is what will name the cause. And **D5 was earning**: four trial starts in nineteen (the board's ≥ 20% gate) and all three purchases of the month. Free first gives that up on purpose, for the two people a month it lost and for the day-2 number above; the offer card and the lock doors are where that revenue has to come back from, and `paywall_viewed{source: offer_card}` is how to see whether it does.
+
+### 51.5 On a Pixel 8, against the real plugins — and the three things only it could show
+
+The founder's follow-up was "make sure issues are fixed properly, not nominally". Every widget test above injects the scheduler and the permission, which is exactly where the first two problems hid. `integration_test/k_retention_test.dart` keeps the data on the fake backend (no account is created, nothing is written) and wires in the **real** `flutter_local_notifications` scheduler and the **real** OS permission through FCM (Firebase initialized for messaging only). An adb driver plays the hand outside the app — the system dialog's Allow, the notification shade — off `E2E-MARKER:` lines in the log, and screenshots each step.
+
+Proven on the device: the Day-1 ask reads the OS's own "never asked", its button opens Android's dialog and the grant comes back; the device clock holds the six remaining check-ins (ids 4001–4006, Day 13–18, limits 85 → 51 from `limitOn`, payload `checkin`; tonight's skipped because it was past 20:00) and the switch takes down only those; a scheduled check-in is posted to the shade (≈50 s after its instant — inexact, as designed), and tapping it routes Stats → Home and reports `reminder_opened{kind: checkin}`; a day-14 free launch puts the card on Home and no paywall over it, the card opens `offer_card`, the paywall's X closes back onto Home and the card stays gone. Then the existing suites: **57 passed** across `a`–`j` (onboarding now ending on Day 1 with a real keypad and a real 3-second hold), and `l_sign_in_fallback_test.dart` on a real font. (`j_widget_session_test.dart` is a `flutter run` setup entrypoint for production, not a fake-backend test; it refused at its own guard and wrote nothing.)
+
+What the device found:
+
+1. **A permanent Android refusal read as "never asked".** firebase_messaging 16.6.0 reports `deniedPermanently` on Android 13+, and `PushService.permissionStatus()` filed every value it did not name under `notAsked` — so the new asks, and the community one before them, would have offered "Turn on notifications" to exactly the people Android will never prompt again, and Settings showed them a dead button instead of the "blocked" note. `PushService.permissionFrom` is exhaustive now, with no wildcard (`test/data/push_service_test.dart`).
+2. **The check-in skipped any day a danger nudge shared its hour** — and the commonest evening danger hour, 21:00, is nudged at 20:50. For all of those people it would never have fired, while Settings read "20:00 · edit". The rule is gone (the two say different things fifty minutes apart), and the Settings row reads *off* if quiet hours have since covered the chosen hour.
+3. **Three dialog actions do not fit a phone's row.** With "Continue with email" added, Android stacked "Got it / Continue with email / Run it back" with the dead end on top. With a second way through, "Got it" is dropped (outside-tap and back still close it), and the device test now asserts the two share a row.
+
+Not proven anywhere but unit tests: the **Apple** 1000 path. It is iOS-only, there was no room on the Mac for an iOS build, and the mapping is pinned against the exact message firebase_auth 6.6.1's iOS plugin builds.
+
+### 51.6 Not done, and why
+
+- **No chart was saved in Amplitude.** The numbers above were queried, not saved; `S4-9`'s dashboard and its drop-off alert are still the founder's to keep or create.
+- **Not run on iOS** (above), and `.maestro/flows/03_onboarding.yaml` has not been run — `b_onboarding_test` covers the same path on the device.
+- **Nothing reaches a user before the next store build.**
+
+### 51.7 Gates
+
+`flutter analyze` clean · `flutter test` **2013 passed** · **on the Pixel 8 (Android 17): `k_retention` 4/4, `l_sign_in_fallback` 1/1, suites `a`–`j` 57/57** (new: `auth_error_mapping_test` guardSignIn group, `sign_in_fallback_test`, `checkin_reminder_planner_test`, `push_ask_test`, the offer-card group in `premium_gate_test`, the check-in group in `reminder_coordinator_test`, quiz-first's Day-1 ending and journey-gated paywall). No `functions/` change.

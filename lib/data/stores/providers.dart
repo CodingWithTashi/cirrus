@@ -30,6 +30,7 @@ import '../repositories/api_journey_repository.dart';
 import '../repositories/fake_billing_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
 import '../api/firebase/push_messages.dart';
+import '../api/firebase/push_service.dart';
 import '../repositories/fake_notifications_repository.dart';
 import '../repositories/firebase_notifications_repository.dart';
 import 'notifications_store.dart';
@@ -410,6 +411,16 @@ final pushMessagesProvider = Provider<PushMessages?>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => null,
     BackendMode.firebase => const FirebasePushMessages(),
+  },
+);
+
+/// The OS notification permission, for the second-chance asks. Null on the
+/// fake backend, like [pushMessagesProvider]: there is no FCM to ask, and the
+/// asks simply do not happen there. Tests override it to reach the sheet.
+final pushPermissionsProvider = Provider<PushPermissions?>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => null,
+    BackendMode.firebase => const PlatformPushPermissions(),
   },
 );
 

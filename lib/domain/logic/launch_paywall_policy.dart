@@ -1,10 +1,16 @@
-/// When a free user opening the app is shown the paywall (docs/02 §5: upgrade
+/// When a free user opening the app is OFFERED Premium (docs/02 §5: upgrade
 /// prompts are allowed at most once a day and must never become interstitial
 /// spam; the founder's Sep 2 2026 call puts that one prompt on launch).
 ///
+/// Since Oct 16 2026 the offer is a dismissible card on Home, not a paywall
+/// pushed over it — users before money, and a full screen of price on opening
+/// the app was the one unrequested prompt the product had (docs/10 §51). The
+/// rules below did not change; only what a `true` puts on screen did. The
+/// name stayed so the persisted counters it reads keep theirs.
+///
 /// Pure, so every rule below is a one-line test rather than a device session.
 abstract final class LaunchPaywallPolicy {
-  /// Whether this launch gets the paywall.
+  /// Whether this launch gets the offer.
   ///
   /// - No journey → nothing to gate; the sign-in and onboarding flows own the
   ///   screen.
@@ -12,8 +18,8 @@ abstract final class LaunchPaywallPolicy {
   ///   backend that has not answered yet, must never read as "known free":
   ///   a paying user would be shown a paywall for their own subscription.
   /// - Premium or trial → no.
-  /// - Plan day 1 → no: they saw D5 minutes ago (and the day-1 checklist
-  ///   redirect owns the tabs anyway).
+  /// - Plan day 1 → no: they finished onboarding minutes ago (and the day-1
+  ///   checklist redirect owns the tabs anyway).
   /// - Not a milestone day → no. See [milestoneDays].
   /// - Already shown [lifetimeCap] times → no, ever again.
   /// - Already shown today (local day key) → no. Once a day, never more.
@@ -36,7 +42,7 @@ abstract final class LaunchPaywallPolicy {
     return true;
   }
 
-  /// The only days a launch paywall may appear on.
+  /// The only days the offer may appear on.
   ///
   /// This used to fire on EVERY launch-day of a free account's life, forever.
   /// Two problems with that, and they compound. It is the one door docs/02 §5
@@ -53,7 +59,7 @@ abstract final class LaunchPaywallPolicy {
   /// which is the nearest a launch-time paywall can get to being contextual.
   static const List<int> milestoneDays = [3, 7, 14, 30];
 
-  /// How many launch paywalls one account may ever see.
+  /// How many offers one account may ever see.
   ///
   /// Belt to [milestoneDays]' braces: `planDay` is not guaranteed monotonic —
   /// a Comeback restarts the plan, and day 3 would come round again. Four is
