@@ -548,8 +548,9 @@ time this repo has been bitten by that shape (`MODEL_*`, the allowance params).
 - [x] `S7-16` **The notification ask is per moment**, a day apart. `test/widgets/push_ask_test.dart`
 - [x] `S7-17` **Start a new plan** (`PlanRestart`, `/plan/new`, `taperFrom`), app and server; reviewed once independently and four findings fixed (docs/10 §52.3). `test/domain/plan_restart_test.dart`, `test/data/new_plan_store_test.dart`, `test/widgets/new_plan_test.dart`, `functions/test/taperEngine.test.ts`
 - [x] `S7-18` `ENFORCE_APP_CHECK=true` in the repo again (founder: deploy)
-- [ ] `S7-19` **Deploy functions BEFORE the app ships** — `taperFrom` on the server, and the Oct 11 Italian push copy that has been waiting (founder)
-- [ ] `S7-20` **Prove it on a device.** Blocked on Nov 12: the simulator build needs the watchOS 26.2 runtime, and no Android device was attached. `integration_test/m_reminder_tap_test.dart` is the probe for `S7-9`
+- [x] `S7-19` **Functions deployed** Nov 12 05:50 UTC, all 25, after `verify` 337 · `test:rules` 57 · `test:integration` 412. App Check still enforced; every real request in the next two hours succeeded (docs/10 §52.5)
+- [x] `S7-20a` **On the Pixel 8**, fake backend: suites `a`–`e`, `g`–`j`, `l` 58 passed, the new `n_zero_day_and_new_plan` 3 passed, `k_retention` 3 of 4 (docs/10 §52.5)
+- [ ] `S7-20b` **Still owed on a device:** iOS at all (the simulator build needs the watchOS 26.2 runtime; `m_reminder_tap` is the probe for `S7-9`); `f_firebase_backend` from the Pixel (the pinned App Check debug token is not registered for the Android app — founder); a tapped reminder on Android with Do Not Disturb off
 - [ ] `S7-21` **iOS crash symbols** — a Crashlytics step in the release template, once it is known whether iOS reports arrive at all
 - [ ] `S7-22` **Read it again** two weeks after it ships: iOS `reminder_opened` > 0, Survived views ≈ survived cravings, `setCoachName` failures < 5%, cold-turkey D1 against 26%, re-registrations after sign-out
 

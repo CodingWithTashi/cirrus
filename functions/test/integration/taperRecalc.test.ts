@@ -165,6 +165,56 @@ describe('taperRecalc.recalcOne', () => {
     expect(advice.stretchDelta).toBe(0);
   });
 
+  it('does not judge a plan started again on the days before it', async () => {
+    // `PlanRestart` in the app (Nov 2026): a new day one on the same account.
+    // Today is day 2 of the new plan, so the three-day window reaches two
+    // days back into the OLD one — both run well over the old line. Read at
+    // face value, with yesterday also over, that is "struggling two days
+    // running" on a plan one day old, and its runway was stretched.
+    const restarted: QuitPlan = {
+      ...PLAN,
+      paceDays: 21,
+      startDate: dayKey(-1),
+      taperFrom: 82,
+      planNumber: 2,
+    };
+    const dayOneLine = limitFor(restarted, 1);
+    const log = (puffs: number, limit: number) => ({
+      puffs,
+      limit,
+      hourBuckets: {},
+      cravingsSurvived: 0,
+      vapeFreeConfirmed: false,
+      repairTokenUsed: false,
+    });
+    await journeyDoc('restart-rae').set({
+      profile: {alias: 'SteadyFalcon42', avatarEmoji: '🦊', tier: 'free'},
+      plan: restarted,
+      days: {
+        [dayKey(-3)]: log(150, 100), // the old plan, 1.5× its line
+        [dayKey(-2)]: log(150, 100), // the old plan, 1.5× its line
+        [dayKey(-1)]: log(Math.round(dayOneLine * 1.3), dayOneLine), // day one
+      },
+      cravingsSurvivedTotal: 0,
+      repairTokens: 0,
+      longestStreak: 0,
+      goals: [],
+      earnedBadges: [],
+      day1TasksDone: [0, 1, 2],
+      moodCheckIns: 0,
+    });
+
+    await recalcOne('restart-rae', 'UTC');
+
+    const advice = (await userDoc('restart-rae').get()).get('planAdvice');
+    expect(advice.forDay).toBe(dayKey(0));
+    // One hard day on this plan is one hard day: nothing is stretched.
+    expect(advice.stretchDelta).toBe(0);
+    // And the number is drawn from where this plan started, not the 200 the
+    // account began at: day 2 of 21 from 82 is 71; from 200 it would be 173.
+    expect(advice.limit).toBeLessThan(100);
+  });
+
   it('does not read silence as a flawless day', async () => {
     // An unlogged day carries `puffs: 0` and used to arrive here at face
     // value: a ratio of 0 classifies as "crushing" and a mean of 0 sets

@@ -5756,9 +5756,20 @@ Server: `taperEngine.ts` reads `taperFrom`, `journeyCodec.ts` decodes both field
 
 ### 52.5 Proven where
 
-Unit and widget: everything above. **On a device: nothing.** The iOS simulator build fails at `xcodebuild` — "This scheme builds an embedded Apple Watch app. watchOS 26.2 must be installed" — and no Android device was attached. `integration_test/m_reminder_tap_test.dart` is written for exactly the delegate fix (real scheduler, real banner, the tap delivered with its kind) and has not run.
+Unit and widget: everything above.
+
+**Server, before deploying** (Nov 12): everything that differed from the Sep 12 deploy was read first — the App Check flag refactor (same behaviour at `true`), the Italian push copy, and this round's plan-restart support; the source exports the same 25 functions production had, so nothing was deleted. `npm run verify` 337, `test:rules` 57, `test:integration` 412. The restart case in `test/integration/taperRecalc.test.ts` was run three ways on the emulator: with `withinPlan` it passes, with the call removed the new plan is stretched (`expected 1 to be 0`), restored it passes.
+
+**Deployed** Nov 12 05:50 UTC, all 25 functions. Afterwards: an unattested request is refused (401), the services carry `ENFORCE_APP_CHECK=true`, and every real request in the two hours that followed succeeded — 12 `syncUserContext` calls (9 iPhone, 3 Android) and two scheduled `taperRecalc` runs, no errors logged. No real coach, panic or community call arrived in that window, so those are proven on the emulator only.
+
+**On the Pixel 8 (Android 17), fake backend, real fonts and router:** suites `a`–`e`, `g`–`j`, `l` **58 passed**, and the new `n_zero_day_and_new_plan` **3 passed** — cold turkey's Day 1 under the walkthrough barrier, the zero-day button in all six languages (an overflow fails the test), Undo taking its slip back, a new plan started from Home with streak and money unchanged, and the sign-out dialog. `k_retention` **3 of 4**: the per-moment ask against Android's own permission dialog, a week of check-ins on the device clock, the offer card. Its fourth case and `m_reminder_tap` could not finish: the phone was in Do Not Disturb (02:30 local), and Android posts an intercepted notification (`mIntercept=true`) without showing it in the shade, so there was nothing to tap. The first attempt at the run lost wireless adb part-way (the debugging port changed); every suite was rerun.
+
+**Not proven:**
+- *Anything on iOS.* The simulator build fails at `xcodebuild` — "This scheme builds an embedded Apple Watch app. watchOS 26.2 must be installed". The delegate fix is pinned by its source test only; `integration_test/m_reminder_tap_test.dart` is the probe.
+- *The real backend from the phone.* `f_firebase_backend` failed 15 of 17 on App Check: the device used the pinned token from `.appcheck_token` and the exchange answered `403 App attestation failed` — that token is no longer registered for the Android app (three others are). Its teardown removed the throwaway account; no post was created. Registering the token is the founder's call.
+- *A tapped reminder on Android*, tonight (Do Not Disturb, above). Unchanged code; last proven Oct 16.
 
 ### 52.6 Gates
 
-`flutter analyze` clean · `flutter test` **2125 passed** · `functions`: `npm run verify` **337 passed** · on a device: **not run** (§52.5).
+`flutter analyze` clean · `flutter test` **2125 passed** · `functions`: `npm run verify` **337**, `test:rules` **57**, `test:integration` **412** · deployed Nov 12 · Pixel 8: **61 passed** on the fake backend, `k_retention` 3/4 (§52.5) · iOS and the real backend from a device: **not run**.
 
