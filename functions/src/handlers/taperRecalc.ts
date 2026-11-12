@@ -19,7 +19,7 @@ import {tierFor} from '../lib/usage';
 import {decodeJourney, JourneyDecodeError} from '../domain/journeyCodec';
 import {dayKeyIn, hourIn} from '../domain/dateKey';
 import {isConfirmed, trailingDays} from '../domain/streakEngine';
-import {adviseTomorrow, dayNumber} from '../domain/taperEngine';
+import {adviseTomorrow, dayNumber, withinPlan} from '../domain/taperEngine';
 import {totalDays} from '../domain/types';
 
 /** Users handled per scheduled run before paging. Keeps memory flat. */
@@ -107,7 +107,10 @@ export async function recalcOne(uid: string, timeZone: string): Promise<void> {
   // gives every account one on day 1, and a mood check-in or a survived
   // craving mints one too — so a brand-new user who did not tap LOG PUFF was
   // advised a day-2 limit of 0. "An unknown day is unknown, never a saving."
-  const window = trailingDays(journey.days, todayKey, 3)
+  // And only days of THIS plan (`withinPlan`): one started again has days
+  // behind it that were held to the plan before, and they are not evidence
+  // about this one.
+  const window = withinPlan(trailingDays(journey.days, todayKey, 3), journey.plan)
     .filter(isConfirmed)
     .map((d) => ({puffs: d.puffs, limit: d.limit}));
   const lastTwo = window.slice(-2);

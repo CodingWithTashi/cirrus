@@ -889,7 +889,17 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
   /// next one" means the most. Asked before leaving, while this screen and
   /// its `ref` are still mounted to show the sheet.
   Future<void> _leave() async {
-    if (!_reviewDue) {
+    // Yield to the rating card only when it was really on screen. `_ReviewAsk`
+    // also needs hydrated settings and a store route that goes somewhere; due
+    // by policy alone meant yielding to a card nobody was shown, and the
+    // person left having been asked nothing at all.
+    final route =
+        ref.read(reviewRouteProvider).valueOrNull ?? ReviewRoute.none;
+    final reviewShown =
+        _reviewDue &&
+        ref.read(settingsStoreProvider).hydrated &&
+        route != ReviewRoute.none;
+    if (!reviewShown) {
       await maybeAskPushPermission(
         context,
         ref,

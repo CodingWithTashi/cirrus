@@ -9,6 +9,7 @@ import '../../core/widgets/lp_card.dart';
 import '../../data/api/firebase/push_service.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../domain/date_key.dart';
 
 /// Why this ask is happening — which decides the words on the sheet.
 ///
@@ -51,14 +52,20 @@ Future<void> maybeAskPushPermission(
   final settings = ref.read(settingsStoreProvider);
   // Nothing to gain from asking somebody who has switched notifications off
   // in our own settings — they have already answered this question.
-  if (settings.pushPromptShown || !settings.notificationsOn) return;
+  if (!settings.notificationsOn) return;
+  // One ask per moment, ever, and never two in a day: somebody who said
+  // "maybe later" after the checklist is not asked again at their first
+  // craving an hour on, but is the next time one of these moments comes.
+  if (settings.pushAsksShown.contains(reason.name)) return;
+  final today = LpDate.dayKey(ref.read(nowProvider)());
+  if (settings.pushAskDay == today) return;
   // No OS to ask: the fake backend, desktop and web.
   final permissions = ref.read(pushPermissionsProvider);
   if (permissions == null) return;
   if (await permissions.status() != PushPermission.notAsked) return;
   if (!context.mounted) return;
 
-  ref.read(settingsStoreProvider.notifier).markPushPromptShown();
+  ref.read(settingsStoreProvider.notifier).markPushAskShown(reason.name, today);
   final accepted = await showModalBottomSheet<bool>(
     context: context,
     backgroundColor: Colors.transparent,

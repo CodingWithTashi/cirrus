@@ -332,7 +332,9 @@ extension LpEvents on AnalyticsSink {
   /// dark. Install→activation could not be computed.
   void day1Viewed() => track(const AnalyticsEvent('day1_viewed'));
 
-  /// One task ticked. [task] is `log_puff`, `meet_coach` or `danger_hours`.
+  /// One task ticked. [task] is `log_puff`, `meet_coach` or `danger_hours` —
+  /// or `first_checkin` when the first move was confirming a vape-free day,
+  /// which is what it is for somebody whose line is zero.
   void day1TaskDone(String task) =>
       track(AnalyticsEvent('day1_task_done', {'task': task}));
 
@@ -371,6 +373,46 @@ extension LpEvents on AnalyticsSink {
   void restoreCompleted({required bool found}) =>
       track(AnalyticsEvent('restore_completed', {'found': found.toString()}));
 
+  /// A new plan was started on the same account (`PlanRestart`).
+  ///
+  /// [fromDay] is the day of the plan being left and [pastFreedom] whether it
+  /// had already ended — the two cases the feature exists for are a finished
+  /// plan with the person still vaping, and a plan that stopped fitting
+  /// half-way. Before Nov 2026 both ended in a sign-out and a new account.
+  void planRestarted({
+    required int fromDay,
+    required bool pastFreedom,
+    required String method,
+    required int pace,
+    required int planNumber,
+  }) => track(
+    AnalyticsEvent('plan_restarted', {
+      'from_day': fromDay,
+      'past_freedom': pastFreedom.toString(),
+      'method': method,
+      'pace': pace,
+      'plan_number': planNumber,
+    }),
+  );
+
+  /// Somebody signed out, and where they were when they did.
+  ///
+  /// Five of the seven people who signed out before Nov 2026 created a new
+  /// account straight afterwards — one of them a paying subscriber — and it
+  /// could only be seen by reading the screens before it. Fired before the
+  /// identity is reset, so it lands under the account that left.
+  void signedOut({
+    required int planDay,
+    required bool pastFreedom,
+    required bool premium,
+  }) => track(
+    AnalyticsEvent('signed_out', {
+      'plan_day': planDay,
+      'past_freedom': pastFreedom.toString(),
+      'premium': premium.toString(),
+    }),
+  );
+
   /// The tier changed from anything other than a purchase on this device:
   /// a renewal, an expiry, a restore, a change made on another device.
   void entitlementChanged(String tier) =>
@@ -380,7 +422,34 @@ extension LpEvents on AnalyticsSink {
 
   /// Not in docs/02 §7, but the north star is Weekly Active Quitters — users
   /// who log on 4+ days a week — and that is uncountable without this.
-  void puffLogged() => track(const AnalyticsEvent('puff_logged'));
+  ///
+  /// [source] is `app` for a tap inside the app and `widget` for one that
+  /// came off the outbox — the home-screen widget, the lock screen or the
+  /// wrist, which queue through the same log and are not told apart there.
+  /// Until Nov 12 2026 the event carried nothing, so whether anybody used the
+  /// widget at all could not be read.
+  void puffLogged({String source = 'app'}) =>
+      track(AnalyticsEvent('puff_logged', {'source': source}));
+
+  /// A day was confirmed vape-free: the card on Home, the morning-after
+  /// question about yesterday, or the main button on a zero-limit day.
+  ///
+  /// The habit loop of somebody who has stopped. `puff_logged` was the only
+  /// loop event, so a person quitting cold turkey who opened the app every
+  /// evening and confirmed the day looked exactly like one who never came
+  /// back. [today] is false for a past day; [zeroDay] says the day's limit
+  /// was 0 (cold turkey, the taper's last days, after Freedom Day).
+  void dayConfirmed({required bool today, required bool zeroDay}) => track(
+    AnalyticsEvent('day_confirmed', {
+      'day': today ? 'today' : 'past',
+      'zero_day': zeroDay.toString(),
+    }),
+  );
+
+  /// The evening mood check-in was answered. [mood] is the `Mood` name —
+  /// one of five — and the note the person may have typed is never sent.
+  void moodCheckedIn(String mood) =>
+      track(AnalyticsEvent('mood_checked_in', {'mood': mood}));
 
   /// A panic session ended, with the game on screen (`none` when unplayed),
   /// its rounds, and their 1–10 before and (optionally) after.

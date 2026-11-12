@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../app/theme/lp_typography.dart';
 import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_format.dart';
 import '../../core/utils/lp_haptics.dart';
+import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_premium_gate.dart';
@@ -22,6 +24,7 @@ import '../notifications/notifications_screen.dart';
 import '../day1/day1_spotlight.dart';
 import '../stats/edit_day_sheet.dart';
 import '../../domain/logic/billing_catalog.dart';
+import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
 import '../../domain/models/journey_state.dart';
@@ -114,10 +117,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // all day; on any other day confirming "no puffs today" at breakfast
     // would be a guess about the evening, so it waits for 8pm. Evening-only
     // on the tail days is how a perfect day 28 zeroed a 21-day streak (QA H4).
+    final confirmedToday = todayLog?.vapeFreeConfirmed ?? false;
+    // A day whose line is zero and nothing has been logged on: cold turkey,
+    // the taper's last days, every day after Freedom Day. Here zero puffs IS
+    // the goal, so confirming it is the day's main action and takes the
+    // pinned button — "LOG PUFF" as the one big control told somebody who
+    // had stopped that the app's job was to record them failing. 46% of new
+    // people chose cold turkey and 26% of them came back the next day,
+    // against 57% of those tapering (Nov 11 2026).
+    final zeroDay = snap.limit == 0 && snap.puffs == 0;
+    // On any other day confirming "no puffs today" at breakfast would be a
+    // guess about the evening, so the card waits for 8pm.
     final showVapeFree =
-        snap.puffs == 0 &&
-        !(todayLog?.vapeFreeConfirmed ?? false) &&
-        (snap.limit == 0 || now.hour >= 20);
+        snap.puffs == 0 && !confirmedToday && snap.limit > 0 && now.hour >= 20;
     // The morning after an unconfirmed day: ask, never assume. A day with no
     // log — or a zero-puff log nobody confirmed — breaks the chain, and the
     // only honest way to know what happened is to ask the one person who
@@ -125,9 +137,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final yesterdayKey = LpDate.addDays(JourneyState.dateKey(now), -1);
     final yesterdayLog = journey.days[yesterdayKey];
     final askYesterday =
-        !yesterdayKey.isBefore(JourneyState.dateKey(journey.plan.startDate)) &&
+        // The account's first day, not the current plan's: a plan started
+        // today must not stop Home asking about an unanswered yesterday.
+        !yesterdayKey.isBefore(journey.historyStart) &&
         !(yesterdayLog?.isConfirmed ?? false);
     final showMoodPrompt = todayLog?.mood == null && now.hour >= 18;
+    // The last day of the plan, or any day after it.
+    final planOver = snap.isFreedomDay || snap.isMaintenance;
+    // Puffs on the books today or yesterday — what "still vaping" means
+    // here. From the log, so it is never said to somebody who has stopped.
+    final stillLogging = snap.puffs > 0 || (yesterdayLog?.puffs ?? 0) > 0;
 
     bool onTourStep() =>
         ref.read(day1TourStepProvider) == Day1TourStep.logPuff;
@@ -360,10 +379,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               ],
                                             ),
                                       ),
-                                      Text(
-                                        l10n.homeOfLimit(snap.limit),
-                                        style: LpType.micro(lp.textSecondary),
-                                      ),
+                                      // "0 of 0" is a sum, not a goal.
+                                      if (snap.limit > 0)
+                                        Text(
+                                          l10n.homeOfLimit(snap.limit),
+                                          style: LpType.micro(
+                                            lp.textSecondary,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -383,6 +406,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       Text(
                                         over
                                             ? l10n.homeOverLimitBody
+                                            // "0 left on today's line. Tight"
+                                            // was what a perfect day read as.
+                                            : zeroDay
+                                            ? (confirmedToday
+                                                  ? l10n.homeZeroDayDone
+                                                  : l10n.homeZeroDayOpen)
                                             : snap.puffsLeft > snap.limit * 0.25
                                             ? l10n.homeLeftAhead(snap.puffsLeft)
                                             : l10n.homeLeftTight(
@@ -390,6 +419,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               ),
                                         style: LpType.caption(lp.textSecondary),
                                       ),
+                                      // The number that goes UP for somebody
+                                      // who has stopped. From the logged
+                                      // anchor only — nothing is shown when
+                                      // no puff was ever logged.
+                                      if (zeroDay)
+                                        if (journey.lastPuffAt
+                                            case final last?
+                                            when now.isAfter(last)) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            l10n.homeVapeFreeFor(
+                                              LpFormat.compactAgo(
+                                                now.difference(last),
+                                              ),
+                                            ),
+                                            style: LpType.caption(
+                                              lp.voltText,
+                                              weight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       const SizedBox(height: 10),
                                       if (snap.vsDay1Percent
                                           case final pct? when pct != 0)
@@ -588,6 +638,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Setup somebody skipped, or did not finish before
+                        // midnight, stays one tap away for the first three
+                        // days. "Skip setup for now" used to be for ever: the
+                        // checklist is forced only on day one and had no
+                        // other door, and the fourteen people who skipped
+                        // came back at half the rate of those who finished
+                        // (Nov 11 2026).
+                        if (journey.day1TasksDone.length < 3 &&
+                            journey.plan.planNumber == 1 &&
+                            snap.dayNumber <= 3) ...[
+                          PressScale(
+                            onTap: () => context.go(Routes.day1),
+                            child: LpCard(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.homeFinishSetup(
+                                            journey.day1TasksDone.length,
+                                          ),
+                                          style: LpType.body14(
+                                            lp.textPrimary,
+                                            weight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          l10n.homeFinishSetupSub,
+                                          style: LpType.caption(
+                                            lp.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: lp.textSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         // Slip-recovery entry, coach nudge, or mood prompt.
                         if (journey.pendingSlipCleanDays != null)
                           _SlipCard(onTap: () => context.push(Routes.slip))
@@ -656,6 +759,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         ),
                                       ],
                                     ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        // The plan is over and puffs are still being logged:
+                        // the line is zero and every one of them is "over
+                        // it", for ever. There used to be nothing to do
+                        // about that here, and five people signed out and
+                        // made a new account to get a plan that fit (Nov
+                        // 2026). Shown on what was logged, never assumed —
+                        // somebody who has stopped is not offered a plan.
+                        if (planOver && stillLogging) ...[
+                          PressScale(
+                            onTap: () => context.push(Routes.planNew),
+                            child: LpCard(
+                              borderColor: lp.voltFocus,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 15,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.homePlanEndedTitle,
+                                          style: LpType.body14(
+                                            lp.textPrimary,
+                                            weight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          l10n.homePlanEndedBody,
+                                          style: LpType.caption(
+                                            lp.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: lp.textSecondary,
                                   ),
                                 ],
                               ),
@@ -858,6 +1011,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
+            // On a zero day the thumb zone holds the confirmation, and the
+            // honest way out sits under it: one tap, one puff, after which
+            // the ordinary button below takes over again.
+            if (zeroDay)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Day1Spotlight(
+                      step: Day1TourStep.logPuff,
+                      title: l10n.day1TourZeroTitle,
+                      description: l10n.day1TourZeroBody,
+                      child: PressScale(
+                      onTap: confirmedToday
+                          ? null
+                          : () {
+                              LpHaptics.celebrate();
+                              // Asked BEFORE confirming: the confirmation
+                              // ticks the task, and a ticked task is no
+                              // longer the step the tour is on.
+                              final touring = onTourStep();
+                              ref
+                                  .read(quitStoreProvider.notifier)
+                                  .confirmVapeFreeDay();
+                              if (touring) {
+                                // Day-1 step one on a zero line: the
+                                // confirmation has ticked the box; this ends
+                                // the step and returns to the checklist, as
+                                // the first puff does on a taper. No snack —
+                                // the route changes underneath it.
+                                ref
+                                    .read(day1TourProvider.notifier)
+                                    .complete(Day1TourStep.logPuff);
+                                return;
+                              }
+                              showLpSnack(context, l10n.homeVapeFreeDone);
+                            },
+                      haptic: false,
+                      child: Container(
+                        height: LpDimens.ctaHeightHero,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: confirmedToday ? lp.surface : lp.volt,
+                          borderRadius: BorderRadius.circular(18),
+                          border: confirmedToday
+                              ? Border.all(color: lp.voltFocus, width: 1.5)
+                              : null,
+                          boxShadow: confirmedToday
+                              ? null
+                              : lp.voltGlow(blur: 32, opacity: 0.3),
+                        ),
+                        child: Text(
+                          confirmedToday
+                              ? l10n.homeVapeFreeToday
+                              : l10n.homeStillVapeFree,
+                          style: LpType.button(
+                            confirmedToday ? lp.voltText : lp.onVolt,
+                            size: 19,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ),
+                    // Its own words, not the morning-after card's "I
+                    // vaped": both can be on screen at once, and two
+                    // identical buttons about two different days is a trap.
+                    // Not offered mid-lesson: the tour teaches one tap.
+                    if (ref.watch(day1TourStepProvider) !=
+                        Day1TourStep.logPuff)
+                      LpTextButton(l10n.homeIVapedToday, onTap: logPuff),
+                  ],
+                ),
+              )
+            else
             // LOG PUFF — pinned in the thumb zone (frame 30), never scrolls.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -1003,14 +1231,63 @@ class _OfferCard extends ConsumerStatefulWidget {
 }
 
 class _OfferCardState extends ConsumerState<_OfferCard> {
+  /// Captured here, not read in the scroll listener or in `dispose`.
+  late final AnalyticsSink _analytics = ref.read(analyticsProvider);
+
+  /// The list this card scrolls in, listened to until the card has been seen.
+  ScrollPosition? _position;
+  bool _counted = false;
+
   @override
   void initState() {
     super.initState();
-    // Deferred a frame, like `LpPremiumGate`: `build` stays side-effect free.
-    final analytics = ref.read(analyticsProvider);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) analytics.gateShown(_OfferCard.source, planDay: widget.day);
-    });
+    _analytics; // resolve now, while ref is usable
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final position = Scrollable.maybeOf(context)?.position;
+    if (!identical(position, _position)) {
+      _position?.removeListener(_countIfSeen);
+      _position = position?..addListener(_countIfSeen);
+    }
+    // Deferred a frame, like `LpPremiumGate`: `build` stays side-effect free,
+    // and the card has no size to measure until it has been laid out.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _countIfSeen());
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_countIfSeen);
+    super.dispose();
+  }
+
+  /// An impression is the card ON SCREEN, once per time it is put there.
+  ///
+  /// It used to be counted when built, and this card is the last thing on
+  /// Home: a list lays out the rows just past its bottom edge before anyone
+  /// scrolls, so every Home visit on an offer day reported an offer most
+  /// people never scrolled to — 114 impressions from 26 people and not one
+  /// tap (Nov 11 2026), which read as a card being ignored when it was a
+  /// card not being seen. Counted when its middle is inside the viewport.
+  void _countIfSeen() {
+    if (_counted || !mounted) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return;
+    final viewport = RenderAbstractViewport.maybeOf(box);
+    final position = _position;
+    if (viewport != null && position != null) {
+      // The scroll offset that would centre the card; it is on screen while
+      // the list is within half a viewport of that.
+      final centred = viewport.getOffsetToReveal(box, 0.5).offset;
+      if ((position.pixels - centred).abs() > position.viewportDimension / 2) {
+        return;
+      }
+    }
+    _counted = true;
+    _position?.removeListener(_countIfSeen);
+    _analytics.gateShown(_OfferCard.source, planDay: widget.day);
   }
 
   @override

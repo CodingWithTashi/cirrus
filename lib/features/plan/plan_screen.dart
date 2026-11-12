@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router/app_router.dart';
 import '../../app/theme/lp_colors.dart';
 import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
@@ -185,19 +186,48 @@ class PlanScreen extends ConsumerWidget {
                 ),
               ),
               const Spacer(),
-              LpButton(
-                l10n.planAdjustCta,
-                style: LpButtonStyle.surface,
-                height: 52,
-                onTap: () => _showAdjustSheet(context, ref, plan),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  l10n.planAdjustNote,
-                  style: LpType.caption(lp.textSecondary),
+              if (snap.isMaintenance) ...[
+                // Past the end there is nothing left to adjust: the sheet
+                // re-drew the curve from the original baseline over the old
+                // runway, and handed somebody now on 80 a day a line of 28.
+                // What a finished plan has is a next one.
+                Center(
+                  child: Text(
+                    l10n.planEnded(
+                      LpFormat.shortDate(plan.freedomDate, locale),
+                    ),
+                    style: LpType.caption(lp.textSecondary),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                LpButton(
+                  l10n.planNewCta,
+                  height: 52,
+                  onTap: () => context.push(Routes.planNew),
+                ),
+              ] else ...[
+                LpButton(
+                  l10n.planAdjustCta,
+                  style: LpButtonStyle.surface,
+                  height: 52,
+                  onTap: () => _showAdjustSheet(context, ref, plan),
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: Text(
+                    l10n.planAdjustNote,
+                    style: LpType.caption(lp.textSecondary),
+                  ),
+                ),
+                // And for a plan that no longer fits at all — a different
+                // level, not a different pace.
+                Center(
+                  child: LpTextButton(
+                    l10n.planNewCta,
+                    onTap: () => context.push(Routes.planNew),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

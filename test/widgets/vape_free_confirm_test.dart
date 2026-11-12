@@ -8,6 +8,7 @@ import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/stats/edit_day_sheet.dart';
+import 'package:last_puff/features/home/home_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
@@ -97,11 +98,11 @@ void main() {
     container.read(quitStoreProvider.notifier).replaceForTest(journey);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.homeLogPuff), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     return container;
   }
 
-  group('the confirm card on a 0-limit day', () {
+  group('the confirmation on a 0-limit day', () {
     // Day 29 of 30 at B=20: the curve is 0 (verified by hand in the sim).
     final day29 = DateTime(2026, 9, 29, 10, 15);
 
@@ -115,9 +116,12 @@ void main() {
       );
       expect(container.read(todayProvider)!.limit, 0, reason: 'fixture');
 
-      expect(find.text(l10n.homeVapeFreeTitle), findsOneWidget);
+      // The pinned button since Nov 12 2026, not a card in the list: on a
+      // zero day confirming IS the day's action (`zero_day_home_test.dart`).
+      expect(find.text(l10n.homeVapeFreeTitle), findsNothing);
+      expect(find.text(l10n.homeLogPuff), findsNothing);
 
-      await tester.tap(find.text(l10n.homeVapeFreeCta));
+      await tester.tap(find.text(l10n.homeStillVapeFree));
       await tester.pump();
       final today = container.read(quitStoreProvider)!.logFor(day29);
       expect(today?.vapeFreeConfirmed, isTrue);
@@ -162,6 +166,10 @@ void main() {
         findsOneWidget,
       );
 
+      // Today is a zero day too, so the pinned control is the taller
+      // confirmation and the card sits lower in this short test viewport.
+      await tester.ensureVisible(find.text(l10n.homeYesterdayYes));
+      await tester.pump();
       await tester.tap(find.text(l10n.homeYesterdayYes));
       await tester.pump();
 
@@ -186,6 +194,8 @@ void main() {
         journey: journeyAt(day29, cleanDays: 27),
       );
 
+      await tester.ensureVisible(find.text(l10n.homeYesterdayNo));
+      await tester.pump();
       await tester.tap(find.text(l10n.homeYesterdayNo));
       await tester.pumpAndSettle();
 

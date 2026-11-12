@@ -123,9 +123,10 @@ void main() {
     });
 
     test('leaves the Firebase app delegate proxy enabled', () {
-      // Disabling the proxy hands us `didRegisterForRemoteNotifications-
-      // WithDeviceToken` and `setAPNSToken` to wire by hand, and the app
-      // delegate does neither. An absent key means enabled.
+      // The app delegate hands the APNs token over itself now (see the
+      // AppDelegate group), but the proxy is still what swizzles the rest of
+      // Firebase's app-delegate hooks, and nothing here replaces those. An
+      // absent key means enabled.
       expect(
         code(infoPlist).contains('FirebaseAppDelegateProxyEnabled'),
         isFalse,
@@ -208,6 +209,38 @@ void main() {
       expect(
         code(appDelegate),
         contains('didRegisterForRemoteNotificationsWithDeviceToken'),
+      );
+    });
+
+    test('is the notification-centre delegate, claimed before super', () {
+      // The bug this pins: not one reminder tap ever reached the app on an
+      // iPhone — zero `reminder_opened` from 114 people in four weeks while
+      // every Android device reported them (Nov 11 2026).
+      //
+      // `flutter_local_notifications` hears a tap only through
+      // `userNotificationCenter(_:didReceive:)`, and it never claims the
+      // delegate itself: it registers as an application delegate and waits
+      // for `FlutterAppDelegate` to forward. Nothing made `FlutterAppDelegate`
+      // the delegate, so the tap opened the app and told it nothing — no
+      // route, no event, and `getNotificationAppLaunchDetails` always false
+      // on a cold start, because the same callback is what sets it.
+      //
+      // Before `super`, because that is when `firebase_messaging` looks: it
+      // takes the delegate for itself unless the one already there is a
+      // `FlutterAppLifeCycleProvider`, and it forwards a tap only to a
+      // delegate it displaced. Claiming it afterwards would leave a window
+      // in which the plugin has taken over and forwards to nobody.
+      final body = code(appDelegate);
+      const claim = 'UNUserNotificationCenter.current().delegate = self';
+      expect(body, contains(claim));
+      expect(
+        body.indexOf(claim),
+        lessThan(
+          body.indexOf(
+            'super.application(application, didFinishLaunchingWithOptions',
+          ),
+        ),
+        reason: 'firebase_messaging decides whether to take over during super',
       );
     });
 

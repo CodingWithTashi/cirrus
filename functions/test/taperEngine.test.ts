@@ -12,6 +12,7 @@ import {
   curve,
   dayNumber,
   limitFor,
+  withinPlan,
 } from '../src/domain/taperEngine';
 import type {QuitPlan} from '../src/domain/types';
 
@@ -57,9 +58,50 @@ describe('base curve', () => {
     expect(limitFor(plan({method: 'coldTurkey'}), 1)).toBe(0);
   });
 
+  // A plan started again part-way (`PlanRestart` in the app): its curve
+  // comes down from the level it was started at, not from the baseline the
+  // money is still measured against. The same four numbers are pinned in
+  // `test/domain/taper_engine_test.dart` — a server reading the baseline
+  // here would hand a Premium user on 82 a day a nightly limit drawn from
+  // 200, and the coach would quote a line Home does not show.
+  it('a restarted plan comes down from where it was started', () => {
+    const p = plan({paceDays: 21, taperFrom: 82, planNumber: 2});
+    expect(limitFor(p, 1)).toBe(76);
+    expect(limitFor(p, 7)).toBe(45);
+    expect(limitFor(p, 19)).toBe(2);
+    expect(limitFor(p, 20)).toBe(1);
+    expect(limitFor(p, 21)).toBe(0);
+  });
+
+  it('a first plan — no taperFrom — is the baseline curve it always was', () => {
+    expect(limitFor(plan(), 1)).toBe(190);
+  });
+
   it('stretch days extend the runway', () => {
     // A stretched plan is a LONGER plan, so each day sits higher on the curve.
     expect(limitFor(plan({stretchDays: 2}), 15)).toBeGreaterThan(limitFor(plan(), 15));
+  });
+});
+
+describe('withinPlan', () => {
+  // A plan can be started again part-way (`PlanRestart`). The nightly advice
+  // reads the last three completed days, and on days 2 and 3 of a new plan
+  // that window reaches back into the old one — days held to the old line.
+  // Somebody over a finished plan's zero line the day before they restarted
+  // read as "struggling for two days" on a plan one day old, and had it
+  // stretched.
+  const day = (date: string) => ({date, puffs: 80, limit: 0});
+
+  it('drops the days before this plan began', () => {
+    const p = plan({startDate: '2026-11-12', planNumber: 2, taperFrom: 82});
+    const days = [day('2026-11-10'), day('2026-11-11'), day('2026-11-12')];
+    expect(withinPlan(days, p).map((d) => d.date)).toEqual(['2026-11-12']);
+  });
+
+  it('keeps every day of a first plan, which has none before it', () => {
+    const p = plan({startDate: '2026-08-04'});
+    const days = [day('2026-08-04'), day('2026-08-05')];
+    expect(withinPlan(days, p)).toHaveLength(2);
   });
 });
 

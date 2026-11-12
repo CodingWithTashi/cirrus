@@ -50,7 +50,9 @@ void main() {
     // The one-time notification ask opens a sheet over the thread after the
     // first reply. It has its own tests; here it would only stand in front of
     // the reply being measured.
-    container.read(settingsStoreProvider.notifier).markPushPromptShown();
+    container
+        .read(settingsStoreProvider.notifier)
+        .markPushAskShown('community', '2026-01-01');
     container.read(routerProvider).go(Routes.communityPost(sos));
     await tester.pumpAndSettle();
     return container;

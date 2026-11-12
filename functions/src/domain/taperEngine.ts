@@ -38,11 +38,32 @@ const MIN_ADAPTIVE_WINDOW = 3;
  */
 const TAIL_FLOOR = 4;
 
+/**
+ * The days of [days] that belong to [plan] — on or after its day one.
+ *
+ * Every first plan passes through untouched: nothing was logged before it
+ * began. A plan started again part-way (`PlanRestart` in the app) has days
+ * behind it that were held to the plan before it, and nothing that judges
+ * THIS plan may read them: on its second and third days the nightly advice's
+ * three-day window reaches back across the restart, and somebody over a
+ * finished plan's zero line the day before read as "struggling for two days"
+ * on a plan one day old — and had its runway stretched.
+ */
+export function withinPlan<T extends {readonly date: string}>(
+  days: readonly T[],
+  plan: QuitPlan,
+): T[] {
+  return days.filter((d) => d.date >= plan.startDate);
+}
+
 /** Daily limit for 1-based day [d] of a plan. */
 export function limitFor(plan: QuitPlan, d: number): number {
   if (plan.method === 'coldTurkey') return 0;
   const p = totalDays(plan);
-  const b = plan.baselinePuffsPerDay;
+  // Where THIS plan's curve starts: the baseline on a first plan, the level
+  // a later one was started again at. Mirrors `QuitPlan.curveStart` in
+  // `lib/domain/models/models.dart`.
+  const b = plan.taperFrom ?? plan.baselinePuffsPerDay;
   if (d >= p) return 0;
   const base = Math.round(b * Math.pow(1 - d / p, 1.5));
   // Fixed tail so the final approach is always [..., <=3, <=1, 0]. docs/03's

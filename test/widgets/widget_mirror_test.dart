@@ -233,6 +233,56 @@ void main() {
     });
   });
 
+  group('on a zero-limit day', () {
+    // The widget picks its line by Home's old rule — `left > limit * 0.25`,
+    // else "tight" — and on a day whose line is zero that reads "0 left ·
+    // tight, you've got this" on a perfect day. Native formats whatever
+    // template it is handed and ignores an argument the template does not
+    // use, so the fix needs no Kotlin and no Swift: on such a day the mirror
+    // hands it a line with no count in it.
+    Future<Map<String, dynamic>> copyOnDay(WidgetTester tester, int day) async {
+      final now = DateTime(2026, 10, 4, 9);
+      final store = MemoryWidgetStore();
+      final container = ProviderContainer(
+        overrides: [
+          ...fastBackendOverrides(now: now),
+          widgetCoordinatorProvider.overrideWithValue(WidgetCoordinator(store)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const LastPuffApp(),
+        ),
+      );
+      container
+          .read(quitStoreProvider.notifier)
+          .replaceForTest(journeyOnDay(day, now: now));
+      await tester.pumpAndSettle();
+      return mirrorIn(store)['copy'] as Map<String, dynamic>;
+    }
+
+    testWidgets('the line it draws says zero day, with no count', (
+      tester,
+    ) async {
+      final copy = await copyOnDay(tester, 31);
+      expect(copy['leftTight'], 'zero day · stay vape-free');
+      expect(copy['leftAhead'], 'zero day · stay vape-free');
+      expect((copy['leftTight'] as String).contains('%'), isFalse);
+      // Over the line is still over the line.
+      expect(copy['overLimit'], "over today's line · no shame");
+    });
+
+    testWidgets('a day with a limit keeps its counted templates', (
+      tester,
+    ) async {
+      final copy = await copyOnDay(tester, 5);
+      expect(copy['leftTight'], contains(r'%1$d'));
+      expect(copy['leftAhead'], contains(r'%1$d'));
+    });
+  });
+
   testWidgets('a puff logged in the app reaches the widget', (tester) async {
     final (container, store) = await open(tester);
     container.read(quitStoreProvider.notifier).seedDemoJourney();

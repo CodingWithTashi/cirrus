@@ -46,7 +46,15 @@ export function buildMemoryCard(
   const plan = journey.plan;
   const day = Math.max(1, dayNumber(plan, todayKey));
   const today = journey.days[todayKey];
-  const limit = day <= totalDays(plan) ? limitFor(plan, day) : 0;
+  const curve = day <= totalDays(plan) ? limitFor(plan, day) : 0;
+  // Day one of a plan started again is held where the person already was
+  // when they started it, and the app records that on the day's log
+  // (`JourneyState.limitOn`). Mirrored here so the card never quotes a line
+  // Home is not showing — on that one day the curve alone is the wrong one.
+  const limit =
+    (plan.planNumber ?? 1) > 1 && todayKey === plan.startDate
+      ? Math.max(curve, today?.limit ?? 0)
+      : curve;
   const streak = currentStreak(journey.days, todayKey);
   const window14 = trailingDays(journey.days, todayKey, 14);
   const last7 = trailingDays(journey.days, todayKey, 7);
@@ -103,6 +111,7 @@ export function buildMemoryCard(
     // "How long have I been at this?" — answerable without arithmetic. The
     // start date is absolute so the model never has to derive a calendar.
     tenureLine(plan, day),
+    ...restartLine(plan),
     `why: ${list(profile.whys)} · fears: ${list(profile.worries)}`,
     // The chips above say "health, money". This is what they meant by it, in
     // the one sentence of the whole funnel they wrote themselves — and the
@@ -304,6 +313,27 @@ function recentEvents(journey: Journey, todayKey: string, streak: number): strin
  * plan's end it switches to maintenance phrasing: tenure keeps counting, and
  * "week 17" of a finished 30-day plan is an achievement, not an error.
  */
+/**
+ * One line for a plan that was started again (`PlanRestart` in the app), and
+ * nothing at all for a first plan.
+ *
+ * Every number above it is relative to THIS plan — "plan day 6", "week 1",
+ * "started:" — which is right for the line they are holding today and wrong
+ * as an account of how long they have been at it. Somebody on their second
+ * plan with four months of history must not be greeted as a beginner.
+ *
+ * In words, with no count: a "2" on this line is one more number the model
+ * could read as the day, and which plan it is matters less than that it is
+ * not the first.
+ */
+function restartLine(plan: Journey['plan']): string[] {
+  if ((plan.planNumber ?? 1) <= 1) return [];
+  return [
+    `not their first plan: they started this one on ${plan.startDate} and ` +
+      'kept everything before it — streak, history and money saved carry over',
+  ];
+}
+
 function tenureLine(plan: Journey['plan'], day: number): string {
   const total = totalDays(plan);
   const weekIn = Math.floor((day - 1) / 7) + 1;

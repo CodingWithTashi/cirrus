@@ -54,6 +54,42 @@ void main() {
     });
   });
 
+  group('a plan started again', () {
+    // `QuitPlan.taperFrom`: the curve of a second plan comes down from the
+    // level it was started at, not from the baseline money is measured
+    // against. These five numbers are pinned again in
+    // `functions/test/taperEngine.test.ts` — the two sides must agree, or
+    // the coach quotes a line Home does not show.
+    final restarted = plan(pace: 21).copyWith(taperFrom: 82, planNumber: 2);
+
+    test('comes down from where it was started', () {
+      expect(TaperEngine.limitFor(restarted, 1), 76);
+      expect(TaperEngine.limitFor(restarted, 7), 45);
+      expect(TaperEngine.limitFor(restarted, 19), 2);
+      expect(TaperEngine.limitFor(restarted, 20), 1);
+      expect(TaperEngine.limitFor(restarted, 21), 0);
+    });
+
+    test('is halfway at half of that level, and draws from it', () {
+      final halfway = TaperEngine.halfwayDay(restarted);
+      expect(TaperEngine.limitFor(restarted, halfway), lessThanOrEqualTo(41));
+      expect(TaperEngine.limitFor(restarted, halfway - 1), greaterThan(41));
+      // The chart starts near the top of its own scale, not at 82/200 of it.
+      expect(TaperEngine.normalizedCurve(restarted).first, greaterThan(0.9));
+    });
+
+    test('still measures what it avoids against the old habit', () {
+      // The baseline is what was being vaped before any plan; a day on a
+      // line of 76 avoids 124 of those 200, not 6 of 82.
+      expect(restarted.baselinePuffsPerDay, 200);
+      expect(
+        TaperEngine.projectedPuffsAvoided(restarted, fromDay: 20),
+        200,
+        reason: 'the last day: 200 − 0',
+      );
+    });
+  });
+
   group('TaperEngine slip recovery', () {
     test('stretches freedom day by two days', () {
       final reflown = TaperEngine.reflowAfterSlip(plan());

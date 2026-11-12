@@ -84,11 +84,48 @@ class JourneyState {
   /// adaptive layer may bend today's number up (a struggling stretch) or down
   /// (crushing it), and `TodaySnapshot`, `logPuff`'s over-limit test and the
   /// Plan screen must never disagree about which number is live.
+  /// The first day this account has anything on record for.
+  ///
+  /// Not `plan.startDate`: that is day one of the CURRENT plan, and since a
+  /// plan can be started again (`PlanRestart`) the two differ. Everything
+  /// that means "since you began" — the Stats window, the morning-after
+  /// question — is bounded by this, so starting a new plan cannot make the
+  /// weeks before it disappear.
+  DateTime get historyStart {
+    var first = LpDate.dayStart(plan.startDate);
+    for (final day in days.keys) {
+      if (day.isBefore(first)) first = day;
+    }
+    return first;
+  }
+
   int limitOn(DateTime date) {
     final advice = planAdvice;
     if (advice != null && advice.appliesTo(date)) return advice.limit;
+    final day = LpDate.dayStart(date);
+    final start = LpDate.dayStart(plan.startDate);
+    // Two things are true only of a plan started again (`PlanRestart`), and
+    // a first plan must read exactly as it always did.
+    final restarted = plan.planNumber > 1;
+    // A day before it began was held to the plan before it, whose line is
+    // not recorded anywhere but on that day's own log. An unlogged one gets
+    // no line at all — it used to be handed THIS plan's day-one limit, so 50
+    // puffs back-filled onto a day the old plan held at zero "held" a streak
+    // nobody lived.
+    if (restarted && day.isBefore(start)) return 0;
     final d = plan.dayNumber(date).clamp(1, 9999);
-    return d <= plan.totalDays ? TaperEngine.limitFor(plan, d) : 0;
+    final curve = d <= plan.totalDays ? TaperEngine.limitFor(plan, d) : 0;
+    // Its day one is the day it was started on, usually part-way through.
+    // `PlanRestart` holds that day's line where the person already was, and
+    // records it on the log; this is what makes Home, the widget and the
+    // coach read the same line the streak does. Written only onto the log,
+    // it reached the streak and nothing else — a fresh start opened on a red
+    // ring.
+    if (restarted && day == start) {
+      final held = days[dateKey(date)]?.limit ?? 0;
+      if (held > curve) return held;
+    }
+    return curve;
   }
 
   JourneyState copyWith({

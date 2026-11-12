@@ -362,6 +362,7 @@ class _WidgetSyncState extends ConsumerState<_WidgetSync> {
         dayPastOther: l10n.widgetDayPastOther,
         leftAhead: l10n.widgetLeftAhead,
         leftTight: l10n.widgetLeftTight,
+        zeroDay: l10n.widgetZeroDay,
         overLimit: l10n.widgetOverLimit,
         emptyTitle: l10n.widgetEmptyTitle,
         emptyBody: l10n.widgetEmptyBody,

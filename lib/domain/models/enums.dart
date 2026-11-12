@@ -3,6 +3,12 @@ library;
 
 enum QuitMethod { taper, coldTurkey }
 
+/// How an account signs in — the door it came in by.
+///
+/// Not an analytics value and not a permission: it exists so the app can
+/// tell somebody who is about to sign out which button brings them back.
+enum AccountProvider { apple, google, email }
+
 enum Gender { woman, man, nonBinary }
 
 enum QuitAttempts { never, once, twoToFive, moreThanFive }

@@ -225,7 +225,9 @@ void main() {
     // The one-time notification ask opens a sheet over the thread after the
     // first reply. It is not what this tests, and it would stand in front of
     // every reply checked below.
-    e2e.container.read(settingsStoreProvider.notifier).markPushPromptShown();
+    e2e.container
+        .read(settingsStoreProvider.notifier)
+        .markPushAskShown('community', '2026-01-01');
     await openCommunity(e2e);
     await e2e.tapText(e2e.l10n.seedPostSos);
     await e2e.waitFor(const Duration(seconds: 2));

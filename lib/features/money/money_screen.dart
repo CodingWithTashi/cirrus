@@ -72,7 +72,10 @@ class MoneyScreen extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         l10n.moneySavedSince(
-                          LpFormat.shortDate(journey.plan.startDate, locale),
+                          // The total beside it is a lifetime one, so the
+                          // date is the account's first day, not the day
+                          // the current plan began.
+                          LpFormat.shortDate(journey.historyStart, locale),
                           LpFormat.money(
                             snap.savedRunRatePerDay,
                             locale,

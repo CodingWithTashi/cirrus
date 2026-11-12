@@ -9,6 +9,7 @@ import '../../domain/logic/dependence_engine.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/games/game_score.dart';
 import '../../domain/logic/money_engine.dart';
+import '../../domain/logic/plan_restart.dart';
 import '../../domain/logic/puff_anchor.dart';
 import '../../domain/logic/streak_engine.dart';
 import '../../domain/logic/taper_engine.dart';
@@ -139,6 +140,51 @@ class JourneyStore extends Notifier<JourneyState?> {
     _identifyForAnalytics();
     _bindBilling();
     _bindWidgetSession();
+    _syncCoachName();
+  }
+
+  /// The name last handed to the server by [_syncCoachName] in this process,
+  /// so one session asks once. In memory only, and dropped with the session:
+  /// the next account may have chosen the same word.
+  String? _coachNameSent;
+
+  /// Gives the server its copy of the coach's name, now that there is an
+  /// account for it to belong to.
+  ///
+  /// The onboarding step asks [reserveCoachName] with nobody signed in — the
+  /// quiz runs before the account (docs/10 §49) — so the callable answers
+  /// "Sign in to continue", the step keeps the name locally as designed, and
+  /// until Nov 12 2026 nothing ever asked again: 101 of 127 accounts had no
+  /// server copy, and the model, which may read only the server's, called
+  /// itself Ember under every screen showing the name the person chose.
+  ///
+  /// Here because this is the first moment both halves exist, on every path:
+  /// a journey just created, a sign-in, a restored launch. That last one is
+  /// what catches up every account made before the fix.
+  ///
+  /// A definite refusal puts the default back. It cannot be shown at the step
+  /// any more, and keeping a name the model will never be told about is the
+  /// very disagreement this exists to end; Settings is where a new one is
+  /// picked, with the refusal on screen. No answer at all changes nothing and
+  /// is asked again on the next session.
+  void _syncCoachName() {
+    final name = state?.profile.coachName;
+    if (name == null || name == _coachNameSent) return;
+    _coachNameSent = name;
+    final guard = ref.read(coachNameRepositoryProvider);
+    unawaited(() async {
+      final bool accepted;
+      try {
+        accepted = await guard.reserve(name);
+      } on Object {
+        if (_coachNameSent == name) _coachNameSent = null;
+        return;
+      }
+      if (accepted) return;
+      final s = state;
+      if (s == null || s.profile.coachName != name) return;
+      _commit(s.copyWith(profile: s.profile.withDefaultCoachName()));
+    }());
   }
 
   /// Reads the nightly taper verdict from the server-owned user document and
@@ -169,6 +215,14 @@ class JourneyStore extends Notifier<JourneyState?> {
     final s = state;
     if (s == null) return;
     if (!advice.appliesTo(_now)) return;
+    // Never on a plan's first day. The server advises days 2 onward — there
+    // is no completed day to read before that — so a verdict stamped for
+    // "today" on day one can only have been worked out last night for the
+    // plan that was just replaced (`startNewPlan`). It is re-read on every
+    // resume, and a restart clears the accepted copy the guard below looks
+    // at: the old plan's zero became the new plan's day-one line, and its
+    // stretch lengthened a runway chosen minutes earlier.
+    if (s.plan.dayNumber(_now) <= 1) return;
     if (s.planAdvice?.appliesTo(advice.forDay) ?? false) return;
     _commit(
       s.copyWith(
@@ -326,7 +380,7 @@ class JourneyStore extends Notifier<JourneyState?> {
   void _flushBatchedPuffLogs() {
     final analytics = ref.read(analyticsProvider);
     for (var i = 0; i < _batchedPuffLogs; i++) {
-      analytics.puffLogged();
+      analytics.puffLogged(source: 'widget');
     }
     _batchedPuffLogs = 0;
   }
@@ -503,10 +557,27 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   /// Optimistic: signed out locally at once, the API ack is write-behind.
   void signOut() {
+    // Said before anything is forgotten: the event has to land under the
+    // account that is leaving, and it needs the journey to say where they
+    // were. `reset()` below is what unbinds the identity.
+    final leaving = state;
+    if (leaving != null) {
+      final day = leaving.plan.dayNumber(_now);
+      ref
+          .read(analyticsProvider)
+          .signedOut(
+            planDay: day,
+            pastFreedom: day > leaving.plan.totalDays,
+            premium: ref.read(isPremiumProvider),
+          );
+    }
     state = null;
     _sessionOpen = false;
+    _coachNameSent = null;
     // The undo trail names this account's puffs (docs/10 §41).
     _anchorTrail.clear();
+    _slipArmedOn = null;
+    _tokenSpentOn = null;
     // Before the sign-out call, so the identity is unbound even if the ack
     // never lands. On a shared phone the alternative is the next person's
     // events arriving under the last person's user id — and, for billing,
@@ -576,7 +647,10 @@ class JourneyStore extends Notifier<JourneyState?> {
     ref.read(pushTokenRegistrarProvider).forget();
     ref.read(userContextRepositoryProvider).unregister().ignore();
     _anchorTrail.clear();
+    _slipArmedOn = null;
+    _tokenSpentOn = null;
     _sessionOpen = false;
+    _coachNameSent = null;
     state = null;
   }
 
@@ -591,6 +665,13 @@ class JourneyStore extends Notifier<JourneyState?> {
   void seedDemoJourney() => _commit(SeedData.journey(_now));
 
   // ---- daily log ------------------------------------------------------------
+
+  /// The day this session armed the slip-recovery card on, and the day it
+  /// spent a repair token on — what [undoPuffs] may take back. In memory like
+  /// the anchor trail, and forgotten with it: after a restart the Undo snack
+  /// is long gone, and a slip that survived one is real.
+  DateTime? _slipArmedOn;
+  DateTime? _tokenSpentOn;
 
   /// What "last puff" was before each puff logged this session, newest last
   /// (docs/10 §41).
@@ -679,6 +760,17 @@ class JourneyStore extends Notifier<JourneyState?> {
       );
     }
 
+    // Remember which day this session armed a slip or spent a token on, so
+    // an Undo that brings the day back under its line can take those back
+    // too (see [undoPuffs]). Only the transition is recorded: a slip already
+    // pending from an earlier day is not this day's to clear.
+    if (s.pendingSlipCleanDays == null && pendingSlip != null) {
+      _slipArmedOn = key;
+    }
+    if (!(s.days[key]?.repairTokenUsed ?? false) && updated.repairTokenUsed) {
+      _tokenSpentOn = key;
+    }
+
     // The anchor only ever moves FORWARD. Every in-app caller passes `at:
     // null`, so `when` is now and this is a no-op for them — but a puff
     // logged from the home-screen widget is drained hours later, and applying
@@ -745,10 +837,26 @@ class JourneyStore extends Notifier<JourneyState?> {
       }
       remaining--;
     }
-    final days = {
-      ...s.days,
-      key: log.copyWith(puffs: log.puffs - removed, hourBuckets: buckets),
-    };
+    var next = log.copyWith(puffs: log.puffs - removed, hourBuckets: buckets);
+    // Taking puffs back takes back what they caused. A tap that crossed the
+    // line armed the recovery card or spent a repair token, and Undo used to
+    // remove only the puff — so an accidental tap on a zero-limit day left "A
+    // slip is data, not defeat." on Home with nothing logged, holding the one
+    // card slot the mood prompt and the nudge share (Nov 12 2026). Only what
+    // THIS session did on THIS day: a slip pending from yesterday stays.
+    var pendingSlip = s.pendingSlipCleanDays;
+    if (next.puffs <= next.limit && _tokenSpentOn == key) {
+      next = next.copyWith(repairTokenUsed: false);
+      _tokenSpentOn = null;
+    }
+    final stillSlipped =
+        (next.puffs > next.limit && !next.repairTokenUsed) ||
+        (next.limit > 0 && next.puffs > next.limit * 2);
+    if (!stillSlipped && _slipArmedOn == key) {
+      pendingSlip = null;
+      _slipArmedOn = null;
+    }
+    final days = {...s.days, key: next};
     // Taking puffs back takes their clock back too (docs/10 §41): follow this
     // session's trail while it still matches the anchor, then make sure the
     // anchor sits in an hour that still holds a puff.
@@ -762,7 +870,13 @@ class JourneyStore extends Notifier<JourneyState?> {
       undone++;
     }
     final settled = PuffAnchor.settle(days, anchor);
-    _commit(s.copyWith(days: days, lastPuffAt: () => settled));
+    _commit(
+      s.copyWith(
+        days: days,
+        lastPuffAt: () => settled,
+        pendingSlipCleanDays: () => pendingSlip,
+      ),
+    );
   }
 
   /// Marks [date] — today by default — as a confirmed vape-free day.
@@ -778,10 +892,38 @@ class JourneyStore extends Notifier<JourneyState?> {
     final key = JourneyState.dateKey(date ?? _now);
     final log =
         s.days[key] ?? DayLog(date: key, puffs: 0, limit: s.limitOn(key));
+    // Once per day confirmed, not once per tap: the card answers itself away,
+    // but the store is also reachable from the edit sheet and the tour.
+    // The line as Home shows it, not the one stored when the log was minted:
+    // a day created on a taper and switched to cold turkey that afternoon
+    // carries the old number, and Home's zero-day button reads the live one.
+    final zeroLine = s.limitOn(key) == 0;
+    if (!log.vapeFreeConfirmed) {
+      ref
+          .read(analyticsProvider)
+          .dayConfirmed(today: key == _todayKey, zeroDay: zeroLine);
+    }
+    // On a zero line this IS the first move, the way the first puff is on a
+    // taper — so it ticks Day-1 task zero from wherever it was tapped, and
+    // is reported under its own name: the dashboard has to be able to tell a
+    // first check-in from a first puff.
+    //
+    // Only while setup is still on offer (the first three days of a first
+    // plan, the window Home's "Finish setup" card keeps). Every cold-turkey
+    // account made before this shipped has task zero undone — there was
+    // never a puff to log — and their next confirmation, weeks in, must not
+    // arrive in the Day-1 funnel as a new person.
+    final firstMove =
+        key == _todayKey &&
+        zeroLine &&
+        s.plan.planNumber == 1 &&
+        s.plan.dayNumber(_now) <= 3;
+    if (firstMove) _reportDay1Task(s, 0, name: 'first_checkin');
     _commit(
       _withBadges(
         s.copyWith(
           days: {...s.days, key: log.copyWith(vapeFreeConfirmed: true)},
+          day1TasksDone: firstMove ? {...s.day1TasksDone, 0} : null,
         ),
       ),
     );
@@ -938,6 +1080,8 @@ class JourneyStore extends Notifier<JourneyState?> {
   void checkInMood(Mood mood, {String? note}) {
     final s = state;
     if (s == null) return;
+    // The mood, never the note: the note is the person's own sentence.
+    ref.read(analyticsProvider).moodCheckedIn(mood.name);
     final log =
         s.days[_todayKey] ??
         DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
@@ -958,6 +1102,43 @@ class JourneyStore extends Notifier<JourneyState?> {
     final s = state;
     if (s == null) return;
     _commit(s.copyWith(goals: [...s.goals, goal]));
+  }
+
+  /// Starts a new plan today on this account — see [PlanRestart] for what
+  /// that keeps (everything already lived) and what it changes (the line
+  /// from here on).
+  ///
+  /// Synchronous and optimistic like every other mutation. A screen that
+  /// calls this and leaves must leave FIRST: it changes the journey, and the
+  /// router's refresh after an imperative navigation undoes the navigation.
+  void startNewPlan({
+    required QuitMethod method,
+    required int paceDays,
+    required int level,
+  }) {
+    final s = state;
+    if (s == null) return;
+    final now = _now;
+    final fromDay = s.plan.dayNumber(now);
+    final next = PlanRestart.apply(
+      s,
+      now: now,
+      method: method,
+      paceDays: paceDays,
+      level: level,
+    );
+    ref
+        .read(analyticsProvider)
+        .planRestarted(
+          fromDay: fromDay,
+          pastFreedom: fromDay > s.plan.totalDays,
+          method: method.name,
+          pace: paceDays,
+          planNumber: next.plan.planNumber,
+        );
+    // The slip this session may have armed belonged to the plan just left.
+    _slipArmedOn = null;
+    _commit(_withBadges(next));
   }
 
   void adjustPlan({QuitMethod? method, int? paceDays}) {
@@ -1001,12 +1182,12 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// counted identically however it happened, and a new entry point cannot
   /// ship unmeasured. Guarded on the before-state, so the second puff of the
   /// day never re-reports task zero.
-  void _reportDay1Task(JourneyState before, int index) {
+  void _reportDay1Task(JourneyState before, int index, {String? name}) {
     if (index < 0 || index >= _day1TaskNames.length) return;
     if (before.day1TasksDone.contains(index)) return;
 
     final analytics = ref.read(analyticsProvider);
-    analytics.day1TaskDone(_day1TaskNames[index]);
+    analytics.day1TaskDone(name ?? _day1TaskNames[index]);
     if (before.day1TasksDone.length + 1 >= _day1TaskNames.length) {
       analytics.day1Completed();
     }

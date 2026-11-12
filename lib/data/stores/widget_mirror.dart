@@ -36,6 +36,7 @@ class WidgetCopy {
     required this.breathePattern,
     required this.cravingTimer,
     required this.cravingTimerLate,
+    this.zeroDay = '',
   });
 
   /// `day %1$d`
@@ -60,6 +61,13 @@ class WidgetCopy {
 
   /// No count in this one — over is over.
   final String overLimit;
+
+  /// What the status line says on a day whose limit is zero and nothing has
+  /// been logged. Not a key of its own in the mirror: see [onZeroDay].
+  ///
+  /// Optional and empty by default, so a caller that never names it — the
+  /// contract tests build a copy by hand — gets the mirror it always did.
+  final String zeroDay;
 
   final String emptyTitle;
   final String emptyBody;
@@ -109,6 +117,46 @@ class WidgetCopy {
   /// nothing on either device can know when a particular craving peaks.
   final String cravingTimer;
   final String cravingTimerLate;
+
+  /// The copy as the widget should read it on a zero-limit day.
+  ///
+  /// The widget picks its status line by the rule Home used to use — `left >
+  /// limit × 0.25`, else "tight" — and with a limit of zero that is "0 left ·
+  /// tight, you've got this" on a perfect day. Both natives format whatever
+  /// template they are handed and ignore an argument the template does not
+  /// use (`String.format` in Kotlin, `String(format:)` in Swift), so the fix
+  /// is made here and needs no change on either: on such a day both "left"
+  /// slots carry [zeroDay], which has no count in it. Over the line still
+  /// reads [overLimit] — the widget checks that first.
+  ///
+  /// One limit it knows about: a mirror built on a day that still had a
+  /// limit, rolled over by the widget alone onto a zero day, keeps the
+  /// counted templates until the app is next opened.
+  WidgetCopy onZeroDay() => zeroDay.isEmpty
+      ? this
+      : WidgetCopy(
+          day: day,
+          dayFreedom: dayFreedom,
+          dayPastOne: dayPastOne,
+          dayPastOther: dayPastOther,
+          leftAhead: zeroDay,
+          leftTight: zeroDay,
+          overLimit: overLimit,
+          emptyTitle: emptyTitle,
+          emptyBody: emptyBody,
+          watchOpenPhone: watchOpenPhone,
+          weekTitle: weekTitle,
+          vsLast: vsLast,
+          savedLabel: savedLabel,
+          cravingsLabel: cravingsLabel,
+          breatheIn: breatheIn,
+          breatheHold: breatheHold,
+          breatheOut: breatheOut,
+          breathePattern: breathePattern,
+          cravingTimer: cravingTimer,
+          cravingTimerLate: cravingTimerLate,
+          zeroDay: zeroDay,
+        );
 
   Map<String, dynamic> toJson() => {
     'day': day,
@@ -263,7 +311,7 @@ Map<String, dynamic> buildMirror({
           LpDate.addDays(today, i),
         ),
     },
-    'copy': copy.toJson(),
+    'copy': (snapshot.limit == 0 ? copy.onZeroDay() : copy).toJson(),
   };
 }
 

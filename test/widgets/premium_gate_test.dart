@@ -656,6 +656,34 @@ void main() {
       );
     });
 
+    testWidgets('an offer nobody scrolled to is not an impression', (
+      tester,
+    ) async {
+      // The card sits under everything else on Home, and a list builds the
+      // rows just past its bottom edge before anyone scrolls. Counting on
+      // build reported 114 impressions and no taps (Nov 11 2026) — for a card
+      // most of those 26 people had never seen.
+      final analytics = RecordingAnalytics();
+      await launch(tester, entitlement: null, analytics: analytics);
+      Iterable<Map<String, Object>> shown() => analytics
+          .propsOfAll('gate_shown')
+          .where((p) => p['source'] == 'offer_card');
+
+      expect(offerAnywhere(), findsOneWidget, reason: 'built, in the cache');
+      expect(offerCard(), findsNothing, reason: 'and below the fold');
+      expect(shown(), isEmpty);
+
+      await reveal(tester, offerAnywhere());
+      expect(shown(), hasLength(1));
+
+      // Once per look, not once per scroll tick.
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 60));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -60));
+      await tester.pumpAndSettle();
+      expect(shown(), hasLength(1));
+    });
+
     testWidgets('it opens the paywall it names, which closes back onto Home '
         'with the card gone for the day', (tester) async {
       final analytics = RecordingAnalytics();

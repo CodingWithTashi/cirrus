@@ -535,6 +535,25 @@ time this repo has been bitten by that shape (`MODEL_*`, the allowance params).
 - [x] `S7-6` **On device** (Pixel 8, docs/10 §51.5): `k_retention_test` 4/4 against the real scheduler and OS permission, `l_sign_in_fallback_test`, suites `a`–`j` 57/57. Found and fixed three the widget tests could not see — Android's `deniedPermanently` read as "never asked", the check-in silenced by an evening danger hour, and a three-button dialog that stacked. **Still owed: iOS** (Apple 1000 on a real iPhone; no disk for an iOS build on Oct 16)
 - [ ] `S7-7` **Ship it** — nothing above reaches a user before the next store build (founder: submit)
 
+**S7 retention work, round two — Nov 12 2026** (docs/10 §52). Read on Nov 11 through a user-level real-user list: **D1 35% · D7 12% · D14 7%** (v1.0.28, from `onboarding_completed`: D1 43% · D7 13%). Cold turkey is 46% of new people and returns at 26% on day 1 against 57% for taper; 5 of the 7 who signed out made a new account; no reminder tap had ever arrived from an iPhone. Gates unchanged: **D1 ≥ 45% · D7 ≥ 25%**.
+
+- [x] `S7-8` **Hand-built pages are real routes** — `key: state.pageKey`; the Survived screen reports its view. `test/widgets/screen_view_test.dart`
+- [x] `S7-9` **iOS claims the notification delegate** so a tapped reminder reaches the app. `test/ios_push_test.dart`. **Device proof owed** (`S7-20`)
+- [x] `S7-10` **The coach name reaches the server**, new accounts and old. `test/data/coach_name_sync_test.dart`
+- [x] `S7-11` **Undo takes back the slip it caused.** `test/data/undo_slip_test.dart`
+- [x] `S7-12` **Signing out says how to get back**, and what a subscriber leaves behind; login carries the email and asks about the other door. `test/widgets/sign_out_guard_test.dart`
+- [x] `S7-13` **Events**: `day_confirmed`, `mood_checked_in`, `signed_out`, `plan_restarted`, `puff_logged{source}`, offer card counted when seen. `test/data/retention_events_test.dart`, `premium_gate_test.dart`
+- [x] `S7-14` **Zero-day Home**: the confirmation is the pinned button on any zero-limit day; the widget line follows through the mirror. `test/widgets/zero_day_home_test.dart`, `widget_mirror_test.dart`
+- [x] `S7-15` **Day 1 fits the line**: "Lock in day one" on a zero line; a finished list names tomorrow; skipped setup stays reachable. `test/widgets/day1_zero_day_test.dart`, `day1_tomorrow_test.dart`
+- [x] `S7-16` **The notification ask is per moment**, a day apart. `test/widgets/push_ask_test.dart`
+- [x] `S7-17` **Start a new plan** (`PlanRestart`, `/plan/new`, `taperFrom`), app and server; reviewed once independently and four findings fixed (docs/10 §52.3). `test/domain/plan_restart_test.dart`, `test/data/new_plan_store_test.dart`, `test/widgets/new_plan_test.dart`, `functions/test/taperEngine.test.ts`
+- [x] `S7-18` `ENFORCE_APP_CHECK=true` in the repo again (founder: deploy)
+- [x] `S7-19` **Functions deployed** Nov 12 05:50 UTC, all 25, after `verify` 337 · `test:rules` 57 · `test:integration` 412. App Check still enforced; every real request in the next two hours succeeded (docs/10 §52.5)
+- [x] `S7-20a` **On the Pixel 8**, fake backend: suites `a`–`e`, `g`–`j`, `l` 58 passed, the new `n_zero_day_and_new_plan` 3 passed, `k_retention` 3 of 4 (docs/10 §52.5)
+- [ ] `S7-20b` **Still owed on a device:** iOS at all (the simulator build needs the watchOS 26.2 runtime; `m_reminder_tap` is the probe for `S7-9`); `f_firebase_backend` from the Pixel (the pinned App Check debug token is not registered for the Android app — founder); a tapped reminder on Android with Do Not Disturb off
+- [ ] `S7-21` **iOS crash symbols** — a Crashlytics step in the release template, once it is known whether iOS reports arrive at all
+- [ ] `S7-22` **Read it again** two weeks after it ships: iOS `reminder_opened` > 0, Survived views ≈ survived cravings, `setCoachName` failures < 5%, cold-turkey D1 against 26%, re-registrations after sign-out
+
 **Kill criterion (Doc 6 §8):** if by Dec 1 we've posted 100+ videos with <1K downloads, the content angle is wrong — not the market. Shift weight to the best-performing format. *"January is the judge."*
 
 ---

@@ -55,6 +55,8 @@
   "authForgotPassword": "Forgot password?",
   "authNewHere": "New here?",
   "authWrongPassword": "not that one — try again",
+  "authLoginTryApple": "made this account with Apple? go back and use “Sign in with Apple”",
+  "authLoginTryGoogle": "made this account with Google? go back and use “Sign in with Google”",
   "authForgotTitle": "Happens to everyone.",
   "authForgotSubtitle": "Drop your email — we'll send a reset link. Your streak is untouched.",
   "authLinkSent": "Link sent. Check spam if it hides.",
@@ -811,6 +813,11 @@
   "day1Task1": "Log your first puff",
   "day1Task1Done": "done — honesty from puff one",
   "day1Task1Sub": "one honest tap on the big button",
+  "day1Task1Zero": "Lock in day one",
+  "day1Task1ZeroSub": "one tap: vape-free from here",
+  "day1Task1ZeroDone": "done — day one is counting",
+  "day1TourZeroTitle": "This is your daily move.",
+  "day1TourZeroBody": "Your line is zero, so there's no puff to log. One tap here says you're still vape-free — that's what keeps your streak alive. Go on, tap it.",
   "day1Task2": "Meet your coach",
   "day1Task2Sub": "30-sec hello. It already knows your triggers.",
   "day1Task3": "Set your danger hours",
@@ -843,6 +850,23 @@
   },
   "day1CtaCoach": "Meet your coach",
   "day1CtaHome": "Go to Today",
+  "day1NextTaper": "{limit, plural, =1{Tomorrow's line: 1 puff.} other{Tomorrow's line: {limit} puffs.}}",
+  "@day1NextTaper": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "day1NextZero": "Tomorrow: day 2 vape-free.",
+  "day1NextCheckin": "Tonight at {time}: your first check-in.",
+  "@day1NextCheckin": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "homeGreetingDate": "{date} · Day {day} of {total}",
   "@homeGreetingDate": {
     "placeholders": {
@@ -1018,6 +1042,28 @@
   "homeVapeFreeTitle": "No puffs today?",
   "homeVapeFreeCta": "Confirm vape-free day ✓",
   "homeVapeFreeDone": "Vape-free day locked in. That's the whole game. 🔥",
+  "homeStillVapeFree": "STILL VAPE-FREE ✓",
+  "homeVapeFreeToday": "VAPE-FREE TODAY ✓",
+  "homeIVapedToday": "I vaped today",
+  "homeZeroDayOpen": "A zero day. Confirm it below when you're sure.",
+  "homeZeroDayDone": "Vape-free today. Locked in.",
+  "homeVapeFreeFor": "vape-free for {duration}",
+  "@homeVapeFreeFor": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "homeFinishSetup": "Finish setup · {done}/3",
+  "@homeFinishSetup": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "homeFinishSetupSub": "Two minutes, then the app does its job.",
   "homeYesterdayTitle": "Was yesterday vape-free?",
   "homeYesterdayBody": "No log for {date}. Only you know, so we ask instead of guessing.",
   "@homeYesterdayBody": {
@@ -1573,6 +1619,55 @@
       }
     }
   },
+  "planNewCta": "Start a new plan",
+  "planEnded": "This plan ended on {date}.",
+  "@planEnded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "newPlanTitle": "A new plan",
+  "newPlanLead": "Nothing resets. Your streak, your history and the money you've saved all come with you.",
+  "newPlanLevelLabel": "PUFFS A DAY, RIGHT NOW",
+  "newPlanLevelHint": "On the days you vaped this past week, you averaged {count}.",
+  "@newPlanLevelHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newPlanLevelNoHint": "Your honest guess is enough. The line starts from here.",
+  "newPlanToday": "{limit, plural, =0{Today's line: zero} =1{Today's line: 1 puff} other{Today's line: {limit} puffs}}",
+  "@newPlanToday": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "newPlanFreedom": "Freedom Day: {date}",
+  "@newPlanFreedom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "newPlanCta": "Start Day 1 today",
+  "newPlanStarted": "New plan started. Freedom Day: {date}",
+  "@newPlanStarted": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homePlanEndedTitle": "Still vaping? Start a new plan.",
+  "homePlanEndedBody": "It starts from where you are now. Nothing resets.",
+  "settingsSignOutNewPlan": "Start a new plan instead",
   "statsTitle": "Stats",
   "statsRangeDay": "Day",
   "statsRangeWeek": "Week",
@@ -2289,6 +2384,10 @@
   "settingsSignOut": "Sign out",
   "settingsSignOutConfirmTitle": "Sign out?",
   "settingsSignOutConfirmBody": "Your data stays on your account. The streak keeps burning.",
+  "settingsSignOutMethodApple": "You signed in with Apple. Use Apple again to get back to this plan.",
+  "settingsSignOutMethodGoogle": "You signed in with Google. Use Google again to get back to this plan.",
+  "settingsSignOutMethodEmail": "You signed in with your email and password. Use them again to get back to this plan.",
+  "settingsSignOutPremium": "Premium stays with this account. A new account would start on the Free plan.",
   "settingsDangerHoursTitle": "When do cravings hit hardest?",
   "settingsDangerHoursNote": "Pick the hour it usually starts. We nudge you 10 minutes before it — one push a day, nothing more.",
   "settingsDangerHoursNudge": "One nudge around {time}, every day.",
@@ -2416,6 +2515,7 @@
   "@widgetLeftTight": {
     "description": "Home-screen widget: puffs left when close to the line. Native %1$d template."
   },
+  "widgetZeroDay": "zero day · stay vape-free",
   "widgetOverLimit": "over today's line · no shame",
   "@widgetOverLimit": {
     "description": "Home-screen widget: shown once today is over the line. Carries no count on purpose - over is over."

@@ -34,7 +34,11 @@ abstract final class SettingsPersistence {
   static const _pushReplies = 'settings.pushRepliesOn';
   static const _pushMentions = 'settings.pushMentionsOn';
   static const _pushWeekly = 'settings.pushWeeklyOn';
+  /// The single once-ever flag this replaced (Nov 12 2026). Still read, never
+  /// written: see [_asksFrom].
   static const _pushPrompt = 'settings.pushPromptShown';
+  static const _pushAsks = 'settings.pushAsksShown';
+  static const _pushAskDay = 'settings.pushAskDay';
   static const _winbackShown = 'settings.winbackShown';
   static const _launchPaywallDay = 'settings.launchPaywallShownDay';
   static const _launchPaywallCount = 'settings.launchPaywallShownCount';
@@ -70,7 +74,8 @@ abstract final class SettingsPersistence {
         pushRepliesOn: prefs.getBool(_pushReplies) ?? defaults.pushRepliesOn,
         pushMentionsOn: prefs.getBool(_pushMentions) ?? defaults.pushMentionsOn,
         pushWeeklyOn: prefs.getBool(_pushWeekly) ?? defaults.pushWeeklyOn,
-        pushPromptShown: prefs.getBool(_pushPrompt) ?? defaults.pushPromptShown,
+        pushAsksShown: _asksFrom(prefs),
+        pushAskDay: prefs.getString(_pushAskDay),
         trialReminderOn:
             prefs.getBool(_trialReminderOn) ?? defaults.trialReminderOn,
         checkinReminderOn:
@@ -101,6 +106,18 @@ abstract final class SettingsPersistence {
     }
   }
 
+  /// The asks already spent, carrying an older build's answer across.
+  ///
+  /// Before Nov 12 2026 there was one flag for all three moments and no
+  /// record of which moment set it. It is read as the Day-1 ask — the first
+  /// one nearly everybody reaches — so an upgrading user is not shown that
+  /// one twice, and still gets the two they never had.
+  static Set<String> _asksFrom(SharedPreferences prefs) {
+    final stored = prefs.getStringList(_pushAsks);
+    if (stored != null) return stored.toSet();
+    return (prefs.getBool(_pushPrompt) ?? false) ? {'dayOne'} : const {};
+  }
+
   static Future<void> save(SettingsState state) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -119,7 +136,13 @@ abstract final class SettingsPersistence {
       await prefs.setBool(_pushReplies, state.pushRepliesOn);
       await prefs.setBool(_pushMentions, state.pushMentionsOn);
       await prefs.setBool(_pushWeekly, state.pushWeeklyOn);
-      await prefs.setBool(_pushPrompt, state.pushPromptShown);
+      await prefs.setStringList(_pushAsks, state.pushAsksShown.toList());
+      final askDay = state.pushAskDay;
+      if (askDay == null) {
+        await prefs.remove(_pushAskDay);
+      } else {
+        await prefs.setString(_pushAskDay, askDay);
+      }
       await prefs.setBool(_trialReminderOn, state.trialReminderOn);
       await prefs.setBool(_checkinReminderOn, state.checkinReminderOn);
       await prefs.setInt(_checkinHour, state.checkinHour);
