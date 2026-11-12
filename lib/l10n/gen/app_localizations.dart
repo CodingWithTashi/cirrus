@@ -352,6 +352,18 @@ abstract class AppLocalizations {
   /// **'not that one — try again'**
   String get authWrongPassword;
 
+  /// No description provided for @authLoginTryApple.
+  ///
+  /// In en, this message translates to:
+  /// **'made this account with Apple? go back and use “Sign in with Apple”'**
+  String get authLoginTryApple;
+
+  /// No description provided for @authLoginTryGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'made this account with Google? go back and use “Sign in with Google”'**
+  String get authLoginTryGoogle;
+
   /// No description provided for @authForgotTitle.
   ///
   /// In en, this message translates to:
@@ -2271,6 +2283,36 @@ abstract class AppLocalizations {
   /// **'one honest tap on the big button'**
   String get day1Task1Sub;
 
+  /// No description provided for @day1Task1Zero.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock in day one'**
+  String get day1Task1Zero;
+
+  /// No description provided for @day1Task1ZeroSub.
+  ///
+  /// In en, this message translates to:
+  /// **'one tap: vape-free from here'**
+  String get day1Task1ZeroSub;
+
+  /// No description provided for @day1Task1ZeroDone.
+  ///
+  /// In en, this message translates to:
+  /// **'done — day one is counting'**
+  String get day1Task1ZeroDone;
+
+  /// No description provided for @day1TourZeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your daily move.'**
+  String get day1TourZeroTitle;
+
+  /// No description provided for @day1TourZeroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your line is zero, so there\'s no puff to log. One tap here says you\'re still vape-free — that\'s what keeps your streak alive. Go on, tap it.'**
+  String get day1TourZeroBody;
+
   /// No description provided for @day1Task2.
   ///
   /// In en, this message translates to:
@@ -2360,6 +2402,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to Today'**
   String get day1CtaHome;
+
+  /// No description provided for @day1NextTaper.
+  ///
+  /// In en, this message translates to:
+  /// **'{limit, plural, =1{Tomorrow\'s line: 1 puff.} other{Tomorrow\'s line: {limit} puffs.}}'**
+  String day1NextTaper(int limit);
+
+  /// No description provided for @day1NextZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow: day 2 vape-free.'**
+  String get day1NextZero;
+
+  /// No description provided for @day1NextCheckin.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonight at {time}: your first check-in.'**
+  String day1NextCheckin(String time);
 
   /// No description provided for @homeGreetingDate.
   ///
@@ -2576,6 +2636,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vape-free day locked in. That\'s the whole game. 🔥'**
   String get homeVapeFreeDone;
+
+  /// No description provided for @homeStillVapeFree.
+  ///
+  /// In en, this message translates to:
+  /// **'STILL VAPE-FREE ✓'**
+  String get homeStillVapeFree;
+
+  /// No description provided for @homeVapeFreeToday.
+  ///
+  /// In en, this message translates to:
+  /// **'VAPE-FREE TODAY ✓'**
+  String get homeVapeFreeToday;
+
+  /// No description provided for @homeIVapedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'I vaped today'**
+  String get homeIVapedToday;
+
+  /// No description provided for @homeZeroDayOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'A zero day. Confirm it below when you\'re sure.'**
+  String get homeZeroDayOpen;
+
+  /// No description provided for @homeZeroDayDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Vape-free today. Locked in.'**
+  String get homeZeroDayDone;
+
+  /// No description provided for @homeVapeFreeFor.
+  ///
+  /// In en, this message translates to:
+  /// **'vape-free for {duration}'**
+  String homeVapeFreeFor(String duration);
+
+  /// No description provided for @homeFinishSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish setup · {done}/3'**
+  String homeFinishSetup(int done);
+
+  /// No description provided for @homeFinishSetupSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Two minutes, then the app does its job.'**
+  String get homeFinishSetupSub;
 
   /// No description provided for @homeYesterdayTitle.
   ///
@@ -3620,6 +3728,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Plan reflowed. New Freedom Day: {date}'**
   String planAdjusted(String date);
+
+  /// No description provided for @planNewCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new plan'**
+  String get planNewCta;
+
+  /// No description provided for @planEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'This plan ended on {date}.'**
+  String planEnded(String date);
+
+  /// No description provided for @newPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A new plan'**
+  String get newPlanTitle;
+
+  /// No description provided for @newPlanLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing resets. Your streak, your history and the money you\'ve saved all come with you.'**
+  String get newPlanLead;
+
+  /// No description provided for @newPlanLevelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PUFFS A DAY, RIGHT NOW'**
+  String get newPlanLevelLabel;
+
+  /// No description provided for @newPlanLevelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'On the days you vaped this past week, you averaged {count}.'**
+  String newPlanLevelHint(int count);
+
+  /// No description provided for @newPlanLevelNoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your honest guess is enough. The line starts from here.'**
+  String get newPlanLevelNoHint;
+
+  /// No description provided for @newPlanToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{limit, plural, =0{Today\'s line: zero} =1{Today\'s line: 1 puff} other{Today\'s line: {limit} puffs}}'**
+  String newPlanToday(int limit);
+
+  /// No description provided for @newPlanFreedom.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day: {date}'**
+  String newPlanFreedom(String date);
+
+  /// No description provided for @newPlanCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Day 1 today'**
+  String get newPlanCta;
+
+  /// No description provided for @newPlanStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'New plan started. Freedom Day: {date}'**
+  String newPlanStarted(String date);
+
+  /// No description provided for @homePlanEndedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Still vaping? Start a new plan.'**
+  String get homePlanEndedTitle;
+
+  /// No description provided for @homePlanEndedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It starts from where you are now. Nothing resets.'**
+  String get homePlanEndedBody;
+
+  /// No description provided for @settingsSignOutNewPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new plan instead'**
+  String get settingsSignOutNewPlan;
 
   /// No description provided for @statsTitle.
   ///
@@ -5325,6 +5517,30 @@ abstract class AppLocalizations {
   /// **'Your data stays on your account. The streak keeps burning.'**
   String get settingsSignOutConfirmBody;
 
+  /// No description provided for @settingsSignOutMethodApple.
+  ///
+  /// In en, this message translates to:
+  /// **'You signed in with Apple. Use Apple again to get back to this plan.'**
+  String get settingsSignOutMethodApple;
+
+  /// No description provided for @settingsSignOutMethodGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'You signed in with Google. Use Google again to get back to this plan.'**
+  String get settingsSignOutMethodGoogle;
+
+  /// No description provided for @settingsSignOutMethodEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'You signed in with your email and password. Use them again to get back to this plan.'**
+  String get settingsSignOutMethodEmail;
+
+  /// No description provided for @settingsSignOutPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium stays with this account. A new account would start on the Free plan.'**
+  String get settingsSignOutPremium;
+
   /// No description provided for @settingsDangerHoursTitle.
   ///
   /// In en, this message translates to:
@@ -5648,6 +5864,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'%1\$d left · tight, you\'ve got this'**
   String get widgetLeftTight;
+
+  /// No description provided for @widgetZeroDay.
+  ///
+  /// In en, this message translates to:
+  /// **'zero day · stay vape-free'**
+  String get widgetZeroDay;
 
   /// Home-screen widget: shown once today is over the line. Carries no count on purpose - over is over.
   ///

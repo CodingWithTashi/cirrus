@@ -57,6 +57,18 @@ abstract interface class AuthRepository {
   Future<String?> ensureSessionId();
 }
 
+/// An auth backend that can say how the signed-in account signs in.
+///
+/// A separate capability rather than a member of [AuthRepository], because it
+/// is a courtesy and not part of the session lifecycle: a backend (or a test
+/// double) that cannot answer simply does not implement it, and the one
+/// caller — the sign-out dialog — says nothing about the method.
+abstract interface class SignInMethodSource {
+  /// The provider the current account signs in with, or null when there is
+  /// no session or the backend does not know (a guest, a restored fake).
+  Future<AccountProvider?> signInProvider();
+}
+
 /// Persistence of the quit journey itself.
 abstract interface class JourneyRepository {
   /// The backend creates the initial journey from onboarding output.

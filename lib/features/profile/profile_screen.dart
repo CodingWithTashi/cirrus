@@ -63,7 +63,7 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         l10n.profileQuittingSince(
-                          LpFormat.shortDate(journey.plan.startDate, locale),
+                          LpFormat.shortDate(journey.historyStart, locale),
                           journey.plan.method.label(context).toLowerCase(),
                           snap.dayNumber,
                         ),

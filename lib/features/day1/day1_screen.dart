@@ -14,9 +14,11 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../data/api/firebase/push_service.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../domain/date_key.dart';
 import '../community/push_permission_ask.dart';
 
 /// Frame 24 — Day-1 checklist: three setup moves, CTA always points at the
@@ -94,6 +96,11 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
     final snap = ref.watch(todayProvider);
     if (journey == null || snap == null) return const SizedBox.shrink();
     final done = journey.day1TasksDone;
+    // A zero line (cold turkey) has no first puff to log — asking for one
+    // was an instruction to break the plan four minutes after making it. The
+    // first move there is the one Home is built around on such a day: saying
+    // you are vape-free. Same task slot, same tour step, different move.
+    final zeroLine = snap.limit == 0;
 
     Widget task({
       required int index,
@@ -210,9 +217,13 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
                       const SizedBox(height: 22),
                       task(
                         index: 0,
-                        title: l10n.day1Task1,
-                        doneSub: l10n.day1Task1Done,
-                        sub: l10n.day1Task1Sub,
+                        title: zeroLine ? l10n.day1Task1Zero : l10n.day1Task1,
+                        doneSub: zeroLine
+                            ? l10n.day1Task1ZeroDone
+                            : l10n.day1Task1Done,
+                        sub: zeroLine
+                            ? l10n.day1Task1ZeroSub
+                            : l10n.day1Task1Sub,
                         onTap: () => _begin(ref, context, Day1TourStep.logPuff),
                       ),
                       task(
@@ -246,13 +257,45 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
                 Center(
                   child: LpTextButton(
                     l10n.day1Skip,
-                    onTap: () {
+                    // The same second chance "Go to Today" gives, asked
+                    // while this screen is still here to show it: fourteen
+                    // people skipped, and the ask lived only on the button
+                    // they did not press (Nov 2026).
+                    onTap: () async {
+                      await maybeAskPushPermission(
+                        context,
+                        ref,
+                        reason: PushAskReason.dayOne,
+                      );
+                      if (!context.mounted) return;
                       ref.read(day1TourProvider.notifier).skip();
                       context.go(Routes.home);
                     },
                   ),
                 ),
                 const SizedBox(height: 8),
+              ],
+              // Opened from Home after a skip, the list has no skip link
+              // left and no back control, and every other button starts a
+              // tour step that comes back here — a room with no door. A
+              // skipped list is one the person chose to visit; let them
+              // leave it the way they came, ticking nothing.
+              if (done.length < 3 && journey.day1TourSkipped) ...[
+                Center(
+                  child: LpTextButton(
+                    l10n.day1CtaHome,
+                    onTap: () => context.go(Routes.home),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              // A finished list points at day two. It used to end on "Go to
+              // Today" and nothing else, eighty seconds after onboarding —
+              // and people who never came back left a median of five
+              // minutes after it (Nov 11 2026).
+              if (done.length >= 3) ...[
+                _Tomorrow(zeroLine: zeroLine),
+                const SizedBox(height: 10),
               ],
               LpNoteCard(
                 l10n.day1FreedomNote(
@@ -264,7 +307,7 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
               // Frame 24: the CTA always points at the next unchecked item.
               LpButton(
                 switch (nextTask) {
-                  0 => l10n.day1Task1,
+                  0 => zeroLine ? l10n.day1Task1Zero : l10n.day1Task1,
                   1 => l10n.day1CtaCoach,
                   2 => l10n.day1Task3,
                   _ => l10n.day1CtaHome,
@@ -293,6 +336,73 @@ class _Day1ScreenState extends ConsumerState<Day1Screen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// What tomorrow is, on the finished checklist: its number, from the engine,
+/// and tonight's check-in — said only when one is really going to arrive.
+///
+/// The check-in line reads the OS permission rather than our own switch: the
+/// reminder is armed for everyone whose settings allow it, including people
+/// who declined the system prompt, and promising a notification iOS will
+/// never show would be the app inventing something about the user's evening.
+class _Tomorrow extends ConsumerStatefulWidget {
+  const _Tomorrow({required this.zeroLine});
+
+  final bool zeroLine;
+
+  @override
+  ConsumerState<_Tomorrow> createState() => _TomorrowState();
+}
+
+class _TomorrowState extends ConsumerState<_Tomorrow> {
+  /// Null on the fake backend, desktop and web: no OS to ask, no promise.
+  late final Future<PushPermission>? _permission = ref
+      .read(pushPermissionsProvider)
+      ?.status();
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    final journey = ref.watch(quitStoreProvider);
+    final settings = ref.watch(settingsStoreProvider);
+    if (journey == null) return const SizedBox.shrink();
+    final now = ref.watch(nowProvider)();
+    final tomorrow = LpDate.addDays(LpDate.dayStart(now), 1);
+    final line = widget.zeroLine
+        ? l10n.day1NextZero
+        : l10n.day1NextTaper(journey.limitOn(tomorrow));
+    final checkinAhead =
+        settings.notificationsOn &&
+        settings.checkinReminderOn &&
+        now.hour < settings.checkinHour;
+    final style = LpType.body14(lp.textPrimary, weight: FontWeight.w600);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(line, style: style),
+        if (checkinAhead)
+          FutureBuilder<PushPermission>(
+            future: _permission,
+            builder: (context, answer) =>
+                answer.data == PushPermission.granted
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.day1NextCheckin(
+                        LpFormat.hour(
+                          settings.checkinHour,
+                          context.localeTag,
+                        ),
+                      ),
+                      style: LpType.caption(lp.textSecondary),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+      ],
     );
   }
 }

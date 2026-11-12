@@ -19,7 +19,9 @@ abstract final class DayWindow {
   /// carrying the limit the plan set that day.
   static List<DayLog> trailing(JourneyState s, DateTime today, int length) {
     final end = LpDate.dayStart(today);
-    final planStart = LpDate.dayStart(s.plan.startDate);
+    // The account's first day, not the current plan's: a plan started again
+    // must not cut the chart off at its own day one.
+    final planStart = s.historyStart;
     var first = LpDate.addDays(end, -(length - 1));
     if (first.isBefore(planStart)) first = planStart;
     // A plan that starts after today (frame-map previews, a journey seeded
@@ -38,7 +40,7 @@ abstract final class DayWindow {
   static List<DayLog> previous(JourneyState s, DateTime today, int length) {
     final current = trailing(s, today, length);
     final dayBefore = LpDate.addDays(current.first.date, -1);
-    if (dayBefore.isBefore(LpDate.dayStart(s.plan.startDate))) return const [];
+    if (dayBefore.isBefore(s.historyStart)) return const [];
     return trailing(s, dayBefore, length);
   }
 

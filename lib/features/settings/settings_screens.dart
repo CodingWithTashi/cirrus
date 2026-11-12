@@ -642,7 +642,7 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.settingsSignOutConfirmTitle),
-        content: Text(l10n.settingsSignOutConfirmBody),
+        content: const _SignOutNotes(),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -664,6 +664,67 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What the sign-out dialog says: that nothing is lost, which door brings
+/// the person back, and — for a subscriber — that Premium stays behind.
+///
+/// Five of the seven people who signed out before Nov 2026 made a new
+/// account straight afterwards; one was a paying subscriber who came back by
+/// a different button and landed on the free tier. The dialog said only
+/// "your data stays on your account", which is true and no help at all to
+/// somebody who cannot remember whether that account was Apple or an email.
+///
+/// The method is read fresh each time (`accountProviderProvider` is
+/// auto-disposed) and a backend that cannot say leaves the line out — never
+/// a guess.
+class _SignOutNotes extends ConsumerWidget {
+  const _SignOutNotes();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final lp = context.lp;
+    final method = ref.watch(accountProviderProvider).valueOrNull;
+    final premium = ref.watch(isPremiumProvider);
+    final methodLine = switch (method) {
+      AccountProvider.apple => l10n.settingsSignOutMethodApple,
+      AccountProvider.google => l10n.settingsSignOutMethodGoogle,
+      AccountProvider.email => l10n.settingsSignOutMethodEmail,
+      null => null,
+    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.settingsSignOutConfirmBody),
+        if (methodLine != null) ...[
+          const SizedBox(height: 12),
+          Text(methodLine),
+        ],
+        if (premium) ...[
+          const SizedBox(height: 12),
+          Text(
+            l10n.settingsSignOutPremium,
+            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+          ),
+        ],
+        // The other thing people came here for. Signing out and registering
+        // again was the only way to get a plan that fit; this is that, with
+        // the account, the history and the subscription still attached. In
+        // the body, not a third action: three do not fit a phone's row.
+        const SizedBox(height: 6),
+        LpTextButton(
+          l10n.settingsSignOutNewPlan,
+          onTap: () {
+            final router = GoRouter.of(context);
+            Navigator.of(context).pop();
+            router.push(Routes.planNew);
+          },
+        ),
+      ],
     );
   }
 }

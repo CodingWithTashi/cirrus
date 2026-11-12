@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -476,6 +477,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _wrongPassword = false;
   bool _busy = false;
 
+  /// How many times this visit has been told "wrong". From the second, the
+  /// screen asks the other question: the backend gives one answer for a wrong
+  /// password, an unknown email and an account that only ever signed in with
+  /// Apple or Google, so "try again" sent that last person round in circles —
+  /// one tried twice, reset a password the account never had, and came back
+  /// in by a different button as somebody new (Nov 2026).
+  int _wrongCount = 0;
+
   @override
   void dispose() {
     _email.dispose();
@@ -483,6 +492,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
+  }
+
+  /// The identity button this platform's sign-in screen offers, as a hint.
+  /// Mirrors the gate on that screen: Apple on Apple platforms, Google on
+  /// Android, and no hint where neither is offered.
+  String? _otherDoorHint(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => l10n.authLoginTryApple,
+      TargetPlatform.android => l10n.authLoginTryGoogle,
+      _ => null,
+    };
   }
 
   Future<void> _logIn() async {
@@ -500,6 +521,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _busy = false;
         _wrongPassword = true;
+        _wrongCount++;
       });
       _shakeKey.currentState?.shake();
       return;
@@ -576,11 +598,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ],
+                if (_wrongCount >= 2)
+                  if (_otherDoorHint(context) case final hint?) ...[
+                    const SizedBox(height: 8),
+                    Text(hint, style: LpType.caption(lp.textSecondary)),
+                  ],
                 const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerRight,
                   child: PressScale(
-                    onTap: () => context.push(Routes.forgot),
+                    // The email rides along, so the reset is not asked for
+                    // an address the person has just typed. As `extra`, not
+                    // in the URL: a path is what the analytics observer and
+                    // a debug log can see.
+                    onTap: () =>
+                        context.push(Routes.forgot, extra: _email.text.trim()),
                     child: Text(
                       l10n.authForgotPassword,
                       style: LpType.body13(
@@ -624,7 +656,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 /// Frame 29 — inline success state, resend disabled 30s with countdown.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({super.key, this.initialEmail});
+
+  /// What was typed on the login screen, when that is how we got here.
+  final String? initialEmail;
 
   @override
   ConsumerState<ForgotPasswordScreen> createState() =>
@@ -633,7 +668,10 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   late final _email = TextEditingController(
-    text: LoginDefaults.email(ref.read(backendModeProvider)),
+    text: switch (widget.initialEmail) {
+      final typed? when typed.isNotEmpty => typed,
+      _ => LoginDefaults.email(ref.read(backendModeProvider)),
+    },
   );
   final _emailFocus = FocusNode();
   bool _sent = false;

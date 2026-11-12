@@ -127,6 +127,10 @@ abstract final class JourneyCodec {
     'weeklySpend': p.weeklySpend,
     'strength': p.strength.name,
     'stretchDays': p.stretchDays,
+    // A plan started again (`PlanRestart`). Written only then, so a first
+    // plan stays byte-for-byte the document it always was.
+    if (p.taperFrom != null) 'taperFrom': p.taperFrom,
+    if (p.planNumber > 1) 'planNumber': p.planNumber,
   };
 
   static QuitPlan decodePlan(Map<String, dynamic> json) => QuitPlan(
@@ -141,6 +145,16 @@ abstract final class JourneyCodec {
       NicStrength.notSure,
     ),
     stretchDays: json['stretchDays'] as int? ?? 0,
+    // Absent on every journey written before Nov 2026, and anything that is
+    // not a positive whole number reads as absent: a first plan.
+    taperFrom: switch (json['taperFrom']) {
+      final int level when level > 0 => level,
+      _ => null,
+    },
+    planNumber: switch (json['planNumber']) {
+      final int n when n >= 1 => n,
+      _ => 1,
+    },
   );
 
   // `date` is re-derived from the map key on decode — one source of truth.

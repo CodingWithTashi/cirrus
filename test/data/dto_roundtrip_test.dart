@@ -123,6 +123,52 @@ void main() {
       expect(JourneyCodec.decode(json).day1TourSkipped, isFalse);
     });
 
+    test('a restarted plan round-trips where its curve starts, and its '
+        'number', () {
+      // `PlanRestart`: the second plan's curve comes down from a level that
+      // is not the baseline. Lost on the wire, the next launch would redraw
+      // the line from the old habit — 200 a day for somebody on 80.
+      final seed = SeedData.journey(DateTime(2026, 11, 12));
+      final restarted = seed.copyWith(
+        plan: seed.plan.copyWith(taperFrom: 82, planNumber: 2),
+      );
+
+      final json = _roundTrip(JourneyCodec.encode(restarted));
+      final decoded = JourneyCodec.decode(json);
+
+      expect(decoded.plan.taperFrom, 82);
+      expect(decoded.plan.planNumber, 2);
+      expect(decoded.plan.curveStart, 82);
+      expect(decoded.plan.baselinePuffsPerDay, seed.plan.baselinePuffsPerDay);
+    });
+
+    test('a first plan writes neither, and decodes as a first plan', () {
+      // Absent, not zero and not null: every journey written before Nov 2026
+      // has neither key, and an older build must read a first plan as the
+      // document it always was.
+      final seed = SeedData.journey(DateTime(2026, 11, 12));
+      final plan = JourneyCodec.encode(seed)['plan'] as Map<String, dynamic>;
+
+      expect(plan.containsKey('taperFrom'), isFalse);
+      expect(plan.containsKey('planNumber'), isFalse);
+      final decoded = JourneyCodec.decode(_roundTrip(JourneyCodec.encode(seed)));
+      expect(decoded.plan.taperFrom, isNull);
+      expect(decoded.plan.planNumber, 1);
+    });
+
+    test('a nonsense level or plan number decodes to a first plan', () {
+      final json = _roundTrip(
+        JourneyCodec.encode(SeedData.journey(DateTime(2026, 11, 12))),
+      );
+      (json['plan'] as Map<String, dynamic>)
+        ..['taperFrom'] = -4
+        ..['planNumber'] = 0;
+
+      final decoded = JourneyCodec.decode(json);
+      expect(decoded.plan.taperFrom, isNull);
+      expect(decoded.plan.planNumber, 1);
+    });
+
     test('per-game bests round-trip, and their absence stays absent', () {
       // The demo journey has never played a game: a seeded best would be an
       // invented number rendered as the user's own (docs/09 §8), and an empty
@@ -474,3 +520,7 @@ void main() {
     });
   });
 }
+
+/// Through real JSON text and back — what the wire and Firestore both do.
+Map<String, dynamic> _roundTrip(Map<String, dynamic> json) =>
+    jsonDecode(jsonEncode(json)) as Map<String, dynamic>;

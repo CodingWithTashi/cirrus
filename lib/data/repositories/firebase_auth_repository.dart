@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../domain/models/enums.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/firebase/functions_client.dart';
@@ -12,7 +13,7 @@ import 'firebase_common.dart';
 /// mobile by `backendModeProvider`; needs the console prerequisites from the
 /// project setup notes (enabled providers, Android SHA fingerprints, iOS
 /// Apple-sign-in entitlement).
-class FirebaseAuthRepository implements AuthRepository {
+class FirebaseAuthRepository implements AuthRepository, SignInMethodSource {
   FirebaseAuthRepository({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
@@ -239,6 +240,22 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<String?> currentUserId() async => _auth.currentUser?.uid;
+
+  /// Read off the account itself, so it is right on a cold start months after
+  /// the sign-in and on a phone that was never the one used to register.
+  /// Apple and Google before the password: an account that linked one keeps
+  /// its `password` entry too, and the button is the easier way back.
+  @override
+  Future<AccountProvider?> signInProvider() async {
+    final ids = {
+      for (final info in _auth.currentUser?.providerData ?? const <UserInfo>[])
+        info.providerId,
+    };
+    if (ids.contains('apple.com')) return AccountProvider.apple;
+    if (ids.contains('google.com')) return AccountProvider.google;
+    if (ids.contains('password')) return AccountProvider.email;
+    return null;
+  }
 
   /// Mints the anonymous account the guest path otherwise gets from
   /// `FirebaseJourneyRepository.create()` — but BEFORE the paywall, so the

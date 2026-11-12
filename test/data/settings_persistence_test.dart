@@ -45,7 +45,8 @@ void main() {
       pushRepliesOn: false,
       pushMentionsOn: false,
       pushWeeklyOn: false,
-      pushPromptShown: true,
+      pushAsksShown: {'dayOne', 'survived'},
+      pushAskDay: '2026-09-03',
       winbackShown: true,
       launchPaywallShownDay: '2026-09-02',
       launchPaywallShownCount: 3,
@@ -94,6 +95,10 @@ void main() {
     expect(loaded.checkinReminderOn, isFalse);
     expect(loaded.checkinHour, 19);
     expect(loaded.winbackShown, isTrue);
+    // An ask already made must not be made again after a restart, and the
+    // day it was made on is what keeps a second one out of the same day.
+    expect(loaded.pushAsksShown, {'dayOne', 'survived'});
+    expect(loaded.pushAskDay, '2026-09-03');
     // A close that a restart forgets is a card that comes back the same day.
     expect(loaded.offerCardClosedDay, '2026-09-02');
     // A lifetime counter that resets on every launch would hand out an
@@ -146,7 +151,8 @@ void main() {
       'pushRepliesOn',
       'pushMentionsOn',
       'pushWeeklyOn',
-      'pushPromptShown',
+      'pushAsksShown',
+      'pushAskDay',
       'winbackShown',
       'launchPaywallShownDay',
       'launchPaywallShownCount',
@@ -179,6 +185,23 @@ void main() {
   test('the one-time win-back flag stays burned across a reload', () async {
     await SettingsPersistence.save(const SettingsState(winbackShown: true));
     expect((await SettingsPersistence.load()).winbackShown, isTrue);
+  });
+
+  // Before Nov 12 2026 one flag covered all three moments. An upgrade must
+  // not ask the Day-1 question a second time, and must not swallow the two
+  // asks that person never had.
+  test('the old once-ever ask flag is carried over as the Day-1 ask', () async {
+    SharedPreferences.setMockInitialValues({'settings.pushPromptShown': true});
+
+    final loaded = await SettingsPersistence.load();
+    expect(loaded.pushAsksShown, {'dayOne'});
+    expect(loaded.pushAskDay, isNull);
+  });
+
+  test('nobody asked on the old build starts with every ask unspent', () async {
+    SharedPreferences.setMockInitialValues({'settings.pushPromptShown': false});
+
+    expect((await SettingsPersistence.load()).pushAsksShown, isEmpty);
   });
 
   test('a corrupt stored theme falls back rather than throwing', () async {

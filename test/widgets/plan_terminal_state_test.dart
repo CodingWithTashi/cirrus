@@ -8,6 +8,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
+import 'package:last_puff/features/home/home_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
@@ -76,7 +77,9 @@ void main() {
     container.read(quitStoreProvider.notifier).replaceForTest(journey());
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.homeLogPuff), findsOneWidget);
+    // Home is up. Not "LOG PUFF is on it": these are zero-limit days, where
+    // the pinned button is the vape-free confirmation (Nov 12 2026).
+    expect(find.byType(HomeScreen), findsOneWidget);
     return container;
   }
 

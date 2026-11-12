@@ -139,6 +139,30 @@ function decodePlan(json: Record<string, unknown>): QuitPlan {
     weeklySpend: typeof json['weeklySpend'] === 'number' ? json['weeklySpend'] : 0,
     strength: asEnumOr(json['strength'], NIC_STRENGTHS, 'notSure'),
     stretchDays: asInt(json['stretchDays'], 0),
+    ...restartOf(json),
+  };
+}
+
+/** No taper has ever started above this; anything larger is not a level. */
+const MAX_TAPER_FROM = 5000;
+
+/**
+ * The two fields a restarted plan adds, read defensively: this document is
+ * client-written, and `taperFrom` sets a limit the coach will quote. Anything
+ * that is not a positive whole number in range reads as a first plan — the
+ * same answer the Dart codec gives for an absent key.
+ */
+function restartOf(
+  json: Record<string, unknown>,
+): Pick<QuitPlan, 'taperFrom' | 'planNumber'> {
+  const whole = (v: unknown, max: number): number | undefined =>
+    typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max
+      ? v
+      : undefined;
+  const taperFrom = whole(json['taperFrom'], MAX_TAPER_FROM);
+  return {
+    ...(taperFrom === undefined ? {} : {taperFrom}),
+    planNumber: whole(json['planNumber'], 1000) ?? 1,
   };
 }
 

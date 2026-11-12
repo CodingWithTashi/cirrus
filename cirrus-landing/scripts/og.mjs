@@ -317,6 +317,21 @@ const POSTS = [
       { n: '2.29×', label: 'COPD rate, vapers', color: EMBER },
     ],
   },
+  {
+    slug: 'does-vaping-help-people-quit-smoking',
+    eyebrow: 'VAPING TO QUIT SMOKING · WHAT THE TRIALS SAY',
+    headline: 'Does vaping help people quit smoking?',
+    // The post's yes-with-a-catch in four figures: the two quit rates Cochrane
+    // sets side by side (volt for the vape, ember for patches and gum), then
+    // the catch from the two NEJM trials. Most quitters keep the vape, and only
+    // one in five of the Swiss vape group ended up off nicotine.
+    blocks: [
+      { n: '8–10', label: 'quit per 100, vaping', color: VOLT },
+      { n: '6', label: 'per 100, patch or gum', color: EMBER },
+      { n: '80%', label: 'still vaping, 1 yr on', color: EMBER },
+      { n: '1 in 5', label: 'off nicotine at 6 mo', color: EMBER },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line

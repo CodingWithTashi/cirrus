@@ -144,6 +144,20 @@ final authRepositoryProvider = Provider<AuthRepository>(
   },
 );
 
+/// How the signed-in account signs in, for the sign-out dialog.
+///
+/// Auto-disposed so it is asked fresh each time the dialog opens: the answer
+/// changes with the account, and a cached one would name the last person's
+/// door on a shared phone.
+final accountProviderProvider = FutureProvider.autoDispose<AccountProvider?>((
+  ref,
+) async {
+  // `Object`, so the capability check can promote: [SignInMethodSource] is
+  // not a subtype of the auth contract, on purpose.
+  final Object auth = ref.watch(authRepositoryProvider);
+  return auth is SignInMethodSource ? auth.signInProvider() : null;
+});
+
 final journeyRepositoryProvider = Provider<JourneyRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => ApiJourneyRepository(ref.watch(journeyApiProvider)),

@@ -140,6 +140,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authWrongPassword => 'pas celui-là — réessaie';
 
   @override
+  String get authLoginTryApple =>
+      'compte créé avec Apple ? reviens en arrière et choisis « Se connecter avec Apple »';
+
+  @override
+  String get authLoginTryGoogle =>
+      'compte créé avec Google ? reviens en arrière et choisis « Se connecter avec Google »';
+
+  @override
   String get authForgotTitle => 'Ça arrive à tout le monde.';
 
   @override
@@ -1182,7 +1190,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get freePlanColPro => 'PRO';
 
   @override
-  String get freeCompareLog => 'Journal de bouffées + séries';
+  String get freeCompareLog => 'Journal de taffes + séries';
 
   @override
   String get freeCompareMoney => 'Compteur d\'économies';
@@ -1301,6 +1309,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String get day1Task1Sub => 'un appui honnête sur le grand bouton';
 
   @override
+  String get day1Task1Zero => 'Valide ton jour 1';
+
+  @override
+  String get day1Task1ZeroSub => 'un appui : sans vape à partir de maintenant';
+
+  @override
+  String get day1Task1ZeroDone => 'fait — le jour 1 compte';
+
+  @override
+  String get day1TourZeroTitle => 'C\'est ton geste du jour.';
+
+  @override
+  String get day1TourZeroBody =>
+      'Ta ligne est à zéro, donc pas de taffe à enregistrer. Un appui ici dit que tu es toujours sans vape — c\'est ça qui garde ta série en vie. Vas-y, appuie.';
+
+  @override
   String get day1Task2 => 'Rencontre ton coach';
 
   @override
@@ -1324,7 +1348,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get day1TourLogBody =>
-      'Chaque bouffée, ici. Seul un compte honnête rend le plan réel — vas-y, enregistres-en une.';
+      'Chaque taffe, ici. Seul un compte honnête rend le plan réel — vas-y, enregistres-en une.';
 
   @override
   String get day1TourCoachTitle => 'Dis-lui n\'importe quoi.';
@@ -1351,6 +1375,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get day1CtaHome => 'Aller à Aujourd\'hui';
+
+  @override
+  String day1NextTaper(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: 'La ligne de demain : $limit taffes.',
+      one: 'La ligne de demain : 1 taffe.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get day1NextZero => 'Demain : jour 2 sans vape.';
+
+  @override
+  String day1NextCheckin(String time) {
+    return 'Ce soir à $time : ton premier point du soir.';
+  }
 
   @override
   String homeGreetingDate(String date, int day, int total) {
@@ -1444,8 +1487,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       puffs,
       locale: localeName,
-      other: '$puffs bouffées',
-      one: '$puffs bouffée',
+      other: '$puffs taffes',
+      one: '$puffs taffe',
     );
     return '$_temp0 · $spend';
   }
@@ -1461,8 +1504,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       puffs,
       locale: localeName,
-      other: '$puffs bouffées',
-      one: '$puffs bouffée',
+      other: '$puffs taffes',
+      one: '$puffs taffe',
     );
     return '$_temp0 · $saved économisés';
   }
@@ -1472,17 +1515,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get savingsInfoWhyNotCounted =>
-      'Aujourd\'hui compte dès ta première bouffée enregistrée, ou quand tu confirmes une journée sans vape. D\'ici là, rien ne s\'ajoute.';
+      'Aujourd\'hui compte dès ta première taffe enregistrée, ou quand tu confirmes une journée sans vape. D\'ici là, rien ne s\'ajoute.';
 
   @override
   String savingsInfoWhyKept(int usual, String perPuff, num notTaken) {
     String _temp0 = intl.Intl.pluralLogic(
       notTaken,
       locale: localeName,
-      other: '$notTaken bouffées',
-      one: '$notTaken bouffée',
+      other: '$notTaken taffes',
+      one: '$notTaken taffe',
     );
-    return 'Chaque bouffée sous tes $usual habituelles te fait garder environ $perPuff. Aujourd\'hui : $_temp0 en moins.';
+    return 'Chaque taffe sous tes $usual habituelles te fait garder environ $perPuff. Aujourd\'hui : $_temp0 en moins.';
   }
 
   @override
@@ -1490,15 +1533,15 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       notTaken,
       locale: localeName,
-      other: '$notTaken bouffées',
-      one: '$notTaken bouffée',
+      other: '$notTaken taffes',
+      one: '$notTaken taffe',
     );
-    return 'Toutes les 10 bouffées sous tes $usual habituelles te font garder environ $perTen. Aujourd\'hui : $_temp0 en moins.';
+    return 'Toutes les 10 taffes sous tes $usual habituelles te font garder environ $perTen. Aujourd\'hui : $_temp0 en moins.';
   }
 
   @override
   String savingsInfoWhyNothingKept(int usual) {
-    return 'Aujourd\'hui, tu atteins ou dépasses tes $usual bouffées habituelles, donc rien ne s\'ajoute. Demain, on repart de zéro.';
+    return 'Aujourd\'hui, tu atteins ou dépasses tes $usual taffes habituelles, donc rien ne s\'ajoute. Demain, on repart de zéro.';
   }
 
   @override
@@ -1533,6 +1576,35 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get homeVapeFreeDone =>
       'Jour sans vape validé. C\'est tout le jeu. 🔥';
+
+  @override
+  String get homeStillVapeFree => 'TOUJOURS SANS VAPE ✓';
+
+  @override
+  String get homeVapeFreeToday => 'SANS VAPE AUJOURD\'HUI ✓';
+
+  @override
+  String get homeIVapedToday => 'J\'ai vapoté aujourd\'hui';
+
+  @override
+  String get homeZeroDayOpen =>
+      'Journée à zéro. Confirme-la en bas quand c\'est sûr.';
+
+  @override
+  String get homeZeroDayDone => 'Sans vape aujourd\'hui. Validé.';
+
+  @override
+  String homeVapeFreeFor(String duration) {
+    return 'sans vape depuis $duration';
+  }
+
+  @override
+  String homeFinishSetup(int done) {
+    return 'Termine les réglages · $done/3';
+  }
+
+  @override
+  String get homeFinishSetupSub => 'Deux minutes, et l\'appli fait son boulot.';
 
   @override
   String get homeYesterdayTitle => 'Hier, journée sans vape ?';
@@ -2252,6 +2324,68 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get planNewCta => 'Commencer un nouveau plan';
+
+  @override
+  String planEnded(String date) {
+    return 'Ce plan s\'est terminé le $date.';
+  }
+
+  @override
+  String get newPlanTitle => 'Un nouveau plan';
+
+  @override
+  String get newPlanLead =>
+      'Rien ne repart de zéro. Ta série, ton historique et l\'argent économisé te suivent.';
+
+  @override
+  String get newPlanLevelLabel => 'TAFFES PAR JOUR, EN CE MOMENT';
+
+  @override
+  String newPlanLevelHint(int count) {
+    return 'Les jours où tu as vapoté cette dernière semaine, c\'était $count en moyenne.';
+  }
+
+  @override
+  String get newPlanLevelNoHint =>
+      'Ton estimation honnête suffit. La ligne part d\'ici.';
+
+  @override
+  String newPlanToday(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: 'Ligne du jour : $limit taffes',
+      one: 'Ligne du jour : 1 taffe',
+      zero: 'Ligne du jour : zéro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String newPlanFreedom(String date) {
+    return 'Jour de la Liberté : $date';
+  }
+
+  @override
+  String get newPlanCta => 'Commencer le jour 1 aujourd\'hui';
+
+  @override
+  String newPlanStarted(String date) {
+    return 'Nouveau plan lancé. Jour de la Liberté : $date';
+  }
+
+  @override
+  String get homePlanEndedTitle => 'Tu vapotes encore ? Lance un nouveau plan.';
+
+  @override
+  String get homePlanEndedBody =>
+      'Il part de là où tu en es. Rien ne repart de zéro.';
+
+  @override
+  String get settingsSignOutNewPlan => 'Plutôt commencer un nouveau plan';
+
+  @override
   String get statsTitle => 'Stats';
 
   @override
@@ -2270,7 +2404,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statsPuffsToday => 'TAFFES AUJOURD\'HUI · PAR HEURE';
 
   @override
-  String get statsDayNoPuffs => 'Aucune bouffée enregistrée aujourd\'hui';
+  String get statsDayNoPuffs => 'Aucune taffe enregistrée aujourd\'hui';
 
   @override
   String get statsPuffsThisMonth => 'TAFFES · 30 DERNIERS JOURS';
@@ -2297,11 +2431,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get statsHardDayToday =>
-      'Pour l\'instant, aujourd\'hui est le jour avec le plus de bouffées.';
+      'Pour l\'instant, aujourd\'hui est le jour avec le plus de taffes.';
 
   @override
   String statsHardDayTodayReason(String reason) {
-    return 'Pour l\'instant, aujourd\'hui est le jour avec le plus de bouffées — $reason.';
+    return 'Pour l\'instant, aujourd\'hui est le jour avec le plus de taffes — $reason.';
   }
 
   @override
@@ -2310,8 +2444,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get statsWindowNoPuffs =>
-      'aucune bouffée enregistrée sur cette période';
+  String get statsWindowNoPuffs => 'aucune taffe enregistrée sur cette période';
 
   @override
   String get statsTriggerHours => 'HEURES DÉCLENCHEURS';
@@ -2818,13 +2951,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get insightWatchoutLabel => 'À surveiller';
 
   @override
-  String get insightWeekChartLabel => 'BOUFFÉES, 7 DERNIERS JOURS';
+  String get insightWeekChartLabel => 'TAFFES, 7 DERNIERS JOURS';
 
   @override
   String get insightCravingsChartLabel => 'ENVIES SURMONTÉES, 7 DERNIERS JOURS';
 
   @override
-  String get insightHoursChartLabel => 'BOUFFÉES PAR HEURE, 14 DERNIERS JOURS';
+  String get insightHoursChartLabel => 'TAFFES PAR HEURE, 14 DERNIERS JOURS';
 
   @override
   String get insightPendingTitle => 'Pas encore de bilan';
@@ -3268,6 +3401,22 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tes données restent sur ton compte. La série continue de brûler.';
 
   @override
+  String get settingsSignOutMethodApple =>
+      'Ce compte se connecte avec Apple. Reprends Apple pour retrouver ce plan.';
+
+  @override
+  String get settingsSignOutMethodGoogle =>
+      'Ce compte se connecte avec Google. Reprends Google pour retrouver ce plan.';
+
+  @override
+  String get settingsSignOutMethodEmail =>
+      'Ce compte se connecte avec ton e-mail et ton mot de passe. Reprends-les pour retrouver ce plan.';
+
+  @override
+  String get settingsSignOutPremium =>
+      'Premium reste sur ce compte. Un nouveau compte repartirait sur le plan Gratuit.';
+
+  @override
   String get settingsDangerHoursTitle =>
       'À quelle heure les envies frappent-elles le plus fort ?';
 
@@ -3479,6 +3628,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get widgetLeftTight => '%1\$d restantes · juste, mais tu gères';
+
+  @override
+  String get widgetZeroDay => 'journée à zéro · reste sans vape';
 
   @override
   String get widgetOverLimit => 'au-dessus de ta ligne · sans honte';

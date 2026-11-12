@@ -5690,3 +5690,75 @@ Not proven anywhere but unit tests: the **Apple** 1000 path. It is iOS-only, the
 ### 51.7 Gates
 
 `flutter analyze` clean · `flutter test` **2013 passed** · **on the Pixel 8 (Android 17): `k_retention` 4/4, `l_sign_in_fallback` 1/1, suites `a`–`j` 57/57** (new: `auth_error_mapping_test` guardSignIn group, `sign_in_fallback_test`, `checkin_reminder_planner_test`, `push_ask_test`, the offer-card group in `premium_gate_test`, the check-in group in `reminder_coordinator_test`, quiz-first's Day-1 ending and journey-gated paywall). No `functions/` change.
+
+---
+
+## 52. THE THREE GROUPS THE APP WAS LOSING ITSELF (Nov 12) — cold turkey, the end of a plan, and the iPhone
+
+Six read-only audits on Nov 11 (Amplitude, GA4, App Store Connect, Firebase, the market, the clinical literature — real people only, ~131 of them in 90 days) put retention at the category median: **35% back on day 1, 12% on day 7, 7% on day 14**. Onboarding was not the leak (87% finish it). The founder's brief: fix what is broken, update what exists, keep new features for after, and aim it all at people coming back.
+
+Reading the code against the audit moved several of its findings, and found three it did not have:
+
+| The audit said | What the source showed |
+|---|---|
+| The Survived screen is almost never shown (3 views, 63 "it passed") | It is shown. The hand-built pages in `app_router.dart` carried no `key`, and two pages of one type with no key are the same page to the Navigator — so `pushReplacement` from the takeover updated the takeover's route in place. New child, no fade, no pushed route, no observer callback. The 3 were people closing a sheet on top of it |
+| iOS reminder taps never reach the app | Confirmed: nothing made `FlutterAppDelegate` the `UNUserNotificationCenter` delegate, and `flutter_local_notifications` only hears a tap through it |
+| The coach name never reaches the server | Confirmed: the step asks with nobody signed in, and nothing asked again |
+| The offer card is never tapped | Not broken. It is the last thing on Home and counted an impression when built in the list's cache, unseen |
+| The age gate may be misreading input | No — a typed age cannot be read as a year. The block is simply not remembered. A policy question, left to the founder |
+| — | The Day-1 checklist told everyone to "log your first puff", which puts somebody on a zero line over it and onto the slip card minutes after onboarding |
+| — | A clean zero day read "0 left on today's line. Tight" under a ring saying "0 of 0" |
+| — | Undo took back the puff and left the slip card it had armed |
+
+### 52.1 Fixed
+
+- **Hand-built pages are real routes** (`key: state.pageKey` on panic, game, survived, premium welcome). `screen_view_test` now drives the real "It passed" tap. The Survived screen also stops yielding its notification ask to a rating card that was never drawn.
+- **iOS claims the notification delegate before `super`**, which is when `firebase_messaging` decides whether to take it over. Pinned in `ios_push_test`. **Not proven on a device** — see §52.5.
+- **The coach name is sent once there is an account for it** (`JourneyStore._syncCoachName`, from `_onSessionEstablished`): the same call catches up every account made since Oct 5 on its next launch. A name the server refuses goes back to the default, so the screens and the model agree.
+- **Undo takes back the slip or the repair token its puff caused** — only what this session did on that day; a slip pending from yesterday stays.
+- **`ENFORCE_APP_CHECK=true`** in `functions/.env.alastpuff`. It had read `false` since the Sep 13 merge while production (deployed Sep 12) went on enforcing; the next deploy would have switched it off.
+- **Signing out says how to get back**: the sign-in method, read off the account (`SignInMethodSource`), and for a subscriber that Premium stays behind. The login screen carries the typed email into forgot-password, and from the second wrong password asks whether the account was made with Apple or Google.
+- **Events**: `day_confirmed`, `mood_checked_in`, `signed_out`, `plan_restarted`, a `source` on `puff_logged` (`app` or `widget`), and `gate_shown{offer_card}` only once the card is on screen.
+
+### 52.2 The zero day
+
+On a day whose limit is zero with nothing logged — cold turkey, the taper's tail, every day after Freedom Day — **the pinned button is the confirmation** ("STILL VAPE-FREE ✓"), with "I vaped today" under it; once a puff exists the ordinary button returns. The status line says it is a zero day, the ring drops "of 0", and time since the last logged puff is shown when one is known. The home-screen widget and the wrist get the same line with **no native change**: on such a day the mirror puts a count-free line in the two "left" slots, and both natives format whatever they are handed.
+
+The Day-1 checklist's first task follows the line, not the method: on a zero line it is "Lock in day one" — the confirmation, under the tour's spotlight — so day one is clean, counted, and reported as `first_checkin`. A finished checklist names tomorrow's number and, only where the OS permission is granted, tonight's check-in. Setup somebody skipped stays one tap away on Home for three days.
+
+**The notification ask is per moment**, not once ever (Day 1, a survived craving, a first post), never twice in a day, and the skip path now asks too. The old flag is read as the Day-1 ask.
+
+### 52.3 Start a new plan
+
+`PlanRestart` (`domain/logic/`): a new day one, today, on the same account. `QuitPlan.taperFrom` is where the new curve starts; **`baselinePuffsPerDay` and `weeklySpend` never move**, so money saved and every day already lived read exactly as before. History is bounded by `JourneyState.historyStart` rather than the plan's start, so Stats keeps the weeks behind it. Today's line is the larger of the new day-one line and what is already logged, so a fresh start is not born a slip.
+
+One page (`/plan/new`): how much now (pre-filled with the average of the days with puffs in the last seven, or blank — nothing is guessed), which way, how long, with the line and the date live. Reached from Home once the plan is over and puffs are still being logged, from the Plan screen (in place of Adjust on a finished plan), and from the sign-out dialog. Day one of a later plan triggers no setup checklist (`planNumber == 1` on both gates).
+
+**One independent review of the whole change, and what it found.** No data-loss defect; four real ones, all in this section's code, each fixed test-first:
+
+- *The held line reached the streak and nothing else.* It was written only onto today's log, and Home, the widget and the coach read `limitOn`, which never looked there — a fresh start opened on a red ring. `JourneyState.limitOn` now returns the held line on day one of a plan started again, and 0 for an unlogged day before it (which used to be handed the new plan's day-one limit). `memoryCard.ts` mirrors the first half.
+- *Last night's advice was applied to the plan that replaced it.* It is re-read on every resume and a restart clears the accepted copy the once-only guard reads. `applyPlanAdvice` now refuses any advice on a plan's first day — the server advises days 2 onward, so advice stamped for day one can only be for the plan just left. On the server, `withinPlan` keeps the nightly three-day window from reaching back across a restart.
+- *The morning-after card, Money's "saved since" and Profile's "quitting since" still read the plan's start.* All three use `historyStart` now.
+- *The setup card opened a room with no door.* A skipped checklist has no skip link, no back control, and every other button returns to it. It now has "Go to Today".
+
+Also from the review: the first check-in ticks Day-1 task zero only on the first three days of a first plan (so accounts weeks in do not land in the Day-1 funnel) and follows the line Home shows rather than the one stored on the log.
+
+Server: `taperEngine.ts` reads `taperFrom`, `journeyCodec.ts` decodes both fields defensively, and the coach's card says in words that this is not their first plan. **Functions must be deployed before the app ships**, or nightly advice for a restarted Premium account is drawn from the old baseline.
+
+### 52.4 Left alone, deliberately
+
+- **Native widget code.** The zero-day line is a mirror substitution. A mirror built on a day with a limit and rolled over by the widget alone onto a zero day keeps "0 left · tight" until the app is opened.
+- **`fastlane/Fastfile`.** It is generated from the cross-app release templates; a Crashlytics symbol step belongs in the template, and whether missing symbols explain zero iOS reports is not established.
+- **"Tomorrow's line adjusts"** under an over-the-line zero day is still untrue there.
+- **The coach's week list** stays relative to the current plan.
+- **From the review, not fixed:** the offer card's impression is checked on scroll and on dependency change only, so one that slides into view when a card above it is answered goes uncounted; the server caps `taperFrom` at 5000 and the app's field accepts four digits; "Adjust my plan" and slip recovery mid-plan can still have the same night's advice re-applied (as before this round); pt `homeYesterdayNo` ("Eu vapei") conjugates differently from the newer strings.
+- New features — the quit-date daily program, lifecycle pushes, email — wait for these to be measured.
+
+### 52.5 Proven where
+
+Unit and widget: everything above. **On a device: nothing.** The iOS simulator build fails at `xcodebuild` — "This scheme builds an embedded Apple Watch app. watchOS 26.2 must be installed" — and no Android device was attached. `integration_test/m_reminder_tap_test.dart` is written for exactly the delegate fix (real scheduler, real banner, the tap delivered with its kind) and has not run.
+
+### 52.6 Gates
+
+`flutter analyze` clean · `flutter test` **2125 passed** · `functions`: `npm run verify` **337 passed** · on a device: **not run** (§52.5).
+

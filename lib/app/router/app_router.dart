@@ -29,6 +29,7 @@ import '../../features/panic/games/game_outcome.dart';
 import '../../features/panic/panic_screens.dart';
 import '../../features/paywall/paywall_screens.dart';
 import '../../features/paywall/premium_welcome_screen.dart';
+import '../../features/plan/new_plan_screen.dart';
 import '../../features/plan/plan_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screens.dart';
@@ -81,6 +82,10 @@ abstract final class Routes {
   static String gameFor(GameId id) => '$game?g=${id.name}';
   static const survived = '/panic/survived';
   static const plan = '/plan';
+
+  /// Start a new plan on this account. Under `/plan`, so the journey gate in
+  /// the redirect covers it.
+  static const planNew = '/plan/new';
   static const money = '/money';
   static const health = '/health';
   static const milestones = '/milestones';
@@ -183,6 +188,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final journey = ref.read(quitStoreProvider);
       if (journey != null &&
           !journey.day1TourSkipped &&
+          // Day one of a plan started again is not the first day of the
+          // app: there is no setup to walk somebody through twice.
+          journey.plan.planNumber == 1 &&
           journey.day1TasksDone.length < 3 &&
           journey.plan.dayNumber(ref.read(nowProvider)()) <= 1 &&
           !ref.read(day1TourProvider).running &&
@@ -203,7 +211,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: Routes.forgot,
-        builder: (_, _) => const ForgotPasswordScreen(),
+        builder: (_, state) => ForgotPasswordScreen(
+          initialEmail: switch (state.extra) {
+            final String email => email,
+            _ => null,
+          },
+        ),
       ),
       GoRoute(
         path: Routes.onboarding,
@@ -229,6 +242,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.premiumWelcome,
         pageBuilder: (_, state) => CustomTransitionPage(
+          key: state.pageKey,
           name: state.path,
           child: const PremiumWelcomeScreen(),
           transitionDuration: const Duration(milliseconds: 300),
@@ -308,9 +322,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       // the arena and the Survived screen reported no screen view at all, for
       // anyone, until Oct 5 2026. It is the path PATTERN, never the filled
       // URL, so the arena's `?g=` stays out of the dimension.
+      //
+      // `key: state.pageKey` is not decoration either. go_router keys only the
+      // pages it builds itself, and two pages of the same type with no key
+      // are the SAME page to the Navigator: `pushReplacement` from the
+      // takeover to the Survived screen updated the takeover's route in place
+      // — the new child appeared, with no fade, no pushed route and no
+      // observer callback. 63 survived cravings reported 3 Survived views
+      // (Nov 11 2026), and those 3 were people closing a sheet on top of it.
       GoRoute(
         path: Routes.panic,
         pageBuilder: (_, state) => CustomTransitionPage(
+          key: state.pageKey,
           name: state.path,
           child: const PanicFlow(),
           transitionDuration: const Duration(milliseconds: 250),
@@ -327,6 +350,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               .where((g) => g.name == state.uri.queryParameters['g'])
               .firstOrNull;
           return CustomTransitionPage(
+            key: state.pageKey,
             name: state.path,
             child: GameArenaScreen(key: ValueKey(id), initial: id),
             transitionDuration: const Duration(milliseconds: 250),
@@ -340,6 +364,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // The game hands its result over in the query string
         // (`GameOutcome.toQuery`); "it passed" arrives with none.
         pageBuilder: (_, state) => CustomTransitionPage(
+          key: state.pageKey,
           name: state.path,
           child: SurvivedScreen(
             game: GameOutcome.fromQuery(state.uri.queryParameters),
@@ -350,6 +375,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: Routes.plan, builder: (_, _) => const PlanScreen()),
+      GoRoute(path: Routes.planNew, builder: (_, _) => const NewPlanScreen()),
       GoRoute(path: Routes.money, builder: (_, _) => const MoneyScreen()),
       GoRoute(path: Routes.health, builder: (_, _) => const HealthScreen()),
       GoRoute(

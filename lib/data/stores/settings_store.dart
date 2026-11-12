@@ -25,7 +25,8 @@ class SettingsState {
     this.pushRepliesOn = true,
     this.pushMentionsOn = true,
     this.pushWeeklyOn = true,
-    this.pushPromptShown = false,
+    this.pushAsksShown = const {},
+    this.pushAskDay,
     this.winbackShown = false,
     this.launchPaywallShownDay,
     this.launchPaywallShownCount = 0,
@@ -98,11 +99,25 @@ class SettingsState {
   final bool pushMentionsOn;
   final bool pushWeeklyOn;
 
-  /// Whether the contextual permission ask has been shown, once, ever.
+  /// Which contextual permission asks have been shown — `PushAskReason`
+  /// names — one per moment, ever.
+  ///
+  /// It was a single flag across all three moments until Nov 12 2026, so
+  /// whichever came first spent it, usually minutes after onboarding, and 41
+  /// of the 117 people who reached the permission step never said yes.
+  /// "Maybe later" never opens the OS dialog, so every one of them could
+  /// still be asked; each moment now has its own.
   ///
   /// Account-shaped like the flags above, and forgotten with them: a fresh
-  /// person on a shared phone deserves the ask their predecessor declined.
-  final bool pushPromptShown;
+  /// person on a shared phone deserves the asks their predecessor declined.
+  final Set<String> pushAsksShown;
+
+  /// The local day (`LpDate.dayKey`) the last of them was shown on. Nobody is
+  /// asked twice in one day, whatever they did in it.
+  final String? pushAskDay;
+
+  /// Whether any contextual ask has ever been shown.
+  bool get pushPromptShown => pushAsksShown.isNotEmpty;
 
   /// The founding offer fires once, then never again (Run 1 frame 22).
   final bool winbackShown;
@@ -211,7 +226,8 @@ class SettingsState {
     bool? pushRepliesOn,
     bool? pushMentionsOn,
     bool? pushWeeklyOn,
-    bool? pushPromptShown,
+    Set<String>? pushAsksShown,
+    String? Function()? pushAskDay,
     bool? winbackShown,
     String? launchPaywallShownDay,
     int? launchPaywallShownCount,
@@ -239,7 +255,8 @@ class SettingsState {
     pushRepliesOn: pushRepliesOn ?? this.pushRepliesOn,
     pushMentionsOn: pushMentionsOn ?? this.pushMentionsOn,
     pushWeeklyOn: pushWeeklyOn ?? this.pushWeeklyOn,
-    pushPromptShown: pushPromptShown ?? this.pushPromptShown,
+    pushAsksShown: pushAsksShown ?? this.pushAsksShown,
+    pushAskDay: pushAskDay != null ? pushAskDay() : this.pushAskDay,
     winbackShown: winbackShown ?? this.winbackShown,
     launchPaywallShownDay: launchPaywallShownDay ?? this.launchPaywallShownDay,
     launchPaywallShownCount:
@@ -359,12 +376,17 @@ class SettingsStore extends Notifier<SettingsState> {
     _syncPushPrefs();
   }
 
-  /// Burns the one contextual permission ask.
+  /// Spends [reason]'s contextual permission ask, on [dayKey].
   ///
   /// Marked BEFORE the sheet opens, not after: a swipe-away is an answer, and
   /// a prompt that only counts itself once accepted comes back on every post
   /// until somebody says yes.
-  void markPushPromptShown() => _commit(state.copyWith(pushPromptShown: true));
+  void markPushAskShown(String reason, String dayKey) => _commit(
+    state.copyWith(
+      pushAsksShown: {...state.pushAsksShown, reason},
+      pushAskDay: () => dayKey,
+    ),
+  );
 
   void setPushWeekly(bool on) {
     _commit(state.copyWith(pushWeeklyOn: on));
@@ -521,7 +543,8 @@ class SettingsStore extends Notifier<SettingsState> {
       pushRepliesOn: true,
       pushMentionsOn: true,
       pushWeeklyOn: true,
-      pushPromptShown: false,
+      pushAsksShown: const {},
+      pushAskDay: () => null,
       checkinReminderOn: true,
       checkinHour: const SettingsState().checkinHour,
     ),

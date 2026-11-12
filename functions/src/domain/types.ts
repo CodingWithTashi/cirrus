@@ -125,6 +125,21 @@ export interface QuitPlan {
   readonly strength: NicStrength;
   /** Extra days added by slip recovery (docs/03 §3.3, cap +50% of pace). */
   readonly stretchDays: number;
+  /**
+   * The level this plan's curve comes down from, when it is not the baseline:
+   * a plan started again part-way (`PlanRestart` in the app, Nov 2026).
+   *
+   * The baseline stays the habit before quitting — what money saved and the
+   * dependence band are measured against — so starting a second plan at 80 a
+   * day re-prices nothing already lived. Absent on a first plan.
+   */
+  readonly taperFrom?: number;
+  /**
+   * 1 for the plan made in onboarding; counts up with each new one. The
+   * decoder always supplies it; optional so a plan built by hand (a test, an
+   * eval fixture) is a first plan without saying so.
+   */
+  readonly planNumber?: number;
 }
 
 export interface UserProfile {

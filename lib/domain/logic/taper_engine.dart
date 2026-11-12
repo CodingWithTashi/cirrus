@@ -14,7 +14,9 @@ abstract final class TaperEngine {
   static int limitFor(QuitPlan plan, int d) {
     if (plan.method == QuitMethod.coldTurkey) return 0;
     final p = plan.totalDays;
-    final b = plan.baselinePuffsPerDay;
+    // Where THIS plan's curve starts: the baseline on a first plan, the
+    // level it was started again at on a later one (`QuitPlan.taperFrom`).
+    final b = plan.curveStart;
     if (d >= p) return 0;
     final base = (b * math.pow(1 - d / p, 1.5)).round();
     if (d == p - 1) return math.min(base, 1).clamp(0, 1);
@@ -27,10 +29,11 @@ abstract final class TaperEngine {
     for (var d = 1; d <= plan.totalDays; d++) limitFor(plan, d),
   ];
 
-  /// Day index (1-based) where the limit first drops to half the baseline.
+  /// Day index (1-based) where the limit first drops to half of where the
+  /// curve started.
   static int halfwayDay(QuitPlan plan) {
     for (var d = 1; d <= plan.totalDays; d++) {
-      if (limitFor(plan, d) <= plan.baselinePuffsPerDay / 2) return d;
+      if (limitFor(plan, d) <= plan.curveStart / 2) return d;
     }
     return plan.totalDays;
   }
@@ -65,7 +68,7 @@ abstract final class TaperEngine {
   /// Normalized (0..1) points of the curve for painting, downsampled to
   /// at most [samples] points. First point = day 1, last = Freedom Day.
   static List<double> normalizedCurve(QuitPlan plan, {int samples = 40}) {
-    final b = plan.baselinePuffsPerDay;
+    final b = plan.curveStart;
     if (b == 0) return const [0, 0];
     final total = plan.totalDays;
     final n = math.min(samples, total);

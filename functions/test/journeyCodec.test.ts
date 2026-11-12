@@ -129,6 +129,35 @@ describe('decodeJourney', () => {
     expect(Object.keys(j.days).sort()).toEqual(['2026-08-04', '2026-08-05']);
   });
 
+  it('reads where a restarted plan starts, and which plan it is', () => {
+    const raw = fixture();
+    (raw['plan'] as Record<string, unknown>)['taperFrom'] = 82;
+    (raw['plan'] as Record<string, unknown>)['planNumber'] = 2;
+    const {plan} = decodeJourney(raw);
+    expect(plan.taperFrom).toBe(82);
+    expect(plan.planNumber).toBe(2);
+    // The yardstick for money and dependence does not move.
+    expect(plan.baselinePuffsPerDay).toBe(200);
+  });
+
+  it('a journey from before plans could restart is a first plan', () => {
+    const {plan} = decodeJourney(fixture());
+    expect(plan.taperFrom).toBeUndefined();
+    expect(plan.planNumber).toBe(1);
+  });
+
+  it('ignores a level or plan number that is not a positive whole number', () => {
+    // Client-written, so anything can be in there — and it sets a limit.
+    for (const bad of [0, -3, 1.5, '82', null, 1e9]) {
+      const raw = fixture();
+      (raw['plan'] as Record<string, unknown>)['taperFrom'] = bad;
+      (raw['plan'] as Record<string, unknown>)['planNumber'] = bad;
+      const {plan} = decodeJourney(raw);
+      expect(plan.taperFrom).toBeUndefined();
+      expect(plan.planNumber).toBe(1);
+    }
+  });
+
   it('rejects a journey with no usable plan', () => {
     const raw = fixture();
     raw['plan']['startDate'] = 'whenever';

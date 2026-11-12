@@ -105,6 +105,9 @@
 |---|---|---|---|
 | 31 | **Day-1 checklist** | Three setup moves; the CTA always points at the next unchecked one. A row **navigates** — it never ticks itself. | A fresh account lands here straight from onboarding. **Go to Today** with all three done → the second notification ask, if the OS was never asked. |
 | 32 | **Day-1 walkthrough** | Holds the rest of the app closed while it teaches three real moves: log one puff on Home, say something to the coach, set your danger hour. The tab bar becomes a single *back to checklist* control. | Do all three. Force-quit mid-tour → you return to the checklist, not a stranded app. Skip is available. |
+| 32a | **Day 1 on a zero line** | Cold turkey's first task is "Lock in day one": the walkthrough spotlights the vape-free confirmation, not LOG PUFF. No puff, no slip card, and day one counts toward the streak. | New account, choose cold turkey → the first row reads "Lock in day one"; tap it, then "STILL VAPE-FREE ✓" → back on the checklist, ticked. |
+| 32b | **Tomorrow, on a finished list** | Names tomorrow's limit from the engine (or "day 2 vape-free"), and tonight's check-in only when the OS permission is granted. | Finish all three before 20:00 with notifications allowed → both lines; decline notifications → only tomorrow's. |
+| 32c | **Finish setup** | A card on Home for the first three days while any setup task is undone — the way back after "Skip setup for now". First plan only. | Skip on day one → Home shows "Finish setup · 0/3" → opens the checklist. |
 
 ---
 
@@ -116,6 +119,9 @@
 | 34 | **Press-and-hold log** | The "I had ~30" path: auto-repeat, one puff per tick, the rolling number as live feedback. | Hold, watch it climb, release → one undo snack for the whole burst. |
 | 35 | **Quick-log `+`** | The unmarked button in the middle of the tab bar; same rules. Hidden during the Day-1 tour. | Tap and hold it from any tab. |
 | 36 | **Undo** | A 5s snack carrying the burst total. Taking puffs back takes "last puff" back with them, so the health timeline never restarts from a mis-tap (docs/10 §41). | Undo → the count returns exactly, and Health's last puff is what it was before the tap. |
+| 36a | **Undo takes back the slip** | If the puff being undone crossed the line, the slip card it armed (or the repair token it spent) goes with it. A slip pending from an earlier day stays. | Cold turkey, tap "I vaped today", Undo → no "A slip is data" card. |
+| 36b | **Zero-day Home** | On a day whose limit is 0 with nothing logged, the pinned button is "STILL VAPE-FREE ✓" with "I vaped today" under it; it rests as "VAPE-FREE TODAY ✓" once confirmed. No "0 of 0", no "tight"; time since the last logged puff when one is known. | Cold turkey or past Freedom Day → confirm; then "I vaped today" → LOG PUFF returns, over the line. |
+| 36c | **Still vaping after the plan** | Once the plan has ended and puffs were logged today or yesterday, a card offers a new plan. Never shown to somebody logging nothing. | Day 31+, log a puff → the card appears and opens `/plan/new`. |
 | 37 | **Adjust today** | Tap the ring card → stepper sheet (min 0, hold a stepper to run). The way back once the undo snack is gone. | Overshoot with a hold, then correct. |
 | 38 | **Over-limit state** | The card folds into the over-limit treatment with honest copy and two actions (panic, coach). | Log past today's limit. |
 | 39 | **Repair token** | A streak-saving token absorbs a slip day: the flame dims, it never dies. Derived from history (7 completed holding days = +1, cap 2), never stored-and-trusted. | On the day-12 persona, cross the limit and read the note. |
@@ -154,6 +160,7 @@
 |---|---|---|---|
 | 58 | **Plan curve** (`/plan`) | The live taper curve with a today marker and coming milestones. | Home header chip → Plan. |
 | 59 | **Adjust plan** | Change method (taper / cold turkey) and pace **without resetting** progress. | 30 → 21 days: the streak and history survive. |
+| 59a | **Start a new plan** (`/plan/new`) | A new day one today on the same account: how much now (pre-filled from the last week's logged days, or blank), method, pace, with the line and Freedom Day live. Streak, badges, history and money saved are untouched; the baseline never changes. Replaces Adjust once a plan has ended. | Day 36 of 30, logging ~80 a day → the field opens on the average; pick 21 → "Today's line: 76"; start → Home says "Day 1 of 21", streak and money as before, Stats still shows last week. |
 | 60 | **Adaptive card** (Pro) 🔥 | The nightly `taperRecalc` made visible — why tomorrow's number moved. Framed as the plan adapting, never as you failing. | Free → gated. |
 | 61 | **Money** (`/money`) | Rolling savings hero and a "the math is yours" breakdown, with the same (i) and sheet as Home's savings tile. | Log puffs → the number moves. Tap the (i) → the same sheet as Home. |
 | 62 | **Savings goals** | Add and edit your own goal with a target. Crossing 100% on screen fires confetti. | Add a $1 goal and cross it. Nothing is ever pre-invented for you. |
@@ -347,3 +354,4 @@ you. The two halves obey different rules and are configured in different places.
 | Sep 13, 2026 | Rows 36, 45, 55, 63, 80 and 83 updated (docs/10 §41): Undo takes "last puff" back, the savings note prices ten puffs when one is pennies, an honest nicotine card, no "I got you" on your own SOS, and the rules-side reaction guard. |
 | Sep 13, 2026 | Row 82 updated (docs/10 §42): the reply you send glides into view, and nothing but your own send moves the thread. |
 | Oct 16, 2026 | Rows 2, 4, 21, 22, 23, 25b, 31, 96 and 108 updated and 107b added (docs/10 §51): onboarding ends on Day 1 with no paywall, the launch paywall became the day-3 offer card, every paywall closes, sign-in failures offer email, the evening check-in, and the second notification ask. |
+| Nov 12, 2026 | Added 32a–32c, 36a–36c and 59a (docs/10 §52): Day 1 on a zero line, the zero-day Home button, Undo taking its slip back, setup reachable after a skip, and starting a new plan. Sign-out now names the sign-in method; the notification ask is per moment. |

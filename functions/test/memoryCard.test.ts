@@ -289,6 +289,68 @@ describe('the user card', () => {
   });
 });
 
+describe('a plan that was started again', () => {
+  // `PlanRestart` (Nov 2026): the same account, a new day one. Without a
+  // word about it the card reads as somebody who began quitting this week —
+  // "day 6" beside months of history — and the tenure line's "started:" is
+  // the wrong answer to "how long have I been at this?".
+  const restarted = (): Record<string, unknown> => {
+    const base = journey();
+    return {
+      ...base,
+      plan: {
+        ...(base['plan'] as Record<string, unknown>),
+        startDate: '2026-08-10',
+        paceDays: 21,
+        taperFrom: 82,
+        planNumber: 2,
+      },
+    };
+  };
+
+  it('says so, in words, and that the earlier days still count', () => {
+    const card = buildMemoryCard(restarted(), NOW, TZ);
+    expect(card.text).toContain(
+      'not their first plan: they started this one on 2026-08-10 and kept ' +
+        'everything before it',
+    );
+  });
+
+  it('never says it of a first plan', () => {
+    const card = buildMemoryCard(journey(), NOW, TZ);
+    expect(card.text).not.toContain('not their first plan');
+  });
+
+  it('on the day it was started, quotes the line the app is holding', () => {
+    // The app holds day one of a new plan where the person already was when
+    // they started it (`PlanRestart`), and records that on the day's log.
+    // The curve alone would say 77 here, beside a Home screen saying 120.
+    const base = restarted();
+    const card = buildMemoryCard(
+      {
+        ...base,
+        plan: {...(base['plan'] as Record<string, unknown>), startDate: '2026-08-15'},
+        days: {
+          ...(base['days'] as Record<string, unknown>),
+          '2026-08-15': day({puffs: 120, limit: 120}),
+        },
+      },
+      NOW,
+      TZ,
+    );
+    expect(card.text).toContain('plan day: 1 of 21 (taper)');
+    expect(card.text).toMatch(/today: 120\/120 /);
+  });
+
+  it("quotes today's line from where this plan started, as Home does", () => {
+    // Day 6 of 21 from 82: round(82 × (15/21)^1.5) = 50. From the baseline
+    // of 200 it would be 121 — a line the app is not showing.
+    const card = buildMemoryCard(restarted(), NOW, TZ);
+    expect(card.text).toContain('plan day: 6 of 21 (taper)');
+    expect(card.text).toMatch(/today: \d+\/50 /);
+  });
+});
+
 describe('the whole journey on the card', () => {
   it('states when they started and where that puts them', () => {
     // "How long have I been trying?" must be answerable with a date, not a

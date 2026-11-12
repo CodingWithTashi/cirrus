@@ -12,6 +12,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/data/stores/widget_coordinator.dart';
 import 'package:last_puff/data/stores/widget_mirror.dart';
 import 'package:last_puff/domain/logic/taper_engine.dart';
+import 'package:last_puff/features/home/home_screen.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
@@ -73,7 +74,7 @@ void main() {
     await tester.pumpAndSettle();
     container.read(routerProvider).go(Routes.home);
     await tester.pumpAndSettle();
-    expect(find.text(l10n.homeLogPuff), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     return (container, store);
   }
 
@@ -83,6 +84,8 @@ void main() {
   /// Home's status line under the ring, from the rule the screen uses.
   String statusLine(int puffs, int limit) {
     if (puffs > limit) return l10n.homeOverLimitBody;
+    // A zero line with nothing logged is a zero day, not "0 left… Tight".
+    if (limit == 0) return l10n.homeZeroDayOpen;
     final left = limit - puffs;
     return left > limit * 0.25 ? l10n.homeLeftAhead(left) : l10n.homeLeftTight(left);
   }
@@ -91,8 +94,13 @@ void main() {
     (w) => w is RollingNumber && w.format == null && w.value == value,
   );
 
+  /// The control that logs one puff: LOG PUFF, or on a zero day with nothing
+  /// logged yet, "I vaped today" under the confirmation.
   Future<void> tapLogPuff(WidgetTester tester) async {
-    await tester.tap(find.text(l10n.homeLogPuff));
+    final log = find.text(l10n.homeLogPuff);
+    await tester.tap(
+      log.evaluate().isNotEmpty ? log : find.text(l10n.homeIVapedToday),
+    );
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();
   }
@@ -133,7 +141,16 @@ void main() {
       // Nothing logged yet today: 0 of the day's line, and the streak is
       // every completed day before it (an unconfirmed today anchors on
       // yesterday — "🔥 1 day" beside "Day 2 of 30" is correct).
-      expect(find.text(l10n.homeOfLimit(limit)), findsOneWidget);
+      // "0 of 0" is not a goal: a zero line shows the count alone, and the
+      // confirmation in place of LOG PUFF.
+      expect(
+        find.text(l10n.homeOfLimit(limit)),
+        limit > 0 ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.text(limit > 0 ? l10n.homeLogPuff : l10n.homeStillVapeFree),
+        findsOneWidget,
+      );
       expect(ring(0), findsWidgets, reason: 'the ring shows 0 puffs');
       expect(find.text(statusLine(0, limit)), findsOneWidget);
       expect(find.text(l10n.homeStreakChip(day - 1)), findsOneWidget);

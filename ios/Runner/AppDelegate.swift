@@ -1,6 +1,7 @@
 import FirebaseMessaging
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -12,6 +13,28 @@ import UIKit
     // background to deliver a watch tap, and a WCSession with no delegate hears
     // none of them. Costs nothing on a phone with no watch paired.
     CirrusWatchLink.shared.start()
+
+    // **A tapped reminder has to be delivered to somebody, and it was being
+    // delivered to nobody.** Not one `reminder_opened` came from an iPhone in
+    // the four weeks the event existed, against every Android device that had
+    // one to tap (Nov 11 2026).
+    //
+    // `flutter_local_notifications` hears a tap only through
+    // `userNotificationCenter(_:didReceive:)`, and it never claims the
+    // delegate: it registers as an application delegate and waits for
+    // `FlutterAppDelegate` to forward. Nothing made this class the delegate,
+    // so the tap opened the app and told it nothing — no route, no event, and
+    // `getNotificationAppLaunchDetails()` false on every cold start, because
+    // that same callback is the only thing that sets it.
+    //
+    // Before `super`, deliberately. `firebase_messaging` looks at the
+    // delegate while it sets itself up and takes it over unless the one
+    // already there is a `FlutterAppLifeCycleProvider` — which this is. Left
+    // alone it backs off and both plugins get every tap through the
+    // forwarding below; claimed after it, the plugin would already own the
+    // delegate and forward only to whoever it displaced, which was nobody.
+    UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
+
     let started = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
     // **The APNs round trip has to be started by somebody, and nothing was

@@ -61,6 +61,24 @@ class UserProfile {
   /// which is the copy that counts.
   final String? whyWords;
 
+  /// The same profile with the coach back on the default name.
+  ///
+  /// Its own method because [copyWith] cannot say "none": a null there means
+  /// "unchanged", which is right for every other caller.
+  UserProfile withDefaultCoachName() => UserProfile(
+    alias: alias,
+    avatarEmoji: avatarEmoji,
+    email: email,
+    gender: gender,
+    birthYear: birthYear,
+    whys: whys,
+    worries: worries,
+    attempts: attempts,
+    frequency: frequency,
+    firstPuff: firstPuff,
+    whyWords: whyWords,
+  );
+
   UserProfile copyWith({
     String? alias,
     String? avatarEmoji,
@@ -94,6 +112,8 @@ class QuitPlan {
     required this.weeklySpend,
     required this.strength,
     this.stretchDays = 0,
+    this.taperFrom,
+    this.planNumber = 1,
   });
 
   final QuitMethod method;
@@ -107,6 +127,27 @@ class QuitPlan {
 
   /// Extra days added by slip recovery (docs/03 §3.3, cap +50% of pace).
   final int stretchDays;
+
+  /// The level this plan's curve comes down from, when it is not the
+  /// baseline: a plan started again part-way (`PlanRestart`).
+  ///
+  /// Separate from [baselinePuffsPerDay] on purpose. The baseline is the
+  /// habit before quitting — what money saved, puffs not taken and the
+  /// dependence band are all measured against — and it must never move, or
+  /// every day already lived is re-priced. Somebody who starts a second plan
+  /// at 80 a day has still saved against the 200 they used to vape; only the
+  /// line they are asked to hold from here starts at 80.
+  ///
+  /// Null on a first plan, which is every plan made before Nov 2026.
+  final int? taperFrom;
+
+  /// 1 for the plan made in onboarding; counts up each time a new one is
+  /// started. Tells a real day one from the day one of a later plan, which
+  /// has no setup checklist to walk through.
+  final int planNumber;
+
+  /// Where the taper curve starts.
+  int get curveStart => taperFrom ?? baselinePuffsPerDay;
 
   int get totalDays => paceDays + stretchDays;
 
@@ -126,6 +167,8 @@ class QuitPlan {
     double? weeklySpend,
     NicStrength? strength,
     int? stretchDays,
+    int? taperFrom,
+    int? planNumber,
   }) => QuitPlan(
     method: method ?? this.method,
     paceDays: paceDays ?? this.paceDays,
@@ -134,6 +177,8 @@ class QuitPlan {
     weeklySpend: weeklySpend ?? this.weeklySpend,
     strength: strength ?? this.strength,
     stretchDays: stretchDays ?? this.stretchDays,
+    taperFrom: taperFrom ?? this.taperFrom,
+    planNumber: planNumber ?? this.planNumber,
   );
 }
 

@@ -139,6 +139,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authWrongPassword => 'not that one — try again';
 
   @override
+  String get authLoginTryApple =>
+      'made this account with Apple? go back and use “Sign in with Apple”';
+
+  @override
+  String get authLoginTryGoogle =>
+      'made this account with Google? go back and use “Sign in with Google”';
+
+  @override
   String get authForgotTitle => 'Happens to everyone.';
 
   @override
@@ -1290,6 +1298,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get day1Task1Sub => 'one honest tap on the big button';
 
   @override
+  String get day1Task1Zero => 'Lock in day one';
+
+  @override
+  String get day1Task1ZeroSub => 'one tap: vape-free from here';
+
+  @override
+  String get day1Task1ZeroDone => 'done — day one is counting';
+
+  @override
+  String get day1TourZeroTitle => 'This is your daily move.';
+
+  @override
+  String get day1TourZeroBody =>
+      'Your line is zero, so there\'s no puff to log. One tap here says you\'re still vape-free — that\'s what keeps your streak alive. Go on, tap it.';
+
+  @override
   String get day1Task2 => 'Meet your coach';
 
   @override
@@ -1339,6 +1363,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get day1CtaHome => 'Go to Today';
+
+  @override
+  String day1NextTaper(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: 'Tomorrow\'s line: $limit puffs.',
+      one: 'Tomorrow\'s line: 1 puff.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get day1NextZero => 'Tomorrow: day 2 vape-free.';
+
+  @override
+  String day1NextCheckin(String time) {
+    return 'Tonight at $time: your first check-in.';
+  }
 
   @override
   String homeGreetingDate(String date, int day, int total) {
@@ -1520,6 +1563,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeVapeFreeDone =>
       'Vape-free day locked in. That\'s the whole game. 🔥';
+
+  @override
+  String get homeStillVapeFree => 'STILL VAPE-FREE ✓';
+
+  @override
+  String get homeVapeFreeToday => 'VAPE-FREE TODAY ✓';
+
+  @override
+  String get homeIVapedToday => 'I vaped today';
+
+  @override
+  String get homeZeroDayOpen =>
+      'A zero day. Confirm it below when you\'re sure.';
+
+  @override
+  String get homeZeroDayDone => 'Vape-free today. Locked in.';
+
+  @override
+  String homeVapeFreeFor(String duration) {
+    return 'vape-free for $duration';
+  }
+
+  @override
+  String homeFinishSetup(int done) {
+    return 'Finish setup · $done/3';
+  }
+
+  @override
+  String get homeFinishSetupSub => 'Two minutes, then the app does its job.';
 
   @override
   String get homeYesterdayTitle => 'Was yesterday vape-free?';
@@ -2232,6 +2304,68 @@ class AppLocalizationsEn extends AppLocalizations {
   String planAdjusted(String date) {
     return 'Plan reflowed. New Freedom Day: $date';
   }
+
+  @override
+  String get planNewCta => 'Start a new plan';
+
+  @override
+  String planEnded(String date) {
+    return 'This plan ended on $date.';
+  }
+
+  @override
+  String get newPlanTitle => 'A new plan';
+
+  @override
+  String get newPlanLead =>
+      'Nothing resets. Your streak, your history and the money you\'ve saved all come with you.';
+
+  @override
+  String get newPlanLevelLabel => 'PUFFS A DAY, RIGHT NOW';
+
+  @override
+  String newPlanLevelHint(int count) {
+    return 'On the days you vaped this past week, you averaged $count.';
+  }
+
+  @override
+  String get newPlanLevelNoHint =>
+      'Your honest guess is enough. The line starts from here.';
+
+  @override
+  String newPlanToday(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: 'Today\'s line: $limit puffs',
+      one: 'Today\'s line: 1 puff',
+      zero: 'Today\'s line: zero',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String newPlanFreedom(String date) {
+    return 'Freedom Day: $date';
+  }
+
+  @override
+  String get newPlanCta => 'Start Day 1 today';
+
+  @override
+  String newPlanStarted(String date) {
+    return 'New plan started. Freedom Day: $date';
+  }
+
+  @override
+  String get homePlanEndedTitle => 'Still vaping? Start a new plan.';
+
+  @override
+  String get homePlanEndedBody =>
+      'It starts from where you are now. Nothing resets.';
+
+  @override
+  String get settingsSignOutNewPlan => 'Start a new plan instead';
 
   @override
   String get statsTitle => 'Stats';
@@ -3240,6 +3374,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your data stays on your account. The streak keeps burning.';
 
   @override
+  String get settingsSignOutMethodApple =>
+      'You signed in with Apple. Use Apple again to get back to this plan.';
+
+  @override
+  String get settingsSignOutMethodGoogle =>
+      'You signed in with Google. Use Google again to get back to this plan.';
+
+  @override
+  String get settingsSignOutMethodEmail =>
+      'You signed in with your email and password. Use them again to get back to this plan.';
+
+  @override
+  String get settingsSignOutPremium =>
+      'Premium stays with this account. A new account would start on the Free plan.';
+
+  @override
   String get settingsDangerHoursTitle => 'When do cravings hit hardest?';
 
   @override
@@ -3449,6 +3599,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get widgetLeftTight => '%1\$d left · tight, you\'ve got this';
+
+  @override
+  String get widgetZeroDay => 'zero day · stay vape-free';
 
   @override
   String get widgetOverLimit => 'over today\'s line · no shame';
