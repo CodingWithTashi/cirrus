@@ -4129,7 +4129,8 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mantém premido um espaço vazio do ecrã principal até os ícones tremerem.';
 
   @override
-  String get widgetPromptStep2 => 'Toca em + no canto superior esquerdo.';
+  String get widgetPromptStep2 =>
+      'Toca em «Editar» (ou +) no canto superior esquerdo e depois em «Adicionar widget».';
 
   @override
   String get widgetPromptStep3 =>

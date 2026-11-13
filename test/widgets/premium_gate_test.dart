@@ -663,6 +663,12 @@ void main() {
       // rows just past its bottom edge before anyone scrolls. Counting on
       // build reported 114 impressions and no taps (Nov 11 2026) — for a card
       // most of those 26 people had never seen.
+      //
+      // A short screen: Home shows one optional card at a time now
+      // (`HomeCardPlan`), so there is less above the offer and on the default
+      // test surface it sits inside the fold.
+      tester.view.physicalSize = const Size(2400, 1100);
+      addTearDown(tester.view.resetPhysicalSize);
       final analytics = RecordingAnalytics();
       await launch(tester, entitlement: null, analytics: analytics);
       Iterable<Map<String, Object>> shown() => analytics

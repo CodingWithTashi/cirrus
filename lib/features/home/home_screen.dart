@@ -33,6 +33,7 @@ import '../../domain/models/models.dart';
 import '../help/smoking_rule_card.dart';
 import 'widgets/log_feedback.dart';
 import 'widgets/mood_sheet.dart';
+import '../../domain/logic/home_card_plan.dart';
 import 'widgets/program_card.dart';
 import '../../data/stores/widget_prompt_store.dart';
 import 'widgets/widget_prompt_card.dart';
@@ -274,6 +275,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         BillingCatalog.foundingOfferEnabled &&
         !ref.watch(isPremiumProvider) &&
         !settings.winbackShown;
+
+    // One optional card at a time, and none while something needs the person
+    // (`HomeCardPlan`). What needs them today keeps its place; what can wait
+    // takes turns, so the extras surface in the calm moments instead of
+    // stacking on the day's real work. The cigarette rule counts as needing
+    // them: it is held in this State and shown once, so a held-back rule would
+    // be lost for good.
+    final cards = HomeCardPlan.decide(
+      actionUp:
+          journey.pendingSlipCleanDays != null ||
+          showMoodPrompt ||
+          programShows ||
+          (!tourLocked && Program90Card.shows(journey, now)) ||
+          askYesterday ||
+          showVapeFree ||
+          over ||
+          snap.isFreedomDay ||
+          (planOver && stillLogging) ||
+          _smokingRuleFor != null,
+      offerUp: showOffer || showFoundingOffer,
+      setupDue:
+          journey.day1TasksDone.length < 3 &&
+          journey.plan.planNumber == 1 &&
+          snap.dayNumber <= 3,
+      smokingDue: journey.profile.smoking == null && !tourLocked,
+      widgetUp: ref.watch(widgetPromptUpProvider(now)),
+      nudgeDue: !_nudgeDismissed && snap.dangerWindow != null,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -695,9 +724,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // other door, and the fourteen people who skipped
                         // came back at half the rate of those who finished
                         // (Nov 11 2026).
-                        if (journey.day1TasksDone.length < 3 &&
-                            journey.plan.planNumber == 1 &&
-                            snap.dayNumber <= 3) ...[
+                        if (cards.setup) ...[
                           PressScale(
                             onTap: () => context.go(Routes.day1),
                             child: LpCard(
@@ -747,7 +774,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // card: the question can wait, so it must not take the
                         // slip card's place, and a slip must not be what
                         // hides it. Held back while the Day-1 tour runs.
-                        if (journey.profile.smoking == null && !tourLocked) ...[
+                        if (cards.smoking) ...[
                           _SmokingQuestionCard(
                             onAnswer: (answer) {
                               ref
@@ -796,7 +823,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // (`ReminderPlanner` has no tier check), so promising
                         // to "text you first" would be selling this reader
                         // something they already have.
-                        else if (!_nudgeDismissed && snap.dangerWindow != null)
+                        else if (cards.nudge)
                           _nudgeSlot(context, snap, locale),
                         const SizedBox(height: 12),
                         // The completion state. Day 30 of 30 used to render
@@ -965,7 +992,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // optional convenience must not take the slot that
                         // belongs to the person's own day. It pads itself and
                         // is empty when there is nothing to offer.
-                        WidgetPromptCard(now: now),
+                        WidgetPromptCard(now: now, allowed: cards.widget),
                         // The day-3/7/14/30 offer. Outside the one-card chain
                         // above on purpose: that slot belongs to the person's
                         // own day (a slip, the evening mood, their risky

@@ -4112,7 +4112,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Touch and hold an empty spot on your home screen until the icons wiggle.';
 
   @override
-  String get widgetPromptStep2 => 'Tap + in the top-left corner.';
+  String get widgetPromptStep2 =>
+      'Tap Edit (or +) in the top-left corner, then Add Widget.';
 
   @override
   String get widgetPromptStep3 => 'Search for Cirrus and tap Add Widget.';

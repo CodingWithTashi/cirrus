@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/widget_prompt_policy.dart';
+import 'day1_tour_store.dart';
 import 'providers.dart';
 
 /// What the one-time home-screen widget card needs that the pure
@@ -183,3 +184,26 @@ final widgetPromptProvider =
     NotifierProvider<WidgetPromptStore, WidgetPromptState>(
       WidgetPromptStore.new,
     );
+
+/// Whether the widget card is due this moment, or is already up for the visit.
+///
+/// Home asks it to decide which optional card gets the slot (`HomeCardPlan`),
+/// and the card asks it to know it should draw. One answer for both, so the two
+/// can never disagree about whether the card is there: a card that is up holds
+/// its slot, and nothing else is offered beside it.
+final widgetPromptUpProvider = Provider.family<bool, DateTime>((ref, now) {
+  final journey = ref.watch(quitStoreProvider);
+  if (journey == null || ref.watch(day1TourLockedProvider)) return false;
+  final prompt = ref.watch(widgetPromptProvider);
+  if (prompt.visible && prompt.way != null) return true;
+  final settings = ref.watch(settingsStoreProvider);
+  return settings.hydrated &&
+      WidgetPromptPolicy.shouldShow(
+        journey: journey,
+        now: now,
+        installed: prompt.installed,
+        alreadyShown: settings.widgetPromptShown,
+        tourRunning: false,
+        way: prompt.way,
+      );
+});

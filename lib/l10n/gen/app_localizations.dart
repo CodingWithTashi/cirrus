@@ -6672,7 +6672,7 @@ abstract class AppLocalizations {
   /// No description provided for @widgetPromptStep2.
   ///
   /// In en, this message translates to:
-  /// **'Tap + in the top-left corner.'**
+  /// **'Tap Edit (or +) in the top-left corner, then Add Widget.'**
   String get widgetPromptStep2;
 
   /// No description provided for @widgetPromptStep3.

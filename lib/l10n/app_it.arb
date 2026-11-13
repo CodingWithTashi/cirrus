@@ -1093,7 +1093,7 @@
   "widgetPromptBody": "Metti il widget di Cirrus nella schermata Home e segna senza aprire l'app.",
   "widgetPromptAdd": "Aggiungi widget",
   "widgetPromptStep1": "Tieni premuto su uno spazio vuoto della schermata Home finché le icone non iniziano a muoversi.",
-  "widgetPromptStep2": "Tocca + in alto a sinistra.",
+  "widgetPromptStep2": "Tocca «Modifica» (o +) in alto a sinistra, poi «Aggiungi widget».",
   "widgetPromptStep3": "Cerca Cirrus e tocca «Aggiungi widget».",
   "widgetPromptGotIt": "Ok, capito",
   "milestoneNotifTitle": "Vieni a vedere la tua fiamma",

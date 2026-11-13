@@ -31,8 +31,9 @@ void main() {
   JourneyState unasked({
     SmokingHistory? answer,
     Set<int> setup = const {0, 1, 2},
+    int day = 3,
   }) {
-    final base = journeyOnDay(3, now: now);
+    final base = journeyOnDay(day, now: now);
     return base.copyWith(
       profile: UserProfile(
         alias: base.profile.alias,
@@ -123,8 +124,9 @@ void main() {
   testWidgets('stays out of the way while the Day-1 tour is running', (
     tester,
   ) async {
-    final container = await pumpHome(tester, unasked(setup: const {}));
-    // Setup is unfinished and the tour has not started, so it shows.
+    // Day 5, so "finish setup" (the first three days) is not what holds the
+    // slot; setup is unfinished and the tour has not started, so it shows.
+    final container = await pumpHome(tester, unasked(setup: const {}, day: 5));
     expect(find.text(l10n.obSmokingTitle), findsOneWidget);
 
     container.read(day1TourProvider.notifier).start(Day1TourStep.logPuff);
@@ -132,16 +134,24 @@ void main() {
     expect(find.text(l10n.obSmokingTitle), findsNothing);
   });
 
-  testWidgets('does not hide, and is not hidden by, a pending slip', (
-    tester,
-  ) async {
-    // The one-card chain (slip → mood → nudge) is for things that cannot wait;
-    // this question can, so it must never take the slip card's place or lose
-    // its own to it.
+  testWidgets('waits behind a pending slip, and is not lost: it is asked '
+      'again once the slip is resolved', (tester) async {
+    // A slip needs the person today; this question can wait. Home shows one
+    // optional card at a time and none beside something that needs them
+    // (`HomeCardPlan`, Nov 13 2026) — before, both stacked, which is what made
+    // a rough moment's screen ask the most of somebody. The question is not
+    // answered by being held back, so it comes back.
     final slipping = unasked().copyWith(pendingSlipCleanDays: () => 1);
-    await pumpHome(tester, slipping);
-    expect(find.text(l10n.obSmokingTitle), findsOneWidget);
+    final container = await pumpHome(tester, slipping);
     expect(find.text(l10n.slipTitle), findsOneWidget);
+    expect(find.text(l10n.obSmokingTitle), findsNothing);
+
+    container.read(quitStoreProvider.notifier).replaceForTest(
+      slipping.copyWith(pendingSlipCleanDays: () => null),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.slipTitle), findsNothing);
+    expect(find.text(l10n.obSmokingTitle), findsOneWidget);
   });
 
   group('the one rule (QP-A4)', () {

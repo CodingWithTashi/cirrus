@@ -4145,7 +4145,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Maintiens ton doigt sur un endroit vide de l\'écran d\'accueil jusqu\'à ce que les icônes bougent.';
 
   @override
-  String get widgetPromptStep2 => 'Touche + en haut à gauche.';
+  String get widgetPromptStep2 =>
+      'Touche « Modifier » (ou +) en haut à gauche, puis « Ajouter un widget ».';
 
   @override
   String get widgetPromptStep3 =>

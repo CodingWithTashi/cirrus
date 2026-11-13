@@ -125,6 +125,12 @@ class E2E {
   /// its own Text widget, which is exactly how the first run of this suite
   /// failed.
   Future<void> tapSpan(String label) async {
+    // An iPhone's software keyboard is up whenever an auth form has focus (the
+    // register screen autofocuses its field) and it covers the "Log in" link,
+    // so the span is in the tree but not hit-testable. A person dismisses the
+    // keyboard or scrolls; do the first. Harmless anywhere else.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(frames: 30);
     final range = find.textRange.ofSubstring(label);
     if (range.evaluate().isEmpty) {
       fail('No span "$label".\nOn screen: ${texts()}');

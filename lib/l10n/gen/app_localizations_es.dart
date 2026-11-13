@@ -4130,7 +4130,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mantén pulsado un hueco vacío de la pantalla de inicio hasta que los iconos se muevan.';
 
   @override
-  String get widgetPromptStep2 => 'Toca + en la esquina superior izquierda.';
+  String get widgetPromptStep2 =>
+      'Toca «Editar» (o +) arriba a la izquierda y luego «Añadir widget».';
 
   @override
   String get widgetPromptStep3 => 'Busca Cirrus y toca «Añadir widget».';

@@ -4145,7 +4145,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Halte eine freie Stelle auf dem Home-Bildschirm gedrückt, bis die Symbole wackeln.';
 
   @override
-  String get widgetPromptStep2 => 'Tippe oben links auf +.';
+  String get widgetPromptStep2 =>
+      'Tippe oben links auf „Bearbeiten“ (oder +) und dann auf „Widget hinzufügen“.';
 
   @override
   String get widgetPromptStep3 =>

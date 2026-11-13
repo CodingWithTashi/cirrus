@@ -357,6 +357,25 @@ void main() {
       }
     });
 
+    /// Step 2 once said "Tap + in the top-left corner". From iOS 18 that
+    /// control is **Edit**, with "Add Widget" in its menu (seen on an iOS 26.3
+    /// simulator, Nov 13 2026; the XCUITest notes say iOS 18 too). Each locale
+    /// must name the control by the word iOS itself uses in that language.
+    test('step 2 names the Edit control iOS 18+ shows, not only a plus', () {
+      const edit = {
+        'en': 'edit',
+        'de': 'bearbeiten',
+        'es': 'editar',
+        'fr': 'modifier',
+        'it': 'modifica',
+        'pt': 'editar',
+      };
+      for (final locale in locales) {
+        final step = (arb(locale)['widgetPromptStep2'] as String).toLowerCase();
+        expect(step, contains(edit[locale]!), reason: '$locale: $step');
+      }
+    });
+
     test('it names the app the person is about to look for', () {
       for (final locale in locales) {
         final strings = arb(locale);

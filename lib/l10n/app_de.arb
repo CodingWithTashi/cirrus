@@ -1174,7 +1174,7 @@
   "widgetPromptBody": "Hol dir das Cirrus-Widget auf den Home-Bildschirm und logg, ohne die App zu öffnen.",
   "widgetPromptAdd": "Widget hinzufügen",
   "widgetPromptStep1": "Halte eine freie Stelle auf dem Home-Bildschirm gedrückt, bis die Symbole wackeln.",
-  "widgetPromptStep2": "Tippe oben links auf +.",
+  "widgetPromptStep2": "Tippe oben links auf „Bearbeiten“ (oder +) und dann auf „Widget hinzufügen“.",
   "widgetPromptStep3": "Suche nach Cirrus und tippe auf „Widget hinzufügen“.",
   "widgetPromptGotIt": "Alles klar",
   "milestoneNotifTitle": "Schau dir deine Flamme an",

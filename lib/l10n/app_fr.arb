@@ -1174,7 +1174,7 @@
   "widgetPromptBody": "Mets le widget Cirrus sur ton écran d'accueil et enregistre sans ouvrir l'appli.",
   "widgetPromptAdd": "Ajouter le widget",
   "widgetPromptStep1": "Maintiens ton doigt sur un endroit vide de l'écran d'accueil jusqu'à ce que les icônes bougent.",
-  "widgetPromptStep2": "Touche + en haut à gauche.",
+  "widgetPromptStep2": "Touche « Modifier » (ou +) en haut à gauche, puis « Ajouter un widget ».",
   "widgetPromptStep3": "Cherche Cirrus et touche « Ajouter le widget ».",
   "widgetPromptGotIt": "Compris",
   "milestoneNotifTitle": "Viens voir ta flamme",

@@ -4152,7 +4152,8 @@ class AppLocalizationsIt extends AppLocalizations {
       'Tieni premuto su uno spazio vuoto della schermata Home finché le icone non iniziano a muoversi.';
 
   @override
-  String get widgetPromptStep2 => 'Tocca + in alto a sinistra.';
+  String get widgetPromptStep2 =>
+      'Tocca «Modifica» (o +) in alto a sinistra, poi «Aggiungi widget».';
 
   @override
   String get widgetPromptStep3 => 'Cerca Cirrus e tocca «Aggiungi widget».';
