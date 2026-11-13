@@ -47,6 +47,7 @@ class OnboardingFlow extends ConsumerWidget {
       ObStep.strength => const StrengthStep(),
       ObStep.spend => const SpendStep(),
       ObStep.firstPuff => const FirstPuffStep(),
+      ObStep.smoking => const SmokingStep(),
       ObStep.why => const WhyStep(),
       ObStep.worries => const WorriesStep(),
       ObStep.method => const MethodStep(),

@@ -123,6 +123,24 @@ void main() {
     ]);
   });
 
+  testWidgets('a daily-program message lands on Home, and is counted as its own '
+      'kind', (tester) async {
+    // The program's card lives on Home (docs/15 QP-B4). It is reported as
+    // `program`, not `checkin`, so the two can be read against each other: the
+    // whole point of the program is that a message with something to say
+    // brings more people back than a bare "log your day".
+    final analytics = RecordingAnalytics();
+    final (container, sink) = await open(tester, analytics: analytics);
+    container.read(routerProvider).go(Routes.stats);
+    await tester.pumpAndSettle();
+    sink.taps.add(ReminderKind.program);
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+    expect(analytics.propsOfAll('reminder_opened'), [
+      {'kind': 'program'},
+    ]);
+  });
+
   testWidgets('a milestone celebration opens the badge grid', (tester) async {
     final (container, sink) = await open(tester);
     sink.taps.add(ReminderKind.milestone);

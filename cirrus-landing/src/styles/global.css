@@ -1252,6 +1252,68 @@ html[data-os='android'] .store--play { order: -1; }
 /* A portrait screenshot at the full measure would be taller than the viewport. */
 .prose .figure--phone img { max-width: 15rem; }
 
+/* ---------- flowcharts ----------
+   A post's flowchart is inline SVG written into the Markdown, so its labels are
+   real text in the site's own font. Standard shapes: a rounded pill starts or
+   ends a flow, a box is a step, a diamond is a question. Each chart ships
+   twice, left to right for wide screens and top to bottom for phones, because
+   five boxes in a row on a 375px screen would shrink the labels to 7px; only
+   one of the pair is ever displayed, so a screen reader hears it once. Tones
+   follow the app: volt is the plan, oxygen is the panic flow, ember is a slip.
+   No glow - that is reserved for live numbers. */
+
+.prose .fc { margin: 2.5rem 0; }
+.prose .fc svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.prose .fc .fc-v { display: none; max-width: 22rem; margin-inline: auto; }
+@media (max-width: 37.4375rem) {
+  .prose .fc .fc-h { display: none; }
+  .prose .fc .fc-v { display: block; }
+}
+.prose .fc figcaption { text-align: center; }
+
+.fc .fc-volt { --tone: var(--volt); }
+.fc .fc-oxy { --tone: var(--oxygen); }
+.fc .fc-ember { --tone: var(--ember); }
+.fc .fc-muted { --tone: var(--muted); }
+
+.fc .fc-box {
+  fill: var(--slate);
+  stroke: var(--tone);
+  stroke-width: 1.5;
+}
+.fc .fc-end {
+  fill: color-mix(in srgb, var(--tone) 14%, var(--void));
+  stroke: var(--tone);
+  stroke-width: 1.5;
+}
+.fc .fc-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.fc text {
+  fill: var(--text);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  /* No text-anchor here: a CSS value beats the SVG attribute, and the
+     yes/no labels beside an arrow carry their own start/end anchor. */
+  dominant-baseline: central;
+}
+.fc text.fc-s {
+  fill: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.fc text.fc-s--volt { fill: var(--volt); }
+
 /* ---------- tables ---------- */
 
 .table-wrap {

@@ -49,6 +49,7 @@ abstract final class SettingsPersistence {
   static const _milestonesAdopted = 'settings.milestonesAdopted';
   static const _reviewAskedAt = 'settings.reviewAskedAt';
   static const _reviewAskedCount = 'settings.reviewAskedCount';
+  static const _widgetPromptShown = 'settings.widgetPromptShown';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -99,6 +100,8 @@ abstract final class SettingsPersistence {
         reviewAskedAt: DateTime.tryParse(prefs.getString(_reviewAskedAt) ?? ''),
         reviewAskedCount:
             prefs.getInt(_reviewAskedCount) ?? defaults.reviewAskedCount,
+        widgetPromptShown:
+            prefs.getBool(_widgetPromptShown) ?? defaults.widgetPromptShown,
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -178,6 +181,7 @@ abstract final class SettingsPersistence {
         await prefs.setString(_offerCardClosedDay, closed);
       }
       await prefs.setInt(_reviewAskedCount, state.reviewAskedCount);
+      await prefs.setBool(_widgetPromptShown, state.widgetPromptShown);
       final askedAt = state.reviewAskedAt;
       if (askedAt == null) {
         await prefs.remove(_reviewAskedAt);

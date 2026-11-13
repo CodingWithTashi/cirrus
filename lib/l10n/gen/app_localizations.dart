@@ -1048,6 +1048,720 @@ abstract class AppLocalizations {
   /// **'Time-to-first-puff is the strongest single predictor of dependence. 76% of young vapers reach for it within 30 min of waking.'**
   String get obFirstPuffScience;
 
+  /// No description provided for @obSmokingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Have you ever smoked cigarettes?'**
+  String get obSmokingTitle;
+
+  /// No description provided for @obSmokingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'It changes the advice you get from us.'**
+  String get obSmokingSubtitle;
+
+  /// No description provided for @obSmokingNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get obSmokingNever;
+
+  /// No description provided for @obSmokingFormer.
+  ///
+  /// In en, this message translates to:
+  /// **'I used to'**
+  String get obSmokingFormer;
+
+  /// No description provided for @obSmokingCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'I still do'**
+  String get obSmokingCurrent;
+
+  /// No description provided for @helpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More help'**
+  String get helpTitle;
+
+  /// No description provided for @helpIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'An app can only do so much. For some people, a medicine or a real person makes the difference.'**
+  String get helpIntro;
+
+  /// No description provided for @helpMedicineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Medicine'**
+  String get helpMedicineTitle;
+
+  /// No description provided for @helpMedicineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There is medicine for this. In trials with young people, a stop-smoking medicine called varenicline, taken with counselling, helped more people stop vaping than a placebo did. It\'s a prescription medicine, it isn\'t licensed specifically for vaping, and who can have it differs from country to country. Cirrus can\'t tell you whether it\'s right for you. A doctor or pharmacist can.'**
+  String get helpMedicineBody;
+
+  /// No description provided for @helpMedicineSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the research'**
+  String get helpMedicineSource;
+
+  /// No description provided for @helpPeopleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'People you can talk to'**
+  String get helpPeopleTitle;
+
+  /// No description provided for @helpPeopleNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Official services, listed from their own pages. Cirrus has no link with any of them.'**
+  String get helpPeopleNote;
+
+  /// No description provided for @helpNoLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'We haven\'t listed a service for your country yet.'**
+  String get helpNoLocal;
+
+  /// No description provided for @helpDoctorLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Wherever you are, a doctor or pharmacist can talk it through and tell you what\'s available near you.'**
+  String get helpDoctorLine;
+
+  /// No description provided for @helpCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get helpCall;
+
+  /// No description provided for @helpOpenSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Open website'**
+  String get helpOpenSite;
+
+  /// No description provided for @helpSourceLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get helpSourceLink;
+
+  /// No description provided for @smokingRuleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'One rule above the others: don\'t go back to cigarettes. If it ever comes down to a cigarette or your vape, the vape is the safer choice, and choosing it is not failing.'**
+  String get smokingRuleBody;
+
+  /// No description provided for @smokingRuleCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'If you smoke as well, stopping the cigarettes matters most. A stop-smoking service can help with both.'**
+  String get smokingRuleCurrent;
+
+  /// No description provided for @programMsgPre7.
+  ///
+  /// In en, this message translates to:
+  /// **'Your date is a week out. Tell one person it\'s happening: saying it makes it real.'**
+  String get programMsgPre7;
+
+  /// No description provided for @programMsgPre6.
+  ///
+  /// In en, this message translates to:
+  /// **'Notice the three moments you reach for it most. Those are the ones to plan for.'**
+  String get programMsgPre6;
+
+  /// No description provided for @programMsgPre5.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick one thing for your hands and mouth in those moments. Keep it where the vape used to be.'**
+  String get programMsgPre5;
+
+  /// No description provided for @programMsgPre4.
+  ///
+  /// In en, this message translates to:
+  /// **'A craving rises, peaks and passes whether or not you vape. Try waiting one out today.'**
+  String get programMsgPre4;
+
+  /// No description provided for @programMsgPre3.
+  ///
+  /// In en, this message translates to:
+  /// **'Decide now what happens to the device and the pods on your date. Deciding early makes it easy.'**
+  String get programMsgPre3;
+
+  /// No description provided for @programMsgPre2.
+  ///
+  /// In en, this message translates to:
+  /// **'The first three days are the hardest. Clear what you can out of them.'**
+  String get programMsgPre2;
+
+  /// No description provided for @programMsgPre1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow. Put everything out of reach tonight, and make the morning easy.'**
+  String get programMsgPre1;
+
+  /// No description provided for @programMsgQ0am.
+  ///
+  /// In en, this message translates to:
+  /// **'Today. One job: get to tonight. When it hits, open this and press Craving.'**
+  String get programMsgQ0am;
+
+  /// No description provided for @programMsgQ0pm.
+  ///
+  /// In en, this message translates to:
+  /// **'The first evening is often the hardest stretch. Plan it hour by hour.'**
+  String get programMsgQ0pm;
+
+  /// No description provided for @programMsgD1am.
+  ///
+  /// In en, this message translates to:
+  /// **'The urge on waking is habit as much as nicotine. Change your first ten minutes.'**
+  String get programMsgD1am;
+
+  /// No description provided for @programMsgD1pm.
+  ///
+  /// In en, this message translates to:
+  /// **'Irritable, restless, foggy: that\'s withdrawal, and it passes.'**
+  String get programMsgD1pm;
+
+  /// No description provided for @programMsgD2am.
+  ///
+  /// In en, this message translates to:
+  /// **'This is often the peak. Nothing is wrong with you. Keep the day small.'**
+  String get programMsgD2am;
+
+  /// No description provided for @programMsgD2pm.
+  ///
+  /// In en, this message translates to:
+  /// **'If the cravings are winning, there\'s help beyond an app: people to call, and medicine.'**
+  String get programMsgD2pm;
+
+  /// No description provided for @programMsgD3.
+  ///
+  /// In en, this message translates to:
+  /// **'For most people it starts easing around now. If it hasn\'t yet, that\'s normal too.'**
+  String get programMsgD3;
+
+  /// No description provided for @programMsgD4.
+  ///
+  /// In en, this message translates to:
+  /// **'\"One won\'t hurt\" is the urge talking. Give it ten minutes and something to do.'**
+  String get programMsgD4;
+
+  /// No description provided for @programMsgD5.
+  ///
+  /// In en, this message translates to:
+  /// **'Vaping never fixed the stress, only the craving. Try the Stress button.'**
+  String get programMsgD5;
+
+  /// No description provided for @programMsgD6.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends who vape: decide your line before you see them.'**
+  String get programMsgD6;
+
+  /// No description provided for @programMsgD7.
+  ///
+  /// In en, this message translates to:
+  /// **'A week since your date. If you slipped, that\'s information. Pick up from today.'**
+  String get programMsgD7;
+
+  /// No description provided for @programMsgD8.
+  ///
+  /// In en, this message translates to:
+  /// **'Boredom is a trigger. Name what you\'ll do with the empty minutes.'**
+  String get programMsgD8;
+
+  /// No description provided for @programMsgD9.
+  ///
+  /// In en, this message translates to:
+  /// **'A drink lowers the guard. Plan the first one, or skip it this week.'**
+  String get programMsgD9;
+
+  /// No description provided for @programMsgD10.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep and appetite can wobble for a while. It settles.'**
+  String get programMsgD10;
+
+  /// No description provided for @programMsgD11.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re becoming someone who doesn\'t vape. Say it out loud once.'**
+  String get programMsgD11;
+
+  /// No description provided for @programMsgD12.
+  ///
+  /// In en, this message translates to:
+  /// **'Look at what has stayed in your pocket.'**
+  String get programMsgD12;
+
+  /// No description provided for @programMsgD13.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t swap it for cigarettes or pouches. It\'s the same hook.'**
+  String get programMsgD13;
+
+  /// No description provided for @programMsgD14.
+  ///
+  /// In en, this message translates to:
+  /// **'Two weeks since your date. Cravings come less often, and they still pass.'**
+  String get programMsgD14;
+
+  /// No description provided for @programMsgD16.
+  ///
+  /// In en, this message translates to:
+  /// **'The \"just to check\" puff is how most restarts begin.'**
+  String get programMsgD16;
+
+  /// No description provided for @programMsgD18.
+  ///
+  /// In en, this message translates to:
+  /// **'A bad day isn\'t a reason. Decide now what you\'ll do on one.'**
+  String get programMsgD18;
+
+  /// No description provided for @programMsgD21.
+  ///
+  /// In en, this message translates to:
+  /// **'Three weeks. Give yourself something real for it.'**
+  String get programMsgD21;
+
+  /// No description provided for @programMsgD23.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the break, lose the vape. What has replaced the vape break?'**
+  String get programMsgD23;
+
+  /// No description provided for @programMsgD25.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone will offer. Have your line ready.'**
+  String get programMsgD25;
+
+  /// No description provided for @programMsgD28.
+  ///
+  /// In en, this message translates to:
+  /// **'Four weeks since your date. Notice how a craving feels now.'**
+  String get programMsgD28;
+
+  /// No description provided for @programMsgD30.
+  ///
+  /// In en, this message translates to:
+  /// **'A month since your date. There\'s a question waiting in today\'s card.'**
+  String get programMsgD30;
+
+  /// No description provided for @programMsgD32.
+  ///
+  /// In en, this message translates to:
+  /// **'Think once about the triggers you haven\'t met yet: a trip, an exam, a bad week.'**
+  String get programMsgD32;
+
+  /// No description provided for @programMsgD35.
+  ///
+  /// In en, this message translates to:
+  /// **'Notice anything different in your body?'**
+  String get programMsgD35;
+
+  /// No description provided for @programMsgD37.
+  ///
+  /// In en, this message translates to:
+  /// **'A craving out of nowhere is normal for months. It still passes.'**
+  String get programMsgD37;
+
+  /// No description provided for @programMsgD39.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone in the community is on their day one. A word from you helps.'**
+  String get programMsgD39;
+
+  /// No description provided for @programMsgD42.
+  ///
+  /// In en, this message translates to:
+  /// **'Six weeks since your date. Worth a moment to notice.'**
+  String get programMsgD42;
+
+  /// No description provided for @programMsgD44.
+  ///
+  /// In en, this message translates to:
+  /// **'Read your reason again. It\'s waiting in the craving flow.'**
+  String get programMsgD44;
+
+  /// No description provided for @programMsgD46.
+  ///
+  /// In en, this message translates to:
+  /// **'Late slips happen. Same rule: it\'s data, and you pick up the same day.'**
+  String get programMsgD46;
+
+  /// No description provided for @programMsgD49.
+  ///
+  /// In en, this message translates to:
+  /// **'When everything\'s going well, \"just one\" sounds safe. It isn\'t.'**
+  String get programMsgD49;
+
+  /// No description provided for @programMsgD51.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you tell yourself on your first day?'**
+  String get programMsgD51;
+
+  /// No description provided for @programMsgD53.
+  ///
+  /// In en, this message translates to:
+  /// **'The program ends soon. The daily message stays for the hard days.'**
+  String get programMsgD53;
+
+  /// No description provided for @programMsgD56.
+  ///
+  /// In en, this message translates to:
+  /// **'Eight weeks since your date. The program ends here. The app doesn\'t.'**
+  String get programMsgD56;
+
+  /// No description provided for @programReplyBreathe.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe for one minute: in for four, out for six. The Stress button will count it with you.'**
+  String get programReplyBreathe;
+
+  /// No description provided for @programReplyWaitTen.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait ten minutes, then do one small thing with your hands. Most urges pass before then.'**
+  String get programReplyWaitTen;
+
+  /// No description provided for @programReplyChangeRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the room. Cold water on your face, or a walk to the door and back.'**
+  String get programReplyChangeRoom;
+
+  /// No description provided for @programReplyTellSomeone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell someone it\'s a rough one, or tell the coach. It weighs less out loud.'**
+  String get programReplyTellSomeone;
+
+  /// No description provided for @programReplyOkayHold.
+  ///
+  /// In en, this message translates to:
+  /// **'Steady is the goal. Keep doing what you\'re doing.'**
+  String get programReplyOkayHold;
+
+  /// No description provided for @programReplyOkayOne.
+  ///
+  /// In en, this message translates to:
+  /// **'An okay day counts. Is there one thing to look forward to tonight?'**
+  String get programReplyOkayOne;
+
+  /// No description provided for @programReplyOkayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Okay is fine. Keep the day small and the evening planned.'**
+  String get programReplyOkayShort;
+
+  /// No description provided for @programReplyPraiseWhy1.
+  ///
+  /// In en, this message translates to:
+  /// **'Good. Keep this in view: “{why}”'**
+  String programReplyPraiseWhy1(String why);
+
+  /// No description provided for @programReplyPraiseWhy2.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s a day worth having. It\'s for this: “{why}”'**
+  String programReplyPraiseWhy2(String why);
+
+  /// No description provided for @programReplyPraise3.
+  ///
+  /// In en, this message translates to:
+  /// **'Good days are built out of ordinary ones like this. Well done.'**
+  String get programReplyPraise3;
+
+  /// No description provided for @programReplyPraise4.
+  ///
+  /// In en, this message translates to:
+  /// **'Notice how this feels. Remember it on a harder day.'**
+  String get programReplyPraise4;
+
+  /// No description provided for @programReplySlipData.
+  ///
+  /// In en, this message translates to:
+  /// **'A slip is information, not a verdict. You\'re still here, and that counts.'**
+  String get programReplySlipData;
+
+  /// No description provided for @programReplySlipToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going today. One puff doesn\'t have to become a whole day.'**
+  String get programReplySlipToday;
+
+  /// No description provided for @programReplySlipPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'If the plan stopped fitting, start a new one. You keep everything you\'ve lived so far.'**
+  String get programReplySlipPlan;
+
+  /// No description provided for @programTipStress1.
+  ///
+  /// In en, this message translates to:
+  /// **'Name it: \"this is stress, not a craving.\" Naming it takes some of the weight off.'**
+  String get programTipStress1;
+
+  /// No description provided for @programTipStress2.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe out longer than you breathe in. Five slow breaths.'**
+  String get programTipStress2;
+
+  /// No description provided for @programTipStress3.
+  ///
+  /// In en, this message translates to:
+  /// **'Move for two minutes: stairs, a walk, a stretch. The body clears stress by moving.'**
+  String get programTipStress3;
+
+  /// No description provided for @programTipStress4.
+  ///
+  /// In en, this message translates to:
+  /// **'Write down the one thing stressing you. Then one small step on it.'**
+  String get programTipStress4;
+
+  /// No description provided for @programTipStress5.
+  ///
+  /// In en, this message translates to:
+  /// **'Text someone, or tell the coach. Stress shrinks when it\'s said out loud.'**
+  String get programTipStress5;
+
+  /// No description provided for @programTipSlip1.
+  ///
+  /// In en, this message translates to:
+  /// **'Write down what led to it: where, who, what time. That\'s your plan for next time.'**
+  String get programTipSlip1;
+
+  /// No description provided for @programTipSlip2.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset the moment: change the room, drink some water, do something else for ten minutes.'**
+  String get programTipSlip2;
+
+  /// No description provided for @programTipSlip3.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t make it a bigger story. One slip is one slip. The next choice is a new one.'**
+  String get programTipSlip3;
+
+  /// No description provided for @programTipSlip4.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell someone, or the coach. Shame keeps slips hidden; saying it takes the power out.'**
+  String get programTipSlip4;
+
+  /// No description provided for @programTipMore1.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the urge like a wave: it rises, peaks and passes. You don\'t have to act on it.'**
+  String get programTipMore1;
+
+  /// No description provided for @programTipMore2.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay it. Ten minutes, then decide. Most urges are gone by then.'**
+  String get programTipMore2;
+
+  /// No description provided for @programTipMore3.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace the action: gum, a pen, a straw, something in your hands.'**
+  String get programTipMore3;
+
+  /// No description provided for @programTipMore4.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan the trigger. If it\'s coffee, change your coffee routine for a week.'**
+  String get programTipMore4;
+
+  /// No description provided for @programTipMore5.
+  ///
+  /// In en, this message translates to:
+  /// **'Sip water slowly when it hits. It gives your mouth and hands a job.'**
+  String get programTipMore5;
+
+  /// No description provided for @programTipMore6.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the place or the time where you used to vape. A new routine has no habit attached.'**
+  String get programTipMore6;
+
+  /// No description provided for @programTipMore7.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell the people around you what you\'re doing. They help when they know.'**
+  String get programTipMore7;
+
+  /// No description provided for @programTipMore8.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your reason where you\'ll see it: lock screen, wallet, a note by the bed.'**
+  String get programTipMore8;
+
+  /// No description provided for @programTipMore9.
+  ///
+  /// In en, this message translates to:
+  /// **'Eat something. A low-energy body makes urges louder.'**
+  String get programTipMore9;
+
+  /// No description provided for @programTipMore10.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep matters. A tired mind negotiates.'**
+  String get programTipMore10;
+
+  /// No description provided for @programTipMore11.
+  ///
+  /// In en, this message translates to:
+  /// **'A craving is not an order. You can feel it and not do it.'**
+  String get programTipMore11;
+
+  /// No description provided for @programTipMore12.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t wait to feel ready. Do the next small thing.'**
+  String get programTipMore12;
+
+  /// No description provided for @programCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY · DAY {day}'**
+  String programCardTitle(int day);
+
+  /// No description provided for @programCardTitlePast.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY'**
+  String get programCardTitlePast;
+
+  /// No description provided for @programQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How is today going?'**
+  String get programQuestion;
+
+  /// No description provided for @programBtnCraving.
+  ///
+  /// In en, this message translates to:
+  /// **'Craving'**
+  String get programBtnCraving;
+
+  /// No description provided for @programBtnStress.
+  ///
+  /// In en, this message translates to:
+  /// **'Stress'**
+  String get programBtnStress;
+
+  /// No description provided for @programBtnSlipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Slipped'**
+  String get programBtnSlipped;
+
+  /// No description provided for @programBtnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get programBtnMore;
+
+  /// No description provided for @programStressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A minute for yourself'**
+  String get programStressTitle;
+
+  /// No description provided for @programStressBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe with the circle: in as it grows, out as it shrinks.'**
+  String get programStressBody;
+
+  /// No description provided for @programSlippedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A slip is information'**
+  String get programSlippedTitle;
+
+  /// No description provided for @programSlippedCoach.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to the coach'**
+  String get programSlippedCoach;
+
+  /// No description provided for @programMoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One more idea'**
+  String get programMoreTitle;
+
+  /// No description provided for @programCheckupNicotineQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Any other nicotine this week?'**
+  String get programCheckupNicotineQ;
+
+  /// No description provided for @programCheckupNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get programCheckupNone;
+
+  /// No description provided for @programCheckupCigarettes.
+  ///
+  /// In en, this message translates to:
+  /// **'Cigarettes'**
+  String get programCheckupCigarettes;
+
+  /// No description provided for @programCheckupPouches.
+  ///
+  /// In en, this message translates to:
+  /// **'Pouches'**
+  String get programCheckupPouches;
+
+  /// No description provided for @programCheckupPatchGum.
+  ///
+  /// In en, this message translates to:
+  /// **'Patch or gum'**
+  String get programCheckupPatchGum;
+
+  /// No description provided for @programCheckupPatchNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A pharmacist can help you use it well.'**
+  String get programCheckupPatchNote;
+
+  /// No description provided for @programCheckupVapedQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Have you vaped in the last 30 days?'**
+  String get programCheckupVapedQ;
+
+  /// No description provided for @programCheckupYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get programCheckupYes;
+
+  /// No description provided for @programCheckupThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for answering.'**
+  String get programCheckupThanks;
+
+  /// No description provided for @programCheckup90Title.
+  ///
+  /// In en, this message translates to:
+  /// **'90 days on'**
+  String get programCheckup90Title;
+
   /// No description provided for @obFactLabelScience.
   ///
   /// In en, this message translates to:
@@ -1369,7 +2083,7 @@ abstract class AppLocalizations {
   /// No description provided for @obRevealProof.
   ///
   /// In en, this message translates to:
-  /// **'24% quit with a structured program vs 19% alone — randomized trial of 2,588 young adults. Not magic. Better odds.'**
+  /// **'Trial of 2,588 young adults: with daily quit messages by text, 24% said they had stopped vs 19% without. Not magic. Better odds.'**
   String get obRevealProof;
 
   /// No description provided for @obRevealComparisonOne.
@@ -1651,7 +2365,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Not spam. A nudge before your danger hours, an evening check-in on your plan, and a word when you hit a milestone.'**
+  /// **'Not spam. A nudge before your danger hours, a daily message on your plan, and a word when you hit a milestone.'**
   String get obNotifSubtitle;
 
   /// No description provided for @obNotifPreviewTime.
@@ -1675,13 +2389,13 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet2.
   ///
   /// In en, this message translates to:
-  /// **'An evening check-in, and a milestone celebration'**
+  /// **'A daily message on your plan, and a milestone celebration'**
   String get obNotifBullet2;
 
   /// No description provided for @obNotifBullet3.
   ///
   /// In en, this message translates to:
-  /// **'Nothing else — no marketing, ever'**
+  /// **'The first three mornings from your date. Nothing else — no marketing, ever'**
   String get obNotifBullet3;
 
   /// No description provided for @obNotifCta.
@@ -3714,8 +4428,32 @@ abstract class AppLocalizations {
   /// No description provided for @planAdjustSheetNote.
   ///
   /// In en, this message translates to:
-  /// **'Curve regenerates from today with your real numbers. History stays. Freedom Day moves honestly.'**
+  /// **'Pick how many days from today until Freedom Day. Your history stays as it is.'**
   String get planAdjustSheetNote;
+
+  /// No description provided for @planAdjustPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Freedom Day would be {date}.'**
+  String planAdjustPreview(String date);
+
+  /// No description provided for @planAdjustSame.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the date you already have.'**
+  String get planAdjustSame;
+
+  /// No description provided for @planAdjustLater.
+  ///
+  /// In en, this message translates to:
+  /// **'A later date is harder to reach. Pick the earliest you can keep.'**
+  String get planAdjustLater;
+
+  /// No description provided for @planAdjustNewPlanLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Different method, or a fresh start? Start a new plan.'**
+  String get planAdjustNewPlanLink;
 
   /// No description provided for @planAdjustApply.
   ///
@@ -4854,13 +5592,13 @@ abstract class AppLocalizations {
   /// No description provided for @slipAdjustTitle.
   ///
   /// In en, this message translates to:
-  /// **'Here\'s the adjustment.'**
+  /// **'Your date, your call.'**
   String get slipAdjustTitle;
 
   /// No description provided for @slipCurveLabel.
   ///
   /// In en, this message translates to:
-  /// **'YOUR CURVE — GENTLY REFLOWN'**
+  /// **'YOUR CURVE'**
   String get slipCurveLabel;
 
   /// No description provided for @slipTheBump.
@@ -4872,13 +5610,13 @@ abstract class AppLocalizations {
   /// No description provided for @slipNewFreedom.
   ///
   /// In en, this message translates to:
-  /// **'Freedom Day: {date} (+{days} days)'**
+  /// **'Freedom Day: {date} ({days, plural, =1{+1 day} other{+{days} days}})'**
   String slipNewFreedom(String date, int days);
 
   /// No description provided for @slipCurveNote.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination.'**
+  /// **'Same destination.'**
   String get slipCurveNote;
 
   /// No description provided for @slipStreakSurvives.
@@ -4893,17 +5631,29 @@ abstract class AppLocalizations {
   /// **'The flame dims, it doesn\'t die. One clean day brings it back to full blaze.'**
   String get slipFlameDims;
 
-  /// No description provided for @slipBackOnCurve.
-  ///
-  /// In en, this message translates to:
-  /// **'Back on the curve'**
-  String get slipBackOnCurve;
-
   /// No description provided for @slipTalkFirst.
   ///
   /// In en, this message translates to:
   /// **'Talk it through with coach first'**
   String get slipTalkFirst;
+
+  /// No description provided for @slipKeepDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep my date'**
+  String get slipKeepDate;
+
+  /// No description provided for @slipDateStays.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Freedom Day stays {date}.'**
+  String slipDateStays(String date);
+
+  /// No description provided for @slipAddDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Add 1 day} other{Add {days} days}}'**
+  String slipAddDays(int days);
 
   /// No description provided for @profileQuittingSince.
   ///
@@ -5316,7 +6066,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCheckin.
   ///
   /// In en, this message translates to:
-  /// **'Evening check-in'**
+  /// **'Daily message'**
   String get settingsCheckin;
 
   /// No description provided for @settingsCheckinOff.
@@ -5328,13 +6078,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCheckinBody.
   ///
   /// In en, this message translates to:
-  /// **'One notification an evening with today\'s limit, so you can log how it went. It stops by itself after a week without you opening Cirrus.'**
+  /// **'One message an evening about your plan, plus the first three mornings from your date. It stops by itself after a week without you opening Cirrus.'**
   String get settingsCheckinBody;
 
   /// No description provided for @settingsCheckinToggle.
   ///
   /// In en, this message translates to:
-  /// **'Remind me each evening'**
+  /// **'Send me the daily message'**
   String get settingsCheckinToggle;
 
   /// No description provided for @settingsCheckinTime.
@@ -5796,37 +6546,37 @@ abstract class AppLocalizations {
   /// No description provided for @slipCurveNoteParty.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. Before the next party, set a danger hour so the reminder lands first.'**
+  /// **'Same destination. Before the next party, set a danger hour so the reminder lands first.'**
   String get slipCurveNoteParty;
 
   /// No description provided for @slipCurveNoteStress.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. When stress hits, the panic button\'s 60-second breathe is built for exactly that minute.'**
+  /// **'Same destination. When stress hits, the panic button\'s 60-second breathe is built for exactly that minute.'**
   String get slipCurveNoteStress;
 
   /// No description provided for @slipCurveNoteBoredom.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.'**
+  /// **'Same destination. For the empty minutes, the game inside the panic flow is one tap away.'**
   String get slipCurveNoteBoredom;
 
   /// No description provided for @slipCurveNoteDrinking.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.'**
+  /// **'Same destination. Set a danger hour before your next drink — the reminder lands before the first one.'**
   String get slipCurveNoteDrinking;
 
   /// No description provided for @slipCurveNoteFriends.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. Next time, text your coach before you meet them, not after.'**
+  /// **'Same destination. Next time, text your coach before you meet them, not after.'**
   String get slipCurveNoteFriends;
 
   /// No description provided for @slipCurveNoteJustHappened.
   ///
   /// In en, this message translates to:
-  /// **'Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.'**
+  /// **'Same destination. It happens. The log stays honest, and tomorrow is a clean day.'**
   String get slipCurveNoteJustHappened;
 
   /// Home-screen widget: the day label above the count. A NATIVE format template - the %1$d is filled by Kotlin String.format, not by gen-l10n, because the widget recomputes the day number itself across a midnight the app slept through.
@@ -5894,6 +6644,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Cirrus on your iPhone'**
   String get widgetWatchOpenPhone;
+
+  /// No description provided for @widgetPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a puff in one tap'**
+  String get widgetPromptTitle;
+
+  /// No description provided for @widgetPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the Cirrus widget to your home screen and log without opening the app.'**
+  String get widgetPromptBody;
+
+  /// No description provided for @widgetPromptAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add widget'**
+  String get widgetPromptAdd;
+
+  /// No description provided for @widgetPromptStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and hold an empty spot on your home screen until the icons wiggle.'**
+  String get widgetPromptStep1;
+
+  /// No description provided for @widgetPromptStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + in the top-left corner.'**
+  String get widgetPromptStep2;
+
+  /// No description provided for @widgetPromptStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for Cirrus and tap Add Widget.'**
+  String get widgetPromptStep3;
+
+  /// No description provided for @widgetPromptGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get widgetPromptGotIt;
 
   /// Title of the one-shot celebration fired the morning after a streak milestone is earned (design frame 51 #2).
   ///

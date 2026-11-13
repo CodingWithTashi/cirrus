@@ -676,7 +676,12 @@ void main() {
         coordinator,
         settings: const SettingsState(checkinReminderOn: false),
       );
-      expect(sink.cancelled, CheckinReminderPlanner.ids);
+      // Its evening slots and the program's three mornings: both are this
+      // schedule's, and both go when it does.
+      expect(sink.cancelled, [
+        ...CheckinReminderPlanner.ids,
+        ...CheckinReminderPlanner.morningIds,
+      ]);
       expect(sink.scheduledOnce.length, armed);
       expect(sink.cancels, 0);
     });
@@ -713,6 +718,176 @@ void main() {
         sink.kinds.where((k) => k == ReminderKind.checkin),
         hasLength(CheckinReminderPlanner.window),
       );
+    });
+
+    // docs/15 QP-B5: the daily program rides this schedule. Same switch, same
+    // seven-day window, same ids for the evening — plus three mornings.
+    group('carrying the daily program', () {
+      ({String title, String body}) programCopy(CheckinReminder c) =>
+          (title: 'Day ${c.planDay}', body: 'program ${c.message!.name}');
+      final dawn = DateTime(2026, 8, 20, 7);
+
+      /// The fixture on its quit day: cold turkey, day one today, today
+      /// unlogged.
+      JourneyState quitDay() {
+        final j = unloggedToday();
+        return j.copyWith(
+          plan: j.plan.copyWith(
+            method: QuitMethod.coldTurkey,
+            startDate: DateTime(2026, 8, 20),
+          ),
+        );
+      }
+
+      Future<void> syncProgram(
+        ReminderCoordinator coordinator, {
+        JourneyState? journey,
+        SettingsState settings = const SettingsState(),
+        DateTime? now,
+        bool withProgramCopy = true,
+      }) => coordinator.sync(
+        journey: journey ?? quitDay(),
+        settings: settings,
+        title: title,
+        body: body,
+        checkinCopy: copy,
+        programCopy: withProgramCopy ? programCopy : null,
+        now: () => now ?? dawn,
+      );
+
+      test('arms program messages, with the program kind and its own words', () async {
+        final sink = _FakeSink();
+        await syncProgram(ReminderCoordinator(sink));
+
+        final program = [
+          for (final (i, kind) in sink.kinds.indexed)
+            if (kind == ReminderKind.program) i,
+        ];
+        // Seven evenings and the three mornings.
+        expect(program, hasLength(10));
+        expect(sink.bodies[program.first], startsWith('program '));
+        final ids = [for (final i in program) sink.scheduledOnce[i].id];
+        expect(ids, containsAll(CheckinReminderPlanner.morningIds));
+        expect(ids, containsAll(CheckinReminderPlanner.ids));
+        expect(
+          sink.kinds.where((k) => k == ReminderKind.checkin),
+          isEmpty,
+          reason: 'every day in this window has a message',
+        );
+      });
+
+      test('a day without a message is still the plain check-in', () async {
+        final sink = _FakeSink();
+        final j = quitDay();
+        // Program day 14 onward: messages on 14, 16, 18 only.
+        final later = j.copyWith(
+          plan: j.plan.copyWith(startDate: DateTime(2026, 8, 6)),
+        );
+        await syncProgram(ReminderCoordinator(sink), journey: later);
+
+        final plain = [
+          for (final (i, kind) in sink.kinds.indexed)
+            if (kind == ReminderKind.checkin) sink.bodies[i],
+        ];
+        expect(plain, isNotEmpty);
+        expect(plain.every((b) => b.startsWith('limit ')), isTrue);
+        expect(
+          sink.kinds.where((k) => k == ReminderKind.program),
+          isNotEmpty,
+        );
+      });
+
+      test('a re-arm withdraws the mornings along with the evenings', () async {
+        final sink = _FakeSink();
+        await syncProgram(ReminderCoordinator(sink));
+        expect(
+          sink.cancelled,
+          containsAll([
+            ...CheckinReminderPlanner.ids,
+            ...CheckinReminderPlanner.morningIds,
+          ]),
+        );
+        expect(sink.cancels, 0, reason: 'never cancelAll');
+      });
+
+      test('a moved date re-arms with the new words even when nothing else '
+          'about the day changed', () async {
+        // Baseline 0 keeps every limit at zero, so a stretch changes the
+        // MESSAGE for each instant and nothing else the fingerprint carries.
+        final sink = _FakeSink();
+        final coordinator = ReminderCoordinator(sink);
+        final base = journeyWith({10: 30});
+        final at = DateTime(2026, 8, 20, 7);
+        final taper = base.copyWith(
+          days: {...base.days}..remove(JourneyState.dateKey(at)),
+          plan: base.plan.copyWith(
+            method: QuitMethod.taper,
+            baselinePuffsPerDay: 0,
+            startDate: DateTime(2026, 7, 28), // day 24 of 30 on Aug 20
+          ),
+        );
+        await syncProgram(coordinator, journey: taper, now: at);
+        final first = [...sink.bodies];
+        final armed = sink.scheduledOnce.length;
+        expect(first.any((b) => b == 'program pre6'), isTrue);
+
+        await syncProgram(
+          coordinator,
+          journey: taper.copyWith(plan: taper.plan.copyWith(stretchDays: 1)),
+          now: at,
+        );
+        expect(
+          sink.scheduledOnce.length,
+          greaterThan(armed),
+          reason: 'the same instants, different messages: it must re-arm',
+        );
+        expect(sink.bodies.skip(armed).any((b) => b == 'program pre7'), isTrue);
+      });
+
+      test('an unchanged program window is not re-armed on the next puff', () async {
+        final sink = _FakeSink();
+        final coordinator = ReminderCoordinator(sink);
+        await syncProgram(coordinator);
+        final armed = sink.scheduledOnce.length;
+        await syncProgram(coordinator);
+        expect(sink.scheduledOnce.length, armed);
+      });
+
+      test('a refused program schedule is tried again', () async {
+        final sink = _FakeSink()..arms = false;
+        final coordinator = ReminderCoordinator(sink);
+        await syncProgram(coordinator);
+        expect(sink.scheduledOnce, isEmpty);
+        sink.arms = true;
+        await syncProgram(coordinator);
+        expect(
+          sink.kinds.where((k) => k == ReminderKind.program),
+          isNotEmpty,
+        );
+      });
+
+      test('without program copy a program slot is left unarmed rather than '
+          'fired with the wrong words', () async {
+        final sink = _FakeSink();
+        await syncProgram(ReminderCoordinator(sink), withProgramCopy: false);
+        expect(sink.kinds.where((k) => k == ReminderKind.program), isEmpty);
+        expect(sink.scheduledOnce, isEmpty, reason: 'every day here is a program day');
+      });
+
+      test('the one switch turns it all off, mornings included', () async {
+        final sink = _FakeSink();
+        final coordinator = ReminderCoordinator(sink);
+        await syncProgram(coordinator);
+        sink.cancelled.clear();
+        final armed = sink.scheduledOnce.length;
+
+        await syncProgram(
+          coordinator,
+          settings: const SettingsState(checkinReminderOn: false),
+        );
+        expect(sink.cancelled, containsAll(CheckinReminderPlanner.morningIds));
+        expect(sink.scheduledOnce.length, armed);
+      });
     });
 
     test('nothing before the stored settings have been read', () async {

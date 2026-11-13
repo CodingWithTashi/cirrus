@@ -5773,3 +5773,119 @@ Unit and widget: everything above.
 
 `flutter analyze` clean · `flutter test` **2125 passed** · `functions`: `npm run verify` **337**, `test:rules` **57**, `test:integration` **412** · deployed Nov 12 · Pixel 8: **61 passed** on the fake backend, `k_retention` 3/4 (§52.5) · iOS and the real backend from a device: **not run**.
 
+
+---
+## 53. THE QUIT PROGRAM (Nov 12–13) — a cigarettes question, a date that holds, and one message a day
+
+The plan and its evidence are `docs/15_Quit_Program_Plan.md`; this is the dated record. It came out of the Nov 11 audit (§52): the one intervention with trial evidence in people who vape is a daily message program tied to a quit date, every guideline puts "do not go back to smoking" first, and the app asked nobody about cigarettes. Two stages, built test-first, and **neither is deployed or released**.
+
+### 53.1 Stage A — safety and a date that holds (Nov 12)
+
+- **The cigarettes question** — `SmokingHistory` on the profile (nullable: null is never asked), a 13th quiz question after `firstPuff` (so `ObStep` is 21 values), the same question as a Home card for accounts that never saw it, and **the one rule** (`SmokingRuleCard`): don't go back to cigarettes; the vape is the *safer* of two choices, never *safe*. Shown to former and current smokers only.
+- **More help** — a page of medicine and people for the device's region, with every link a real URI handed to the opener. The onboarding trial claim now says what was tested.
+- **A date that holds** — tapers are 14, 21, 30 or 42 days (`PlanPaces`); a total stretch is capped at **7 days** on both engines (it was half the plan); a slip now **asks** (keep the date, add 1 or 2 days) rather than always adding 2; "Adjust my plan" changes the date only and refuses a no-op.
+- **Server** — `profile.smoking` is decoded defensively and the coach's card says `used to smoke` / `still smokes as well as vaping`; a new hard safety rule in the prompt stops the coach suggesting a substitute. **The coach eval gate is open** (§53.4).
+
+### 53.2 Stage B — the daily program (Nov 13)
+
+One message a day from 7 days before the quit date to 56 after: 43 written messages, 14 replies, 21 tips, all in six languages, none AI. The quit date is `plan.freedomDate` for a taper and `plan.startDate` for cold turkey, so nobody sets a second date.
+
+- **Engine** — `quit_program.dart` is a pure function of the plan and the date. "Slipped" reads each day's *stored* `DayLog.limit`, never a recomputed curve.
+- **Home card** — the message, a link chip, the existing mood check-in as the question, a written reply, and Craving / Stress / Slipped / More. It replaces the evening mood prompt (one check-in a day) and is hidden during the Day-1 tour, so a cold-turkey account first meets it after the tour on its quit day.
+- **The mood check-in counts once a day.** It used to count every call, and seven awarded a badge.
+- **Reminders** — the evening check-in became the daily message (`ReminderKind.program`): evenings 4000–4006, plus three 09:00 mornings 5000–5002, on the existing channel with `BigTextStyleInformation` so Android shows the whole body. An armed message never claims a status. Settings and the onboarding copy that had stopped being true were rewritten.
+- **Check-ups** — nicotine on days 7/14/28/56, "have you vaped in the last 30 days" at 30 and (its own Home card) 90. `JourneyState.checkups`, mirrored in `journeyCodec.ts` and the coach's card; each answer also goes to analytics (`checkup_answered`, `quit_status_reported`) because an older build on a second device rewrites the journey document.
+- **Events** — `help_viewed`, `help_link_opened`, `slip_resolved`, `plan_adjusted`, `program_shown`, `program_reply`, `program_help`, `reminder_opened{program}`, `checkup_answered`, `quit_status_reported`.
+
+### 53.3 Three bugs found while building it
+
+- A nicotine check-up answered on day 7 closed day 14 as well (one window per ask now: `CheckupKind.windowStart`).
+- On a program day the evening message was skipped once the *day* was confirmed — a cold-turkey day is confirmed by morning, which silenced the quit day. It is skipped once the **mood** is in.
+- On the Pixel: the Slipped sheet showed "More help" twice to a former smoker. No widget test saw it; the sheet now drops its own link when the rule card, which has one, is showing.
+
+### 53.4 Proven where, and not
+
+**Gates:** `flutter analyze` clean · `flutter test` **2,436** · `functions`: `npm run verify` **359**, `test:integration` **412**.
+
+**On the Pixel 8 (Android 17), fake backend, real fonts, router and notification scheduler:** stage A — suites `a`–`e`, `g`–`i`, `l`, `n` and the new `p_safety_and_date` 13/13 (docs/15 A12). Stage B — the new `o_quit_program` **7/7**, three runs: the quit-day card, a mood answered and its reply, tomorrow's message pending on the OS with payload `program` and its full text (read through `pendingNotificationRequests()`, so Do Not Disturb cannot hide it), the switch clearing exactly its own ids and leaving the trial reminder, the day-7 check-up and the one rule, the Stress sheet's breathing ring, Slipped moving nothing, and the 90-day card.
+
+**Not proven:**
+- **`npm run eval:coach` is not green.** Re-run Nov 13 on a paid-tier key: real answers, no quota errors, and the first run (20/22, 18/22) found real defects in the new coach rules that are now fixed (§53.6). But a single-roll 22/22 is not reachable reliably by any prompt: the one in production scored lite 19/20 at best over six runs. Over five rolls the final prompt is level with production; the real harness on the same bytes read lite 19/22, premium 21/22. **Functions were deployed Nov 13 2026** after the founder chose the multi-roll standard and an improved judge (§53.7); the app is not released.
+- **A tap on the program notification**, on any device (Do Not Disturb hides it; routing is pinned by `reminder_tap_test`).
+- **Anything on an iPhone.** The simulator build needs the watchOS 26.2 runtime (§52.5).
+- **Translations** are the plan author's, not reviewed by a native speaker.
+- **Whether it works on people.** There is no comparison group (docs/15 §2); the day-30 and day-90 answers are read by install week, four weeks after release.
+
+### 53.5 Left for later
+
+Stage C (a one-time home-screen widget prompt) was not started when this was written; it landed the same day, see §54. The deploy order is functions first, then the app, once the eval is clean.
+
+### 53.6 What the eval found (Nov 13)
+
+- **The cigarette rule was easy to invert.** "Choosing a vape over a cigarette is not failing" came back to someone who had a cigarette as "choosing that cigarette wasn't failing". It now hands the model the exact sentence, limits the reply to four short sentences, and says medicine is never a "hook" (it had leaked onto the patch question). Pinned in `test/prompts.test.ts`.
+- **Slips are not sized and the family is not leverage** ("40 puffs is a lot", "protect your daughter's future" — both failed the tone judge).
+- **The panic rider asks for 20 words, not 30.** The lite model's median at "30" was 27–30 words against the eval's cap of 30, so any prompt change tipped it over; measured side by side, 4–8 of 12 rolls failed against 2 of 12 for the shipped prompt. At 20: 1 of 12, median 16 words. **This shortens live panic replies.**
+- **A one-roll LLM-judged gate is noise near the edge.** The method that replaced it for this change: write the pass bar down first, run five full rolls of the old and new prompt side by side, and read every failing safety reply. See the CLAUDE.md gotcha.
+
+### 53.7 The judge, and the deploy (Nov 13)
+
+- **The judge was the weakest part of the gate.** It never saw the user's message, the card or the conversation summary, and ran on the smallest model, so it failed correct replies and passed an inverted cigarette rule. `tools/evalJudge.ts` (tested in `test/evalJudge.test.ts`) now gives it all three and the premium model. A majority vote would not have helped: it runs at temperature 0, so its errors are systematic. No case's criteria text was edited.
+- **Validated two ways, and the second caught what the first could not.** On 23 replies labeled by hand: accuracy 67% → 91%, good replies wrongly failed 55% → 0%. Then a held-out re-judge of 504 stored answers found a missing-summary bug (22 of 24 correct recalls failed) and an over-reaching tone sentence (ordinary mentions of the person's why failed). Both fixed test-first, both re-measured.
+- **Result under the improved judge, like for like:** production 6.7% of answers failing, new prompt 7.5%; safety cases 0 failures in 6 runs per model; the literal harness three times: lite 21, 19, 21 of 22, premium 21, 21, 22 of 22.
+- **Deployed** Nov 13 18:13 UTC: `firebase deploy --only functions`, all 25 functions updated, project `alastpuff`, Gemini secret version 2. Afterwards `aiCoachChat`, `panicSession` and `syncUserContext` refused an unattested request with 401. **Not verified:** a real signed-in coach call and the function logs.
+- **The app is not released.** Until it is, the live coach has the new safety rule and shorter panic replies, and the app has no program card.
+
+## 54. THE WIDGET PROMPT (Nov 13) — one card, offered once, and the launcher is the only witness
+
+Stage C of `docs/15_Quit_Program_Plan.md` (§5). App-only: no functions change, nothing deployed, nothing released. A Home card offers the home-screen widget once to a taper user who has been logging by hand, so logging a puff takes one tap. The only evidence on widgets is that one raised how many days a diary was filled in (22 people, Choe 2015) and nothing links a widget to quitting, so the copy says it makes logging quicker and `copy_honesty_test` fails on any claim that it helps anybody quit.
+
+### 54.1 What was built
+
+- **The seam** — `WidgetStore` gained `canPin()`, `requestPin()` and `installedCount()` (`int?`; `null` is "could not be read", never zero) over `home_widget` 0.9.4, with a `MemoryWidgetStore` that defaults to **no widget host** (cannot pin, count `null`). Its own `widgetStoreProvider`: the coordinator's provider is null on the fake backend. That default is also why no other Home fixture meets the card, and why `premium_gate_test`, `plan_terminal_state_test` and `vape_free_confirm_test` pass unchanged with no test-only switch.
+- **`WidgetPromptPolicy`** (pure) and **`WidgetPromptStore`** (view model: what the device can do, whether the card is up this visit, whether a request waits to be confirmed) and **`WidgetPromptCard`** on Home, outside the one-card chain beside the offer card and the cigarettes question.
+- **Who and when** — a taper (limit above zero today), at least 5 puffs on at least 2 distinct days (a proxy off the day map: the journey stores no puff source), `installed` exactly zero, no pending slip, no Day-1 tour (which also takes down a card already up), settings hydrated.
+- **Android** — one tap to the system pin dialog; a launcher that cannot pin gets no card. **iPhone** — three steps and "Got it", since no app can add a widget there.
+- **Shown once means seen once.** The flag is written when the card is on screen — its middle inside the viewport, on the tab and route that are showing (`TickerMode`, §54.4) — not when it is built (the offer card counted 114 impressions from 26 people for being built below the fold), through `settings.hydrated`, and a latch holds the card up for the visit because writing the flag makes the policy false the next frame. A restart without an answer does not bring it back.
+- **Forgotten on sign-out and on account deletion** — `SettingsStore.resetWidgetPrompt()` and `ref.invalidate(widgetPromptProvider)`. `CLAUDE.md` said five things; the code already forgot a sixth (the push registration), so it now lists seven.
+- **Events** — `widget_prompt_shown{way}`, `widget_prompt_accepted{way}`, `widget_installed`. The last is credited by order alone: the first resume after "Add" that finds more widgets than before the dialog.
+- **Copy** — seven new ARB keys (+ `commonNotNow`), six locales, through a JSON round trip. Portuguese is European in this app.
+
+### 54.2 Two things only the source and the device could say
+
+- **Android reports the widget's class as `ComponentName.shortClassName`.** `getInstalledWidgets` returns `.widget.CirrusWidgetProvider`, never the qualified name, so comparing with `HomeWidgetStore.androidProvider` counts zero on every phone that has the widget, and the card would be offered again to the people who already have it. Read from the plugin's Kotlin; matched by suffix; the unit test uses that exact shape and fails if the filter is made naive; the Pixel then reported `installed=1` for a real placed widget.
+- **The system pin dialog takes the app only to `inactive`.** Recorded on the device: `inactive > resumed`, never `paused` or `hidden`, and the app was already back on Home in a screenshot taken 3 s after the tap, before the test driver's relaunch — a real person lands back in the app on their own (the driver's relaunch step turned out to be unnecessary). `AppLifecycleState.resumed` is the hook; there is no success callback, so the widget is only ever learned by asking the launcher again.
+
+### 54.3 Proven where, and not
+
+**Gates:** `flutter analyze` clean · `flutter test` **2,519** (was 2,436; +83, of which 10 came with the §54.4 review round). `functions/` is untouched, so `npm run verify`, `test:integration` and `test:rules` were not re-run. Ten mutations of the production code were each caught by a test.
+
+**On the Pixel 8 (Android 17), fake backend, real `HomeWidgetStore`, real `SharedPreferences`, real fonts:** `q_widget_prompt` **4/4 in one clean run** from a fresh install — the launcher can pin and shows none; the card is found by scrolling to it, "Not now" is final, the flag is on the device's disk and nothing returns after a restart; a sign-out clears it and the next account is offered it once; "Add widget" opens the real dialog, the launcher reports the widget, `widget_installed` fires once; and with the widget placed the card does not come back for the next account and its flag is not spent. The first run passed three and failed the fourth on a wrong premise in the **test** (the previous account's flag was still on disk); fixed, and the suite rerun whole. Screenshots read by hand: the card, the dialog, Home after each answer.
+
+**Not proven:**
+- **Anything on an iPhone** — the walkthrough steps (written from Apple's own menu names, not driven) and `getCurrentConfigurations` as the iOS count.
+- **Other launchers.** Only the Pixel's.
+- **A real process kill across the restart.** `flutter test integration_test` uninstalls the app when it finishes, so the restart is a fresh container re-reading the preferences from the platform plugin (on Android `reload()` re-reads a copy cached for the life of the process, so it is not a disk read), with the value confirmed in the preferences file on the device's disk over adb.
+- **The card in the five other locales on a device**, and a native read of the seven new strings.
+- **Whether it changes anything.** There is no comparison group; the events say how many accept and how many then place a widget, nothing about quitting.
+
+The phone was returned to Play build 1.0.28 from the verified backup (same base-APK hash). Its signed-in session and any Cirrus widget on its home screen went with the uninstall.
+
+### 54.4 A review round before commit (Nov 13)
+
+A fresh-eyes review of the staged change (`/code-review high`, a read not anchored on the author's) returned eight findings. Each was checked against the code, not taken as given: **six were real and are fixed test-first**, one was a doc that disagreed with the flow, one is an accepted trade-off. Every fix has a test that fails when the fix is removed.
+
+- **The one-time offer could be spent unseen.** The "seen" test looked only at the scroll offset, and Home stays mounted, laid out and sized under the other tabs and under any pushed route — and the quick-log `+` is on every tab, so the fifth puff can be logged from Stats. The card now also requires `TickerMode` (go_router switches it off for an inactive branch, an `Overlay` for a covered route) and re-checks when it comes back.
+- **The resume listener lived in the card.** Home is a lazily built `ListView`, so a card beyond the cache extent is never built and one scrolled away is disposed, and a person who added the widget and came back to a Home scrolled elsewhere was never noticed. The listener is in `HomeScreen`'s State now. (The first test for this did not prove it — the card sat inside the cache at the viewport I chose — and was rewritten until its own precondition showed the card was not in the tree.)
+- **A double tap on "Add widget"** asked the launcher for two dialogs and reported two acceptances: the card now comes down before anything is awaited.
+- **A call in flight when the account goes** could write the old account's request into the next account's state (the store's liveness flag is true again after `invalidate`), and a container disposed before the first launcher read threw an uncaught error. A generation counter replaces the flag.
+- **`resume()` asked the launcher on every foreground, for ever.** It now asks only while the answer can matter: the card is up, a request waits, or the offer has not been made yet (a stale zero would offer the widget to somebody who already has it).
+- **`resetWidgetPrompt()`** is a no-op when the flag is already false, instead of a second whole-state write on every sign-out.
+- **Doc:** `widget_prompt_accepted` on an iPhone means the steps were read ("Got it"), not that anything was added, so the two platforms' accept rates are not comparable; the event's doc now says so.
+- **Accepted, not changed:** the puff proxy counts widget-logged puffs, so someone who logged only from the widget and then removed it passes the rule and is offered it once. The plan specified the proxy; the offer is made once and the copy is not wrong for them.
+- **Not changed, and not new:** a sign-out before settings have hydrated writes the defaults over the stored ones. `resetMilestoneLedger()` has always done the same; it needs the sign-out button before a preferences read returns, which is milliseconds at launch.
+
+**Also checked at this point:** a release APK was built and its dex contains `Lcom/quitvape/last_puff/widget/CirrusWidgetProvider;` under its real name, so R8 keeps the class the plugin looks up by name; the staged diff is 38 files of stage C only, with no native, `functions/` or `pubspec` change and no credentials.
+
+**Re-run on the Pixel 8 against the fixed code: `q_widget_prompt` 6/6, from a clean install.** The original four plus two new device tests: the fifth puff logged from the Stats tab, and under a Settings screen pushed over Home, does **not** spend the offer, and looking at Home again does (the screenshot shows Day 2, 1 of 90 puffs, the card appearing only after the return); and "Add widget" **tapped twice** opened one system dialog and reported one `widget_prompt_accepted`. The real lifecycle was `inactive > resumed` again and the launcher reported `installed=1`, now through the Home-level listener. Not exercised on a device: the resume listener surviving a card that a lazy list has disposed (it needs the app pumped while a dialog is up, which stalls; the widget suite proves it, and fails if the Home-level hook is removed), the stale-call-after-sign-out race, and the launcher-query guard.
+
+A first attempt at the two new device tests failed on the **harness**, not the app: the fake demo login passes through its seeded day-12 journey, which qualifies, so the card was seen and the offer spent before the fixture replaced it. A real sign-in loads one real journey and never does that. I stopped the run, made those two tests start from the state a real account would have (`freshOffer`), and reran everything from a fresh install. The phone was returned to Play build 1.0.28 again, hash-identical to the backup.

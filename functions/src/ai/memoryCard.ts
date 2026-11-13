@@ -123,6 +123,11 @@ export function buildMemoryCard(
     // all-day vaper who reaches for it within five minutes of waking is a
     // different person from a social one.
     `about them: ${describeProfile(profile, age)}`,
+    // Only for someone who smokes or did. The common case adds nothing, and
+    // "not asked" adds nothing either: it must never read as "does not smoke".
+    // A fact, not an instruction — what to do with it is the hard safety rule.
+    ...cigarettesLine(profile.smoking),
+    ...otherNicotineLine(journey.checkups),
     `vaping: ${strengthPhrase(plan.strength)}`,
     `saving toward: ${goalsLine(journey, saved)}`,
     `baseline: ${plan.baselinePuffsPerDay} puffs/day · today: ${today?.puffs ?? 0}/${limit} · streak: ${streak}d (${flameFor(streak)}) · tokens: ${repairTokens(journey.days, todayKey)}`,
@@ -178,6 +183,36 @@ function planDayLine(plan: Journey['plan'], day: number): string {
 
 function list(values: readonly string[]): string {
   return values.length > 0 ? values.join(', ') : 'not set';
+}
+
+/**
+ * The latest "any other nicotine this week?" answer (docs/15 QP-B7), as a plain
+ * fact. Only that question: the 30- and 90-day vaping answers are the product's
+ * own outcome measure, and handing them to the coach would invite it to quote
+ * them back. Nothing at all when it was never asked, so "not asked" can never
+ * read as "none".
+ */
+function otherNicotineLine(checkups: Journey['checkups']): string[] {
+  const latest = checkups.filter((c) => c.kind === 'nicotine').at(-1);
+  if (latest === undefined) return [];
+  const words: Record<string, string> = {
+    noOther: 'none',
+    cigarettes: 'cigarettes',
+    pouches: 'pouches',
+    patchGum: 'patch or gum',
+  };
+  return [`other nicotine (last check-up): ${words[latest.answer] ?? 'unknown'}`];
+}
+
+function cigarettesLine(smoking: Journey['profile']['smoking']): string[] {
+  switch (smoking) {
+    case 'former':
+      return ['cigarettes: used to smoke'];
+    case 'current':
+      return ['cigarettes: still smokes as well as vaping'];
+    default:
+      return [];
+  }
 }
 
 /** The onboarding answers, as a sentence rather than a field dump. */

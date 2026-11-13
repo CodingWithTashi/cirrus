@@ -99,7 +99,12 @@ void main() {
 
     // Straight past onboarding, the way f_firebase_backend_test does.
     await store.startJourney(
-      profile: const UserProfile(alias: '@e2ewidget', avatarEmoji: '🧩'),
+      // Answered, so the cigarettes card (QP-A3) is not in the way.
+      profile: const UserProfile(
+        alias: '@e2ewidget',
+        avatarEmoji: '🧩',
+        smoking: SmokingHistory.never,
+      ),
       plan: QuitPlan(
         method: QuitMethod.taper,
         paceDays: 30,

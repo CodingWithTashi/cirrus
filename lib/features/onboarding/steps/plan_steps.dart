@@ -14,6 +14,7 @@ import '../../../core/widgets/lp_charts.dart';
 import '../../../core/widgets/lp_selectables.dart';
 import '../../../core/widgets/press_scale.dart';
 import '../../../core/widgets/progress_ring.dart';
+import '../../../domain/logic/plan_paces.dart';
 import '../../../domain/logic/taper_engine.dart';
 import '../../../domain/models/models.dart';
 import '../onboarding_view_model.dart';
@@ -352,7 +353,7 @@ class MethodStep extends ConsumerWidget {
 class PaceStep extends ConsumerWidget {
   const PaceStep({super.key});
 
-  static const paces = [14, 21, 30, 60, 90];
+  static const paces = PlanPaces.options;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

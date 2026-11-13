@@ -80,7 +80,12 @@ void main() {
       );
     }
     return JourneyState(
-      profile: const UserProfile(alias: '@matrixfox', avatarEmoji: '🦊'),
+      // Answered, so the cigarettes card (QP-A3) is not in the way.
+      profile: const UserProfile(
+        alias: '@matrixfox',
+        avatarEmoji: '🦊',
+        smoking: SmokingHistory.never,
+      ),
       plan: plan,
       days: days,
       cravingsSurvivedTotal: 14,

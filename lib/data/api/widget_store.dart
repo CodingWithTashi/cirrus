@@ -58,6 +58,28 @@ abstract interface class WidgetStore {
   /// `updatePeriodMillis` floor, so a phone left alone overnight shows
   /// yesterday's day and yesterday's count until the system gets round to it.
   Future<void> scheduleRepaints(List<DateTime> times);
+
+  /// Whether this device can show the system's "add this widget" dialog.
+  ///
+  /// True only on Android API 26+ with a launcher that supports pinning. False
+  /// on iOS — no app can add a widget there, the person does it from the home
+  /// screen's edit mode — and false for anything unknown: a launcher that
+  /// cannot pin answers the plugin's request with success and does nothing, so
+  /// offering the button on a maybe would be a control that does nothing.
+  Future<bool> canPin();
+
+  /// Asks the launcher to put the widget on the home screen. Resolves to
+  /// whether a request was actually made, never to whether the person accepted:
+  /// **the system dialog has no callback.** Whether the widget was added can
+  /// only be learned by asking [installedCount] again, which is why the prompt
+  /// re-reads it on resume.
+  Future<bool> requestPin();
+
+  /// How many Cirrus widgets are placed, or null when that cannot be read.
+  ///
+  /// Null is "unknown", and callers must treat it as such: reading a failed
+  /// call as zero would offer the widget to someone who already has it.
+  Future<int?> installedCount();
 }
 
 /// The real store, over `home_widget`.
@@ -187,6 +209,58 @@ class HomeWidgetStore implements WidgetStore {
   Stream<int> get watchTaps => _listenWatch();
 
   @override
+  Future<bool> canPin() async {
+    try {
+      // `bool?` — a null is the plugin having no opinion, which is a no.
+      return await HomeWidget.isRequestPinWidgetSupported() ?? false;
+    } on Object {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> requestPin() async {
+    // Asked here rather than trusted to the caller: on a launcher that cannot
+    // pin, the plugin answers success and does nothing, so the request would
+    // read as a dialog that never opened.
+    if (!await canPin()) return false;
+    try {
+      // `qualifiedAndroidName`, for the reason spelled out on [refresh]: the
+      // other two parameters are resolved against the package name.
+      await HomeWidget.requestPinWidget(qualifiedAndroidName: androidProvider);
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
+  @override
+  Future<int?> installedCount() async {
+    try {
+      final installed = await HomeWidget.getInstalledWidgets();
+      return installed.where(_isCirrus).length;
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Whether [widget] is ours.
+  ///
+  /// Android reports `ComponentName.shortClassName` — the class with the
+  /// package cut off, `.widget.CirrusWidgetProvider` — never the qualified name
+  /// the manifest declares, so comparing against [androidProvider] outright
+  /// matches nothing: every phone with the widget on it would count zero and be
+  /// offered it again. A leading dot is the short form; anything else is read
+  /// as already qualified. iOS reports the WidgetKit `kind`.
+  static bool _isCirrus(HomeWidgetInfo widget) {
+    final cls = widget.androidClassName;
+    if (cls != null) {
+      return cls.startsWith('.') ? androidProvider.endsWith(cls) : cls == androidProvider;
+    }
+    return widget.iOSKind == iOSName;
+  }
+
+  @override
   Future<void> refresh() async {
     try {
       await _ensureGroup();
@@ -242,4 +316,40 @@ class MemoryWidgetStore implements WidgetStore {
   @override
   Future<void> scheduleRepaints(List<DateTime> times) async =>
       scheduled = times;
+
+  /// What the fake says about the device, defaulting to **no widget host**:
+  /// the fake backend runs on desktop and web, which have no launcher, and a
+  /// store that cannot pin and cannot count is the honest answer there. It is
+  /// also what keeps every Home fixture free of a card it never asked for — a
+  /// test about the widget prompt says otherwise on purpose.
+  bool pinSupported = false;
+
+  /// What [installedCount] reads; null is "cannot be read".
+  int? installed;
+
+  /// How many times a dialog was actually requested.
+  int pinRequests = 0;
+
+  /// How many times the launcher was asked how many widgets are placed.
+  int reads = 0;
+
+  @override
+  Future<bool> canPin() async => pinSupported;
+
+  @override
+  Future<bool> requestPin() async {
+    if (!pinSupported) return false;
+    pinRequests++;
+    return true;
+  }
+
+  @override
+  Future<int?> installedCount() async {
+    reads++;
+    return installed;
+  }
+
+  /// The person confirming the system dialog: the launcher places the widget,
+  /// which the app can only learn by reading [installedCount] again.
+  void placeWidget() => installed = (installed ?? 0) + 1;
 }

@@ -93,6 +93,10 @@ abstract final class ObTailoring {
       ObStep.frequency ||
       ObStep.puffs ||
       ObStep.spend ||
+      // Deliberately nothing: this answer picks which safety copy they see
+      // later, and a statistic under a question about their own history
+      // reads as judgement.
+      ObStep.smoking ||
       ObStep.why ||
       ObStep.method ||
       ObStep.pace ||

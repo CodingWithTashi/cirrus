@@ -57,12 +57,42 @@ abstract final class TaperEngine {
     return avoided;
   }
 
-  /// Big-relapse recovery (docs/03 §5): stretch Freedom Day, capped at +50%
-  /// of the original pace. The curve regenerates over the longer runway.
+  /// The most days a plan's Freedom Day can be pushed back in total
+  /// (docs/15 QP-A9). It was half the plan — 15 days on a 30-day taper, so a
+  /// few slips could turn a month into six weeks — and each week of delay to a
+  /// quit date raised the chance of lapsing by 19% (Hughes 2010).
+  ///
+  /// **This number lives in exactly two places**: here and `MAX_STRETCH_DAYS`
+  /// in `functions/src/domain/taperEngine.ts`. Both are pinned to the same
+  /// table, and a client a build behind the server must not disagree about
+  /// the ceiling.
+  static const maxStretchDays = 7;
+
+  /// The ceiling for [plan]: [maxStretchDays], or half of a plan too short for
+  /// that, and nothing at all for cold turkey — there is no runway to lengthen.
+  static int _stretchCeiling(QuitPlan plan) => plan.method == QuitMethod.coldTurkey
+      ? 0
+      : math.min(maxStretchDays, (plan.paceDays * 0.5).floor());
+
+  /// How many more days a slip could still add to [plan]'s runway.
+  static int stretchLeft(QuitPlan plan) =>
+      math.max(0, _stretchCeiling(plan) - plan.stretchDays);
+
+  /// Big-relapse recovery (docs/03 §5): stretch Freedom Day by [extraDays],
+  /// up to the ceiling. The curve regenerates over the longer runway.
+  ///
+  /// A stretch already given is never lowered. Plans stretched under the old
+  /// half-the-plan rule keep every day they were promised; the ceiling only
+  /// stops them growing further.
   static QuitPlan reflowAfterSlip(QuitPlan plan, {int extraDays = 2}) {
-    final cap = (plan.paceDays * 0.5).floor();
-    final stretch = math.min(plan.stretchDays + extraDays, cap);
-    return plan.copyWith(stretchDays: stretch);
+    final ceiling = _stretchCeiling(plan);
+    final stretch = math.max(
+      plan.stretchDays,
+      math.min(plan.stretchDays + extraDays, ceiling),
+    );
+    return stretch == plan.stretchDays
+        ? plan
+        : plan.copyWith(stretchDays: stretch);
   }
 
   /// Normalized (0..1) points of the curve for painting, downsampled to

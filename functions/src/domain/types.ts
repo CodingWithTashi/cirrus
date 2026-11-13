@@ -51,6 +51,42 @@ export type QuitAttempts = (typeof QUIT_ATTEMPTS)[number];
 export const VAPE_FREQUENCIES = ['daily', 'often', 'always'] as const;
 export type VapeFrequency = (typeof VAPE_FREQUENCIES)[number];
 
+/**
+ * Whether they have smoked cigarettes (docs/15 QP-A1). Mirrors Dart's
+ * `SmokingHistory`. Null on [UserProfile] means never asked, which is not
+ * the same fact as `never`.
+ */
+export const SMOKING_HISTORIES = ['never', 'former', 'current'] as const;
+export type SmokingHistory = (typeof SMOKING_HISTORIES)[number];
+
+/**
+ * The daily program's check-up questions and answers (docs/15 QP-B7). Mirrors
+ * Dart's `CheckupKind` / `CheckupAnswer`; the answers each question accepts are
+ * the same on both sides, and anything else is dropped on decode.
+ */
+export const CHECKUP_KINDS = ['nicotine', 'vaped30', 'vaped90'] as const;
+export type CheckupKind = (typeof CHECKUP_KINDS)[number];
+
+export const CHECKUP_ANSWERS = [
+  'noOther', 'cigarettes', 'pouches', 'patchGum', 'vaped', 'notVaped',
+] as const;
+export type CheckupAnswer = (typeof CHECKUP_ANSWERS)[number];
+
+export const CHECKUP_ANSWERS_BY_KIND: Readonly<
+  Record<CheckupKind, readonly CheckupAnswer[]>
+> = {
+  nicotine: ['noOther', 'cigarettes', 'pouches', 'patchGum'],
+  vaped30: ['vaped', 'notVaped'],
+  vaped90: ['vaped', 'notVaped'],
+};
+
+/** One answered check-up: the day it was given (`yyyy-MM-dd`), and to what. */
+export interface Checkup {
+  readonly day: string;
+  readonly kind: CheckupKind;
+  readonly answer: CheckupAnswer;
+}
+
 /** What the user blamed a slip on (docs/03 §5). Their answer, not ours. */
 export const SLIP_TRIGGERS = [
   'party', 'stress', 'boredom', 'drinking', 'friends', 'justHappened',
@@ -123,7 +159,7 @@ export interface QuitPlan {
   readonly baselinePuffsPerDay: number;
   readonly weeklySpend: number;
   readonly strength: NicStrength;
-  /** Extra days added by slip recovery (docs/03 §3.3, cap +50% of pace). */
+  /** Extra days added by slip recovery (docs/03 §3.3), at most `MAX_STRETCH_DAYS` in total (docs/15 QP-A9). */
   readonly stretchDays: number;
   /**
    * The level this plan's curve comes down from, when it is not the baseline:
@@ -167,6 +203,12 @@ export interface UserProfile {
    * and reaches the model exactly, and for free, through the user card.
    */
   readonly whyWords: string | null;
+  /**
+   * Whether they have smoked cigarettes. Null when never asked (every account
+   * that predates the question) — so a null must never be phrased to the model
+   * as "does not smoke".
+   */
+  readonly smoking: SmokingHistory | null;
   // The rest of the 19-step quiz. The server used to drop these, so the coach
   // could not tell a first-time quitter from someone on their sixth attempt,
   // or an all-day vaper from a social one — the two facts that most change
@@ -214,6 +256,12 @@ export interface Journey {
   readonly moodCheckIns: number;
   readonly goals: readonly SavingsGoal[];
   readonly earnedBadges: readonly string[];
+  /**
+   * Check-up answers, oldest day first. Client-written and decoded as enums
+   * with every unknown name dropped, so nothing typed can reach a prompt
+   * through it.
+   */
+  readonly checkups: readonly Checkup[];
 }
 
 /** Total plan length including slip stretch. */

@@ -21,6 +21,7 @@ class UserProfile {
     this.firstPuff,
     this.coachName,
     this.whyWords,
+    this.smoking,
   });
 
   final String alias;
@@ -33,6 +34,11 @@ class UserProfile {
   final QuitAttempts? attempts;
   final VapeFrequency? frequency;
   final FirstPuffWindow? firstPuff;
+
+  /// Whether they have smoked cigarettes. **Null means never asked**, not
+  /// "never smoked": existing accounts predate the question, and Home asks them
+  /// once while this is null.
+  final SmokingHistory? smoking;
 
   /// What this person calls their coach.
   ///
@@ -77,6 +83,7 @@ class UserProfile {
     frequency: frequency,
     firstPuff: firstPuff,
     whyWords: whyWords,
+    smoking: smoking,
   );
 
   UserProfile copyWith({
@@ -87,6 +94,7 @@ class UserProfile {
     Set<WorryChip>? worries,
     String? coachName,
     String? whyWords,
+    SmokingHistory? smoking,
   }) => UserProfile(
     alias: alias ?? this.alias,
     avatarEmoji: avatarEmoji ?? this.avatarEmoji,
@@ -100,6 +108,7 @@ class UserProfile {
     firstPuff: firstPuff,
     coachName: coachName ?? this.coachName,
     whyWords: whyWords ?? this.whyWords,
+    smoking: smoking ?? this.smoking,
   );
 }
 
@@ -125,7 +134,8 @@ class QuitPlan {
   final double weeklySpend;
   final NicStrength strength;
 
-  /// Extra days added by slip recovery (docs/03 §3.3, cap +50% of pace).
+  /// Extra days added by slip recovery (docs/03 §3.3), at most
+  /// `TaperEngine.maxStretchDays` in total (docs/15 QP-A9).
   final int stretchDays;
 
   /// The level this plan's curve comes down from, when it is not the
@@ -630,7 +640,11 @@ class PlanAdvice {
   final int limit;
   final PlanAdherence adherence;
 
-  /// Days the runway grows by, already capped server-side at +50% of pace.
+  /// Days the runway actually grew by when this advice was accepted. The
+  /// server asks for at most one, held to `MAX_STRETCH_DAYS`; the client then
+  /// clamps again to the ceiling it knows (`TaperEngine.maxStretchDays`) and
+  /// stores what really moved, so a server a build behind cannot make the Plan
+  /// screen claim a stretch the engine refused.
   /// Applied exactly once per [forDay] — see `JourneyStore.applyPlanAdvice`.
   final int stretchDelta;
 

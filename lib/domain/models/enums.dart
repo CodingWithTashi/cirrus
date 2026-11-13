@@ -17,6 +17,42 @@ enum VapeFrequency { daily, often, always }
 
 enum FirstPuffWindow { withinFive, fiveToThirty, thirtyToSixty, hourPlus }
 
+/// The questions the daily program asks a few times (docs/15 QP-B7). The
+/// windows they are asked in live in `QuitProgram`.
+enum CheckupKind {
+  nicotine,
+  vaped30,
+  vaped90;
+
+  /// The answers on offer, in the order they are shown. Also the only answers
+  /// the codecs accept for this question.
+  List<CheckupAnswer> get answers => switch (this) {
+    CheckupKind.nicotine => const [
+      CheckupAnswer.noOther,
+      CheckupAnswer.cigarettes,
+      CheckupAnswer.pouches,
+      CheckupAnswer.patchGum,
+    ],
+    CheckupKind.vaped30 || CheckupKind.vaped90 => const [
+      CheckupAnswer.vaped,
+      CheckupAnswer.notVaped,
+    ],
+  };
+}
+
+/// What a check-up was answered with. Which answers belong to which question is
+/// `CheckupKind.answers`; a pairing that does not match is dropped on decode,
+/// on both sides of the wire.
+enum CheckupAnswer { noOther, cigarettes, pouches, patchGum, vaped, notVaped }
+
+/// Whether this person has smoked cigarettes (docs/15 QP-A1).
+///
+/// Asked because every cessation guideline puts "do not go back to smoking"
+/// first, and the app otherwise has no way to know it applies. A profile
+/// field of null means **never asked**, which is a different fact from
+/// [never].
+enum SmokingHistory { never, former, current }
+
 extension FirstPuffWindowHour on FirstPuffWindow {
   /// A rough local hour for the first puff of the day, used ONLY as the
   /// danger-hour fallback before three days of real data exist (docs/03 §8).

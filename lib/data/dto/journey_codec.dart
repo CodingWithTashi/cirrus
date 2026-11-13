@@ -1,3 +1,4 @@
+import '../../domain/date_key.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
@@ -27,7 +28,47 @@ abstract final class JourneyCodec {
     'planAdvice': s.planAdvice == null ? null : _encodeAdvice(s.planAdvice!),
     'gameBests': {for (final e in s.gameBests.entries) e.key.name: e.value},
     'lastGame': s.lastGame?.name,
+    // Written only once there is an answer, so a journey nobody asked stays
+    // byte-for-byte the document it always was (docs/15 QP-B7).
+    if (s.checkups.isNotEmpty) 'checkups': _encodeCheckups(s.checkups),
   };
+
+  static Map<String, dynamic> _encodeCheckups(
+    Map<DateTime, Map<CheckupKind, CheckupAnswer>> checkups,
+  ) => {
+    for (final e in checkups.entries)
+      encodeDayKey(e.key): {
+        for (final a in e.value.entries) a.key.name: a.value.name,
+      },
+  };
+
+  /// The program's check-up answers, keyed by the day they were given. Decoded
+  /// defensively because it is client-written and a newer build may write what
+  /// this one does not know: an unknown question, an unknown answer, an answer
+  /// that belongs to a different question, a bad day key and a value that is
+  /// not a map are all DROPPED, and a day left with nothing disappears. A
+  /// decode that threw on any of them would take the account down at launch.
+  static Map<DateTime, Map<CheckupKind, CheckupAnswer>> _decodeCheckups(
+    Object? raw,
+  ) {
+    if (raw is! Map) return const {};
+    final out = <DateTime, Map<CheckupKind, CheckupAnswer>>{};
+    for (final day in raw.entries) {
+      final key = day.key;
+      final answers = day.value;
+      if (key is! String || !LpDate.isDayKey(key) || answers is! Map) continue;
+      final kept = <CheckupKind, CheckupAnswer>{};
+      for (final a in answers.entries) {
+        final kind = enumByNameOrNull(CheckupKind.values, a.key);
+        final answer = enumByNameOrNull(CheckupAnswer.values, a.value);
+        if (kind != null && answer != null && kind.answers.contains(answer)) {
+          kept[kind] = answer;
+        }
+      }
+      if (kept.isNotEmpty) out[decodeDayKey(key)] = kept;
+    }
+    return out;
+  }
 
   static JourneyState decode(Map<String, dynamic> json) => JourneyState(
     profile: decodeProfile(json['profile'] as Map<String, dynamic>),
@@ -63,6 +104,7 @@ abstract final class JourneyCodec {
         : decodeAdvice(json['planAdvice'] as Map<String, dynamic>),
     gameBests: _decodeGameBests(json),
     lastGame: enumByNameOrNull(GameId.values, json['lastGame']),
+    checkups: _decodeCheckups(json['checkups']),
   );
 
   /// Per-game bests keyed by `GameId.name`; missing means never played. The
@@ -94,6 +136,9 @@ abstract final class JourneyCodec {
     'firstPuff': p.firstPuff?.name,
     'coachName': p.coachName,
     'whyWords': p.whyWords,
+    // Written only once answered, so a journey nobody asked stays
+    // byte-for-byte the document it always was.
+    if (p.smoking != null) 'smoking': p.smoking!.name,
   };
 
   static UserProfile decodeProfile(Map<String, dynamic> json) => UserProfile(
@@ -117,6 +162,8 @@ abstract final class JourneyCodec {
     // Every journey written before the question existed is missing this key,
     // so it decodes as "never asked" rather than throwing.
     whyWords: json['whyWords'] as String?,
+    // Missing, or a name a newer build wrote, both read as "never asked".
+    smoking: enumByNameOrNull(SmokingHistory.values, json['smoking']),
   );
 
   static Map<String, dynamic> encodePlan(QuitPlan p) => {

@@ -25,6 +25,7 @@ class JourneyState {
     this.planAdvice,
     this.gameBests = const {},
     this.lastGame,
+    this.checkups = const {},
   });
 
   final UserProfile profile;
@@ -68,6 +69,12 @@ class JourneyState {
   /// round ran to the end. Never seeded, and it only goes up
   /// (`GameScore.beats`).
   final Map<GameId, int> gameBests;
+
+  /// The daily program's check-up answers (docs/15 QP-B7): the day the answer
+  /// was given → which question → what it was answered with. Empty until one
+  /// is answered. Client-owned like the rest of this document; what the server
+  /// reads of it is decoded as enums with unknown names dropped.
+  final Map<DateTime, Map<CheckupKind, CheckupAnswer>> checkups;
 
   /// The game the arena opened on last; null until one has been played.
   final GameId? lastGame;
@@ -145,6 +152,7 @@ class JourneyState {
     PlanAdvice? Function()? planAdvice,
     Map<GameId, int>? gameBests,
     GameId? lastGame,
+    Map<DateTime, Map<CheckupKind, CheckupAnswer>>? checkups,
   }) => JourneyState(
     profile: profile ?? this.profile,
     plan: plan ?? this.plan,
@@ -168,6 +176,7 @@ class JourneyState {
     // game only ever moves to another game.
     gameBests: gameBests ?? this.gameBests,
     lastGame: lastGame ?? this.lastGame,
+    checkups: checkups ?? this.checkups,
   );
 }
 

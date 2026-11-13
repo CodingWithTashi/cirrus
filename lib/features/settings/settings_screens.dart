@@ -405,6 +405,15 @@ class SettingsScreen extends ConsumerWidget {
                 value: '',
                 onTap: () => context.push(Routes.moderation),
               ),
+            // A medicine and real people to call, for the country the phone is
+            // set to (docs/15 QP-A7). First of the outbound rows because it is
+            // the one that matters on a bad night.
+            row(
+              icon: Icons.favorite_border_rounded,
+              label: l10n.helpTitle,
+              value: '',
+              onTap: () => context.push(Routes.helpFrom('settings')),
+            ),
             // The app used to be an island: no way to reach the site, the
             // policy, the terms or a person from anywhere inside it. Support
             // used to sit here and only show a snack, so it was deleted — this

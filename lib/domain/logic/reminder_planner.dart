@@ -1,6 +1,7 @@
 import '../models/journey_state.dart';
 import '../models/models.dart';
 import 'danger_hours.dart';
+import 'quit_program.dart';
 
 /// One scheduled nudge: the local hour and minute it fires at.
 class ReminderSlot {
@@ -143,7 +144,12 @@ abstract final class ReminderPlanner {
 /// "milestone celebrations" in five languages while seventeen badges unlocked
 /// in silence; this is the value that makes the promise true. `checkin` is the
 /// same arrangement for the evening check-in.
-enum ReminderKind { danger, trial, milestone, checkin }
+///
+/// `program` is the daily quit program's message (docs/15 stage B). It takes
+/// over the evening check-in's slot on the days it has something to say, and
+/// adds a morning on the first three; on every other day the check-in is
+/// still what fires, which is why both kinds exist.
+enum ReminderKind { danger, trial, milestone, checkin, program }
 
 /// One nudge at one instant — the trial-ending reminder and the milestone
 /// celebration. Unlike a [ReminderSlot] it does not repeat, so it is an
@@ -345,16 +351,27 @@ abstract final class MilestoneReminderPlanner {
       DateTime(day.year, day.month, day.day + (tomorrow ? 1 : 0), hour);
 }
 
-/// One evening check-in: when it fires, and the plan day and limit it names.
+/// One evening check-in — or, on a day the daily program has a message for, one
+/// program message — with when it fires and the plan day and limit it names.
 class CheckinReminder {
   const CheckinReminder({
     required this.reminder,
     required this.planDay,
     required this.totalDays,
     required this.limit,
+    this.message,
   });
 
   final OneShotReminder reminder;
+
+  /// The program message this carries, or null for a plain evening check-in.
+  /// The copy for it is resolved by the caller (the scheduler has no
+  /// `BuildContext`), from this id.
+  final ProgramMessage? message;
+
+  /// What a tap on it reports and routes on.
+  ReminderKind get kind =>
+      message == null ? ReminderKind.checkin : ReminderKind.program;
 
   /// 1-based, as Home counts it; above [totalDays] means past Freedom Day.
   final int planDay;
@@ -366,10 +383,11 @@ class CheckinReminder {
   @override
   String toString() =>
       'CheckinReminder(${reminder.id}, ${reminder.at.toIso8601String()}, '
-      'day $planDay, limit $limit)';
+      'day $planDay, limit $limit, ${message?.name ?? 'check-in'})';
 }
 
-/// Decides when the evening check-in fires (docs/10 §51).
+/// Decides when the evening check-in fires (docs/10 §51), and — from docs/15
+/// stage B — when the daily program's messages do.
 ///
 /// The Oct 5 2026 read found two in three people who finished onboarding never
 /// opened the app a second day, and nothing in the app could reach them: the
@@ -387,7 +405,6 @@ class CheckinReminder {
 ///     time the person was here and then STOPS by itself. Somebody who has
 ///     gone for good stops hearing from us within a week, without a server
 ///     ever deciding they have
-///   * not today once today is confirmed: they have been here today
 ///   * nothing inside quiet hours
 ///   * NOT skipped for a danger-hour nudge in the same hour. The first cut
 ///     did skip it, and the most common evening danger hour (21:00, nudged
@@ -397,6 +414,19 @@ class CheckinReminder {
 ///     hour on the screen is the hour it fires
 ///   * fire times are calendar arithmetic (`DateTime(y, m, d + i, hour)`),
 ///     never `Duration(days: i)`, which lands an hour off across DST
+///
+/// **The daily program** (`QuitProgram`) rides the same evening slot and the
+/// same switch, so it adds no notification a person did not already have, bar
+/// three mornings:
+///   * on a day the program has an evening message, that message is what fires
+///     in the slot, with the same id; on any other day it is the plain check-in
+///   * the first three program days also get a morning, at nine or the first
+///     hour quiet hours leave open before noon — ids 5000 + the program day,
+///     not the place in the window, so a moved window cannot reuse an id
+///   * **today's evening is skipped once the MOOD is in on a program day, not
+///     once the day is confirmed.** A cold-turkey day is confirmed by morning,
+///     and that rule would silence the quit day's evening message — the one the
+///     program exists to send. On a day with no message the old rule stands
 abstract final class CheckinReminderPlanner {
   /// Ids [firstId] … [firstId] + [window] − 1, clear of the danger-hour slots
   /// (1000–1023), the trial reminder (2000) and the milestones (3000+).
@@ -404,6 +434,26 @@ abstract final class CheckinReminderPlanner {
   static const int window = 7;
 
   static List<int> get ids => [for (var i = 0; i < window; i++) firstId + i];
+
+  /// The program's three mornings: quit day, day one and day two. By program
+  /// day, so 5000 is always the quit day's morning.
+  static const int morningFirstId = 5000;
+  static const int morningCount = 3;
+
+  static List<int> get morningIds => [
+    for (var d = 0; d < morningCount; d++) morningFirstId + d,
+  ];
+
+  /// Nine, or the first hour before noon that quiet hours leave open; null when
+  /// there is none (the evening message still goes).
+  static int? morningHour(int quietStartHour, int quietEndHour) {
+    for (var hour = 9; hour < 12; hour++) {
+      if (!ReminderPlanner.isQuiet(hour, quietStartHour, quietEndHour)) {
+        return hour;
+      }
+    }
+    return null;
+  }
 
   static List<CheckinReminder> plan({
     required JourneyState journey,
@@ -418,20 +468,54 @@ abstract final class CheckinReminderPlanner {
       return const [];
     }
 
+    final amHour = morningHour(quietStartHour, quietEndHour);
     final out = <CheckinReminder>[];
     for (var i = 0; i < window; i++) {
+      final day = DateTime(now.year, now.month, now.day + i);
+
+      final am = QuitProgram.messageFor(journey.plan, day, ProgramSlot.morning);
+      if (am != null && amHour != null) {
+        final at = DateTime(day.year, day.month, day.day, amHour);
+        if (at.isAfter(now)) {
+          out.add(
+            CheckinReminder(
+              reminder: OneShotReminder(
+                id: morningFirstId + am.programDay,
+                at: at,
+              ),
+              planDay: journey.plan.dayNumber(at),
+              totalDays: journey.plan.totalDays,
+              limit: journey.limitOn(at),
+              message: am,
+            ),
+          );
+        }
+      }
+
       final at = DateTime(now.year, now.month, now.day + i, hour);
       if (!at.isAfter(now)) continue;
-      if (i == 0 && (journey.logFor(now)?.isConfirmed ?? false)) continue;
+      final pm = QuitProgram.messageFor(journey.plan, day, ProgramSlot.evening);
+      if (i == 0) {
+        final today = journey.logFor(now);
+        if (pm != null) {
+          // On a program day the question is the card, and answering it is
+          // what makes the nudge redundant.
+          if (today?.mood != null) continue;
+        } else if (today?.isConfirmed ?? false) {
+          continue;
+        }
+      }
       out.add(
         CheckinReminder(
           reminder: OneShotReminder(id: firstId + i, at: at),
           planDay: journey.plan.dayNumber(at),
           totalDays: journey.plan.totalDays,
           limit: journey.limitOn(at),
+          message: pm,
         ),
       );
     }
+    out.sort((a, b) => a.reminder.at.compareTo(b.reminder.at));
     return out;
   }
 }

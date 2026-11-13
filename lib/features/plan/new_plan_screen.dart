@@ -16,6 +16,7 @@ import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/logic/plan_paces.dart';
 import '../../domain/logic/plan_restart.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/models.dart';
@@ -39,7 +40,7 @@ class NewPlanScreen extends ConsumerStatefulWidget {
 }
 
 class _NewPlanScreenState extends ConsumerState<NewPlanScreen> {
-  static const _paces = [14, 21, 30, 60, 90];
+  static const _paces = PlanPaces.options;
 
   /// What the last week says they have been vaping, read once on the way in.
   /// Null when there is too little logged to say — then the field starts
@@ -62,7 +63,7 @@ class _NewPlanScreenState extends ConsumerState<NewPlanScreen> {
     // The runway they chose last time, when it is one of the choices here —
     // a stretched or reflowed plan is not, and falls back to thirty.
     final last = journey?.plan.paceDays;
-    _pace = _paces.contains(last) ? last! : 30;
+    _pace = _paces.contains(last) ? last! : PlanPaces.defaultDays;
   }
 
   @override

@@ -104,6 +104,37 @@ void main() {
     });
   });
 
+  group('the widget offer is per account, not per phone', () {
+    // Another thing a sign-out forgets (docs/15 QP-C2). "Shown" is device-scoped
+    // SharedPreferences with no uid in the key: without a reset, the next
+    // person to sign in on a shared phone is never offered the widget at all.
+    test('signing out forgets it', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      final settings = c.read(settingsStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+
+      settings.markWidgetPromptShown();
+      expect(c.read(settingsStoreProvider).widgetPromptShown, isTrue);
+
+      store.signOut();
+
+      expect(c.read(settingsStoreProvider).widgetPromptShown, isFalse);
+    });
+
+    test('deleting the account forgets it too', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      final settings = c.read(settingsStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+      settings.markWidgetPromptShown();
+
+      await store.deleteAccount();
+
+      expect(c.read(settingsStoreProvider).widgetPromptShown, isFalse);
+    });
+  });
+
   test('a failed deletion throws and leaves the session standing', () async {
     final c = harness(deletionFails: true);
     final store = c.read(quitStoreProvider.notifier);

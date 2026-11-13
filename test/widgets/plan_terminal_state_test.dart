@@ -48,9 +48,12 @@ void main() {
       );
     }
     return JourneyState(
+      // Answered: the cigarettes card (QP-A3) would otherwise sit above the
+      // card under test and push it off this short test surface.
       profile: const UserProfile(
         alias: '@simfox',
         avatarEmoji: '🦊',
+        smoking: SmokingHistory.never,
       ),
       plan: plan,
       days: days,
@@ -64,6 +67,13 @@ void main() {
   }
 
   Future<ProviderContainer> pumpAt(WidgetTester tester, DateTime now) async {
+    // Tall enough to BUILD everything on Home. The daily program's card
+    // (docs/15 stage B) sits under the ring on every day near the quit date and
+    // pushes what is below it out of a short surface's built range; a ListView
+    // builds only what is near the screen. A taller surface, never a switch.
+    tester.view.physicalSize = const Size(393, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final container = ProviderContainer(
       overrides: fastBackendOverrides(now: now),
     );

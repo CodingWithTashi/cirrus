@@ -27,6 +27,8 @@ void main() {
     expect(loaded.notificationsOn, defaults.notificationsOn);
     expect(loaded.dangerStartHour, defaults.dangerStartHour);
     expect(loaded.winbackShown, isFalse);
+    // Nobody has been offered the widget yet.
+    expect(loaded.widgetPromptShown, isFalse);
   });
 
   test('every field survives a save and reload', () async {
@@ -57,6 +59,7 @@ void main() {
       milestonesAdopted: true,
       reviewAskedAt: DateTime(2026, 9, 10, 21, 30),
       reviewAskedCount: 1,
+      widgetPromptShown: true,
     );
 
     await SettingsPersistence.save(saved);
@@ -84,6 +87,9 @@ void main() {
     // craving — the pestering Guideline 5.6.3 is about.
     expect(loaded.reviewAskedAt, DateTime(2026, 9, 10, 21, 30));
     expect(loaded.reviewAskedCount, 1);
+    // "Shown once" that a restart forgot would put the card back on the next
+    // launch, for everyone who ignored it.
+    expect(loaded.widgetPromptShown, isTrue);
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -165,6 +171,9 @@ void main() {
       // it is NOT on the sign-out forget list — see the field's comment.
       'reviewAskedAt',
       'reviewAskedCount',
+      // The one-time home-screen widget offer (`WidgetPromptPolicy`). Unlike
+      // the rating ledger above it IS on the sign-out forget list.
+      'widgetPromptShown',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });

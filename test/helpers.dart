@@ -143,7 +143,12 @@ JourneyState journeyOnDay(
     );
   }
   return JourneyState(
-    profile: UserProfile(alias: alias, avatarEmoji: '🦊'),
+    // Answered, so no fixture shows the smoking-history card on Home.
+    profile: UserProfile(
+      alias: alias,
+      avatarEmoji: '🦊',
+      smoking: SmokingHistory.never,
+    ),
     plan: plan,
     days: days,
     cravingsSurvivedTotal: 0,

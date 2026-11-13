@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -56,6 +57,7 @@ import 'settings_store.dart';
 import 'widget_coordinator.dart';
 import '../api/widget_store.dart';
 import '../../domain/date_key.dart';
+import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_review.dart';
 
 // ---- backend seam -----------------------------------------------------------
@@ -428,6 +430,21 @@ final pushMessagesProvider = Provider<PushMessages?>(
   },
 );
 
+/// The country the device is set to (ISO 3166-1 alpha-2), or null when it
+/// reports none. The app's own locale carries a language, not a country, so the
+/// More help page reads this to choose which phone numbers to show. Tests
+/// override it.
+final deviceRegionProvider = Provider<String?>(
+  (ref) => PlatformDispatcher.instance.locale.countryCode,
+);
+
+/// Opens a link outside the app — a phone number, a web page. The seam exists
+/// so a widget test can see WHAT was opened; production is [LpLinks.open],
+/// which never throws.
+final linkOpenerProvider = Provider<Future<bool> Function(Uri)>(
+  (ref) => LpLinks.open,
+);
+
 /// The OS notification permission, for the second-chance asks. Null on the
 /// fake backend, like [pushMessagesProvider]: there is no FCM to ask, and the
 /// asks simply do not happen there. Tests override it to reach the sheet.
@@ -466,6 +483,22 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
   (ref) => switch (ref.watch(backendModeProvider)) {
     BackendMode.fake => null,
     BackendMode.firebase => ReminderCoordinator(ReminderScheduler()),
+  },
+);
+
+/// The launcher, as the one-time widget card sees it (docs/15 QP-C2): can it
+/// add a widget, ask it to, and how many are placed.
+///
+/// Its own provider, not a reach through [widgetCoordinatorProvider], which is
+/// null on the fake backend. The fake's answer is the honest one for a desktop
+/// or a test — a [MemoryWidgetStore] that cannot pin and cannot count — and it
+/// is also what keeps every Home fixture free of a card it never asked for. A
+/// test about the prompt overrides it with a store that can; the device suite
+/// overrides it with the real [HomeWidgetStore] under the fake backend.
+final widgetStoreProvider = Provider<WidgetStore>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => MemoryWidgetStore(),
+    BackendMode.firebase => const HomeWidgetStore(),
   },
 );
 

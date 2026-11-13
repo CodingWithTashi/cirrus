@@ -14,6 +14,7 @@ import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_premium_gate.dart';
+import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/rolling_number.dart';
@@ -29,8 +30,12 @@ import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
+import '../help/smoking_rule_card.dart';
 import 'widgets/log_feedback.dart';
 import 'widgets/mood_sheet.dart';
+import 'widgets/program_card.dart';
+import '../../data/stores/widget_prompt_store.dart';
+import 'widgets/widget_prompt_card.dart';
 
 /// Frame 30 — HOME / Today. Bento grid, rolling counters, LOG PUFF in the
 /// thumb zone, SOS always floating. Over-limit state folds in from frame 31.
@@ -42,13 +47,39 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// The cigarettes answer that earned the one-rule card on this visit, or
+  /// null. Session-only on purpose: "shown once" means exactly that.
+  SmokingHistory? _smokingRuleFor;
+
   bool _nudgeDismissed = false;
   bool _ringPulse = false;
   final _hold = HoldToLog();
   bool _holdTokenBefore = false;
 
+  /// Back from the launcher's "add widget" dialog (or from the home screen after
+  /// the iPhone's three steps): the only moment the widget can be noticed, since
+  /// the dialog has no callback. Here rather than in the widget card because
+  /// Home is a lazily built list — a card scrolled out of the cache is disposed,
+  /// and a listener in it would die before the person came back. `resumed` is
+  /// reached from `inactive`, which is all a system dialog over the app produces
+  /// (recorded on a Pixel 8).
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        if (state == AppLifecycleState.resumed) {
+          ref.read(widgetPromptProvider.notifier).resume().ignore();
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     _hold.stop();
     super.dispose();
   }
@@ -141,7 +172,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // today must not stop Home asking about an unanswered yesterday.
         !yesterdayKey.isBefore(journey.historyStart) &&
         !(yesterdayLog?.isConfirmed ?? false);
-    final showMoodPrompt = todayLog?.mood == null && now.hour >= 18;
+    // The daily program's card (docs/15 QP-B4) asks the same question, so on a
+    // card day the evening mood prompt stands down: one check-in a day, not two.
+    final checkinHour = ref.watch(settingsStoreProvider).checkinHour;
+    final programShows =
+        !tourLocked &&
+        ProgramCard.shows(journey, now, checkinHour: checkinHour);
+    final showMoodPrompt =
+        todayLog?.mood == null && now.hour >= 18 && !programShows;
     // The last day of the plan, or any day after it.
     final planOver = snap.isFreedomDay || snap.isMaintenance;
     // Puffs on the books today or yesterday — what "still vaping" means
@@ -544,6 +582,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           LpNoteCard(l10n.homeOverLimitFooter),
                           const SizedBox(height: 10),
                         ],
+                        // The daily program (docs/15 stage B): directly under
+                        // the ring, and held back while the Day-1 tour runs.
+                        if (!tourLocked) ...[
+                          if (programShows) ...[
+                            ProgramCard(now: now),
+                            const SizedBox(height: 12),
+                          ],
+                          if (Program90Card.shows(journey, now)) ...[
+                            Program90Card(now: now),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
                         // Money + cravings bento row.
                         Row(
                           children: [
@@ -688,6 +738,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ],
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        // The cigarettes question for accounts made before
+                        // onboarding asked it (docs/15 QP-A3). Outside the
+                        // one-card chain below on purpose, like the offer
+                        // card: the question can wait, so it must not take the
+                        // slip card's place, and a slip must not be what
+                        // hides it. Held back while the Day-1 tour runs.
+                        if (journey.profile.smoking == null && !tourLocked) ...[
+                          _SmokingQuestionCard(
+                            onAnswer: (answer) {
+                              ref
+                                  .read(quitStoreProvider.notifier)
+                                  .setSmokingHistory(answer);
+                              // The answer makes this branch false on the very
+                              // next build, so the rule is held in this
+                              // State: shown once, on the visit the answer was
+                              // given, and never stored (docs/15 QP-A4).
+                              if (answer != SmokingHistory.never) {
+                                setState(() => _smokingRuleFor = answer);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                        ] else if (_smokingRuleFor != null && !tourLocked) ...[
+                          SmokingRuleCard(
+                            answer: _smokingRuleFor!,
+                            source: 'home',
+                            onDone: () => setState(() => _smokingRuleFor = null),
                           ),
                           const SizedBox(height: 12),
                         ],
@@ -879,6 +959,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                        // The one-time home-screen widget offer (docs/15 QP-C2).
+                        // Outside the one-card chain for the same reason as the
+                        // offer below and the cigarettes question above: an
+                        // optional convenience must not take the slot that
+                        // belongs to the person's own day. It pads itself and
+                        // is empty when there is nothing to offer.
+                        WidgetPromptCard(now: now),
                         // The day-3/7/14/30 offer. Outside the one-card chain
                         // above on purpose: that slot belongs to the person's
                         // own day (a slip, the evening mood, their risky
@@ -1356,6 +1443,55 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Have you ever smoked cigarettes?" — three taps, no follow-up, gone for
+/// good once answered. Not a [Dismissible]: it leaves by being answered, and
+/// "Never" is one tap for most people.
+class _SmokingQuestionCard extends StatelessWidget {
+  const _SmokingQuestionCard({required this.onAnswer});
+
+  final void Function(SmokingHistory) onAnswer;
+
+  @override
+  Widget build(BuildContext context) {
+    final lp = context.lp;
+    final l10n = context.l10n;
+    Widget chip(SmokingHistory answer, String label) => LpChip(
+      label: label,
+      selected: false,
+      fontSize: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      onTap: () => onAnswer(answer),
+    );
+    return LpCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.obSmokingTitle,
+            style: LpType.body14(lp.textPrimary, weight: FontWeight.w600),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            l10n.obSmokingSubtitle,
+            style: LpType.caption(lp.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              chip(SmokingHistory.never, l10n.obSmokingNever),
+              chip(SmokingHistory.former, l10n.obSmokingFormer),
+              chip(SmokingHistory.current, l10n.obSmokingCurrent),
+            ],
+          ),
+        ],
       ),
     );
   }

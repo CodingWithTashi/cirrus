@@ -145,6 +145,48 @@ void main() {
     expect(analytics.screens, [Routes.health]);
   });
 
+  testWidgets('More help is a screen view, reports its door, never its query', (
+    tester,
+  ) async {
+    final (container, analytics) = await open(tester);
+    container.read(routerProvider).go(Routes.home);
+    await tester.pumpAndSettle();
+    analytics.screens.clear();
+
+    unawaited(container.read(routerProvider).push(Routes.helpFrom('settings')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(analytics.screens, [Routes.help]);
+    expect(analytics.propsOfAll('help_viewed'), [
+      {'source': 'settings'},
+    ]);
+  });
+
+  testWidgets('More help opens with nobody signed in', (tester) async {
+    // Information, and the one screen that should never sit behind a sign-in:
+    // it is deliberately absent from the router's journey gate.
+    final container = ProviderContainer(overrides: fastBackendOverrides());
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const LastPuffApp(),
+      ),
+    );
+    // A signed-out app never settles (the welcome shimmer repeats), so fixed
+    // pumps: long enough for the splash to decide, then go.
+    await tester.pump(const Duration(seconds: 2));
+    expect(container.read(quitStoreProvider), isNull);
+
+    container.read(routerProvider).go(Routes.help);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(container.read(routerProvider).state.uri.path, Routes.help);
+    expect(find.text(l10n.helpTitle), findsOneWidget);
+  });
+
   testWidgets('the arena is a screen view, and never carries its query', (
     tester,
   ) async {

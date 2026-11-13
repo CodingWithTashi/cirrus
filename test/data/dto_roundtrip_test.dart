@@ -105,6 +105,144 @@ void main() {
       expect(JourneyCodec.decode(json).profile.whyWords, isNull);
     });
 
+    group('check-ups (QP-B7)', () {
+      final day1 = DateTime(2026, 8, 25);
+      final day2 = DateTime(2026, 9, 17);
+
+      test('an empty history stays absent on the wire', () {
+        final encoded = JourneyCodec.encode(journey);
+        expect(encoded.containsKey('checkups'), isFalse,
+            reason: 'written only once there is something, so a journey nobody '
+                'asked stays the document it always was');
+        expect(JourneyCodec.decode(encoded).checkups, isEmpty);
+      });
+
+      test('answers round-trip by day, question and answer', () {
+        final answered = journey.copyWith(
+          checkups: {
+            day1: {CheckupKind.nicotine: CheckupAnswer.cigarettes},
+            day2: {
+              CheckupKind.vaped30: CheckupAnswer.notVaped,
+              CheckupKind.nicotine: CheckupAnswer.noOther,
+            },
+          },
+        );
+        final wire = jsonEncode(JourneyCodec.encode(answered));
+        final decoded = jsonDecode(wire) as Map<String, dynamic>;
+        expect(decoded['checkups'], {
+          '2026-08-25': {'nicotine': 'cigarettes'},
+          '2026-09-17': {'vaped30': 'notVaped', 'nicotine': 'noOther'},
+        });
+        final back = JourneyCodec.decode(decoded);
+        expect(back.checkups[day1], {
+          CheckupKind.nicotine: CheckupAnswer.cigarettes,
+        });
+        expect(back.checkups[day2]![CheckupKind.vaped30], CheckupAnswer.notVaped);
+        expect(jsonEncode(JourneyCodec.encode(back)), wire);
+      });
+
+      test('unknown questions, unknown answers and mismatched pairs are dropped, '
+          'never a crash', () {
+        final json = JourneyCodec.encode(journey);
+        json['checkups'] = {
+          '2026-08-25': {
+            'nicotine': 'cigarettes', // good
+            'mood': 'okay', // a question this build does not know
+            'vaped30': 'sometimes', // an answer it does not know
+            'vaped90': 'cigarettes', // a real answer to a different question
+          },
+        };
+        final back = JourneyCodec.decode(json);
+        expect(back.checkups[day1], {
+          CheckupKind.nicotine: CheckupAnswer.cigarettes,
+        });
+      });
+
+      test('a day with nothing left after that disappears, and a bad key does '
+          'too', () {
+        final json = JourneyCodec.encode(journey);
+        json['checkups'] = {
+          '2026-08-25': {'nicotine': 'astral'},
+          'last tuesday': {'nicotine': 'noOther'},
+          '2026-09-17': 'not a map',
+        };
+        expect(JourneyCodec.decode(json).checkups, isEmpty);
+      });
+
+      test('a value that is not a map at all reads as no history', () {
+        for (final bad in [null, 3, 'x', const <dynamic>[]]) {
+          final json = JourneyCodec.encode(journey);
+          json['checkups'] = bad;
+          expect(JourneyCodec.decode(json).checkups, isEmpty, reason: '$bad');
+        }
+      });
+    });
+
+    group('smoking history (QP-A1)', () {
+      // Null is "never asked", which is a different fact from `never`: the
+      // Home question card keys off it, so collapsing the two would ask
+      // people who answered, or never ask people who did not.
+      const unasked = UserProfile(alias: '@matrixfox', avatarEmoji: '🦊');
+      final blank = journey.copyWith(profile: unasked);
+
+      test('an unanswered question stays absent on the wire', () {
+        final encoded =
+            JourneyCodec.encode(blank)['profile'] as Map<String, dynamic>;
+        expect(
+          encoded.containsKey('smoking'),
+          isFalse,
+          reason: 'written only when set, so every older document is unchanged',
+        );
+        final back = JourneyCodec.decode(
+          jsonDecode(jsonEncode(JourneyCodec.encode(blank)))
+              as Map<String, dynamic>,
+        );
+        expect(back.profile.smoking, isNull);
+      });
+
+      test('every answer round-trips by name', () {
+        for (final answer in SmokingHistory.values) {
+          final answered = blank.copyWith(
+            profile: blank.profile.copyWith(smoking: answer),
+          );
+          final wire = jsonEncode(JourneyCodec.encode(answered));
+          expect(
+            (jsonDecode(wire)['profile'] as Map<String, dynamic>)['smoking'],
+            answer.name,
+          );
+          final back = JourneyCodec.decode(
+            jsonDecode(wire) as Map<String, dynamic>,
+          );
+          expect(back.profile.smoking, answer);
+          expect(jsonEncode(JourneyCodec.encode(back)), wire);
+        }
+      });
+
+      test('a name this build does not know decodes as never asked', () {
+        final json = JourneyCodec.encode(blank);
+        (json['profile']! as Map<String, dynamic>)['smoking'] = 'occasionally';
+        expect(JourneyCodec.decode(json).profile.smoking, isNull);
+      });
+
+      test('copyWith keeps the answer when changing something else', () {
+        final answered = blank.profile.copyWith(
+          smoking: SmokingHistory.current,
+        );
+        expect(answered.copyWith(alias: '@other').smoking, SmokingHistory.current);
+        expect(answered.copyWith(coachName: 'Wren').smoking, SmokingHistory.current);
+      });
+
+      test('going back to the default coach name keeps the answer', () {
+        final named = blank.profile.copyWith(
+          smoking: SmokingHistory.former,
+          coachName: 'Wren',
+        );
+        final reset = named.withDefaultCoachName();
+        expect(reset.coachName, isNull);
+        expect(reset.smoking, SmokingHistory.former);
+      });
+    });
+
     test('a skipped Day-1 walkthrough round-trips', () {
       expect(journey.day1TourSkipped, isFalse);
 

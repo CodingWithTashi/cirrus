@@ -228,7 +228,7 @@ class ReminderScheduler implements ReminderSink {
         // An absolute instant in the device's zone; the planner guarantees it
         // is in the future, which `zonedSchedule` insists on.
         scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
-        notificationDetails: _oneShotDetails(kind),
+        notificationDetails: oneShotDetails(kind, body),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: kind.name,
       );
@@ -274,36 +274,61 @@ class ReminderScheduler implements ReminderSink {
   /// Channels are OS surface, not app copy, so these stay English like the
   /// two above them. A celebration gets its own channel so someone who wants
   /// the danger-hour nudge but not the confetti can say so in system settings.
-  NotificationDetails _oneShotDetails(ReminderKind kind) => switch (kind) {
-    ReminderKind.checkin => const NotificationDetails(
-      android: AndroidNotificationDetails(
-        _checkinChannelId,
-        'Evening check-ins',
-        channelDescription: 'One nudge an evening to log how the day went.',
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
-      ),
-      iOS: DarwinNotificationDetails(),
-    ),
-    ReminderKind.milestone => const NotificationDetails(
-      android: AndroidNotificationDetails(
-        _milestoneChannelId,
-        'Milestone celebrations',
-        channelDescription: 'The morning after you hit a streak milestone.',
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
-      ),
-      iOS: DarwinNotificationDetails(),
-    ),
-    _ => const NotificationDetails(
-      android: AndroidNotificationDetails(
-        _trialChannelId,
-        'Trial reminders',
-        channelDescription: 'The heads-up before a free trial ends.',
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
-      ),
-      iOS: DarwinNotificationDetails(),
-    ),
-  };
+  ///
+  /// **Every kind is named.** This used to end in `_ =>` for the trial reminder,
+  /// which would have filed any new kind under "Trial reminders" — and a channel
+  /// is the user's own switch, so a message under the wrong one can only be
+  /// silenced by silencing something else.
+  ///
+  /// A program message (docs/15 stage B) takes over the evening check-in's slot,
+  /// so it shares that channel. [body] goes into a `BigTextStyleInformation`:
+  /// Android collapses a plain body to one line, and a message is a sentence or
+  /// two.
+  @visibleForTesting
+  static NotificationDetails oneShotDetails(ReminderKind kind, String body) =>
+      switch (kind) {
+        ReminderKind.checkin => const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _checkinChannelId,
+            'Evening check-ins',
+            channelDescription: 'One nudge an evening to log how the day went.',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        ReminderKind.program => NotificationDetails(
+          android: AndroidNotificationDetails(
+            _checkinChannelId,
+            'Evening check-ins',
+            channelDescription: 'One nudge an evening to log how the day went.',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            styleInformation: BigTextStyleInformation(body),
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+        ReminderKind.milestone => const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _milestoneChannelId,
+            'Milestone celebrations',
+            channelDescription: 'The morning after you hit a streak milestone.',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        // `danger` is scheduled through `apply`, not here; it is listed so the
+        // switch stays exhaustive and a new kind cannot fall through to it.
+        ReminderKind.danger || ReminderKind.trial => const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _trialChannelId,
+            'Trial reminders',
+            channelDescription: 'The heads-up before a free trial ends.',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+      };
 }

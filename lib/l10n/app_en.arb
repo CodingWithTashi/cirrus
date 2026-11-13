@@ -301,6 +301,146 @@
   "obFirstPuff30to60": "30–60 minutes",
   "obFirstPuffHourPlus": "An hour or more",
   "obFirstPuffScience": "Time-to-first-puff is the strongest single predictor of dependence. 76% of young vapers reach for it within 30 min of waking.",
+  "obSmokingTitle": "Have you ever smoked cigarettes?",
+  "obSmokingSubtitle": "It changes the advice you get from us.",
+  "obSmokingNever": "Never",
+  "obSmokingFormer": "I used to",
+  "obSmokingCurrent": "I still do",
+  "helpTitle": "More help",
+  "helpIntro": "An app can only do so much. For some people, a medicine or a real person makes the difference.",
+  "helpMedicineTitle": "Medicine",
+  "helpMedicineBody": "There is medicine for this. In trials with young people, a stop-smoking medicine called varenicline, taken with counselling, helped more people stop vaping than a placebo did. It's a prescription medicine, it isn't licensed specifically for vaping, and who can have it differs from country to country. Cirrus can't tell you whether it's right for you. A doctor or pharmacist can.",
+  "helpMedicineSource": "Read the research",
+  "helpPeopleTitle": "People you can talk to",
+  "helpPeopleNote": "Official services, listed from their own pages. Cirrus has no link with any of them.",
+  "helpNoLocal": "We haven't listed a service for your country yet.",
+  "helpDoctorLine": "Wherever you are, a doctor or pharmacist can talk it through and tell you what's available near you.",
+  "helpCall": "Call",
+  "helpOpenSite": "Open website",
+  "helpSourceLink": "Source",
+  "smokingRuleBody": "One rule above the others: don't go back to cigarettes. If it ever comes down to a cigarette or your vape, the vape is the safer choice, and choosing it is not failing.",
+  "smokingRuleCurrent": "If you smoke as well, stopping the cigarettes matters most. A stop-smoking service can help with both.",
+  "programMsgPre7": "Your date is a week out. Tell one person it's happening: saying it makes it real.",
+  "programMsgPre6": "Notice the three moments you reach for it most. Those are the ones to plan for.",
+  "programMsgPre5": "Pick one thing for your hands and mouth in those moments. Keep it where the vape used to be.",
+  "programMsgPre4": "A craving rises, peaks and passes whether or not you vape. Try waiting one out today.",
+  "programMsgPre3": "Decide now what happens to the device and the pods on your date. Deciding early makes it easy.",
+  "programMsgPre2": "The first three days are the hardest. Clear what you can out of them.",
+  "programMsgPre1": "Tomorrow. Put everything out of reach tonight, and make the morning easy.",
+  "programMsgQ0am": "Today. One job: get to tonight. When it hits, open this and press Craving.",
+  "programMsgQ0pm": "The first evening is often the hardest stretch. Plan it hour by hour.",
+  "programMsgD1am": "The urge on waking is habit as much as nicotine. Change your first ten minutes.",
+  "programMsgD1pm": "Irritable, restless, foggy: that's withdrawal, and it passes.",
+  "programMsgD2am": "This is often the peak. Nothing is wrong with you. Keep the day small.",
+  "programMsgD2pm": "If the cravings are winning, there's help beyond an app: people to call, and medicine.",
+  "programMsgD3": "For most people it starts easing around now. If it hasn't yet, that's normal too.",
+  "programMsgD4": "\"One won't hurt\" is the urge talking. Give it ten minutes and something to do.",
+  "programMsgD5": "Vaping never fixed the stress, only the craving. Try the Stress button.",
+  "programMsgD6": "Friends who vape: decide your line before you see them.",
+  "programMsgD7": "A week since your date. If you slipped, that's information. Pick up from today.",
+  "programMsgD8": "Boredom is a trigger. Name what you'll do with the empty minutes.",
+  "programMsgD9": "A drink lowers the guard. Plan the first one, or skip it this week.",
+  "programMsgD10": "Sleep and appetite can wobble for a while. It settles.",
+  "programMsgD11": "You're becoming someone who doesn't vape. Say it out loud once.",
+  "programMsgD12": "Look at what has stayed in your pocket.",
+  "programMsgD13": "Don't swap it for cigarettes or pouches. It's the same hook.",
+  "programMsgD14": "Two weeks since your date. Cravings come less often, and they still pass.",
+  "programMsgD16": "The \"just to check\" puff is how most restarts begin.",
+  "programMsgD18": "A bad day isn't a reason. Decide now what you'll do on one.",
+  "programMsgD21": "Three weeks. Give yourself something real for it.",
+  "programMsgD23": "Keep the break, lose the vape. What has replaced the vape break?",
+  "programMsgD25": "Someone will offer. Have your line ready.",
+  "programMsgD28": "Four weeks since your date. Notice how a craving feels now.",
+  "programMsgD30": "A month since your date. There's a question waiting in today's card.",
+  "programMsgD32": "Think once about the triggers you haven't met yet: a trip, an exam, a bad week.",
+  "programMsgD35": "Notice anything different in your body?",
+  "programMsgD37": "A craving out of nowhere is normal for months. It still passes.",
+  "programMsgD39": "Someone in the community is on their day one. A word from you helps.",
+  "programMsgD42": "Six weeks since your date. Worth a moment to notice.",
+  "programMsgD44": "Read your reason again. It's waiting in the craving flow.",
+  "programMsgD46": "Late slips happen. Same rule: it's data, and you pick up the same day.",
+  "programMsgD49": "When everything's going well, \"just one\" sounds safe. It isn't.",
+  "programMsgD51": "What would you tell yourself on your first day?",
+  "programMsgD53": "The program ends soon. The daily message stays for the hard days.",
+  "programMsgD56": "Eight weeks since your date. The program ends here. The app doesn't.",
+  "programReplyBreathe": "Breathe for one minute: in for four, out for six. The Stress button will count it with you.",
+  "programReplyWaitTen": "Wait ten minutes, then do one small thing with your hands. Most urges pass before then.",
+  "programReplyChangeRoom": "Change the room. Cold water on your face, or a walk to the door and back.",
+  "programReplyTellSomeone": "Tell someone it's a rough one, or tell the coach. It weighs less out loud.",
+  "programReplyOkayHold": "Steady is the goal. Keep doing what you're doing.",
+  "programReplyOkayOne": "An okay day counts. Is there one thing to look forward to tonight?",
+  "programReplyOkayShort": "Okay is fine. Keep the day small and the evening planned.",
+  "programReplyPraiseWhy1": "Good. Keep this in view: “{why}”",
+  "@programReplyPraiseWhy1": {
+    "placeholders": {
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "programReplyPraiseWhy2": "That's a day worth having. It's for this: “{why}”",
+  "@programReplyPraiseWhy2": {
+    "placeholders": {
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "programReplyPraise3": "Good days are built out of ordinary ones like this. Well done.",
+  "programReplyPraise4": "Notice how this feels. Remember it on a harder day.",
+  "programReplySlipData": "A slip is information, not a verdict. You're still here, and that counts.",
+  "programReplySlipToday": "Keep going today. One puff doesn't have to become a whole day.",
+  "programReplySlipPlan": "If the plan stopped fitting, start a new one. You keep everything you've lived so far.",
+  "programTipStress1": "Name it: \"this is stress, not a craving.\" Naming it takes some of the weight off.",
+  "programTipStress2": "Breathe out longer than you breathe in. Five slow breaths.",
+  "programTipStress3": "Move for two minutes: stairs, a walk, a stretch. The body clears stress by moving.",
+  "programTipStress4": "Write down the one thing stressing you. Then one small step on it.",
+  "programTipStress5": "Text someone, or tell the coach. Stress shrinks when it's said out loud.",
+  "programTipSlip1": "Write down what led to it: where, who, what time. That's your plan for next time.",
+  "programTipSlip2": "Reset the moment: change the room, drink some water, do something else for ten minutes.",
+  "programTipSlip3": "Don't make it a bigger story. One slip is one slip. The next choice is a new one.",
+  "programTipSlip4": "Tell someone, or the coach. Shame keeps slips hidden; saying it takes the power out.",
+  "programTipMore1": "Watch the urge like a wave: it rises, peaks and passes. You don't have to act on it.",
+  "programTipMore2": "Delay it. Ten minutes, then decide. Most urges are gone by then.",
+  "programTipMore3": "Replace the action: gum, a pen, a straw, something in your hands.",
+  "programTipMore4": "Plan the trigger. If it's coffee, change your coffee routine for a week.",
+  "programTipMore5": "Sip water slowly when it hits. It gives your mouth and hands a job.",
+  "programTipMore6": "Change the place or the time where you used to vape. A new routine has no habit attached.",
+  "programTipMore7": "Tell the people around you what you're doing. They help when they know.",
+  "programTipMore8": "Keep your reason where you'll see it: lock screen, wallet, a note by the bed.",
+  "programTipMore9": "Eat something. A low-energy body makes urges louder.",
+  "programTipMore10": "Sleep matters. A tired mind negotiates.",
+  "programTipMore11": "A craving is not an order. You can feel it and not do it.",
+  "programTipMore12": "Don't wait to feel ready. Do the next small thing.",
+  "programCardTitle": "TODAY · DAY {day}",
+  "@programCardTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "programCardTitlePast": "TODAY",
+  "programQuestion": "How is today going?",
+  "programBtnCraving": "Craving",
+  "programBtnStress": "Stress",
+  "programBtnSlipped": "Slipped",
+  "programBtnMore": "More",
+  "programStressTitle": "A minute for yourself",
+  "programStressBody": "Breathe with the circle: in as it grows, out as it shrinks.",
+  "programSlippedTitle": "A slip is information",
+  "programSlippedCoach": "Talk to the coach",
+  "programMoreTitle": "One more idea",
+  "programCheckupNicotineQ": "Any other nicotine this week?",
+  "programCheckupNone": "No",
+  "programCheckupCigarettes": "Cigarettes",
+  "programCheckupPouches": "Pouches",
+  "programCheckupPatchGum": "Patch or gum",
+  "programCheckupPatchNote": "A pharmacist can help you use it well.",
+  "programCheckupVapedQ": "Have you vaped in the last 30 days?",
+  "programCheckupYes": "Yes",
+  "programCheckupThanks": "Thanks for answering.",
+  "programCheckup90Title": "90 days on",
   "obFactLabelScience": "THE SCIENCE",
   "obFactLabelYourNumbers": "YOUR NUMBERS",
   "obFactTried": "Among daily young users, failed quit attempts went from 28% to 53% between 2020 and 2024. The devices got better at their job. That isn't you getting weaker — it's an arms race nobody asked you to enter.",
@@ -420,7 +560,7 @@
   "obRevealSavedLabel": "saved by Freedom Day",
   "obRevealPuffsLabel": "puffs you won't take",
   "obRevealProofLabel": "HONEST PROOF",
-  "obRevealProof": "24% quit with a structured program vs 19% alone — randomized trial of 2,588 young adults. Not magic. Better odds.",
+  "obRevealProof": "Trial of 2,588 young adults: with daily quit messages by text, 24% said they had stopped vs 19% without. Not magic. Better odds.",
   "obRevealComparisonOne": "By Freedom Day, that's {item}.",
   "@obRevealComparisonOne": {
     "placeholders": {
@@ -536,12 +676,12 @@
   "obWhyWordsCta": "That's why",
   "obWhyWordsSkip": "Skip this",
   "obNotifTitle": "Backup, exactly when you cave.",
-  "obNotifSubtitle": "Not spam. A nudge before your danger hours, an evening check-in on your plan, and a word when you hit a milestone.",
+  "obNotifSubtitle": "Not spam. A nudge before your danger hours, a daily message on your plan, and a word when you hit a milestone.",
   "obNotifPreviewTime": "Fri 9:54 PM",
   "obNotifPreviewBody": "heads up — Friday nights are your spike. Plan's ready 💪",
   "obNotifBullet1": "Danger-hour heads-up (you set the hours)",
-  "obNotifBullet2": "An evening check-in, and a milestone celebration",
-  "obNotifBullet3": "Nothing else — no marketing, ever",
+  "obNotifBullet2": "A daily message on your plan, and a milestone celebration",
+  "obNotifBullet3": "The first three mornings from your date. Nothing else — no marketing, ever",
   "obNotifCta": "Turn on backup",
   "paywallTitleUpgrade": "Go further with Premium.",
   "paywallRevealLabel": "YOUR PLAN",
@@ -1609,7 +1749,18 @@
   },
   "planAdaptiveStretched": "Freedom Day moved back a day to match.",
   "planAdjustSheetTitle": "Adjust your plan",
-  "planAdjustSheetNote": "Curve regenerates from today with your real numbers. History stays. Freedom Day moves honestly.",
+  "planAdjustSheetNote": "Pick how many days from today until Freedom Day. Your history stays as it is.",
+  "planAdjustPreview": "Freedom Day would be {date}.",
+  "planAdjustSame": "That's the date you already have.",
+  "planAdjustLater": "A later date is harder to reach. Pick the earliest you can keep.",
+  "planAdjustNewPlanLink": "Different method, or a fresh start? Start a new plan.",
+  "@planAdjustPreview": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "planAdjustApply": "Apply — reflow my curve",
   "planAdjusted": "Plan reflowed. New Freedom Day: {date}",
   "@planAdjusted": {
@@ -2105,10 +2256,10 @@
   "slipTriggerJustHappened": "Just happened",
   "slipNoBannedWords": "No banned words here, ever. Most people who quit for good slipped on the way. The log stays honest, the plan adapts.",
   "slipAdjustCta": "Adjust my plan",
-  "slipAdjustTitle": "Here's the adjustment.",
-  "slipCurveLabel": "YOUR CURVE — GENTLY REFLOWN",
+  "slipAdjustTitle": "Your date, your call.",
+  "slipCurveLabel": "YOUR CURVE",
   "slipTheBump": "the slip bump",
-  "slipNewFreedom": "Freedom Day: {date} (+{days} days)",
+  "slipNewFreedom": "Freedom Day: {date} ({days, plural, =1{+1 day} other{+{days} days}})",
   "@slipNewFreedom": {
     "placeholders": {
       "date": {
@@ -2119,7 +2270,7 @@
       }
     }
   },
-  "slipCurveNote": "Two extra days, same destination.",
+  "slipCurveNote": "Same destination.",
   "slipStreakSurvives": "Your {days} days still count.",
   "@slipStreakSurvives": {
     "placeholders": {
@@ -2129,8 +2280,24 @@
     }
   },
   "slipFlameDims": "The flame dims, it doesn't die. One clean day brings it back to full blaze.",
-  "slipBackOnCurve": "Back on the curve",
   "slipTalkFirst": "Talk it through with coach first",
+  "slipKeepDate": "Keep my date",
+  "slipDateStays": "Your Freedom Day stays {date}.",
+  "slipAddDays": "{days, plural, =1{Add 1 day} other{Add {days} days}}",
+  "@slipDateStays": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@slipAddDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "profileQuittingSince": "quitting since {date} · {method} · day {day}",
   "@profileQuittingSince": {
     "placeholders": {
@@ -2343,10 +2510,10 @@
   "settingsManageUnavailable": "Manage this subscription from the store account that bought it.",
   "settingsNotifications": "Notifications",
   "settingsDangerHours": "Danger hours",
-  "settingsCheckin": "Evening check-in",
+  "settingsCheckin": "Daily message",
   "settingsCheckinOff": "off · edit ›",
-  "settingsCheckinBody": "One notification an evening with today's limit, so you can log how it went. It stops by itself after a week without you opening Cirrus.",
-  "settingsCheckinToggle": "Remind me each evening",
+  "settingsCheckinBody": "One message an evening about your plan, plus the first three mornings from your date. It stops by itself after a week without you opening Cirrus.",
+  "settingsCheckinToggle": "Send me the daily message",
   "settingsCheckinTime": "Time",
   "settingsDangerHoursEdit": "{range} · edit ›",
   "@settingsDangerHoursEdit": {
@@ -2485,12 +2652,12 @@
   },
   "coachLoadingThread": "Catching up on your chat…",
   "moderationLoading": "Loading the queue…",
-  "slipCurveNoteParty": "Two extra days, same destination. Before the next party, set a danger hour so the reminder lands first.",
-  "slipCurveNoteStress": "Two extra days, same destination. When stress hits, the panic button's 60-second breathe is built for exactly that minute.",
-  "slipCurveNoteBoredom": "Two extra days, same destination. For the empty minutes, the game inside the panic flow is one tap away.",
-  "slipCurveNoteDrinking": "Two extra days, same destination. Set a danger hour before your next drink — the reminder lands before the first one.",
-  "slipCurveNoteFriends": "Two extra days, same destination. Next time, text your coach before you meet them, not after.",
-  "slipCurveNoteJustHappened": "Two extra days, same destination. It happens. The log stays honest, and tomorrow is a clean day.",
+  "slipCurveNoteParty": "Same destination. Before the next party, set a danger hour so the reminder lands first.",
+  "slipCurveNoteStress": "Same destination. When stress hits, the panic button's 60-second breathe is built for exactly that minute.",
+  "slipCurveNoteBoredom": "Same destination. For the empty minutes, the game inside the panic flow is one tap away.",
+  "slipCurveNoteDrinking": "Same destination. Set a danger hour before your next drink — the reminder lands before the first one.",
+  "slipCurveNoteFriends": "Same destination. Next time, text your coach before you meet them, not after.",
+  "slipCurveNoteJustHappened": "Same destination. It happens. The log stays honest, and tomorrow is a clean day.",
   "widgetDay": "day %1$d",
   "@widgetDay": {
     "description": "Home-screen widget: the day label above the count. A NATIVE format template - the %1$d is filled by Kotlin String.format, not by gen-l10n, because the widget recomputes the day number itself across a midnight the app slept through."
@@ -2526,6 +2693,13 @@
   },
   "widgetEmptyBody": "Tap to open Cirrus",
   "widgetWatchOpenPhone": "Open Cirrus on your iPhone",
+  "widgetPromptTitle": "Log a puff in one tap",
+  "widgetPromptBody": "Add the Cirrus widget to your home screen and log without opening the app.",
+  "widgetPromptAdd": "Add widget",
+  "widgetPromptStep1": "Touch and hold an empty spot on your home screen until the icons wiggle.",
+  "widgetPromptStep2": "Tap + in the top-left corner.",
+  "widgetPromptStep3": "Search for Cirrus and tap Add Widget.",
+  "widgetPromptGotIt": "Got it",
   "@widgetEmptyBody": {
     "description": "Home-screen widget empty state, second line."
   },

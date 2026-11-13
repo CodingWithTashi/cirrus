@@ -97,12 +97,89 @@ void main() {
       expect(reflown.freedomDate, DateTime(2026, 9, 4));
     });
 
-    test('stretch is capped at +50% of the pace', () {
+    test('stretch is capped at seven days, which is half of a 14-day plan', () {
       var p = plan(pace: 14);
       for (var i = 0; i < 20; i++) {
         p = TaperEngine.reflowAfterSlip(p);
       }
       expect(p.stretchDays, 7);
+    });
+  });
+
+  // docs/15 QP-A9. Every slip used to be able to push Freedom Day back by up
+  // to half the plan (15 days on a 30-day taper), and each week of delay to a
+  // quit date raised the chance of lapsing by 19% (Hughes 2010). The ceiling is
+  // seven days in total. The table below is the same one
+  // `functions/test/taperEngine.test.ts` pins — the existing pace-14 test above
+  // passes under the old and the new rule alike, which is why it is not enough.
+  group('TaperEngine stretch ceiling (QP-A9)', () {
+    QuitPlan stretched(int days, {int pace = 30}) =>
+        plan(pace: pace, stretch: days);
+
+    test('a slip adds two days while there is room', () {
+      expect(TaperEngine.reflowAfterSlip(stretched(0)).stretchDays, 2);
+      expect(TaperEngine.reflowAfterSlip(stretched(4)).stretchDays, 6);
+    });
+
+    test('the last of the room is taken whole, never more', () {
+      expect(TaperEngine.reflowAfterSlip(stretched(6)).stretchDays, 7);
+      expect(TaperEngine.reflowAfterSlip(stretched(5)).stretchDays, 7);
+    });
+
+    test('at the ceiling a slip adds nothing', () {
+      expect(TaperEngine.reflowAfterSlip(stretched(7)).stretchDays, 7);
+    });
+
+    test('a stretch already given is never taken back', () {
+      // A running plan that was stretched under the 50% rule keeps every day
+      // it was promised. Lowering it would move somebody's Freedom Day closer
+      // without their asking.
+      expect(TaperEngine.reflowAfterSlip(stretched(10)).stretchDays, 10);
+      expect(TaperEngine.reflowAfterSlip(stretched(15)).stretchDays, 15);
+    });
+
+    test('seven days is the ceiling on every length on offer', () {
+      for (final pace in [14, 21, 30, 42]) {
+        var p = plan(pace: pace);
+        for (var i = 0; i < 20; i++) {
+          p = TaperEngine.reflowAfterSlip(p);
+        }
+        expect(p.stretchDays, 7, reason: 'pace $pace');
+      }
+    });
+
+    test('a plan too short for seven is still held to half of itself', () {
+      // Only reachable by a plan restarted at a short length: 10 days → 5.
+      var p = plan(pace: 10);
+      for (var i = 0; i < 20; i++) {
+        p = TaperEngine.reflowAfterSlip(p);
+      }
+      expect(p.stretchDays, 5);
+    });
+
+    test('cold turkey has no runway to stretch, so it is returned as it was', () {
+      final cold = plan(method: QuitMethod.coldTurkey, pace: 1);
+      final after = TaperEngine.reflowAfterSlip(cold);
+      expect(after.stretchDays, 0);
+      expect(after.method, QuitMethod.coldTurkey);
+      expect(TaperEngine.stretchLeft(cold), 0);
+    });
+
+    test('stretchLeft is what a slip can still add', () {
+      expect(TaperEngine.stretchLeft(stretched(0)), 7);
+      expect(TaperEngine.stretchLeft(stretched(5)), 2);
+      expect(TaperEngine.stretchLeft(stretched(7)), 0);
+      // Never negative for a plan stretched past today's ceiling.
+      expect(TaperEngine.stretchLeft(stretched(10)), 0);
+    });
+
+    test('stretchLeft agrees with what reflowAfterSlip actually does', () {
+      for (final given in [0, 3, 6, 7, 12]) {
+        final p = stretched(given);
+        final room = TaperEngine.stretchLeft(p);
+        final grew = TaperEngine.reflowAfterSlip(p).stretchDays - given;
+        expect(grew, room < 2 ? room : 2, reason: 'stretch $given');
+      }
     });
   });
 

@@ -83,6 +83,9 @@ abstract final class SeedData {
         attempts: QuitAttempts.twoToFive,
         frequency: VapeFrequency.always,
         firstPuff: FirstPuffWindow.withinFive,
+        // Answered, so the demo persona never shows the one-time question
+        // card on Home (docs/15 QP-A3).
+        smoking: SmokingHistory.never,
       ),
       plan: plan,
       days: days,

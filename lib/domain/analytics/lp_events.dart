@@ -1,4 +1,5 @@
 import '../logic/games/game_id.dart';
+import '../logic/widget_prompt_policy.dart';
 import 'analytics.dart';
 
 /// The server-enforced allowances a person can run out of.
@@ -394,6 +395,106 @@ extension LpEvents on AnalyticsSink {
       'plan_number': planNumber,
     }),
   );
+
+  /// The daily program's card was shown (docs/15 QP-B4): [day] is the program
+  /// day (days from the quit date, −7 … 56) and [slot] is `morning`, `evening`
+  /// or `checkup` for a day that carries only a question. Once per day and slot
+  /// per visit to Home, so a rebuild is never counted twice.
+  void programShown({required int day, required String slot}) =>
+      track(AnalyticsEvent('program_shown', {'day': day, 'slot': slot}));
+
+  /// A mood was answered on the card and its written reply shown. [mood] is the
+  /// `Mood` name and [track] is `onTrack` or `slipped` — the two things the
+  /// reply depends on. Never the note.
+  void programReply({required String mood, required String track}) =>
+      // `this.`: the parameter named `track` would otherwise shadow the method.
+      this.track(AnalyticsEvent('program_reply', {'mood': mood, 'track': track}));
+
+  /// One of the card's help buttons was tapped. [kind] is `craving`, `stress`,
+  /// `slipped` or `more`.
+  void programHelp(String kind) =>
+      track(AnalyticsEvent('program_help', {'kind': kind}));
+
+  /// A daily-program check-up was answered (docs/15 QP-B7). [kind] is the
+  /// question (`nicotine`, `vaped30`, `vaped90`) and [answer] what it was
+  /// answered with, both enum names — coarse values, never anything typed.
+  ///
+  /// Reported when GIVEN, as well as stored on the journey: an older build on a
+  /// second device rewrites the whole journey document and would drop the
+  /// stored copy, so this is the record that cannot be overwritten.
+  void checkupAnswered({required String kind, required String answer}) => track(
+    AnalyticsEvent('checkup_answered', {'kind': kind, 'answer': answer}),
+  );
+
+  /// The 30- or 90-day question was answered: [at] is the horizon in days and
+  /// [vapeFree] whether the person says they have not vaped in the last thirty.
+  /// The number the program exists to move, read straight off the funnel.
+  void quitStatusReported({required int at, required bool vapeFree}) => track(
+    AnalyticsEvent('quit_status_reported', {
+      'at': at,
+      'vape_free': vapeFree.toString(),
+    }),
+  );
+
+  /// The one-time home-screen widget card was put on Home (docs/15 QP-C2).
+  /// [way] is how this device adds one: `pinDialog` (Android's system dialog)
+  /// or `walkthrough` (the three steps on an iPhone). Marked once per device
+  /// and account, so this is also the denominator for `widget_prompt_accepted`.
+  void widgetPromptShown(WidgetAddWay way) =>
+      track(AnalyticsEvent('widget_prompt_shown', {'way': way.name}));
+
+  /// The card's button was tapped: the system dialog was requested
+  /// (`pinDialog`) or "Got it" was pressed after the three steps
+  /// (`walkthrough`). **Not** that a widget was added — the dialog has no
+  /// callback — which is what `widget_installed` is for.
+  ///
+  /// The two ways are not the same act, so read them apart: on Android this is
+  /// a request the launcher has just been given, on an iPhone it only says the
+  /// steps were read, before the person has gone to the home screen at all.
+  void widgetPromptAccepted(WidgetAddWay way) =>
+      track(AnalyticsEvent('widget_prompt_accepted', {'way': way.name}));
+
+  /// A Cirrus widget was found on the home screen after the person accepted
+  /// the offer: the first re-read of the launcher on resume that counted more
+  /// widgets than before the dialog. Once per acceptance. It is attributed to
+  /// the card by order alone — a widget added from the home screen's own
+  /// picker between the request and the re-read would be counted too, and
+  /// nothing can tell the two apart.
+  void widgetInstalled() => track(const AnalyticsEvent('widget_installed', {}));
+
+  /// "Adjust my plan" moved Freedom Day (docs/15 QP-A11). [deltaDays] is the
+  /// shift in calendar days: negative when the date came closer, positive when
+  /// it moved out. Never reported for an adjustment that left the date where it
+  /// was — that one is not an adjustment.
+  void planAdjusted({required int deltaDays}) =>
+      track(AnalyticsEvent('plan_adjusted', {'delta_days': deltaDays}));
+
+  /// A slip was resolved on the slip screen (docs/15 QP-A10). [keptDate] is
+  /// whether the person kept their Freedom Day (true) or added days to it
+  /// (false). "Talk it through first" is not a resolution, so it reports
+  /// nothing: the slip card stays until they decide.
+  ///
+  /// A slip used to stretch the plan whichever button was pressed, so this
+  /// split could not be asked of the data at all.
+  void slipResolved({required bool keptDate}) => track(
+    AnalyticsEvent('slip_resolved', {'kept_date': keptDate.toString()}),
+  );
+
+  /// The More help page was opened (docs/15 QP-A7). [source] is the door:
+  /// `settings`, `onboarding`, `home`, `slip`, `program`, or `direct` for a link
+  /// with none.
+  ///
+  /// Whether anyone ever looks for a person or a medicine was unmeasured. Add
+  /// a door, add it here.
+  void helpViewed(String source) =>
+      track(AnalyticsEvent('help_viewed', {'source': source}));
+
+  /// A link on the More help page was opened. [kind] is `call`, `web`,
+  /// `source` (the official page an entry was checked against) or `medicine`
+  /// (the research link). Never the number or the URL: those say where a
+  /// person was, and the kind is enough to tell what the page is for.
+  void helpLinkOpened(String kind) =>
+      track(AnalyticsEvent('help_link_opened', {'kind': kind}));
 
   /// Somebody signed out, and where they were when they did.
   ///
