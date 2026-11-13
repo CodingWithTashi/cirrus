@@ -4131,6 +4131,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get widgetWatchOpenPhone => 'Öffne Cirrus auf deinem iPhone';
 
   @override
+  String get widgetPromptTitle => 'Einen Zug loggen mit einem Tipp';
+
+  @override
+  String get widgetPromptBody =>
+      'Hol dir das Cirrus-Widget auf den Home-Bildschirm und logg, ohne die App zu öffnen.';
+
+  @override
+  String get widgetPromptAdd => 'Widget hinzufügen';
+
+  @override
+  String get widgetPromptStep1 =>
+      'Halte eine freie Stelle auf dem Home-Bildschirm gedrückt, bis die Symbole wackeln.';
+
+  @override
+  String get widgetPromptStep2 => 'Tippe oben links auf +.';
+
+  @override
+  String get widgetPromptStep3 =>
+      'Suche nach Cirrus und tippe auf „Widget hinzufügen“.';
+
+  @override
+  String get widgetPromptGotIt => 'Alles klar';
+
+  @override
   String get milestoneNotifTitle => 'Schau dir deine Flamme an';
 
   @override

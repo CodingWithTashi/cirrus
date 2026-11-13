@@ -13,6 +13,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/domain/analytics/lp_events.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
+import 'package:last_puff/domain/logic/widget_prompt_policy.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
 
@@ -90,7 +91,10 @@ void main() {
         ..programReply(mood: 'rough', track: 'onTrack')
         ..programHelp('stress')
         ..checkupAnswered(kind: 'nicotine', answer: 'pouches')
-        ..quitStatusReported(at: 30, vapeFree: true);
+        ..quitStatusReported(at: 30, vapeFree: true)
+        ..widgetPromptShown(WidgetAddWay.pinDialog)
+        ..widgetPromptAccepted(WidgetAddWay.walkthrough)
+        ..widgetInstalled();
 
       expect(a.names, [
         'onboarding_start',
@@ -171,6 +175,11 @@ void main() {
         'program_help',
         'checkup_answered',
         'quit_status_reported',
+        // The one-time home-screen widget offer (docs/15 QP-C2): seen,
+        // taken up, and — read back from the launcher on resume — placed.
+        'widget_prompt_shown',
+        'widget_prompt_accepted',
+        'widget_installed',
       ]);
       expect(a.propsOf('help_viewed'), {'source': 'settings'});
       expect(a.propsOf('help_link_opened'), {'kind': 'call'});
@@ -181,6 +190,9 @@ void main() {
       expect(a.propsOf('program_help'), {'kind': 'stress'});
       expect(a.propsOf('checkup_answered'), {'kind': 'nicotine', 'answer': 'pouches'});
       expect(a.propsOf('quit_status_reported'), {'at': 30, 'vape_free': 'true'});
+      expect(a.propsOf('widget_prompt_shown'), {'way': 'pinDialog'});
+      expect(a.propsOf('widget_prompt_accepted'), {'way': 'walkthrough'});
+      expect(a.propsOf('widget_installed'), isEmpty);
       expect(a.propsOf('sign_in_completed'), {
         'method': 'email_register',
         'returning': 'false',

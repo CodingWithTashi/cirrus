@@ -306,6 +306,66 @@ void main() {
     }
   });
 
+  /// docs/15 QP-C2. The only evidence on widgets is that one raised how many
+  /// days a diary was filled in (22 people, Choe 2015); nothing links a widget
+  /// to quitting. The card says it makes logging quicker and nothing larger.
+  group('the widget card', () {
+    const keys = [
+      'widgetPromptTitle',
+      'widgetPromptBody',
+      'widgetPromptAdd',
+      'widgetPromptStep1',
+      'widgetPromptStep2',
+      'widgetPromptStep3',
+      'widgetPromptGotIt',
+    ];
+
+    /// Stems of a claim that the widget helps somebody quit, per locale.
+    const claims = {
+      'en': ['quit', 'stop', 'help', 'vape-free'],
+      'de': ['aufhör', 'hilft', 'hilf', 'vape-frei'],
+      'es': ['dejar', 'ayuda', 'abandon', 'sin vapear'],
+      'fr': ['arrêt', 'aide', 'sans vape'],
+      'it': ['smett', 'aiut', 'senza svapo'],
+      'pt': ['deixar', 'ajud', 'parar'],
+    };
+
+    test('every locale carries the whole card', () {
+      for (final locale in locales) {
+        final strings = arb(locale);
+        for (final key in keys) {
+          final value = strings[key];
+          expect(value, isA<String>(), reason: '$locale is missing $key');
+          expect((value as String).trim(), isNotEmpty, reason: '$locale/$key');
+        }
+      }
+    });
+
+    test('it never says the widget helps anybody quit', () {
+      for (final locale in locales) {
+        final strings = arb(locale);
+        for (final key in keys) {
+          final text = (strings[key] as String).toLowerCase();
+          for (final stem in claims[locale]!) {
+            expect(
+              text.contains(stem),
+              isFalse,
+              reason: '$locale/$key claims "$stem": $text',
+            );
+          }
+        }
+      }
+    });
+
+    test('it names the app the person is about to look for', () {
+      for (final locale in locales) {
+        final strings = arb(locale);
+        expect(strings['widgetPromptBody'], contains('Cirrus'), reason: locale);
+        expect(strings['widgetPromptStep3'], contains('Cirrus'), reason: locale);
+      }
+    });
+  });
+
   test('the fake coach never claims a number would have been double', () async {
     // The demo template "two weeks ago that number would've been double" is
     // an invented comparison — absurd at zero, unverifiable at any count.

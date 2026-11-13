@@ -34,6 +34,8 @@ import '../help/smoking_rule_card.dart';
 import 'widgets/log_feedback.dart';
 import 'widgets/mood_sheet.dart';
 import 'widgets/program_card.dart';
+import '../../data/stores/widget_prompt_store.dart';
+import 'widgets/widget_prompt_card.dart';
 
 /// Frame 30 — HOME / Today. Bento grid, rolling counters, LOG PUFF in the
 /// thumb zone, SOS always floating. Over-limit state folds in from frame 31.
@@ -54,8 +56,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _hold = HoldToLog();
   bool _holdTokenBefore = false;
 
+  /// Back from the launcher's "add widget" dialog (or from the home screen after
+  /// the iPhone's three steps): the only moment the widget can be noticed, since
+  /// the dialog has no callback. Here rather than in the widget card because
+  /// Home is a lazily built list — a card scrolled out of the cache is disposed,
+  /// and a listener in it would die before the person came back. `resumed` is
+  /// reached from `inactive`, which is all a system dialog over the app produces
+  /// (recorded on a Pixel 8).
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        if (state == AppLifecycleState.resumed) {
+          ref.read(widgetPromptProvider.notifier).resume().ignore();
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     _hold.stop();
     super.dispose();
   }
@@ -935,6 +959,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                        // The one-time home-screen widget offer (docs/15 QP-C2).
+                        // Outside the one-card chain for the same reason as the
+                        // offer below and the cigarettes question above: an
+                        // optional convenience must not take the slot that
+                        // belongs to the person's own day. It pads itself and
+                        // is empty when there is nothing to offer.
+                        WidgetPromptCard(now: now),
                         // The day-3/7/14/30 offer. Outside the one-card chain
                         // above on purpose: that slot belongs to the person's
                         // own day (a slip, the evening mood, their risky

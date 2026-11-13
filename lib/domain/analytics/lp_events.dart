@@ -1,4 +1,5 @@
 import '../logic/games/game_id.dart';
+import '../logic/widget_prompt_policy.dart';
 import 'analytics.dart';
 
 /// The server-enforced allowances a person can run out of.
@@ -434,6 +435,32 @@ extension LpEvents on AnalyticsSink {
       'vape_free': vapeFree.toString(),
     }),
   );
+
+  /// The one-time home-screen widget card was put on Home (docs/15 QP-C2).
+  /// [way] is how this device adds one: `pinDialog` (Android's system dialog)
+  /// or `walkthrough` (the three steps on an iPhone). Marked once per device
+  /// and account, so this is also the denominator for `widget_prompt_accepted`.
+  void widgetPromptShown(WidgetAddWay way) =>
+      track(AnalyticsEvent('widget_prompt_shown', {'way': way.name}));
+
+  /// The card's button was tapped: the system dialog was requested
+  /// (`pinDialog`) or "Got it" was pressed after the three steps
+  /// (`walkthrough`). **Not** that a widget was added — the dialog has no
+  /// callback — which is what `widget_installed` is for.
+  ///
+  /// The two ways are not the same act, so read them apart: on Android this is
+  /// a request the launcher has just been given, on an iPhone it only says the
+  /// steps were read, before the person has gone to the home screen at all.
+  void widgetPromptAccepted(WidgetAddWay way) =>
+      track(AnalyticsEvent('widget_prompt_accepted', {'way': way.name}));
+
+  /// A Cirrus widget was found on the home screen after the person accepted
+  /// the offer: the first re-read of the launcher on resume that counted more
+  /// widgets than before the dialog. Once per acceptance. It is attributed to
+  /// the card by order alone — a widget added from the home screen's own
+  /// picker between the request and the re-read would be counted too, and
+  /// nothing can tell the two apart.
+  void widgetInstalled() => track(const AnalyticsEvent('widget_installed', {}));
 
   /// "Adjust my plan" moved Freedom Day (docs/15 QP-A11). [deltaDays] is the
   /// shift in calendar days: negative when the date came closer, positive when

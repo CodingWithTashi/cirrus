@@ -23,6 +23,7 @@ import '../dto/journey_codec.dart';
 import '../seed/seed_data.dart';
 import 'pending_puffs.dart';
 import 'providers.dart';
+import 'widget_prompt_store.dart';
 
 /// What a launch-time [JourneyStore.restoreSession] found.
 enum SessionRestore {
@@ -602,6 +603,14 @@ class JourneyStore extends Notifier<JourneyState?> {
     // sign in inherits this account's settled badges and never gets a single
     // celebration.
     ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
+    // And the widget offer: "have we offered THIS person the home-screen
+    // widget" is account-shaped state in the same device-scoped store, so the
+    // next person on a shared phone is offered it once themselves instead of
+    // never (docs/15 QP-C2).
+    ref.read(settingsStoreProvider.notifier).resetWidgetPrompt();
+    // Its in-memory half: a card still latched on would reach the next
+    // account's Home without the policy ever being asked.
+    ref.invalidate(widgetPromptProvider);
     // Fourth instance, and the one that reaches another device: an Apple Watch
     // holds its own copy of the mirror and its own queue of taps, and it cannot
     // be cleared synchronously — it may be out of range. Dropping the id here is
@@ -647,6 +656,8 @@ class JourneyStore extends Notifier<JourneyState?> {
     // what it already celebrated, or starting over on the same phone is a quit
     // with no milestones at all.
     ref.read(settingsStoreProvider.notifier).resetMilestoneLedger();
+    ref.read(settingsStoreProvider.notifier).resetWidgetPrompt();
+    ref.invalidate(widgetPromptProvider);
     // As in `signOut`, and for the same reason: a wrist still showing a deleted
     // account's count is the leak in its most public form.
     ref.read(widgetSessionProvider.notifier).unbind();

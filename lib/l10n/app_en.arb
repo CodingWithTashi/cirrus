@@ -2693,6 +2693,13 @@
   },
   "widgetEmptyBody": "Tap to open Cirrus",
   "widgetWatchOpenPhone": "Open Cirrus on your iPhone",
+  "widgetPromptTitle": "Log a puff in one tap",
+  "widgetPromptBody": "Add the Cirrus widget to your home screen and log without opening the app.",
+  "widgetPromptAdd": "Add widget",
+  "widgetPromptStep1": "Touch and hold an empty spot on your home screen until the icons wiggle.",
+  "widgetPromptStep2": "Tap + in the top-left corner.",
+  "widgetPromptStep3": "Search for Cirrus and tap Add Widget.",
+  "widgetPromptGotIt": "Got it",
   "@widgetEmptyBody": {
     "description": "Home-screen widget empty state, second line."
   },

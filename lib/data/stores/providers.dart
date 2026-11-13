@@ -486,6 +486,22 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator?>(
   },
 );
 
+/// The launcher, as the one-time widget card sees it (docs/15 QP-C2): can it
+/// add a widget, ask it to, and how many are placed.
+///
+/// Its own provider, not a reach through [widgetCoordinatorProvider], which is
+/// null on the fake backend. The fake's answer is the honest one for a desktop
+/// or a test — a [MemoryWidgetStore] that cannot pin and cannot count — and it
+/// is also what keeps every Home fixture free of a card it never asked for. A
+/// test about the prompt overrides it with a store that can; the device suite
+/// overrides it with the real [HomeWidgetStore] under the fake backend.
+final widgetStoreProvider = Provider<WidgetStore>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => MemoryWidgetStore(),
+    BackendMode.firebase => const HomeWidgetStore(),
+  },
+);
+
 /// Keeps the home-screen widget in step with the journey, and drains the puffs
 /// it logged while the app was closed.
 ///

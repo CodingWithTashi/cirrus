@@ -4115,6 +4115,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get widgetWatchOpenPhone => 'Abra o Cirrus no seu iPhone';
 
   @override
+  String get widgetPromptTitle => 'Regista uma passa com um toque';
+
+  @override
+  String get widgetPromptBody =>
+      'Põe o widget do Cirrus no ecrã principal e regista sem abrir a app.';
+
+  @override
+  String get widgetPromptAdd => 'Adicionar widget';
+
+  @override
+  String get widgetPromptStep1 =>
+      'Mantém premido um espaço vazio do ecrã principal até os ícones tremerem.';
+
+  @override
+  String get widgetPromptStep2 => 'Toca em + no canto superior esquerdo.';
+
+  @override
+  String get widgetPromptStep3 =>
+      'Procura Cirrus e toca em «Adicionar widget».';
+
+  @override
+  String get widgetPromptGotIt => 'Entendido';
+
+  @override
   String get milestoneNotifTitle => 'Venha ver sua chama';
 
   @override

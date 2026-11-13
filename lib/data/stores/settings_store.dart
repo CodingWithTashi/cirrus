@@ -37,6 +37,7 @@ class SettingsState {
     this.milestonesAdopted = false,
     this.reviewAskedAt,
     this.reviewAskedCount = 0,
+    this.widgetPromptShown = false,
     this.hydrated = true,
   });
 
@@ -198,6 +199,20 @@ class SettingsState {
   final DateTime? reviewAskedAt;
   final int reviewAskedCount;
 
+  /// Whether the one-time home-screen widget offer (`WidgetPromptPolicy`) has
+  /// been put in front of this person. Marked the moment the card first
+  /// renders — shown once means gone after a restart even if nothing was
+  /// tapped — and never cleared except by [SettingsStore.resetWidgetPrompt].
+  ///
+  /// The opposite call from [reviewAskedAt], on purpose: a store rating belongs
+  /// to the phone's Apple ID or Google account and so outlives a Cirrus
+  /// sign-out, whereas "have we offered THIS person the widget" is account-
+  /// shaped state in a device-scoped store. It is on the sign-out forget list so
+  /// the next person on a shared phone is offered it once themselves, rather
+  /// than never. Someone who already has the widget placed
+  /// is not offered it either way — that is read from the launcher, not here.
+  final bool widgetPromptShown;
+
   /// Whether this state is the one on disk (or a change made on top of it),
   /// as opposed to the defaults the store shows while disk is still answering.
   ///
@@ -238,6 +253,7 @@ class SettingsState {
     bool? milestonesAdopted,
     DateTime? reviewAskedAt,
     int? reviewAskedCount,
+    bool? widgetPromptShown,
     bool? hydrated,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
@@ -272,6 +288,7 @@ class SettingsState {
     milestonesAdopted: milestonesAdopted ?? this.milestonesAdopted,
     reviewAskedAt: reviewAskedAt ?? this.reviewAskedAt,
     reviewAskedCount: reviewAskedCount ?? this.reviewAskedCount,
+    widgetPromptShown: widgetPromptShown ?? this.widgetPromptShown,
     hydrated: hydrated ?? this.hydrated,
   );
 }
@@ -564,6 +581,24 @@ class SettingsStore extends Notifier<SettingsState> {
   /// next offer day, across restarts.
   void closeOfferCard(String dayKey) =>
       _commit(state.copyWith(offerCardClosedDay: dayKey));
+
+  /// The home-screen widget offer was put on Home. Called from a post-frame
+  /// callback and only once settings have hydrated: an automatic writer must
+  /// not act on the defaults (see [SettingsState.hydrated]).
+  void markWidgetPromptShown() =>
+      _commit(state.copyWith(widgetPromptShown: true));
+
+  /// Forgets that the widget was offered, because the offer belonged to the
+  /// account that has just left. One more thing a sign-out and an account
+  /// deletion forget on a shared phone, beside the milestone ledger and the push
+  /// flags above (which travel together as [resetMilestoneLedger]) — a separate
+  /// method rather than a line in that one so it is visibly its own item, and
+  /// so the two call sites read as the list CLAUDE.md says they are.
+  void resetWidgetPrompt() {
+    // Nothing to forget: skip a second whole-state write on every sign-out.
+    if (!state.widgetPromptShown) return;
+    _commit(state.copyWith(widgetPromptShown: false));
+  }
 
   /// Records that the store-rating ask was shown and answered — "Rate Cirrus"
   /// and "Not now" both count, because both are the person's answer to being

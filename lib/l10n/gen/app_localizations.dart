@@ -6645,6 +6645,48 @@ abstract class AppLocalizations {
   /// **'Open Cirrus on your iPhone'**
   String get widgetWatchOpenPhone;
 
+  /// No description provided for @widgetPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a puff in one tap'**
+  String get widgetPromptTitle;
+
+  /// No description provided for @widgetPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the Cirrus widget to your home screen and log without opening the app.'**
+  String get widgetPromptBody;
+
+  /// No description provided for @widgetPromptAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add widget'**
+  String get widgetPromptAdd;
+
+  /// No description provided for @widgetPromptStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and hold an empty spot on your home screen until the icons wiggle.'**
+  String get widgetPromptStep1;
+
+  /// No description provided for @widgetPromptStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + in the top-left corner.'**
+  String get widgetPromptStep2;
+
+  /// No description provided for @widgetPromptStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for Cirrus and tap Add Widget.'**
+  String get widgetPromptStep3;
+
+  /// No description provided for @widgetPromptGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get widgetPromptGotIt;
+
   /// Title of the one-shot celebration fired the morning after a streak milestone is earned (design frame 51 #2).
   ///
   /// In en, this message translates to:
