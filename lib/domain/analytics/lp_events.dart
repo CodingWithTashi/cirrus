@@ -395,6 +395,80 @@ extension LpEvents on AnalyticsSink {
     }),
   );
 
+  /// The daily program's card was shown (docs/15 QP-B4): [day] is the program
+  /// day (days from the quit date, −7 … 56) and [slot] is `morning`, `evening`
+  /// or `checkup` for a day that carries only a question. Once per day and slot
+  /// per visit to Home, so a rebuild is never counted twice.
+  void programShown({required int day, required String slot}) =>
+      track(AnalyticsEvent('program_shown', {'day': day, 'slot': slot}));
+
+  /// A mood was answered on the card and its written reply shown. [mood] is the
+  /// `Mood` name and [track] is `onTrack` or `slipped` — the two things the
+  /// reply depends on. Never the note.
+  void programReply({required String mood, required String track}) =>
+      // `this.`: the parameter named `track` would otherwise shadow the method.
+      this.track(AnalyticsEvent('program_reply', {'mood': mood, 'track': track}));
+
+  /// One of the card's help buttons was tapped. [kind] is `craving`, `stress`,
+  /// `slipped` or `more`.
+  void programHelp(String kind) =>
+      track(AnalyticsEvent('program_help', {'kind': kind}));
+
+  /// A daily-program check-up was answered (docs/15 QP-B7). [kind] is the
+  /// question (`nicotine`, `vaped30`, `vaped90`) and [answer] what it was
+  /// answered with, both enum names — coarse values, never anything typed.
+  ///
+  /// Reported when GIVEN, as well as stored on the journey: an older build on a
+  /// second device rewrites the whole journey document and would drop the
+  /// stored copy, so this is the record that cannot be overwritten.
+  void checkupAnswered({required String kind, required String answer}) => track(
+    AnalyticsEvent('checkup_answered', {'kind': kind, 'answer': answer}),
+  );
+
+  /// The 30- or 90-day question was answered: [at] is the horizon in days and
+  /// [vapeFree] whether the person says they have not vaped in the last thirty.
+  /// The number the program exists to move, read straight off the funnel.
+  void quitStatusReported({required int at, required bool vapeFree}) => track(
+    AnalyticsEvent('quit_status_reported', {
+      'at': at,
+      'vape_free': vapeFree.toString(),
+    }),
+  );
+
+  /// "Adjust my plan" moved Freedom Day (docs/15 QP-A11). [deltaDays] is the
+  /// shift in calendar days: negative when the date came closer, positive when
+  /// it moved out. Never reported for an adjustment that left the date where it
+  /// was — that one is not an adjustment.
+  void planAdjusted({required int deltaDays}) =>
+      track(AnalyticsEvent('plan_adjusted', {'delta_days': deltaDays}));
+
+  /// A slip was resolved on the slip screen (docs/15 QP-A10). [keptDate] is
+  /// whether the person kept their Freedom Day (true) or added days to it
+  /// (false). "Talk it through first" is not a resolution, so it reports
+  /// nothing: the slip card stays until they decide.
+  ///
+  /// A slip used to stretch the plan whichever button was pressed, so this
+  /// split could not be asked of the data at all.
+  void slipResolved({required bool keptDate}) => track(
+    AnalyticsEvent('slip_resolved', {'kept_date': keptDate.toString()}),
+  );
+
+  /// The More help page was opened (docs/15 QP-A7). [source] is the door:
+  /// `settings`, `onboarding`, `home`, `slip`, `program`, or `direct` for a link
+  /// with none.
+  ///
+  /// Whether anyone ever looks for a person or a medicine was unmeasured. Add
+  /// a door, add it here.
+  void helpViewed(String source) =>
+      track(AnalyticsEvent('help_viewed', {'source': source}));
+
+  /// A link on the More help page was opened. [kind] is `call`, `web`,
+  /// `source` (the official page an entry was checked against) or `medicine`
+  /// (the research link). Never the number or the URL: those say where a
+  /// person was, and the kind is enough to tell what the page is for.
+  void helpLinkOpened(String kind) =>
+      track(AnalyticsEvent('help_link_opened', {'kind': kind}));
+
   /// Somebody signed out, and where they were when they did.
   ///
   /// Five of the seven people who signed out before Nov 2026 created a new

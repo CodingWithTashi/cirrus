@@ -546,6 +546,448 @@ class AppLocalizationsEs extends AppLocalizations {
       'El tiempo hasta la primera calada es el mejor predictor de dependencia. El 76% de los vapeadores jóvenes la busca en los 30 min tras despertar.';
 
   @override
+  String get obSmokingTitle => '¿Alguna vez has fumado cigarrillos?';
+
+  @override
+  String get obSmokingSubtitle => 'Cambia los consejos que te damos.';
+
+  @override
+  String get obSmokingNever => 'Nunca';
+
+  @override
+  String get obSmokingFormer => 'Antes sí';
+
+  @override
+  String get obSmokingCurrent => 'Sigo fumando';
+
+  @override
+  String get helpTitle => 'Más ayuda';
+
+  @override
+  String get helpIntro =>
+      'Una app solo llega hasta cierto punto. A algunas personas les sirve más un medicamento o una persona de verdad.';
+
+  @override
+  String get helpMedicineTitle => 'Medicación';
+
+  @override
+  String get helpMedicineBody =>
+      'Hay medicación para esto. En estudios con jóvenes, un fármaco para dejar de fumar llamado vareniclina, junto con acompañamiento, ayudó a más gente a dejar de vapear que un placebo. Solo se da con receta, no está autorizado específicamente para vapear y quién puede tomarlo cambia de un país a otro. Cirrus no puede decirte si es para ti. Un médico o un farmacéutico sí.';
+
+  @override
+  String get helpMedicineSource => 'Leer el estudio';
+
+  @override
+  String get helpPeopleTitle => 'Personas con las que puedes hablar';
+
+  @override
+  String get helpPeopleNote =>
+      'Servicios oficiales, sacados de sus propias páginas. Cirrus no tiene ninguna relación con ellos.';
+
+  @override
+  String get helpNoLocal =>
+      'Todavía no hemos incluido ningún servicio de tu país.';
+
+  @override
+  String get helpDoctorLine =>
+      'Estés donde estés, un médico o un farmacéutico puede hablarlo contigo y decirte qué hay cerca de ti.';
+
+  @override
+  String get helpCall => 'Llamar';
+
+  @override
+  String get helpOpenSite => 'Abrir la web';
+
+  @override
+  String get helpSourceLink => 'Fuente';
+
+  @override
+  String get smokingRuleBody =>
+      'Una regla por encima de todas: no vuelvas a los cigarrillos. Si algún día la cosa se reduce a un cigarrillo o a vapear, vapear es la opción más segura, y elegirla no es fracasar.';
+
+  @override
+  String get smokingRuleCurrent =>
+      'Si además fumas, dejar los cigarrillos es lo que más importa. Un servicio para dejar de fumar puede ayudarte con las dos cosas.';
+
+  @override
+  String get programMsgPre7 =>
+      'Tu fecha es dentro de una semana. Cuéntaselo a una persona: decirlo lo hace real.';
+
+  @override
+  String get programMsgPre6 =>
+      'Fíjate en los tres momentos en que más te tira vapear. Esos son los que hay que preparar.';
+
+  @override
+  String get programMsgPre5 =>
+      'Elige algo para las manos y la boca en esos momentos. Ponlo donde antes tenías el vapeador.';
+
+  @override
+  String get programMsgPre4 =>
+      'Un antojo sube, llega a su punto más alto y pasa, vapees o no. Hoy prueba a esperar a que pase uno.';
+
+  @override
+  String get programMsgPre3 =>
+      'Decide ya qué pasa con el vapeador y los cartuchos en tu fecha. Decidirlo antes lo hace fácil.';
+
+  @override
+  String get programMsgPre2 =>
+      'Los tres primeros días son los más duros. Quita de en medio lo que puedas.';
+
+  @override
+  String get programMsgPre1 =>
+      'Mañana es el día. Deja todo fuera de tu alcance esta noche y hazte fácil la mañana.';
+
+  @override
+  String get programMsgQ0am =>
+      'Hoy. Un solo objetivo: llegar a esta noche. Cuando venga, abre la app y pulsa Antojo.';
+
+  @override
+  String get programMsgQ0pm =>
+      'La primera noche suele ser el tramo más duro. Plánala hora a hora.';
+
+  @override
+  String get programMsgD1am =>
+      'Las ganas al despertar son hábito además de nicotina. Cambia tus primeros diez minutos.';
+
+  @override
+  String get programMsgD1pm =>
+      'Irritación, inquietud, niebla mental: es la abstinencia, y pasa.';
+
+  @override
+  String get programMsgD2am =>
+      'Suele ser el punto más alto. No te pasa nada raro. Mantén el día pequeño.';
+
+  @override
+  String get programMsgD2pm =>
+      'Si los antojos ganan, hay ayuda más allá de una app: personas a las que llamar y medicación.';
+
+  @override
+  String get programMsgD3 =>
+      'A la mayoría le empieza a aflojar hacia ahora. Si a ti aún no, también es normal.';
+
+  @override
+  String get programMsgD4 =>
+      '«Una no hace daño» es el antojo hablando. Dale diez minutos y algo que hacer.';
+
+  @override
+  String get programMsgD5 =>
+      'Vapear nunca arregló el estrés, solo el antojo. Prueba el botón Estrés.';
+
+  @override
+  String get programMsgD6 =>
+      'Amigos que vapean: decide tu límite antes de verlos.';
+
+  @override
+  String get programMsgD7 =>
+      'Una semana desde tu fecha. Si recaíste, es información. Sigue desde hoy.';
+
+  @override
+  String get programMsgD8 =>
+      'El aburrimiento es un detonante. Decide qué harás con los minutos vacíos.';
+
+  @override
+  String get programMsgD9 =>
+      'Una copa baja la guardia. Planea la primera, o sáltatela esta semana.';
+
+  @override
+  String get programMsgD10 =>
+      'El sueño y el apetito pueden bailar un tiempo. Se asienta.';
+
+  @override
+  String get programMsgD11 =>
+      'Te estás convirtiendo en alguien que no vapea. Dilo en voz alta una vez.';
+
+  @override
+  String get programMsgD12 => 'Mira lo que se ha quedado en tu bolsillo.';
+
+  @override
+  String get programMsgD13 =>
+      'No lo cambies por cigarrillos ni bolsitas de nicotina. Es el mismo anzuelo.';
+
+  @override
+  String get programMsgD14 =>
+      'Dos semanas desde tu fecha. Los antojos vienen menos, y aun así pasan.';
+
+  @override
+  String get programMsgD16 =>
+      'La calada «solo para comprobar» es como empiezan casi todas las recaídas.';
+
+  @override
+  String get programMsgD18 =>
+      'Un mal día no es una razón. Decide ya qué harás en uno.';
+
+  @override
+  String get programMsgD21 => 'Tres semanas. Regálate algo de verdad por ello.';
+
+  @override
+  String get programMsgD23 =>
+      'Conserva el descanso, suelta el vapeador. ¿Qué ha ocupado el hueco de la pausa de vapear?';
+
+  @override
+  String get programMsgD25 => 'Alguien te ofrecerá. Ten tu frase lista.';
+
+  @override
+  String get programMsgD28 =>
+      'Cuatro semanas desde tu fecha. Fíjate en cómo se siente un antojo ahora.';
+
+  @override
+  String get programMsgD30 =>
+      'Un mes desde tu fecha. Hoy hay una pregunta esperándote en tu tarjeta.';
+
+  @override
+  String get programMsgD32 =>
+      'Piensa una vez en los detonantes que aún no has encontrado: un viaje, un examen, una mala semana.';
+
+  @override
+  String get programMsgD35 => '¿Notas algo distinto en tu cuerpo?';
+
+  @override
+  String get programMsgD37 =>
+      'Un antojo de la nada es normal durante meses. Sigue pasando.';
+
+  @override
+  String get programMsgD39 =>
+      'Alguien de la comunidad está en su primer día. Una palabra tuya ayuda.';
+
+  @override
+  String get programMsgD42 =>
+      'Seis semanas desde tu fecha. Vale la pena parar un momento a notarlo.';
+
+  @override
+  String get programMsgD44 =>
+      'Vuelve a leer tu razón. Te espera dentro del flujo de antojos.';
+
+  @override
+  String get programMsgD46 =>
+      'Las recaídas tardías pasan. Misma regla: es información, y retomas ese mismo día.';
+
+  @override
+  String get programMsgD49 =>
+      'Cuando todo va bien, «solo una» suena inofensiva. No lo es.';
+
+  @override
+  String get programMsgD51 => '¿Qué te dirías el primer día?';
+
+  @override
+  String get programMsgD53 =>
+      'El programa termina pronto. El mensaje diario se queda para los días difíciles.';
+
+  @override
+  String get programMsgD56 =>
+      'Ocho semanas desde tu fecha. El programa termina aquí. La app no.';
+
+  @override
+  String get programReplyBreathe =>
+      'Respira un minuto: cuatro segundos para dentro, seis para fuera. El botón Estrés cuenta contigo.';
+
+  @override
+  String get programReplyWaitTen =>
+      'Espera diez minutos y luego haz una cosa pequeña con las manos. La mayoría de las ganas pasan antes.';
+
+  @override
+  String get programReplyChangeRoom =>
+      'Cambia de sitio. Agua fría en la cara, o un paseo hasta la puerta y vuelta.';
+
+  @override
+  String get programReplyTellSomeone =>
+      'Cuéntale a alguien que es un día duro, o cuéntaselo al coach. Dicho en voz alta pesa menos.';
+
+  @override
+  String get programReplyOkayHold =>
+      'La meta es estar estable. Sigue con lo que estás haciendo.';
+
+  @override
+  String get programReplyOkayOne =>
+      'Un día regular también cuenta. ¿Hay algo que esperar con ganas esta noche?';
+
+  @override
+  String get programReplyOkayShort =>
+      'Estar bien está bien. Mantén el día pequeño y la noche planeada.';
+
+  @override
+  String programReplyPraiseWhy1(String why) {
+    return 'Bien. Ten esto a la vista: «$why»';
+  }
+
+  @override
+  String programReplyPraiseWhy2(String why) {
+    return 'Es un día que merece la pena. Es por esto: «$why»';
+  }
+
+  @override
+  String get programReplyPraise3 =>
+      'Los buenos días se construyen con días normales como este. Bien hecho.';
+
+  @override
+  String get programReplyPraise4 =>
+      'Fíjate en cómo se siente esto. Acuérdate en un día más difícil.';
+
+  @override
+  String get programReplySlipData =>
+      'Una recaída es información, no una sentencia. Sigues aquí, y eso cuenta.';
+
+  @override
+  String get programReplySlipToday =>
+      'Sigue hoy. Una calada no tiene por qué convertirse en un día entero.';
+
+  @override
+  String get programReplySlipPlan =>
+      'Si el plan ya no encaja, empieza uno nuevo. Conservas todo lo que has vivido hasta ahora.';
+
+  @override
+  String get programTipStress1 =>
+      'Ponle nombre: «esto es estrés, no un antojo». Nombrarlo le quita algo de peso.';
+
+  @override
+  String get programTipStress2 =>
+      'Suelta el aire más despacio de lo que lo coges. Cinco respiraciones lentas.';
+
+  @override
+  String get programTipStress3 =>
+      'Muévete dos minutos: escaleras, un paseo, estirar. El cuerpo descarga el estrés moviéndose.';
+
+  @override
+  String get programTipStress4 =>
+      'Escribe lo único que te estresa. Luego, un pequeño paso para resolverlo.';
+
+  @override
+  String get programTipStress5 =>
+      'Escríbele a alguien, o cuéntaselo al coach. El estrés se achica cuando se dice en voz alta.';
+
+  @override
+  String get programTipSlip1 =>
+      'Anota qué lo provocó: dónde, con quién, a qué hora. Ese es tu plan para la próxima.';
+
+  @override
+  String get programTipSlip2 =>
+      'Reinicia el momento: cambia de sitio, bebe agua, haz otra cosa durante diez minutos.';
+
+  @override
+  String get programTipSlip3 =>
+      'No lo conviertas en una historia mayor. Una recaída es una recaída. La siguiente decisión es nueva.';
+
+  @override
+  String get programTipSlip4 =>
+      'Cuéntaselo a alguien, o al coach. La vergüenza esconde las recaídas; decirlo les quita poder.';
+
+  @override
+  String get programTipMore1 =>
+      'Mira el impulso como una ola: sube, llega a su punto más alto y pasa. No tienes que actuar.';
+
+  @override
+  String get programTipMore2 =>
+      'Aplázalo. Diez minutos y luego decides. La mayoría de las ganas ya pasaron.';
+
+  @override
+  String get programTipMore3 =>
+      'Sustituye la acción: un chicle, un bolígrafo, una pajita, algo en las manos.';
+
+  @override
+  String get programTipMore4 =>
+      'Planea el detonante. Si es el café, cambia tu rutina del café durante una semana.';
+
+  @override
+  String get programTipMore5 =>
+      'Bebe agua despacio cuando llegue. Le da una tarea a tu boca y a tus manos.';
+
+  @override
+  String get programTipMore6 =>
+      'Cambia el lugar o la hora en que antes vapeabas. Una rutina nueva no arrastra el hábito.';
+
+  @override
+  String get programTipMore7 =>
+      'Cuéntale a la gente de tu alrededor lo que haces. Ayudan cuando lo saben.';
+
+  @override
+  String get programTipMore8 =>
+      'Ten tu razón donde la veas: pantalla de bloqueo, cartera, una nota junto a la cama.';
+
+  @override
+  String get programTipMore9 =>
+      'Come algo. Un cuerpo sin energía hace las ganas más fuertes.';
+
+  @override
+  String get programTipMore10 => 'Dormir importa. Una mente cansada negocia.';
+
+  @override
+  String get programTipMore11 =>
+      'Un antojo no es una orden. Puedes sentirlo y no hacerlo.';
+
+  @override
+  String get programTipMore12 =>
+      'No esperes a sentir que puedes. Haz la siguiente cosa pequeña.';
+
+  @override
+  String programCardTitle(int day) {
+    return 'HOY · DÍA $day';
+  }
+
+  @override
+  String get programCardTitlePast => 'HOY';
+
+  @override
+  String get programQuestion => '¿Cómo va el día?';
+
+  @override
+  String get programBtnCraving => 'Antojo';
+
+  @override
+  String get programBtnStress => 'Estrés';
+
+  @override
+  String get programBtnSlipped => 'Recaída';
+
+  @override
+  String get programBtnMore => 'Más';
+
+  @override
+  String get programStressTitle => 'Un minuto para ti';
+
+  @override
+  String get programStressBody =>
+      'Respira con el círculo: inspira cuando crece, suelta cuando se encoge.';
+
+  @override
+  String get programSlippedTitle => 'Una recaída es información';
+
+  @override
+  String get programSlippedCoach => 'Hablar con el coach';
+
+  @override
+  String get programMoreTitle => 'Una idea más';
+
+  @override
+  String get programCheckupNicotineQ => '¿Alguna otra nicotina esta semana?';
+
+  @override
+  String get programCheckupNone => 'No';
+
+  @override
+  String get programCheckupCigarettes => 'Cigarrillos';
+
+  @override
+  String get programCheckupPouches => 'Bolsitas';
+
+  @override
+  String get programCheckupPatchGum => 'Parche o chicle';
+
+  @override
+  String get programCheckupPatchNote =>
+      'En la farmacia te pueden ayudar a usarlo bien.';
+
+  @override
+  String get programCheckupVapedQ => '¿Has vapeado en los últimos 30 días?';
+
+  @override
+  String get programCheckupYes => 'Sí';
+
+  @override
+  String get programCheckupThanks => 'Gracias por responder.';
+
+  @override
+  String get programCheckup90Title => '90 días después';
+
+  @override
   String get obFactLabelScience => 'LA CIENCIA';
 
   @override
@@ -733,7 +1175,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obRevealProof =>
-      '24% lo dejó con un programa estructurado vs 19% por su cuenta — ensayo aleatorizado con 2.588 jóvenes. No es magia. Son mejores probabilidades.';
+      'Ensayo con 2.588 jóvenes: con mensajes diarios por SMS para dejarlo, el 24% dijo que lo había dejado, frente al 19% sin ellos. No es magia. Son mejores probabilidades.';
 
   @override
   String obRevealComparisonOne(String item) {
@@ -903,7 +1345,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifSubtitle =>
-      'Nada de spam. Un aviso antes de tus horas críticas, un repaso cada noche de cómo vas, y unas palabras cuando llegues a un hito.';
+      'Nada de spam. Un aviso antes de tus horas críticas, un mensaje diario sobre tu plan, y unas palabras cuando llegues a un hito.';
 
   @override
   String get obNotifPreviewTime => 'Vie 21:54';
@@ -917,10 +1359,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifBullet2 =>
-      'Un repaso cada noche, y una celebración de cada hito';
+      'Un mensaje diario sobre tu plan, y una celebración de cada hito';
 
   @override
-  String get obNotifBullet3 => 'Nada más: cero marketing, nunca';
+  String get obNotifBullet3 =>
+      'Las tres primeras mañanas desde tu fecha. Nada más: cero marketing, nunca';
 
   @override
   String get obNotifCta => 'Activar refuerzos';
@@ -2308,7 +2751,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get planAdjustSheetNote =>
-      'La curva se regenera desde hoy con tus números reales. El historial se queda. El Día de libertad se mueve con honestidad.';
+      'Elige cuántos días desde hoy hasta el Día de libertad. Tu historial se queda como está.';
+
+  @override
+  String planAdjustPreview(String date) {
+    return 'El Día de libertad sería el $date.';
+  }
+
+  @override
+  String get planAdjustSame => 'Esa ya es tu fecha.';
+
+  @override
+  String get planAdjustLater =>
+      'Una fecha más tardía es más difícil de alcanzar. Elige la más temprana que puedas mantener.';
+
+  @override
+  String get planAdjustNewPlanLink =>
+      '¿Otro método, o empezar de nuevo? Empieza un plan nuevo.';
 
   @override
   String get planAdjustApply => 'Aplicar — recalcular mi curva';
@@ -3002,21 +3461,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get slipAdjustCta => 'Ajustar mi plan';
 
   @override
-  String get slipAdjustTitle => 'Este es el ajuste.';
+  String get slipAdjustTitle => 'Tu fecha, tú decides.';
 
   @override
-  String get slipCurveLabel => 'TU CURVA — SUAVEMENTE RECALCULADA';
+  String get slipCurveLabel => 'TU CURVA';
 
   @override
   String get slipTheBump => 'el bache de la recaída';
 
   @override
   String slipNewFreedom(String date, int days) {
-    return 'Día de libertad: $date (+$days días)';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '+$days días',
+      one: '+1 día',
+    );
+    return 'Día de libertad: $date ($_temp0)';
   }
 
   @override
-  String get slipCurveNote => 'Dos días extra, mismo destino.';
+  String get slipCurveNote => 'Mismo destino.';
 
   @override
   String slipStreakSurvives(int days) {
@@ -3028,10 +3493,26 @@ class AppLocalizationsEs extends AppLocalizations {
       'La llama se atenúa, no muere. Un día limpio la devuelve a plena llama.';
 
   @override
-  String get slipBackOnCurve => 'De vuelta a la curva';
+  String get slipTalkFirst => 'Hablarlo antes con el coach';
 
   @override
-  String get slipTalkFirst => 'Hablarlo antes con el coach';
+  String get slipKeepDate => 'Mantener mi fecha';
+
+  @override
+  String slipDateStays(String date) {
+    return 'Tu día de libertad sigue siendo el $date.';
+  }
+
+  @override
+  String slipAddDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Añadir $days días',
+      one: 'Añadir 1 día',
+    );
+    return '$_temp0';
+  }
 
   @override
   String profileQuittingSince(String date, String method, int day) {
@@ -3284,17 +3765,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDangerHours => 'Horas de peligro';
 
   @override
-  String get settingsCheckin => 'Repaso de la noche';
+  String get settingsCheckin => 'Mensaje diario';
 
   @override
   String get settingsCheckinOff => 'desactivado · editar ›';
 
   @override
   String get settingsCheckinBody =>
-      'Una notificación cada noche con tu límite del día, para que apuntes cómo fue. Si pasas una semana sin abrir Cirrus, se para sola.';
+      'Un mensaje cada noche sobre tu plan, más las tres primeras mañanas desde tu fecha. Se detiene solo tras una semana sin abrir Cirrus.';
 
   @override
-  String get settingsCheckinToggle => 'Avísame cada noche';
+  String get settingsCheckinToggle => 'Enviarme el mensaje diario';
 
   @override
   String get settingsCheckinTime => 'Hora';
@@ -3579,27 +4060,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get slipCurveNoteParty =>
-      'Dos días extra, mismo destino. Antes de la próxima fiesta, marca una hora de riesgo para que el aviso llegue primero.';
+      'Mismo destino. Antes de la próxima fiesta, marca una hora de riesgo para que el aviso llegue primero.';
 
   @override
   String get slipCurveNoteStress =>
-      'Dos días extra, mismo destino. Cuando llegue el estrés, la respiración de 60 segundos del botón de pánico está hecha justo para ese minuto.';
+      'Mismo destino. Cuando llegue el estrés, la respiración de 60 segundos del botón de pánico está hecha justo para ese minuto.';
 
   @override
   String get slipCurveNoteBoredom =>
-      'Dos días extra, mismo destino. Para los minutos vacíos, el juego dentro del modo pánico está a un toque.';
+      'Mismo destino. Para los minutos vacíos, el juego dentro del modo pánico está a un toque.';
 
   @override
   String get slipCurveNoteDrinking =>
-      'Dos días extra, mismo destino. Marca una hora de riesgo antes de tu próxima copa: el aviso llega antes de la primera.';
+      'Mismo destino. Marca una hora de riesgo antes de tu próxima copa: el aviso llega antes de la primera.';
 
   @override
   String get slipCurveNoteFriends =>
-      'Dos días extra, mismo destino. La próxima vez, escríbele a tu coach antes de verlos, no después.';
+      'Mismo destino. La próxima vez, escríbele a tu coach antes de verlos, no después.';
 
   @override
   String get slipCurveNoteJustHappened =>
-      'Dos días extra, mismo destino. Pasa. El registro sigue siendo honesto y mañana es un día limpio.';
+      'Mismo destino. Pasa. El registro sigue siendo honesto y mañana es un día limpio.';
 
   @override
   String get widgetDay => 'día %1\$d';

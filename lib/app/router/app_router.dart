@@ -34,6 +34,7 @@ import '../../features/plan/plan_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screens.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/help/help_screen.dart';
 import '../../features/slip/slip_screen.dart';
 import '../../features/stats/stats_screen.dart';
 
@@ -104,6 +105,15 @@ abstract final class Routes {
   /// What Ember remembers, and the button that takes it back.
   static const memories = '/coach/memories';
   static const slip = '/slip';
+
+  /// The More help page (docs/15 QP-A7): a medicine, and people to call. Open
+  /// without a journey — it is information, and the one screen in the app that
+  /// should never be behind a sign-in.
+  static const help = '/help';
+
+  /// [help], tagged with the door it was reached through — the
+  /// `help_viewed.source` dimension. A query parameter, like [paywallFrom].
+  static String helpFrom(String source) => '$help?source=$source';
 }
 
 /// Root navigator key — gives app-level error surfaces (app_errors.dart) a
@@ -394,6 +404,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ModerationScreen(),
       ),
       GoRoute(path: Routes.slip, builder: (_, _) => const SlipFlow()),
+      // Built by go_router itself (no pageBuilder), so it reports a screen view
+      // under its path pattern without a `name:`.
+      GoRoute(
+        path: Routes.help,
+        builder: (_, state) =>
+            HelpScreen(source: state.uri.queryParameters['source'] ?? 'direct'),
+      ),
     ],
   );
 });

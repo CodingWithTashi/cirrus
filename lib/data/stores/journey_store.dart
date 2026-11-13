@@ -9,6 +9,7 @@ import '../../domain/logic/dependence_engine.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/logic/games/game_score.dart';
 import '../../domain/logic/money_engine.dart';
+import '../../domain/logic/plan_adjust.dart';
 import '../../domain/logic/plan_restart.dart';
 import '../../domain/logic/puff_anchor.dart';
 import '../../domain/logic/streak_engine.dart';
@@ -224,17 +225,28 @@ class JourneyStore extends Notifier<JourneyState?> {
     // stretch lengthened a runway chosen minutes earlier.
     if (s.plan.dayNumber(_now) <= 1) return;
     if (s.planAdvice?.appliesTo(advice.forDay) ?? false) return;
+    // The stretch ceiling lives in the engine (`maxStretchDays`), so the client
+    // decides how much of a requested stretch actually happens, whatever build
+    // the server is on. A server one deploy behind can still ask for a day on
+    // a plan already at the ceiling (docs/15 QP-A9).
+    final stretched = advice.stretchDelta > 0
+        ? TaperEngine.reflowAfterSlip(s.plan, extraDays: advice.stretchDelta)
+        : s.plan;
+    final moved = stretched.stretchDays - s.plan.stretchDays;
     _commit(
       s.copyWith(
-        planAdvice: () => advice,
-        // The +50% cap lives in the engine, so client and server agree on the
-        // ceiling even if one of them is a build behind.
-        plan: advice.stretchDelta > 0
-            ? TaperEngine.reflowAfterSlip(
-                s.plan,
-                extraDays: advice.stretchDelta,
-              )
-            : s.plan,
+        // What is STORED is the stretch that moved, not the one requested: the
+        // Plan screen says "your runway moved" whenever it is above zero, and
+        // claiming a day the engine refused would be an invented fact.
+        planAdvice: () => moved == advice.stretchDelta
+            ? advice
+            : PlanAdvice(
+                forDay: advice.forDay,
+                limit: advice.limit,
+                adherence: advice.adherence,
+                stretchDelta: moved,
+              ),
+        plan: stretched,
       ),
     );
   }
@@ -1034,6 +1046,16 @@ class JourneyStore extends Notifier<JourneyState?> {
     return newBest;
   }
 
+  /// Whether they have smoked cigarettes (docs/15 QP-A3): the same question
+  /// onboarding asks, put to accounts made before it existed. Synchronous and
+  /// optimistic like every other mutation, so Home can drop the card on the
+  /// frame of the tap. A no-op when unchanged or with no journey.
+  void setSmokingHistory(SmokingHistory value) {
+    final s = state;
+    if (s == null || s.profile.smoking == value) return;
+    _commit(s.copyWith(profile: s.profile.copyWith(smoking: value)));
+  }
+
   /// The arena opened on, or switched to, [id]; a no-op when unchanged.
   void setLastGame(GameId id) {
     final s = state;
@@ -1077,14 +1099,21 @@ class JourneyStore extends Notifier<JourneyState?> {
 
   // ---- mood / goals / plan --------------------------------------------------
 
+  /// Records how today is going. **A check-in counts once a day** (docs/15
+  /// QP-B3): the daily card turns this into a question that can be answered
+  /// again, and seven check-ins award the week badge, so the counter counts
+  /// days, not taps. A changed answer updates the mood and the note and counts
+  /// nothing; the event is reported with the day's first answer only, like
+  /// `day_confirmed`, so the funnel counts days with a check-in.
   void checkInMood(Mood mood, {String? note}) {
     final s = state;
     if (s == null) return;
-    // The mood, never the note: the note is the person's own sentence.
-    ref.read(analyticsProvider).moodCheckedIn(mood.name);
     final log =
         s.days[_todayKey] ??
         DayLog(date: _todayKey, puffs: 0, limit: _limitToday(s));
+    final firstToday = log.mood == null;
+    // The mood, never the note: the note is the person's own sentence.
+    if (firstToday) ref.read(analyticsProvider).moodCheckedIn(mood.name);
     _commit(
       _withBadges(
         s.copyWith(
@@ -1092,8 +1121,40 @@ class JourneyStore extends Notifier<JourneyState?> {
             ...s.days,
             _todayKey: log.copyWith(mood: mood, moodNote: note),
           },
-          moodCheckIns: s.moodCheckIns + 1,
+          moodCheckIns: s.moodCheckIns + (firstToday ? 1 : 0),
         ),
+      ),
+    );
+  }
+
+  /// Files a daily-program check-up answer under today (docs/15 QP-B7).
+  ///
+  /// Only an answer that belongs to the question is accepted: the sheet offers
+  /// nothing else, and a mismatched pair would be dropped by both codecs on the
+  /// next read anyway, so writing one would be a silent loss. Answering again
+  /// the same day replaces the answer; answering the same thing twice is one
+  /// write and one event. The event is reported on acceptance, not just stored:
+  /// see `AnalyticsEvents.checkupAnswered`.
+  void recordCheckup(CheckupKind kind, CheckupAnswer answer) {
+    final s = state;
+    if (s == null || !kind.answers.contains(answer)) return;
+    final today = _todayKey;
+    final existing = s.checkups[today] ?? const {};
+    if (existing[kind] == answer) return;
+    final analytics = ref.read(analyticsProvider);
+    analytics.checkupAnswered(kind: kind.name, answer: answer.name);
+    if (kind != CheckupKind.nicotine) {
+      analytics.quitStatusReported(
+        at: kind == CheckupKind.vaped30 ? 30 : 90,
+        vapeFree: answer == CheckupAnswer.notVaped,
+      );
+    }
+    _commit(
+      s.copyWith(
+        checkups: {
+          ...s.checkups,
+          today: {...existing, kind: answer},
+        },
       ),
     );
   }
@@ -1141,28 +1202,30 @@ class JourneyStore extends Notifier<JourneyState?> {
     _commit(_withBadges(next));
   }
 
-  void adjustPlan({QuitMethod? method, int? paceDays}) {
+  /// Puts Freedom Day [paceDays] days from today (docs/15 QP-A11).
+  ///
+  /// Changes the date and nothing else — the method is `startNewPlan`'s job —
+  /// and does nothing at all when the date would not move: no write, no event,
+  /// and tonight's advice on the current curve is kept. `PlanAdjust` answers
+  /// "where would it land", for this and for the sheet's preview alike.
+  ///
+  /// The curve regenerates from today over the new runway; past days keep their
+  /// recorded limits — no reset, no lost history (docs/03 §11).
+  void adjustPlan({required int paceDays}) {
     final s = state;
     if (s == null) return;
-    final currentDay = s.plan.dayNumber(_now).clamp(1, 9999);
-    // Curve regenerates from today over the new runway; past days keep their
-    // recorded limits — no reset, no lost history (docs/03 §11).
-    final newPace = paceDays == null
-        ? s.plan.paceDays
-        : currentDay - 1 + paceDays;
+    final change = PlanAdjust.toReach(s.plan, _now, paceDays);
+    if (change == null) return;
     _commit(
       s.copyWith(
-        plan: s.plan.copyWith(
-          method: method ?? s.plan.method,
-          paceDays: newPace,
-          stretchDays: 0,
-        ),
+        plan: change.plan,
         // Last night's verdict was about the plan the user just replaced.
         // Keeping it would show today a limit derived from a curve that no
         // longer exists; tonight's cron produces the first honest one.
         planAdvice: () => null,
       ),
     );
+    ref.read(analyticsProvider).planAdjusted(deltaDays: change.deltaDays);
   }
 
   // ---- misc -----------------------------------------------------------------

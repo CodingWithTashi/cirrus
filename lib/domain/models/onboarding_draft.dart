@@ -24,6 +24,7 @@ enum ObStep {
   strength,
   spend,
   firstPuff,
+  smoking,
   why,
   worries,
   method,
@@ -42,7 +43,7 @@ enum ObStep {
   notifications,
 }
 
-/// Quiz questions counted by the progress bar (1/12 … 12/12).
+/// Quiz questions counted by the progress bar (1/13 … 13/13).
 const _progressSteps = [
   ObStep.gender,
   ObStep.birthYear,
@@ -52,6 +53,7 @@ const _progressSteps = [
   ObStep.strength,
   ObStep.spend,
   ObStep.firstPuff,
+  ObStep.smoking,
   ObStep.why,
   ObStep.worries,
   ObStep.method,
@@ -73,6 +75,7 @@ class OnboardingState {
     this.strength,
     this.spendInput = '',
     this.firstPuff,
+    this.smoking,
     this.whys = const {},
     this.worries = const {},
     this.method = QuitMethod.taper,
@@ -93,6 +96,10 @@ class OnboardingState {
   final NicStrength? strength;
   final String spendInput;
   final FirstPuffWindow? firstPuff;
+
+  /// Whether they have smoked cigarettes. Null until they answer, and the
+  /// continue gate holds until then. It reaches [UserProfile.smoking].
+  final SmokingHistory? smoking;
   final Set<WhyChip> whys;
   final Set<WorryChip> worries;
   final QuitMethod method;
@@ -116,8 +123,13 @@ class OnboardingState {
   /// state, which is why it carries the draft's own answer count.
   final ResumableDraft? resumable;
 
-  /// How many of the twelve quiz questions carry an answer. Drives the
-  /// "you were 8 of 12 in" line on the resume card.
+  /// How many questions the quiz asks, which is what the progress bar and the
+  /// resume card divide by. Derived, so adding a question cannot leave a
+  /// hardcoded total behind.
+  static int get quizLength => _progressSteps.length;
+
+  /// How many of the quiz questions carry an answer. Drives the
+  /// "you were 8 of 13 in" line on the resume card.
   int get answeredCount =>
       _progressSteps.where((step) => copyWith(step: step).canContinue).length;
 
@@ -169,7 +181,7 @@ class OnboardingState {
   /// iOS has no system back: no hardware key, and no edge swipe either, since
   /// the whole funnel is one route whose steps swap in place. On an iPhone the
   /// on-screen chevron IS back, so it has to exist on every step that has a
-  /// previous one — not only on the twelve that carry a progress bar, which is
+  /// previous one — not only on the thirteen that carry a progress bar, which is
   /// what left the Phase D screens (reveal, coach name, why-words, commit,
   /// notifications) forward-only on every iPhone.
   ///
@@ -192,6 +204,7 @@ class OnboardingState {
     ObStep.strength => strength != null,
     ObStep.spend => weeklySpend > 0,
     ObStep.firstPuff => firstPuff != null,
+    ObStep.smoking => smoking != null,
     ObStep.why => whys.isNotEmpty,
     ObStep.worries => worries.isNotEmpty,
     _ => true,
@@ -208,6 +221,7 @@ class OnboardingState {
     NicStrength? strength,
     String? spendInput,
     FirstPuffWindow? firstPuff,
+    SmokingHistory? smoking,
     Set<WhyChip>? whys,
     Set<WorryChip>? worries,
     QuitMethod? method,
@@ -228,6 +242,7 @@ class OnboardingState {
     strength: strength ?? this.strength,
     spendInput: spendInput ?? this.spendInput,
     firstPuff: firstPuff ?? this.firstPuff,
+    smoking: smoking ?? this.smoking,
     whys: whys ?? this.whys,
     worries: worries ?? this.worries,
     method: method ?? this.method,

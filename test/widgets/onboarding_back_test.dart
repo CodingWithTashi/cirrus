@@ -55,6 +55,8 @@ void main() {
 
   group('every Phase D screen can go back', () {
     const pairs = [
+      (ObStep.smoking, ObStep.firstPuff),
+      (ObStep.why, ObStep.smoking),
       (ObStep.reveal, ObStep.pace),
       (ObStep.coachName, ObStep.reveal),
       (ObStep.whyWords, ObStep.coachName),
@@ -100,7 +102,7 @@ void main() {
     final container = await pump(tester, ObStep.spend);
 
     expect(find.byType(BackChevron), findsOneWidget);
-    expect(find.text(l10n.obProgressOf(7, 12)), findsOneWidget);
+    expect(find.text(l10n.obProgressOf(7, 13)), findsOneWidget);
 
     await tester.tap(find.byType(BackChevron));
     await tester.pump(const Duration(milliseconds: 400));

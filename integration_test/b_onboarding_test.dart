@@ -76,7 +76,8 @@ void main() {
     // spend
     await typeDigits(e2e, '25');
     await e2e.tapText(e2e.l10n.commonContinue);
-    // firstPuff / why / worries / method
+    // firstPuff / smoking / why / worries / method
+    await pickFirstAndContinue(e2e);
     await pickFirstAndContinue(e2e);
     await pickFirstAndContinue(e2e);
     await pickFirstAndContinue(e2e);

@@ -160,14 +160,49 @@ describe('adaptive layer (docs/03 §3.3)', () => {
     expect(advice.stretchDelta).toBe(1);
   });
 
-  it('caps total stretch at +50% of pace', () => {
-    // paceDays 30 → cap 15. Already at the cap, so no further stretch.
-    const p = plan({stretchDays: 15});
-    const window = [
+  // docs/15 QP-A9. Total stretch is capped at SEVEN days (and at half the
+  // plan on a plan too short for seven). The Dart engine pins the same table in
+  // `test/domain/taper_engine_test.dart`; the two must move together. A night
+  // adds at most one day here, where a slip in the app adds two.
+  describe('the stretch ceiling', () => {
+    const struggling = [
       {puffs: 200, limit: 100},
       {puffs: 200, limit: 100},
     ];
-    expect(adviseTomorrow(p, 7, window, true).stretchDelta).toBe(0);
+    const delta = (over: Partial<QuitPlan>) =>
+      adviseTomorrow(plan(over), 7, struggling, true).stretchDelta;
+
+    it('adds a day while there is room under seven', () => {
+      expect(delta({stretchDays: 0})).toBe(1);
+      expect(delta({stretchDays: 6})).toBe(1);
+    });
+
+    it('adds nothing at the ceiling', () => {
+      expect(delta({stretchDays: 7})).toBe(0);
+    });
+
+    it('adds nothing to a stretch that is already past it', () => {
+      // 10 and 15 were reachable under the old half-the-plan rule. They stand,
+      // and nothing is added on top.
+      expect(delta({stretchDays: 10})).toBe(0);
+      expect(delta({stretchDays: 15})).toBe(0);
+    });
+
+    it('is seven on every length on offer', () => {
+      for (const paceDays of [14, 21, 30, 42]) {
+        expect(delta({paceDays, stretchDays: 6})).toBe(1);
+        expect(delta({paceDays, stretchDays: 7})).toBe(0);
+      }
+    });
+
+    it('is half the plan on a plan too short for seven', () => {
+      expect(delta({paceDays: 10, stretchDays: 4})).toBe(1);
+      expect(delta({paceDays: 10, stretchDays: 5})).toBe(0);
+    });
+
+    it('never stretches a cold-turkey plan', () => {
+      expect(delta({method: 'coldTurkey', stretchDays: 0})).toBe(0);
+    });
   });
 
   it('follows the curve with no history', () => {

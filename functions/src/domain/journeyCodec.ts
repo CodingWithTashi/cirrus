@@ -9,6 +9,9 @@
  * takes the coach down during a staged rollout.
  */
 import {
+  CHECKUP_ANSWERS,
+  CHECKUP_ANSWERS_BY_KIND,
+  CHECKUP_KINDS,
   FIRST_PUFF_WINDOWS,
   GENDERS,
   MOODS,
@@ -16,10 +19,12 @@ import {
   QUIT_ATTEMPTS,
   QUIT_METHODS,
   SLIP_TRIGGERS,
+  SMOKING_HISTORIES,
   SUBSCRIPTION_TIERS,
   VAPE_FREQUENCIES,
   WHY_CHIPS,
   WORRY_CHIPS,
+  type Checkup,
   type DayLog,
   type Journey,
   type QuitPlan,
@@ -46,7 +51,39 @@ export function decodeJourney(raw: unknown): Journey {
     earnedBadges: Array.isArray(json['earnedBadges'])
       ? json['earnedBadges'].filter((b): b is string => typeof b === 'string')
       : [],
+    checkups: decodeCheckups(json['checkups']),
   };
+}
+
+/**
+ * The daily program's check-up answers (docs/15 QP-B7), as a flat list, oldest
+ * day first. The same drop rules the Dart codec applies, for the same reason:
+ * it is client-written, a newer build may write what this one does not know,
+ * and it sits beside a system prompt. An unknown question, an unknown answer,
+ * an answer that belongs to a different question, a bad day key and a value
+ * that is not an object are all dropped — never thrown on, never passed on.
+ */
+function decodeCheckups(raw: unknown): Checkup[] {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  const out: Checkup[] = [];
+  for (const [day, answers] of Object.entries(raw as Record<string, unknown>)) {
+    if (!isDayKey(day)) continue;
+    if (answers === null || typeof answers !== 'object' || Array.isArray(answers)) {
+      continue;
+    }
+    for (const [name, value] of Object.entries(answers as Record<string, unknown>)) {
+      const kind = asEnumOrNull(name, CHECKUP_KINDS);
+      const answer = asEnumOrNull(value, CHECKUP_ANSWERS);
+      if (kind === null || answer === null) continue;
+      if (!CHECKUP_ANSWERS_BY_KIND[kind].includes(answer)) continue;
+      out.push({day, kind, answer});
+    }
+  }
+  return out.sort(
+    (a, b) =>
+      a.day.localeCompare(b.day) ||
+      CHECKUP_KINDS.indexOf(a.kind) - CHECKUP_KINDS.indexOf(b.kind),
+  );
 }
 
 function decodeGoals(raw: unknown): SavingsGoal[] {
@@ -120,6 +157,10 @@ function decodeProfile(json: Record<string, unknown>): UserProfile {
     // cap. Folding the newlines matters more here than it does for a name: a
     // blank line is how you fake a new section inside a prompt.
     whyWords: sanitizeProse(json['whyWords'], MAX_WHY_WORDS),
+    // An enum with a null fallback, never text: client-written, and it sits
+    // beside a system prompt, so nothing a client types may reach the model
+    // through this field.
+    smoking: asEnumOrNull(json['smoking'], SMOKING_HISTORIES),
     gender: asEnumOrNull(json['gender'], GENDERS),
     attempts: asEnumOrNull(json['attempts'], QUIT_ATTEMPTS),
     frequency: asEnumOrNull(json['frequency'], VAPE_FREQUENCIES),

@@ -332,6 +332,22 @@ const POSTS = [
       { n: '1 in 5', label: 'off nicotine at 6 mo', color: EMBER },
     ],
   },
+  {
+    slug: 'how-to-quit-vaping-with-an-app',
+    eyebrow: 'QUIT VAPING APP · HOW CIRRUS WORKS',
+    headline: 'How to quit vaping with an app',
+    // The research each piece of the app stands on, in the order the post
+    // meets it: tracking (Harkin 2016), the daily message (Cochrane CD016058,
+    // texting 29 vs 22 per 100), the panic button's window (the craving, in
+    // ember), and the tie that makes the method the user's choice (Cochrane
+    // CD013183, 22 trials).
+    blocks: [
+      { n: '138', label: 'studies: tracking helps', color: VOLT },
+      { n: '29 vs 22', label: 'quit per 100, daily texts', color: VOLT },
+      { n: '15–20', label: 'min per craving', color: EMBER },
+      { n: 'Tie', label: 'taper vs cold turkey', color: VOLT },
+    ],
+  },
 ];
 
 // Greedy wrap on measured advance widths — SVG has no text box, so the line

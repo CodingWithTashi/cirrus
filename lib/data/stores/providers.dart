@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -56,6 +57,7 @@ import 'settings_store.dart';
 import 'widget_coordinator.dart';
 import '../api/widget_store.dart';
 import '../../domain/date_key.dart';
+import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_review.dart';
 
 // ---- backend seam -----------------------------------------------------------
@@ -426,6 +428,21 @@ final pushMessagesProvider = Provider<PushMessages?>(
     BackendMode.fake => null,
     BackendMode.firebase => const FirebasePushMessages(),
   },
+);
+
+/// The country the device is set to (ISO 3166-1 alpha-2), or null when it
+/// reports none. The app's own locale carries a language, not a country, so the
+/// More help page reads this to choose which phone numbers to show. Tests
+/// override it.
+final deviceRegionProvider = Provider<String?>(
+  (ref) => PlatformDispatcher.instance.locale.countryCode,
+);
+
+/// Opens a link outside the app — a phone number, a web page. The seam exists
+/// so a widget test can see WHAT was opened; production is [LpLinks.open],
+/// which never throws.
+final linkOpenerProvider = Provider<Future<bool> Function(Uri)>(
+  (ref) => LpLinks.open,
 );
 
 /// The OS notification permission, for the second-chance asks. Null on the

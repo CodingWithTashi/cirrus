@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/widgets/lp_error.dart';
 import '../core/utils/l10n_ext.dart';
+import '../core/utils/program_copy.dart';
 import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
 import '../data/stores/providers.dart';
@@ -135,6 +136,10 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
         // At the check-in hour Home is already showing the cards it asks
         // about: "No puffs today?" and the evening mood.
         _router.go(Routes.home);
+      case ReminderKind.program:
+        // The daily program's card sits on Home, under the ring, with the
+        // message in it and the question it asks (docs/15 QP-B4).
+        _router.go(Routes.home);
       case ReminderKind.milestone:
         // The badge it is about lives on the milestones grid, which is a
         // pushed detail screen with a back chevron — so `push`, not `go`,
@@ -189,6 +194,7 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
                   .read(settingsStoreProvider.notifier)
                   .adoptMilestones,
               checkinCopy: (checkin) => _checkinCopy(l10n, checkin),
+              programCopy: (checkin) => _programCopy(l10n, checkin),
               now: now,
             )
             .ignore();
@@ -206,13 +212,27 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
   AppLocalizations l10n,
   CheckinReminder checkin,
 ) => (
-  title: checkin.planDay <= checkin.totalDays
-      ? l10n.checkinNotifTitle(checkin.planDay)
-      : l10n.checkinNotifTitlePast,
+  title: _dayTitle(l10n, checkin),
   body: checkin.limit == 0
       ? l10n.checkinNotifBodyZero
       : l10n.checkinNotifBody(checkin.limit),
 );
+
+/// The title both the check-in and a program message carry: the plan day, or
+/// — past Freedom Day, where Home stops counting — none.
+String _dayTitle(AppLocalizations l10n, CheckinReminder checkin) =>
+    checkin.planDay <= checkin.totalDays
+    ? l10n.checkinNotifTitle(checkin.planDay)
+    : l10n.checkinNotifTitlePast;
+
+/// The daily program's words for one message (docs/15 stage B): the same title
+/// as the check-in it replaces in the slot, and the message itself as the body.
+/// Resolved here for the same reason as the rest — the scheduler has no
+/// `BuildContext`, and a notification in the wrong language is worse than none.
+({String title, String body}) _programCopy(
+  AppLocalizations l10n,
+  CheckinReminder checkin,
+) => (title: _dayTitle(l10n, checkin), body: checkin.message!.text(l10n));
 
 /// The celebration copy for one badge.
 ///

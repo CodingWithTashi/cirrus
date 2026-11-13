@@ -32,6 +32,7 @@ void main() {
       ..selectFrequency(VapeFrequency.always)
       ..selectStrength(NicStrength.mg50)
       ..selectFirstPuff(FirstPuffWindow.withinFive)
+      ..selectSmoking(SmokingHistory.former)
       ..toggleWhy(WhyChip.health)
       ..toggleWorry(WorryChip.cravings)
       ..selectMethod(QuitMethod.taper)
@@ -191,6 +192,53 @@ void main() {
     });
   });
 
+  group('the cigarettes question (QP-A2)', () {
+    test('sits straight after the first-puff question', () {
+      final order = ObStep.values;
+      expect(
+        order.indexOf(ObStep.smoking),
+        order.indexOf(ObStep.firstPuff) + 1,
+      );
+      expect(order[order.indexOf(ObStep.smoking) + 1], ObStep.why);
+    });
+
+    test('counts as a quiz question on the progress bar', () {
+      // First puff was 8 of 12; the new question makes the quiz thirteen.
+      expect(
+        const OnboardingState(step: ObStep.firstPuff).progress,
+        (8, 13),
+      );
+      expect(
+        const OnboardingState(step: ObStep.smoking).progress,
+        (9, 13),
+      );
+      expect(const OnboardingState(step: ObStep.pace).progress, (13, 13));
+    });
+
+    test('forward and back both pass through it', () {
+      final c = container();
+      final vm = c.read(onboardingProvider.notifier)
+        ..selectFirstPuff(FirstPuffWindow.withinFive);
+      vm.state = vm.state.copyWith(step: ObStep.firstPuff);
+
+      vm.next();
+      expect(c.read(onboardingProvider).step, ObStep.smoking);
+
+      // Unanswered, it holds.
+      vm.next();
+      expect(c.read(onboardingProvider).step, ObStep.smoking);
+
+      vm
+        ..selectSmoking(SmokingHistory.current)
+        ..toggleWhy(WhyChip.health)
+        ..next();
+      expect(c.read(onboardingProvider).step, ObStep.why);
+
+      expect(vm.back(), isTrue);
+      expect(c.read(onboardingProvider).step, ObStep.smoking);
+    });
+  });
+
   group('the continue gate', () {
     test('holds until each question is answered', () {
       final c = container();
@@ -202,6 +250,7 @@ void main() {
         (ObStep.frequency, () => vm.selectFrequency(VapeFrequency.daily)),
         (ObStep.strength, () => vm.selectStrength(NicStrength.mg20)),
         (ObStep.firstPuff, () => vm.selectFirstPuff(FirstPuffWindow.hourPlus)),
+        (ObStep.smoking, () => vm.selectSmoking(SmokingHistory.never)),
         (ObStep.why, () => vm.toggleWhy(WhyChip.money)),
         (ObStep.worries, () => vm.toggleWorry(WorryChip.stress)),
       ]) {
@@ -264,6 +313,9 @@ void main() {
       expect(journey.profile.attempts, QuitAttempts.twoToFive);
       expect(journey.profile.frequency, VapeFrequency.always);
       expect(journey.profile.firstPuff, FirstPuffWindow.withinFive);
+      // The one answer that decides which safety copy Ember and Home use.
+      // Dropped here, it is a fact nobody can ever recover.
+      expect(journey.profile.smoking, SmokingHistory.former);
       expect(journey.profile.whys, contains(WhyChip.health));
       expect(journey.profile.worries, contains(WorryChip.cravings));
       // Finishing onboarding grants nothing: the tier is the store's to give,

@@ -45,11 +45,12 @@ void main() {
       ..selectFrequency(VapeFrequency.always)
       ..selectStrength(NicStrength.mg35)
       ..selectFirstPuff(FirstPuffWindow.fiveToThirty)
+      ..selectSmoking(SmokingHistory.current)
       ..toggleWhy(WhyChip.health)
       ..toggleWhy(WhyChip.fitness)
       ..toggleWorry(WorryChip.cravings)
       ..selectMethod(QuitMethod.coldTurkey)
-      ..selectPace(60)
+      ..selectPace(42)
       ..setEmail('maya@quitmail.com');
     for (final d in [1, 9, 9, 8]) {
       vm.typeBirthDigit(d);
@@ -83,10 +84,11 @@ void main() {
         strength: NicStrength.mg20,
         spendInput: '33',
         firstPuff: FirstPuffWindow.hourPlus,
+        smoking: SmokingHistory.former,
         whys: {WhyChip.money, WhyChip.family},
         worries: {WorryChip.stress, WorryChip.weight},
         method: QuitMethod.coldTurkey,
-        paceDays: 90,
+        paceDays: 42,
         whyWordsInput: 'my daughter should never see me vape',
         coachNameInput: 'Koda',
         committed: true,
@@ -105,10 +107,11 @@ void main() {
       expect(back.state.strength, NicStrength.mg20);
       expect(back.state.spendInput, '33');
       expect(back.state.firstPuff, FirstPuffWindow.hourPlus);
+      expect(back.state.smoking, SmokingHistory.former);
       expect(back.state.whys, {WhyChip.money, WhyChip.family});
       expect(back.state.worries, {WorryChip.stress, WorryChip.weight});
       expect(back.state.method, QuitMethod.coldTurkey);
-      expect(back.state.paceDays, 90);
+      expect(back.state.paceDays, 42);
       // The two typed answers of Phase D. Both were once lost to a process
       // kill — the why words as the longest thing anyone types here, the
       // coach name as a rename that silently reverted to "Ember" on resume.
@@ -137,6 +140,75 @@ void main() {
       expect(back.state.gender, isNull);
       expect(back.state.whys, {WhyChip.health});
       expect(back.state.method, QuitMethod.taper);
+    });
+
+    test('a draft saved before the cigarettes question still loads', () async {
+      // The step is stored by NAME, so inserting one shifts nobody. What it
+      // must not do is throw on the missing key, or invent an answer: null is
+      // "not asked yet", and the gate holds on the step until they answer.
+      SharedPreferences.setMockInitialValues({
+        key: jsonEncode({
+          'v': OnboardingDraftPersistence.schemaVersion,
+          'savedAt': now.toIso8601String(),
+          'step': 'why',
+          'firstPuff': 'withinFive',
+        }),
+      });
+      final back = (await OnboardingDraftPersistence.load(now: now))!;
+      expect(back.state.step, ObStep.why);
+      expect(back.state.firstPuff, FirstPuffWindow.withinFive);
+      expect(back.state.smoking, isNull);
+      // The new question is open, not silently answered: the gate holds on it
+      // and the resume card does not count it. (`answeredCount` is not 1
+      // here — method and pace have defaults, so they always read answered.)
+      expect(back.state.copyWith(step: ObStep.smoking).canContinue, isFalse);
+      expect(back.state.answeredCount, lessThan(OnboardingState.quizLength));
+    });
+
+    test('an unknown cigarettes answer reads as unanswered', () async {
+      SharedPreferences.setMockInitialValues({
+        key: jsonEncode({
+          'v': OnboardingDraftPersistence.schemaVersion,
+          'savedAt': now.toIso8601String(),
+          'step': 'smoking',
+          'smoking': 'sometimes',
+        }),
+      });
+      final back = (await OnboardingDraftPersistence.load(now: now))!;
+      expect(back.state.smoking, isNull);
+    });
+
+    test('a draft saved with a retired length comes back at six weeks', () async {
+      // 60 and 90 days were on offer until Nov 12 2026 (docs/15 QP-A8). A
+      // draft parked on one must not carry it into a plan nobody can pick any
+      // more, and must not drop to 30 either: it was a "slower" choice.
+      for (final retired in [60, 90]) {
+        SharedPreferences.setMockInitialValues({
+          key: jsonEncode({
+            'v': OnboardingDraftPersistence.schemaVersion,
+            'savedAt': now.toIso8601String(),
+            'step': 'pace',
+            'paceDays': retired,
+          }),
+        });
+        final back = (await OnboardingDraftPersistence.load(now: now))!;
+        expect(back.state.paceDays, 42, reason: '$retired');
+      }
+    });
+
+    test('a length still on offer survives untouched', () async {
+      for (final days in [14, 21, 30, 42]) {
+        SharedPreferences.setMockInitialValues({
+          key: jsonEncode({
+            'v': OnboardingDraftPersistence.schemaVersion,
+            'savedAt': now.toIso8601String(),
+            'step': 'pace',
+            'paceDays': days,
+          }),
+        });
+        final back = (await OnboardingDraftPersistence.load(now: now))!;
+        expect(back.state.paceDays, days);
+      }
     });
 
     test('garbage on disk reads as no draft at all', () async {
@@ -230,7 +302,7 @@ void main() {
       expect(back.state.puffsInput, '200');
       expect(back.state.spendInput, '45');
       expect(back.state.whys, {WhyChip.health, WhyChip.fitness});
-      expect(back.state.paceDays, 60);
+      expect(back.state.paceDays, 42);
       expect(back.state.email, 'maya@quitmail.com');
     });
 
@@ -246,8 +318,8 @@ void main() {
       final offered = revived.read(onboardingProvider);
       expect(offered.step, ObStep.welcome, reason: 'must not teleport');
       expect(offered.resumable, isNotNull);
-      expect(offered.resumable!.answered, 12);
-      expect(offered.resumable!.total, 12);
+      expect(offered.resumable!.answered, 13);
+      expect(offered.resumable!.total, 13);
 
       revived.read(onboardingProvider.notifier).resumeDraft();
       final resumed = revived.read(onboardingProvider);

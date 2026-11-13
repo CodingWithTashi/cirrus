@@ -5773,3 +5773,64 @@ Unit and widget: everything above.
 
 `flutter analyze` clean · `flutter test` **2125 passed** · `functions`: `npm run verify` **337**, `test:rules` **57**, `test:integration` **412** · deployed Nov 12 · Pixel 8: **61 passed** on the fake backend, `k_retention` 3/4 (§52.5) · iOS and the real backend from a device: **not run**.
 
+
+---
+## 53. THE QUIT PROGRAM (Nov 12–13) — a cigarettes question, a date that holds, and one message a day
+
+The plan and its evidence are `docs/15_Quit_Program_Plan.md`; this is the dated record. It came out of the Nov 11 audit (§52): the one intervention with trial evidence in people who vape is a daily message program tied to a quit date, every guideline puts "do not go back to smoking" first, and the app asked nobody about cigarettes. Two stages, built test-first, and **neither is deployed or released**.
+
+### 53.1 Stage A — safety and a date that holds (Nov 12)
+
+- **The cigarettes question** — `SmokingHistory` on the profile (nullable: null is never asked), a 13th quiz question after `firstPuff` (so `ObStep` is 21 values), the same question as a Home card for accounts that never saw it, and **the one rule** (`SmokingRuleCard`): don't go back to cigarettes; the vape is the *safer* of two choices, never *safe*. Shown to former and current smokers only.
+- **More help** — a page of medicine and people for the device's region, with every link a real URI handed to the opener. The onboarding trial claim now says what was tested.
+- **A date that holds** — tapers are 14, 21, 30 or 42 days (`PlanPaces`); a total stretch is capped at **7 days** on both engines (it was half the plan); a slip now **asks** (keep the date, add 1 or 2 days) rather than always adding 2; "Adjust my plan" changes the date only and refuses a no-op.
+- **Server** — `profile.smoking` is decoded defensively and the coach's card says `used to smoke` / `still smokes as well as vaping`; a new hard safety rule in the prompt stops the coach suggesting a substitute. **The coach eval gate is open** (§53.4).
+
+### 53.2 Stage B — the daily program (Nov 13)
+
+One message a day from 7 days before the quit date to 56 after: 43 written messages, 14 replies, 21 tips, all in six languages, none AI. The quit date is `plan.freedomDate` for a taper and `plan.startDate` for cold turkey, so nobody sets a second date.
+
+- **Engine** — `quit_program.dart` is a pure function of the plan and the date. "Slipped" reads each day's *stored* `DayLog.limit`, never a recomputed curve.
+- **Home card** — the message, a link chip, the existing mood check-in as the question, a written reply, and Craving / Stress / Slipped / More. It replaces the evening mood prompt (one check-in a day) and is hidden during the Day-1 tour, so a cold-turkey account first meets it after the tour on its quit day.
+- **The mood check-in counts once a day.** It used to count every call, and seven awarded a badge.
+- **Reminders** — the evening check-in became the daily message (`ReminderKind.program`): evenings 4000–4006, plus three 09:00 mornings 5000–5002, on the existing channel with `BigTextStyleInformation` so Android shows the whole body. An armed message never claims a status. Settings and the onboarding copy that had stopped being true were rewritten.
+- **Check-ups** — nicotine on days 7/14/28/56, "have you vaped in the last 30 days" at 30 and (its own Home card) 90. `JourneyState.checkups`, mirrored in `journeyCodec.ts` and the coach's card; each answer also goes to analytics (`checkup_answered`, `quit_status_reported`) because an older build on a second device rewrites the journey document.
+- **Events** — `help_viewed`, `help_link_opened`, `slip_resolved`, `plan_adjusted`, `program_shown`, `program_reply`, `program_help`, `reminder_opened{program}`, `checkup_answered`, `quit_status_reported`.
+
+### 53.3 Three bugs found while building it
+
+- A nicotine check-up answered on day 7 closed day 14 as well (one window per ask now: `CheckupKind.windowStart`).
+- On a program day the evening message was skipped once the *day* was confirmed — a cold-turkey day is confirmed by morning, which silenced the quit day. It is skipped once the **mood** is in.
+- On the Pixel: the Slipped sheet showed "More help" twice to a former smoker. No widget test saw it; the sheet now drops its own link when the rule card, which has one, is showing.
+
+### 53.4 Proven where, and not
+
+**Gates:** `flutter analyze` clean · `flutter test` **2,436** · `functions`: `npm run verify` **359**, `test:integration` **412**.
+
+**On the Pixel 8 (Android 17), fake backend, real fonts, router and notification scheduler:** stage A — suites `a`–`e`, `g`–`i`, `l`, `n` and the new `p_safety_and_date` 13/13 (docs/15 A12). Stage B — the new `o_quit_program` **7/7**, three runs: the quit-day card, a mood answered and its reply, tomorrow's message pending on the OS with payload `program` and its full text (read through `pendingNotificationRequests()`, so Do Not Disturb cannot hide it), the switch clearing exactly its own ids and leaving the trial reminder, the day-7 check-up and the one rule, the Stress sheet's breathing ring, Slipped moving nothing, and the 90-day card.
+
+**Not proven:**
+- **`npm run eval:coach` is not green.** Re-run Nov 13 on a paid-tier key: real answers, no quota errors, and the first run (20/22, 18/22) found real defects in the new coach rules that are now fixed (§53.6). But a single-roll 22/22 is not reachable reliably by any prompt: the one in production scored lite 19/20 at best over six runs. Over five rolls the final prompt is level with production; the real harness on the same bytes read lite 19/22, premium 21/22. **Functions were deployed Nov 13 2026** after the founder chose the multi-roll standard and an improved judge (§53.7); the app is not released.
+- **A tap on the program notification**, on any device (Do Not Disturb hides it; routing is pinned by `reminder_tap_test`).
+- **Anything on an iPhone.** The simulator build needs the watchOS 26.2 runtime (§52.5).
+- **Translations** are the plan author's, not reviewed by a native speaker.
+- **Whether it works on people.** There is no comparison group (docs/15 §2); the day-30 and day-90 answers are read by install week, four weeks after release.
+
+### 53.5 Left for later
+
+Stage C (a one-time home-screen widget prompt) is not started. The deploy order is functions first, then the app, once the eval is clean.
+
+### 53.6 What the eval found (Nov 13)
+
+- **The cigarette rule was easy to invert.** "Choosing a vape over a cigarette is not failing" came back to someone who had a cigarette as "choosing that cigarette wasn't failing". It now hands the model the exact sentence, limits the reply to four short sentences, and says medicine is never a "hook" (it had leaked onto the patch question). Pinned in `test/prompts.test.ts`.
+- **Slips are not sized and the family is not leverage** ("40 puffs is a lot", "protect your daughter's future" — both failed the tone judge).
+- **The panic rider asks for 20 words, not 30.** The lite model's median at "30" was 27–30 words against the eval's cap of 30, so any prompt change tipped it over; measured side by side, 4–8 of 12 rolls failed against 2 of 12 for the shipped prompt. At 20: 1 of 12, median 16 words. **This shortens live panic replies.**
+- **A one-roll LLM-judged gate is noise near the edge.** The method that replaced it for this change: write the pass bar down first, run five full rolls of the old and new prompt side by side, and read every failing safety reply. See the CLAUDE.md gotcha.
+
+### 53.7 The judge, and the deploy (Nov 13)
+
+- **The judge was the weakest part of the gate.** It never saw the user's message, the card or the conversation summary, and ran on the smallest model, so it failed correct replies and passed an inverted cigarette rule. `tools/evalJudge.ts` (tested in `test/evalJudge.test.ts`) now gives it all three and the premium model. A majority vote would not have helped: it runs at temperature 0, so its errors are systematic. No case's criteria text was edited.
+- **Validated two ways, and the second caught what the first could not.** On 23 replies labeled by hand: accuracy 67% → 91%, good replies wrongly failed 55% → 0%. Then a held-out re-judge of 504 stored answers found a missing-summary bug (22 of 24 correct recalls failed) and an over-reaching tone sentence (ordinary mentions of the person's why failed). Both fixed test-first, both re-measured.
+- **Result under the improved judge, like for like:** production 6.7% of answers failing, new prompt 7.5%; safety cases 0 failures in 6 runs per model; the literal harness three times: lite 21, 19, 21 of 22, premium 21, 21, 22 of 22.
+- **Deployed** Nov 13 18:13 UTC: `firebase deploy --only functions`, all 25 functions updated, project `alastpuff`, Gemini secret version 2. Afterwards `aiCoachChat`, `panicSession` and `syncUserContext` refused an unattested request with 401. **Not verified:** a real signed-in coach call and the function logs.
+- **The app is not released.** Until it is, the live coach has the new safety rule and shorter panic replies, and the app has no program card.

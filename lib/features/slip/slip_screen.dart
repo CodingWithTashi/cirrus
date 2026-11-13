@@ -15,8 +15,11 @@ import '../../core/widgets/lp_card.dart';
 import '../../core/widgets/lp_charts.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/models.dart';
+import '../help/smoking_rule_card.dart';
+import '../onboarding/steps/step_body.dart' show StepScrollView;
 
 /// Frames 48a/48b — relapse recovery. Teammate-reviewing-film tone, no red,
 /// no streak-zero moment ever shown.
@@ -30,10 +33,6 @@ class SlipFlow extends ConsumerStatefulWidget {
 class _SlipFlowState extends ConsumerState<SlipFlow> {
   int _step = 0;
   SlipTrigger? _trigger;
-
-  /// Frame 48b: the curve shows the slip bump honestly first, then visibly
-  /// reflows to the stretched runway.
-  bool _reflowed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,14 +94,6 @@ class _SlipFlowState extends ConsumerState<SlipFlow> {
                         .read(quitStoreProvider.notifier)
                         .recordSlipTrigger(_trigger!);
                     setState(() => _step = 1);
-                    Future<void>.delayed(
-                      const Duration(milliseconds: 1000),
-                      () {
-                        if (mounted && _step == 1) {
-                          setState(() => _reflowed = true);
-                        }
-                      },
-                    );
                   },
           ),
         ],
@@ -117,132 +108,186 @@ class _SlipFlowState extends ConsumerState<SlipFlow> {
     final journey = ref.watch(quitStoreProvider);
     final snap = ref.watch(todayProvider);
     if (journey == null || snap == null) return const SizedBox.shrink();
-    final reflown = TaperEngine.reflowAfterSlip(journey.plan);
-    final extraDays = reflown.totalDays - journey.plan.totalDays;
+    final plan = journey.plan;
+    // What "Add" would do, computed by the engine so the button, the caption
+    // and the stored plan cannot disagree. Zero for cold turkey and once the
+    // stretch ceiling is used up.
+    final canAdd = TaperEngine.stretchLeft(plan) > 0;
+    final stretched = TaperEngine.reflowAfterSlip(plan);
+    final extraDays = stretched.totalDays - plan.totalDays;
+    final smoking = journey.profile.smoking;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.slipAdjustTitle,
-            style: LpType.title(lp.textPrimary, size: 28),
-          ),
-          const SizedBox(height: 22),
-          LpCard(
-            radius: LpDimens.rCardLg,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SectionLabel(l10n.slipCurveLabel),
-                TaperCurveChart(
-                  samples: _reflowed
-                      ? TaperEngine.normalizedCurve(reflown)
-                      : _bumpedCurve(reflown),
-                  height: 96,
-                  todayFraction: reflown.totalDays <= 1
-                      ? 0
-                      : ((snap.dayNumber - 1) / (reflown.totalDays - 1))
-                            .clamp(0, 1)
-                            .toDouble(),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.slipTheBump,
-                      style: LpType.caption11(lp.textSecondary),
-                    ),
-                    Text(
-                      l10n.slipNewFreedom(
-                        LpFormat.shortDate(reflown.freedomDate, locale),
-                        extraDays,
-                      ),
-                      style: LpType.caption11(
-                        lp.emberText,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  // The note names the trigger THEY picked, or none. One
-                  // fixed "Party nights get…" string told a stressed person
-                  // about their party habit (QA L2). Nothing here promises
-                  // a feature the app does not have.
-                  switch (_trigger) {
-                    SlipTrigger.party => l10n.slipCurveNoteParty,
-                    SlipTrigger.stress => l10n.slipCurveNoteStress,
-                    SlipTrigger.boredom => l10n.slipCurveNoteBoredom,
-                    SlipTrigger.drinking => l10n.slipCurveNoteDrinking,
-                    SlipTrigger.friends => l10n.slipCurveNoteFriends,
-                    SlipTrigger.justHappened => l10n.slipCurveNoteJustHappened,
-                    null => l10n.slipCurveNote,
-                  },
-                  style: LpType.caption(lp.textSecondary),
-                ),
-              ],
+    return StepScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.slipAdjustTitle,
+              style: LpType.title(lp.textPrimary, size: 28),
             ),
-          ),
-          const SizedBox(height: 14),
-          LpCard(
-            radius: LpDimens.rCardLg,
-            borderColor: lp.ember.withValues(alpha: 0.45),
-            glowColor: lp.ember,
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Opacity(
-                  opacity: 0.75,
-                  child: const Text('🔥', style: TextStyle(fontSize: 34)),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.slipStreakSurvives(snap.streak),
-                        style: LpType.emphasis(lp.textPrimary, size: 15),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.slipFlameDims,
-                        style: LpType.body13(lp.textSecondary),
-                      ),
-                    ],
+            const SizedBox(height: 22),
+            LpCard(
+              radius: LpDimens.rCardLg,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionLabel(l10n.slipCurveLabel),
+                  // The plan as it stands, with the slip drawn honestly. The
+                  // later date and the stretched curve are not the picture
+                  // here: a slip does not move Freedom Day unless the person
+                  // asks it to (docs/15 QP-A10).
+                  TaperCurveChart(
+                    samples: _bumpedCurve(plan),
+                    height: 96,
+                    todayFraction: plan.totalDays <= 1
+                        ? 0
+                        : ((snap.dayNumber - 1) / (plan.totalDays - 1))
+                              .clamp(0, 1)
+                              .toDouble(),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.slipTheBump,
+                    style: LpType.caption11(lp.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.slipDateStays(
+                      LpFormat.shortDate(plan.freedomDate, locale),
+                    ),
+                    style: LpType.caption11(
+                      lp.emberText,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    // The note names the trigger THEY picked, or none. One
+                    // fixed "Party nights get…" string told a stressed person
+                    // about their party habit (QA L2). Nothing here promises
+                    // a feature the app does not have.
+                    switch (_trigger) {
+                      SlipTrigger.party => l10n.slipCurveNoteParty,
+                      SlipTrigger.stress => l10n.slipCurveNoteStress,
+                      SlipTrigger.boredom => l10n.slipCurveNoteBoredom,
+                      SlipTrigger.drinking => l10n.slipCurveNoteDrinking,
+                      SlipTrigger.friends => l10n.slipCurveNoteFriends,
+                      SlipTrigger.justHappened =>
+                        l10n.slipCurveNoteJustHappened,
+                      null => l10n.slipCurveNote,
+                    },
+                    style: LpType.caption(lp.textSecondary),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Spacer(),
-          LpButton(
-            l10n.slipBackOnCurve,
-            onTap: () {
-              LpHaptics.medium();
-              ref.read(quitStoreProvider.notifier).applySlipRecovery();
-              context.go(Routes.home);
-            },
-          ),
-          const SizedBox(height: 6),
-          LpTextButton(
-            l10n.slipTalkFirst,
-            onTap: () {
-              ref.read(quitStoreProvider.notifier).applySlipRecovery();
-              context.go(Routes.coach);
-            },
-          ),
-        ],
+            const SizedBox(height: 14),
+            LpCard(
+              radius: LpDimens.rCardLg,
+              borderColor: lp.ember.withValues(alpha: 0.45),
+              glowColor: lp.ember,
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Opacity(
+                    opacity: 0.75,
+                    child: const Text('🔥', style: TextStyle(fontSize: 34)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.slipStreakSurvives(snap.streak),
+                          style: LpType.emphasis(lp.textPrimary, size: 15),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.slipFlameDims,
+                          style: LpType.body13(lp.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Every guideline puts "do not go back to smoking" first, and a
+            // slip is the moment that sentence is for (docs/15 QP-A4). Nothing
+            // for someone who never smoked.
+            if (smoking != null && smoking != SmokingHistory.never) ...[
+              const SizedBox(height: 14),
+              SmokingRuleCard(answer: smoking, source: 'slip'),
+            ],
+            const Spacer(),
+            const SizedBox(height: 18),
+            // Keeping the date is the primary action: it is the one that does
+            // not move anything, and the one the evidence favours.
+            LpButton(l10n.slipKeepDate, onTap: _keepDate),
+            if (canAdd) ...[
+              const SizedBox(height: 10),
+              LpButton(
+                l10n.slipAddDays(extraDays),
+                style: LpButtonStyle.surface,
+                glow: false,
+                onTap: _addDays,
+              ),
+              const SizedBox(height: 6),
+              // The later date, shown only as what this choice would do.
+              Center(
+                child: Text(
+                  l10n.slipNewFreedom(
+                    LpFormat.shortDate(stretched.freedomDate, locale),
+                    extraDays,
+                  ),
+                  style: LpType.caption11(lp.textSecondary),
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            LpTextButton(
+              l10n.slipTalkFirst,
+              // Not a resolution: nothing is stretched and the slip card stays
+              // until they choose.
+              onTap: () => context.go(Routes.coach),
+            ),
+            LpTextButton(
+              l10n.helpTitle,
+              onTap: () => context.push(Routes.helpFrom('slip')),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// The reflown curve with a small honest bump at today's position.
+  /// Leave first, then mutate. A `refreshListenable` fires after the frame, so
+  /// changing the journey and then navigating lets the router rebuild the match
+  /// list under a route that is still being popped (CLAUDE.md, the paywall
+  /// and composer bugs).
+  void _keepDate() {
+    LpHaptics.medium();
+    final store = ref.read(quitStoreProvider.notifier);
+    final analytics = ref.read(analyticsProvider);
+    context.go(Routes.home);
+    store.dismissSlipRecovery();
+    analytics.slipResolved(keptDate: true);
+  }
+
+  void _addDays() {
+    LpHaptics.medium();
+    final store = ref.read(quitStoreProvider.notifier);
+    final analytics = ref.read(analyticsProvider);
+    context.go(Routes.home);
+    store.applySlipRecovery();
+    analytics.slipResolved(keptDate: false);
+  }
+
+  /// The plan's curve with a small honest bump at today's position.
   List<double> _bumpedCurve(QuitPlan plan) {
     final samples = TaperEngine.normalizedCurve(plan);
     final snap = ref.read(todayProvider);

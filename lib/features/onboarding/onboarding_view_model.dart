@@ -79,7 +79,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       resumable: (
         savedAt: draft.savedAt,
         answered: draft.state.answeredCount,
-        total: 12,
+        total: OnboardingState.quizLength,
       ),
     );
     _persistSuppressed = false;
@@ -189,6 +189,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   void selectFirstPuff(FirstPuffWindow w) =>
       state = state.copyWith(firstPuff: w);
 
+  void selectSmoking(SmokingHistory h) => state = state.copyWith(smoking: h);
+
   void selectMethod(QuitMethod m) => state = state.copyWith(method: m);
 
   void selectPace(int days) => state = state.copyWith(paceDays: days);
@@ -253,6 +255,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       strength: NicStrength.mg50,
       spendInput: '25',
       firstPuff: FirstPuffWindow.withinFive,
+      smoking: SmokingHistory.never,
       whys: const {WhyChip.health, WhyChip.money, WhyChip.fitness},
       worries: const {WorryChip.cravings, WorryChip.stress, WorryChip.failing},
     );
@@ -308,6 +311,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       case ObStep.frequency:
       case ObStep.strength:
       case ObStep.firstPuff:
+      case ObStep.smoking:
       case ObStep.worries:
       case ObStep.why:
       case ObStep.building:
@@ -402,6 +406,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
       attempts: state.attempts,
       frequency: state.frequency,
       firstPuff: state.firstPuff,
+      smoking: state.smoking,
       coachName: chosenCoachName,
       whyWords: chosenWhyWords,
     );

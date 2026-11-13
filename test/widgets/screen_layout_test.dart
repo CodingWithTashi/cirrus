@@ -74,6 +74,7 @@ void main() {
     for (final name in [
       'ObBirthYear',
       'ObSpend',
+      'ObSmoking',
       'ObWorries',
       'ObReveal',
       'ObCoachName',
@@ -97,6 +98,7 @@ void main() {
   const previewed = {
     'ObBirthYear': ObStep.birthYear,
     'ObSpend': ObStep.spend,
+    'ObSmoking': ObStep.smoking,
     'ObWorries': ObStep.worries,
     'ObReveal': ObStep.reveal,
     'ObCoachName': ObStep.coachName,

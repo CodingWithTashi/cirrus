@@ -15,7 +15,9 @@ import 'settings_store.dart';
 /// Four independent schedules live here, each with its own fingerprint: the
 /// repeating danger-hour nudges (ids 1000–1023), the one-shot trial-ending
 /// reminder (id 2000), the milestone celebration (3000+) and the evening
-/// check-ins (4000–4006). Independent on purpose — a puff tap must never wipe
+/// check-ins (4000–4006) — which carry the daily program's messages
+/// (docs/15 stage B), plus its three mornings (5000–5002), all on the one
+/// switch. Independent on purpose — a puff tap must never wipe
 /// the trial reminder, which is exactly what a shared cancel-all used to do.
 class ReminderCoordinator {
   ReminderCoordinator(this._sink);
@@ -55,6 +57,8 @@ class ReminderCoordinator {
     void Function(Set<String> earned)? onMilestonesAdopted,
     ({String title, String body}) Function(CheckinReminder checkin)?
         checkinCopy,
+    ({String title, String body}) Function(CheckinReminder checkin)?
+        programCopy,
     DateTime Function() now = DateTime.now,
   }) async {
     // Not until the stored settings have been read. Before that [settings] is
@@ -107,23 +111,37 @@ class ReminderCoordinator {
       );
     }
     if (checkinCopy != null) {
-      await _syncCheckins(journey, settings, now: now(), copy: checkinCopy);
+      await _syncCheckins(
+        journey,
+        settings,
+        now: now(),
+        copy: checkinCopy,
+        programCopy: programCopy,
+      );
     }
   }
 
-  /// Re-arms the evening check-ins: the next seven days from [now].
+  /// Re-arms the evening check-ins and the daily program: the next seven days
+  /// from [now].
   ///
-  /// Cancel-then-schedule over its own seven ids, like the danger-hour apply.
-  /// The window slides forward on every sync that changes it, which is what
-  /// makes it stop by itself a week after the last one — see
-  /// `CheckinReminderPlanner`. The fingerprint carries each day's copy inputs
-  /// as well as its instant, so a limit the nightly plan bends is re-armed
-  /// with the number Home will show.
+  /// Cancel-then-schedule over its own ids — the seven evening slots and the
+  /// program's three mornings — like the danger-hour apply. The window slides
+  /// forward on every sync that changes it, which is what makes it stop by
+  /// itself a week after the last one — see `CheckinReminderPlanner`. The
+  /// fingerprint carries each reminder's copy inputs as well as its instant: a
+  /// limit the nightly plan bends is re-armed with the number Home will show,
+  /// and a moved quit date, which changes which MESSAGE lands on an instant
+  /// without changing the instant, is re-armed with the right text.
+  ///
+  /// A program slot whose words were not supplied is left unarmed, never
+  /// armed with the check-in's: a notification that says the wrong thing is
+  /// worse than none.
   Future<void> _syncCheckins(
     JourneyState journey,
     SettingsState settings, {
     required DateTime now,
     required ({String title, String body}) Function(CheckinReminder) copy,
+    ({String title, String body}) Function(CheckinReminder)? programCopy,
   }) async {
     final checkins = CheckinReminderPlanner.plan(
       journey: journey,
@@ -139,20 +157,25 @@ class ReminderCoordinator {
               .map(
                 (c) =>
                     '${c.reminder.id}@${c.reminder.at.toIso8601String()}'
-                    '#${c.planDay}/${c.limit}',
+                    '#${c.planDay}/${c.limit}:${c.kind.name}/${c.message?.name}',
               )
               .join(',');
     if (fingerprint == _checkinApplied) return;
     _checkinApplied = fingerprint;
 
-    for (final id in CheckinReminderPlanner.ids) {
+    for (final id in [
+      ...CheckinReminderPlanner.ids,
+      ...CheckinReminderPlanner.morningIds,
+    ]) {
       await _sink.cancel(id);
     }
     for (final checkin in checkins) {
-      final text = copy(checkin);
+      final isProgram = checkin.message != null;
+      if (isProgram && programCopy == null) continue;
+      final text = isProgram ? programCopy!(checkin) : copy(checkin);
       final armed = await _sink.scheduleOnce(
         checkin.reminder,
-        kind: ReminderKind.checkin,
+        kind: checkin.kind,
         title: text.title,
         body: text.body,
       );

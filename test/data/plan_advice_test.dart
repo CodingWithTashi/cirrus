@@ -76,6 +76,66 @@ void main() {
     expect(c.read(quitStoreProvider)!.limitOn(DateTime.now()), curveLimit + 20);
   });
 
+  // docs/15 QP-A9. The stretch ceiling dropped from half the plan to seven
+  // days, so a server one deploy behind can still send `stretchDelta: 1` for a
+  // plan that is already at the ceiling. The engine refuses that day; what is
+  // STORED (and shown as "your runway moved") must be the days that actually
+  // moved, or the Plan screen claims a stretch that did not happen. That makes
+  // the app and the functions safe to release in either order.
+  group('advice that asks for more stretch than the ceiling allows', () {
+    Future<ProviderContainer> withStretch(int days) async {
+      final c = await signedIn();
+      final j = c.read(quitStoreProvider)!;
+      c.read(quitStoreProvider.notifier).replaceForTest(
+        j.copyWith(plan: j.plan.copyWith(stretchDays: days)),
+      );
+      return c;
+    }
+
+    test('at the ceiling it moves nothing, and does not claim to', () async {
+      final c = await withStretch(7);
+      c.read(quitStoreProvider.notifier).applyPlanAdvice(
+        adviceFor(DateTime.now(), stretchDelta: 1),
+      );
+
+      final j = c.read(quitStoreProvider)!;
+      expect(j.plan.stretchDays, 7);
+      expect(j.planAdvice!.stretchDelta, 0, reason: 'nothing moved');
+      // The rest of the verdict still applies: it is the stretch that is refused.
+      expect(j.planAdvice!.limit, 91);
+    });
+
+    test('past the ceiling under the old rule it also moves nothing', () async {
+      final c = await withStretch(12);
+      c.read(quitStoreProvider.notifier).applyPlanAdvice(
+        adviceFor(DateTime.now(), stretchDelta: 1),
+      );
+      final j = c.read(quitStoreProvider)!;
+      expect(j.plan.stretchDays, 12);
+      expect(j.planAdvice!.stretchDelta, 0);
+    });
+
+    test('with room it moves the runway and says so', () async {
+      final c = await withStretch(3);
+      c.read(quitStoreProvider.notifier).applyPlanAdvice(
+        adviceFor(DateTime.now(), stretchDelta: 1),
+      );
+      final j = c.read(quitStoreProvider)!;
+      expect(j.plan.stretchDays, 4);
+      expect(j.planAdvice!.stretchDelta, 1);
+    });
+
+    test('with only part of the room it records only the part that moved', () async {
+      final c = await withStretch(6);
+      c.read(quitStoreProvider.notifier).applyPlanAdvice(
+        adviceFor(DateTime.now(), stretchDelta: 2),
+      );
+      final j = c.read(quitStoreProvider)!;
+      expect(j.plan.stretchDays, 7);
+      expect(j.planAdvice!.stretchDelta, 1);
+    });
+  });
+
   test("a fresh day's log is created against the advised line", () async {
     final c = await signedIn();
     final store = c.read(quitStoreProvider.notifier);

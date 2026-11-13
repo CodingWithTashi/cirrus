@@ -15,6 +15,7 @@ import '../../../core/widgets/press_scale.dart';
 import '../../../core/widgets/rolling_number.dart';
 import '../../../domain/logic/dependence_engine.dart';
 import '../../../domain/models/models.dart';
+import '../../help/smoking_rule_card.dart';
 import '../onboarding_view_model.dart';
 import '../tailoring.dart';
 import 'step_fact.dart';
@@ -523,6 +524,50 @@ class SpendStep extends ConsumerWidget {
           LpType.caption11(lp.textSecondary),
         ),
       ),
+    );
+  }
+}
+
+/// Whether they have smoked cigarettes (docs/15 QP-A2). Three one-tap
+/// answers with no follow-up, because the only decision it drives is which
+/// safety copy they see later (QP-A4).
+class SmokingStep extends ConsumerWidget {
+  const SmokingStep({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final state = ref.watch(onboardingProvider);
+    final vm = ref.read(onboardingProvider.notifier);
+
+    Widget option(SmokingHistory h, String label) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: OptionCard(
+        selected: state.smoking == h,
+        onTap: () => vm.selectSmoking(h),
+        title: label,
+      ),
+    );
+
+    return StepBody(
+      title: l10n.obSmokingTitle,
+      subtitle: l10n.obSmokingSubtitle,
+      children: [
+        option(SmokingHistory.never, l10n.obSmokingNever),
+        option(SmokingHistory.former, l10n.obSmokingFormer),
+        option(SmokingHistory.current, l10n.obSmokingCurrent),
+        // The rule appears right under the answer that earns it, so it is read
+        // at the moment it is relevant (docs/15 QP-A4). Nothing for "never".
+        if (state.smoking != null && state.smoking != SmokingHistory.never) ...[
+          const SizedBox(height: 4),
+          SmokingRuleCard(answer: state.smoking!, source: 'onboarding'),
+        ],
+        const Spacer(),
+        LpButton(
+          l10n.commonContinue,
+          onTap: state.canContinue ? vm.next : null,
+        ),
+      ],
     );
   }
 }

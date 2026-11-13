@@ -134,6 +134,105 @@ describe('the user card', () => {
     expect(card.text).toContain('not given');
   });
 
+  describe('other nicotine, from the check-ups (docs/15 QP-B7)', () => {
+    const withCheckups = (checkups: unknown): Record<string, unknown> =>
+      journey({checkups});
+
+    it('says nothing when it was never asked', () => {
+      const card = buildMemoryCard(journey(), NOW, TZ);
+      expect(card.text).not.toContain('other nicotine');
+    });
+
+    it('states the latest answer, as a plain fact', () => {
+      const card = buildMemoryCard(
+        withCheckups({'2026-08-15': {nicotine: 'pouches'}}),
+        NOW,
+        TZ,
+      );
+      expect(card.text).toContain('other nicotine (last check-up): pouches');
+    });
+
+    it('uses the most recent day, not the first', () => {
+      const card = buildMemoryCard(
+        withCheckups({
+          '2026-08-08': {nicotine: 'cigarettes'},
+          '2026-08-15': {nicotine: 'noOther'},
+        }),
+        NOW,
+        TZ,
+      );
+      expect(card.text).toContain('other nicotine (last check-up): none');
+      expect(card.text).not.toContain('cigarettes');
+    });
+
+    it('names each answer in words a model can use', () => {
+      for (const [answer, words] of [
+        ['noOther', 'none'],
+        ['cigarettes', 'cigarettes'],
+        ['pouches', 'pouches'],
+        ['patchGum', 'patch or gum'],
+      ] as const) {
+        const card = buildMemoryCard(
+          withCheckups({'2026-08-15': {nicotine: answer}}),
+          NOW,
+          TZ,
+        );
+        expect(card.text).toContain(`other nicotine (last check-up): ${words}`);
+      }
+    });
+
+    it('carries no word about the vaping questions', () => {
+      // The 30- and 90-day answers are the product's own outcome measure, not
+      // something to hand the coach to quote back at a person.
+      const card = buildMemoryCard(
+        withCheckups({'2026-08-15': {vaped30: 'vaped'}}),
+        NOW,
+        TZ,
+      );
+      expect(card.text).not.toContain('last check-up');
+      expect(card.text).not.toContain('vaped30');
+    });
+  });
+
+  describe('cigarettes (docs/15 QP-A5)', () => {
+    const smoking = (value: unknown): Record<string, unknown> => ({
+      profile: {
+        alias: 'SteadyFalcon42',
+        avatarEmoji: 'E',
+        tier: 'premium',
+        email: null,
+        gender: 'woman',
+        birthYear: 2001,
+        whys: ['health', 'money'],
+        worries: ['cravings'],
+        attempts: 'twoToFive',
+        frequency: 'always',
+        firstPuff: 'withinFive',
+        smoking: value,
+      },
+    });
+
+    it('says a former smoker used to smoke, as a plain fact', () => {
+      const card = buildMemoryCard(journey(smoking('former')), NOW, TZ);
+      expect(card.text).toContain('cigarettes: used to smoke');
+    });
+
+    it('says a current smoker still does', () => {
+      const card = buildMemoryCard(journey(smoking('current')), NOW, TZ);
+      expect(card.text).toContain('cigarettes: still smokes');
+    });
+
+    it('adds no line at all for never, or for not asked', () => {
+      // A line for the common case would spend a card line on every turn of
+      // every conversation to say nothing, and "not asked" must never be
+      // phrased so the model could read it as "does not smoke".
+      for (const value of ['never', null, undefined]) {
+        const card = buildMemoryCard(journey(smoking(value)), NOW, TZ);
+        expect(card.text).not.toContain('cigarettes:');
+      }
+    });
+  });
+
   it('names the nicotine strength they are actually vaping', () => {
     // Stored since onboarding, typed on both sides, and never shown to the
     // model — so Ember gave a 50mg salt user the same withdrawal picture as a

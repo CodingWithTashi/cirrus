@@ -18,6 +18,8 @@ import '../../core/widgets/lp_misc.dart';
 import '../../core/widgets/lp_premium_gate.dart';
 import '../../core/widgets/lp_selectables.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/logic/plan_adjust.dart';
+import '../../domain/logic/plan_paces.dart';
 import '../../domain/logic/taper_engine.dart';
 import '../../domain/models/models.dart';
 
@@ -274,18 +276,30 @@ class PlanScreen extends ConsumerWidget {
     );
   }
 
+  /// Moves Freedom Day, and nothing else (docs/15 QP-A11).
+  ///
+  /// It used to preselect the plan's current length and always apply it, which
+  /// the store read as "from today": an unchanged Apply on day 10 of 30 made a
+  /// 39-day plan. Now nothing is preselected, Apply stays off until the choice
+  /// would actually move the date, and the date shown is the one `PlanAdjust`
+  /// would store. The method toggle left the sheet: switching method mid-taper
+  /// is a new plan (`PlanRestart`), not an edit of this one.
   void _showAdjustSheet(BuildContext context, WidgetRef ref, QuitPlan plan) {
+    final outer = context;
+    final now = ref.read(nowProvider)();
     showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) {
-        var method = plan.method;
-        // Preselect the runway the user is actually on; a reflowed pace that
-        // isn't in the pill set simply starts with nothing highlighted.
-        var pace = plan.paceDays;
+        int? pace;
         return StatefulBuilder(
           builder: (context, setState) {
             final lp = context.lp;
             final l10n = context.l10n;
+            final locale = context.localeTag;
+            final hasLengths = plan.method != QuitMethod.coldTurkey;
+            final change = pace == null
+                ? null
+                : PlanAdjust.toReach(plan, now, pace!);
             return Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
               child: Column(
@@ -297,64 +311,87 @@ class PlanScreen extends ConsumerWidget {
                     style: LpType.titleSm(lp.textPrimary),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      for (final m in QuitMethod.values) ...[
-                        if (m != QuitMethod.values.first)
-                          const SizedBox(width: 10),
-                        Expanded(
-                          child: LpChip(
-                            label: m.label(context),
-                            selected: method == m,
-                            onTap: () => setState(() => method = m),
-                            fontSize: 14,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                  // Cold turkey has one date, the day it started, so there is
+                  // no length to choose: only the way to a different plan.
+                  if (hasLengths) ...[
+                    Text(
+                      l10n.planAdjustSheetNote,
+                      style: LpType.caption(lp.textSecondary),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        for (final p in PlanPaces.options) ...[
+                          if (p != PlanPaces.options.first)
+                            const SizedBox(width: 8),
+                          Expanded(
+                            child: LpChip(
+                              label: '$p',
+                              selected: pace == p,
+                              onTap: () => setState(() => pace = p),
+                              fontSize: 14,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                            ),
                           ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (pace != null && change == null)
+                      Text(
+                        l10n.planAdjustSame,
+                        style: LpType.body13(lp.textPrimary),
+                      ),
+                    if (change != null) ...[
+                      Text(
+                        l10n.planAdjustPreview(
+                          LpFormat.shortDate(change.freedomDate, locale),
+                        ),
+                        style: LpType.body13(
+                          lp.textPrimary,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                      // A later date is a quit date that slips (Hughes 2010).
+                      if (change.deltaDays > 0) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.planAdjustLater,
+                          style: LpType.caption(lp.textSecondary),
                         ),
                       ],
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      for (final p in const [14, 21, 30, 60, 90]) ...[
-                        if (p != 14) const SizedBox(width: 8),
-                        Expanded(
-                          child: LpChip(
-                            label: '$p',
-                            selected: pace == p,
-                            onTap: () => setState(() => pace = p),
-                            fontSize: 14,
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    l10n.planAdjustSheetNote,
-                    style: LpType.caption(lp.textSecondary),
-                  ),
-                  const SizedBox(height: 18),
-                  LpButton(
-                    l10n.planAdjustApply,
+                    const SizedBox(height: 18),
+                    LpButton(
+                      l10n.planAdjustApply,
+                      // Off until the choice would move the date: a button
+                      // that "applies" nothing and says it did is worse than
+                      // no button.
+                      onTap: change == null
+                          ? null
+                          : () {
+                              LpHaptics.medium();
+                              final chosen = pace!;
+                              final landed = change.freedomDate;
+                              // Leave first, then change the journey.
+                              Navigator.of(sheetContext).pop();
+                              ref
+                                  .read(quitStoreProvider.notifier)
+                                  .adjustPlan(paceDays: chosen);
+                              showLpSnack(
+                                outer,
+                                l10n.planAdjusted(
+                                  LpFormat.shortDate(landed, locale),
+                                ),
+                              );
+                            },
+                    ),
+                  ],
+                  LpTextButton(
+                    l10n.planAdjustNewPlanLink,
                     onTap: () {
-                      LpHaptics.medium();
-                      ref
-                          .read(quitStoreProvider.notifier)
-                          .adjustPlan(method: method, paceDays: pace);
                       Navigator.of(sheetContext).pop();
-                      final newFreedom = ref
-                          .read(quitStoreProvider)!
-                          .plan
-                          .freedomDate;
-                      showLpSnack(
-                        context,
-                        l10n.planAdjusted(
-                          LpFormat.shortDate(newFreedom, context.localeTag),
-                        ),
-                      );
+                      outer.push(Routes.planNew);
                     },
                   ),
                 ],
@@ -411,7 +448,7 @@ class _AdaptiveCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(body, style: LpType.body13(lp.textBody)),
           // Only shown when the runway actually moved — the server sends 0
-          // once the +50% cap is reached, and claiming a stretch that did not
+          // once the stretch ceiling is reached, and claiming a stretch that did not
           // happen would be an invented number.
           if (advice.stretchDelta > 0) ...[
             const SizedBox(height: 6),

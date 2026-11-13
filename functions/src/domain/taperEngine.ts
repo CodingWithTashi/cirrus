@@ -100,6 +100,28 @@ export interface DayActual {
   readonly limit: number;
 }
 
+/**
+ * The most days a plan's Freedom Day can be pushed back in total (docs/15
+ * QP-A9). It was half the plan, so a few slips could turn a 30-day taper into a
+ * six-week one; each week of delay to a quit date raised the chance of lapsing
+ * by 19% (Hughes 2010).
+ *
+ * **Exactly two places hold this number**: here and `TaperEngine.maxStretchDays`
+ * in `lib/domain/logic/taper_engine.dart`. Both are pinned to the same table.
+ */
+export const MAX_STRETCH_DAYS = 7;
+
+/**
+ * The ceiling for [plan]: [MAX_STRETCH_DAYS], or half of a plan too short for
+ * that, and nothing for cold turkey, which has no runway to lengthen. A stretch
+ * already past the ceiling (plans stretched under the old rule) stands; it
+ * just never grows.
+ */
+export function stretchCeiling(plan: QuitPlan): number {
+  if (plan.method === 'coldTurkey') return 0;
+  return Math.min(MAX_STRETCH_DAYS, Math.floor(plan.paceDays * 0.5));
+}
+
 export interface TaperAdvice {
   /** Suggested limit for tomorrow, replacing the raw curve value. */
   readonly limitTomorrow: number;
@@ -139,7 +161,7 @@ export function classify(ratio: number | null): Adherence {
  * - the limit never rises above the raw curve value for that day;
  * - the limit never rises above today's limit (docs/03 §3.3 "never increases
  *   day-over-day", the one exception being slip recovery in §5);
- * - `stretchDelta` respects the +50%-of-pace cap.
+ * - `stretchDelta` respects the stretch ceiling ([stretchCeiling]).
  */
 export function adviseTomorrow(
   plan: QuitPlan,
@@ -182,8 +204,7 @@ export function adviseTomorrow(
       // Bend the plan up toward reality — then pay for it with a longer runway.
       limitTomorrow = Math.max(curveTomorrow, Math.round(yesterday.puffs * 0.9));
     }
-    const cap = Math.floor(plan.paceDays * 0.5);
-    stretchDelta = plan.stretchDays < cap ? 1 : 0;
+    stretchDelta = plan.stretchDays < stretchCeiling(plan) ? 1 : 0;
   }
 
   // Monotonicity guard: a limit that goes UP day-over-day reads as the plan

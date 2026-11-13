@@ -81,7 +81,16 @@ void main() {
         ..coachMessageSent(chip: false, panic: true)
         ..communityPostCreated('sos')
         ..communityReplyCreated(toSos: true)
-        ..reminderOpened('checkin');
+        ..reminderOpened('checkin')
+        ..helpViewed('settings')
+        ..helpLinkOpened('call')
+        ..slipResolved(keptDate: true)
+        ..planAdjusted(deltaDays: -7)
+        ..programShown(day: 2, slot: 'morning')
+        ..programReply(mood: 'rough', track: 'onTrack')
+        ..programHelp('stress')
+        ..checkupAnswered(kind: 'nicotine', answer: 'pouches')
+        ..quitStatusReported(at: 30, vapeFree: true);
 
       expect(a.names, [
         'onboarding_start',
@@ -145,7 +154,33 @@ void main() {
         // Reminder taps reported nothing until Oct 16 2026, so no reminder
         // could ever be shown to have brought anybody back.
         'reminder_opened',
+        // The More help page (docs/15 QP-A7). Nothing in the app measured
+        // whether anyone ever looked for a person or a medicine.
+        'help_viewed',
+        'help_link_opened',
+        // A slip used to stretch the plan whichever button was pressed
+        // (docs/15 QP-A10); now it asks, and this records the answer.
+        'slip_resolved',
+        // The Adjust sheet moved Freedom Day; the shift, never the date.
+        'plan_adjusted',
+        // The program's check-ups (docs/15 QP-B7), reported when given so a
+        // second device rewriting the journey cannot lose them.
+        // The daily program's card (docs/15 QP-B4).
+        'program_shown',
+        'program_reply',
+        'program_help',
+        'checkup_answered',
+        'quit_status_reported',
       ]);
+      expect(a.propsOf('help_viewed'), {'source': 'settings'});
+      expect(a.propsOf('help_link_opened'), {'kind': 'call'});
+      expect(a.propsOf('slip_resolved'), {'kept_date': 'true'});
+      expect(a.propsOf('plan_adjusted'), {'delta_days': -7});
+      expect(a.propsOf('program_shown'), {'day': 2, 'slot': 'morning'});
+      expect(a.propsOf('program_reply'), {'mood': 'rough', 'track': 'onTrack'});
+      expect(a.propsOf('program_help'), {'kind': 'stress'});
+      expect(a.propsOf('checkup_answered'), {'kind': 'nicotine', 'answer': 'pouches'});
+      expect(a.propsOf('quit_status_reported'), {'at': 30, 'vape_free': 'true'});
       expect(a.propsOf('sign_in_completed'), {
         'method': 'email_register',
         'returning': 'false',

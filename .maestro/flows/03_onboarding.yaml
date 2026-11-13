@@ -2,7 +2,7 @@
 # one, and land on the Day-1 checklist. The quiz comes BEFORE the account
 # (Oct 5 2026), and onboarding ends on Day 1, never on a paywall (Oct 16 2026).
 # Answers: woman, born 1985, tried 2–5 times, always in hand, 200 puffs/day,
-# 50 mg, $25/week, first puff within 5 min, why health+money, worries
+# 50 mg, $25/week, first puff within 5 min, never smoked, why health+money, worries
 # cravings+failing, taper over 30 days, coach named Koda, why-words skipped,
 # hold to commit, skip the push prompt. (There is no rating step: App Store
 # Guideline 5.6.3 forbids a rating ask during onboarding — Sep 11 2026.)
@@ -18,13 +18,13 @@ tags:
 # A1 welcome
 - tapOn: 'Start my check-up'
 
-# A2 gender (1/12)
+# A2 gender (1/13)
 - assertVisible: 'How do you identify\?'
-- assertVisible: '1/12'
+- assertVisible: '1/13'
 - tapOn: 'Woman'
 - tapOn: 'Continue'
 
-# A3 birth year (2/12) — digits are chosen so no typed digit is already on screen
+# A3 birth year (2/13) — digits are chosen so no typed digit is already on screen
 - assertVisible: 'What year were you born\?'
 - tapOn: '1'
 - tapOn: '9'
@@ -33,19 +33,19 @@ tags:
 - assertVisible: 'You''re \d+\.'
 - tapOn: 'Continue'
 
-# A4 tried before (3/12)
+# A4 tried before (3/13)
 - assertVisible: 'Tried quitting before\?'
 # Option cards merge title and subtitle into one label ("2–5\na few rounds")
 - tapOn: '(?s)2–5.*'
 - assertVisible: '(?s).*Most people need a few tries.*'
 - tapOn: 'Continue'
 
-# B1 frequency (4/12)
+# B1 frequency (4/13)
 - assertVisible: 'How often is it in your hand\?'
 - tapOn: '(?s)ALWAYS.*'
 - tapOn: 'Continue'
 
-# B2 puffs per day (5/12) — the keypad sits below the estimator link
+# B2 puffs per day (5/13) — the keypad sits below the estimator link
 - assertVisible: 'Puffs on a normal day\?'
 - tapOn:
     text: '2'
@@ -62,12 +62,12 @@ tags:
 - assertVisible: 'Heavy dependence'
 - tapOn: 'Continue'
 
-# B3 strength (6/12)
+# B3 strength (6/13)
 - assertVisible: 'How strong is your usual\?'
 - tapOn: '(?s)50 ?mg.*'
 - tapOn: 'Continue'
 
-# B4 weekly spend (7/12) — the hero is one "$0" node, so bare digits are unique
+# B4 weekly spend (7/13) — the hero is one "$0" node, so bare digits are unique
 - assertVisible: 'What''s it costing you a week\?'
 - tapOn: '2'
 - tapOn: '5'
@@ -75,32 +75,38 @@ tags:
 - assertVisible: 'your math, not ours'
 - tapOn: 'Continue'
 
-# B5 first puff (8/12)
+# B5 first puff (8/13)
 - assertVisible: 'First puff after waking up\?'
 - tapOn: '(?s)Within 5 minutes.*'
 - tapOn: 'Continue'
 
-# C1 whys (9/12)
+# B6 cigarettes (9/13) — three one-tap answers, no follow-up
+- assertVisible: 'Have you ever smoked cigarettes\?'
+- assertVisible: '9/13'
+- tapOn: 'Never'
+- tapOn: 'Continue'
+
+# C1 whys (10/13)
 - assertVisible: 'Why do you want out\?'
 - tapOn: 'Health'
 - tapOn: 'Money'
 - assertVisible: '(?s).*YOUR WHY.*'
 - tapOn: 'Continue'
 
-# C2 worries (10/12)
+# C2 worries (11/13)
 - assertVisible: 'What worries you most\?'
 - tapOn: 'Cravings'
 - tapOn: 'Fear of failing'
 - tapOn: 'Continue'
 
-# C3 method (11/12)
+# C3 method (12/13)
 - assertVisible: 'How do you want to do this\?'
 - tapOn: '(?s)Taper down.*'
 - tapOn: 'Continue'
 
-# C4 pace (12/12)
+# C4 pace (13/13)
 - assertVisible: 'Pick your pace.'
-- assertVisible: '12/12'
+- assertVisible: '13/13'
 - tapOn: '30'
 - tapOn: 'Lock my pace'
 

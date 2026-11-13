@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/logic/age_entry_engine.dart';
+import '../../domain/logic/plan_paces.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/onboarding_draft.dart';
 import '../dto/codec_helpers.dart';
@@ -136,6 +137,7 @@ abstract final class OnboardingDraftPersistence {
     'strength': s.strength?.name,
     'spendInput': s.spendInput,
     'firstPuff': s.firstPuff?.name,
+    'smoking': s.smoking?.name,
     'whys': s.whys.map((w) => w.name).toList(),
     'worries': s.worries.map((w) => w.name).toList(),
     'method': s.method.name,
@@ -175,10 +177,15 @@ abstract final class OnboardingDraftPersistence {
       strength: enumByNameOrNull(NicStrength.values, json['strength']),
       spendInput: json['spendInput'] as String? ?? '',
       firstPuff: enumByNameOrNull(FirstPuffWindow.values, json['firstPuff']),
+      // Absent in every draft saved before the question existed, which reads
+      // as not asked yet. No schema bump: the step is stored by name.
+      smoking: enumByNameOrNull(SmokingHistory.values, json['smoking']),
       whys: set(WhyChip.values, json['whys']),
       worries: set(WorryChip.values, json['worries']),
       method: enumByName(QuitMethod.values, json['method'], QuitMethod.taper),
-      paceDays: json['paceDays'] as int? ?? 30,
+      // 60 and 90 days were on offer until Nov 12 2026 (docs/15 QP-A8); a
+      // draft parked on one comes back on the longest length still offered.
+      paceDays: PlanPaces.clamp(json['paceDays'] as int?),
       whyWordsInput: json['whyWordsInput'] as String? ?? '',
       coachNameInput: json['coachNameInput'] as String? ?? '',
       committed: json['committed'] as bool? ?? false,
