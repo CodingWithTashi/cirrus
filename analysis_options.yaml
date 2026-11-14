@@ -12,6 +12,12 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+    # Written by `flutter gen-l10n` and checked for staleness in CI, so it can
+    # carry neither a fix nor an ignore of its own. Flutter 3.50's generator
+    # still emits the deprecated `flutter_localizations` Material/Cupertino
+    # delegates into `AppLocalizations.localizationsDelegates`, a list the app
+    # no longer passes (`LastPuffApp`). Never `dart fix` this folder.
+    - lib/l10n/gen/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

@@ -69,10 +69,12 @@ dependencies:
   # docs/10 §56); the earlier hold under 6.7.1 existed only to keep
   # firebase_core at 4.x and ended with that upgrade.
   firebase_remote_config: ^7.0.1
+  # Material and Cupertino left the SDK for pub.dev (Flutter 3.47; the SDK
+  # copies are deprecated from 3.50 and are separate classes, not re-exports).
+  # Pinned to a major: `any` lets a later `pub upgrade` take a breaking one.
+  material_ui: ^1.11.0
+  cupertino_ui: ^1.1.6
 
-
-  material_ui: any
-  cupertino_ui: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

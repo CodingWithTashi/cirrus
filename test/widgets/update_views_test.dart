@@ -7,7 +7,7 @@ import 'package:last_puff/core/utils/whats_new_copy.dart';
 import 'package:last_puff/data/stores/update_check_store.dart';
 import 'package:last_puff/domain/logic/update_prompt_policy.dart';
 import 'package:last_puff/features/update/update_views.dart';
-import 'package:last_puff/l10n/gen/app_localizations.dart';
+import 'package:last_puff/core/utils/l10n_ext.dart';
 
 import '../helpers.dart';
 
@@ -117,8 +117,7 @@ void main() {
               child: MaterialApp(
                 theme: themes[index % themes.length],
                 locale: locale,
-                localizationsDelegates:
-                    AppLocalizations.localizationsDelegates,
+                localizationsDelegates: lpLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: views[view]!(),
               ),
@@ -161,7 +160,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: themes.first,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: lpLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: _Opener(showUpdateSheet),
         ),
