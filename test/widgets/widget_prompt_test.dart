@@ -65,14 +65,21 @@ void main() {
 
     final analytics = RecordingAnalytics();
     final container = ProviderContainer(
-      overrides: [
-        ...fastBackendOverrides(now: now, analytics: analytics),
-        widgetStoreProvider.overrideWithValue(widgets),
-        // A restart has to survive on real (mock) preferences, not on state
-        // that dies with the container.
-        if (persist) settingsStoreProvider.overrideWith(() => SettingsStore()),
-        if (settings != null) settingsStoreProvider.overrideWith(settings),
-      ],
+      overrides: fastBackendOverrides(
+        now: now,
+        analytics: analytics,
+        extra: [
+          widgetStoreProvider.overrideWithValue(widgets),
+          // A restart has to survive on real (mock) preferences, not on state
+          // that dies with the container. One settings override, never two:
+          // an explicit store wins over `persist`, as the later override did
+          // before Riverpod 3 refused a provider overridden twice.
+          if (settings != null)
+            settingsStoreProvider.overrideWith(settings)
+          else if (persist)
+            settingsStoreProvider.overrideWith(() => SettingsStore()),
+        ],
+      ),
     );
     addTearDown(container.dispose);
     await tester.pumpWidget(

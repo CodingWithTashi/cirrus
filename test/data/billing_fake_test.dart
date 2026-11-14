@@ -147,6 +147,41 @@ void main() {
     });
   });
 
+  group('a store sheet in flight', () {
+    // The forced update screen waits for a store sheet to close (docs/10
+    // §55): the count is up for exactly as long as a purchase or a restore
+    // runs, and comes down when one fails.
+    test(
+      'is counted open for as long as a purchase or a restore runs',
+      () async {
+        final c = make();
+        final store = c.read(entitlementProvider.notifier);
+        expect(c.read(storeSheetsOpenProvider), 0);
+
+        final buying = store.purchase(BillingCatalog.monthlyPackage);
+        expect(c.read(storeSheetsOpenProvider), 1);
+        await buying;
+        expect(c.read(storeSheetsOpenProvider), 0);
+
+        final restoring = store.restore();
+        expect(c.read(storeSheetsOpenProvider), 1);
+        await restoring;
+        expect(c.read(storeSheetsOpenProvider), 0);
+      },
+    );
+
+    test('comes down when the purchase fails', () async {
+      final c = make(online: false);
+      await expectLater(
+        c
+            .read(entitlementProvider.notifier)
+            .purchase(BillingCatalog.monthlyPackage),
+        throwsA(anything),
+      );
+      expect(c.read(storeSheetsOpenProvider), 0);
+    });
+  });
+
   group('restore', () {
     test('finds nothing on an empty account, and says so', () async {
       final c = make();

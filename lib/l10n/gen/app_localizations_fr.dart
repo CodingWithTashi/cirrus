@@ -4265,4 +4265,58 @@ class AppLocalizationsFr extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return '$count notifications non lues';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateTitle => 'Une nouvelle version de Cirrus est dispo';
+
+  @override
+  String get updateReason => 'Mets à jour pour avoir les derniers changements.';
+
+  @override
+  String get updateCta => 'Mettre à jour';
+
+  @override
+  String get updateRequiredTitle => 'Mise à jour nécessaire';
+
+  @override
+  String get updateRequiredBody =>
+      'Cette version de Cirrus n\'est plus prise en charge.';
+
+  @override
+  String get whatsNewTitle => 'Nouveautés';
+
+  @override
+  String get whatsNewReason => 'Voici ce qui change dans cette version.';
+
+  @override
+  String get whatsNewDone => 'Compris';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'Une question rapide sur la cigarette, et une nouvelle page Plus d\'aide';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'Un petit message par jour autour de ta date d\'arrêt';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Enregistre une taffe depuis ton écran d\'accueil avec le widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'Une question rapide sur la cigarette, et une nouvelle page Plus d\'aide';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'Un petit message par jour autour de ta date d\'arrêt';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Enregistre une taffe depuis ton écran d\'accueil avec le widget';
 }

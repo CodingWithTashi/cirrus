@@ -23,9 +23,11 @@ void main() {
     var now = DateTime(2026, 8, 30, 23, 59, 58);
     final c = ProviderContainer(
       overrides: [
+        // `now` is a variable the test advances, so it cannot go through the
+        // helper's fixed `now:`. The helper already pins `DayClock(tick:
+        // false)`; overriding it again is refused by Riverpod 3.
         ...fastBackendOverrides(),
         nowProvider.overrideWithValue(() => now),
-        dayClockProvider.overrideWith(() => DayClock(tick: false)),
       ],
     );
     addTearDown(c.dispose);
@@ -44,9 +46,11 @@ void main() {
     var now = DateTime(2026, 10, 31, 23, 30);
     final c = ProviderContainer(
       overrides: [
+        // `now` is a variable the test advances, so it cannot go through the
+        // helper's fixed `now:`. The helper already pins `DayClock(tick:
+        // false)`; overriding it again is refused by Riverpod 3.
         ...fastBackendOverrides(),
         nowProvider.overrideWithValue(() => now),
-        dayClockProvider.overrideWith(() => DayClock(tick: false)),
       ],
     );
     addTearDown(c.dispose);
@@ -63,9 +67,11 @@ void main() {
     var now = DateTime(2026, 8, 30, 12);
     final c = ProviderContainer(
       overrides: [
+        // `now` is a variable the test advances, so it cannot go through the
+        // helper's fixed `now:`. The helper already pins `DayClock(tick:
+        // false)`; overriding it again is refused by Riverpod 3.
         ...fastBackendOverrides(),
         nowProvider.overrideWithValue(() => now),
-        dayClockProvider.overrideWith(() => DayClock(tick: false)),
       ],
     );
     addTearDown(c.dispose);

@@ -4,9 +4,18 @@
 /// much of them. What stacks below the numbers is of two kinds:
 ///
 /// * **Needs the person today** — a slip to resolve, the evening mood,
-///   yesterday's missing answer, the day's vape-free confirmation, the daily
-///   program, the cigarette rule, the over-limit actions. Those keep their
-///   place; they are [actionUp].
+///   yesterday's missing answer, the day's vape-free confirmation, the
+///   cigarette rule, the over-limit actions. Those keep their place; they are
+///   [actionUp].
+/// * **The daily program** is [programUp], and is its own case. It is a message
+///   and a one-tap check-in, not a task, so it lets *finish setup* share the
+///   screen — and it has to: on cold turkey the program has a message on each
+///   of the first three days, which is the whole of the window "finish setup"
+///   is allowed in, so counting the program as "needs the person" meant the
+///   way back after "Skip setup for now" never showed for a cold-turkey
+///   account (the Nov 12 retention round expected it; the Nov 13 rule removed
+///   it, and no suite that runs the real Home was run in between). Every
+///   other optional card still waits for the program to be over.
 /// * **Can wait** — finishing setup, the cigarettes question, the widget offer,
 ///   the coach nudge. On a day-3 evening all four used to stack with the mood
 ///   prompt and the day-3 offer, nine things under two numbers.
@@ -48,6 +57,7 @@ class HomeCardPlan {
   static HomeCardPlan decide({
     required bool actionUp,
     required bool offerUp,
+    bool programUp = false,
     required bool setupDue,
     required bool smokingDue,
     required bool widgetUp,
@@ -55,6 +65,8 @@ class HomeCardPlan {
   }) {
     if (actionUp || offerUp) return const HomeCardPlan();
     if (setupDue) return const HomeCardPlan(setup: true);
+    // The program holds the slot for everything below setup.
+    if (programUp) return const HomeCardPlan();
     if (smokingDue) return const HomeCardPlan(smoking: true);
     if (widgetUp) return const HomeCardPlan(widget: true);
     if (nudgeDue) return const HomeCardPlan(nudge: true);

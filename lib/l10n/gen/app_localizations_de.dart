@@ -4267,4 +4267,58 @@ class AppLocalizationsDe extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return '$count ungelesene Benachrichtigungen';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateTitle => 'Es gibt eine neue Version von Cirrus';
+
+  @override
+  String get updateReason => 'Hol dir das Update für die neuesten Änderungen.';
+
+  @override
+  String get updateCta => 'Aktualisieren';
+
+  @override
+  String get updateRequiredTitle => 'Update nötig';
+
+  @override
+  String get updateRequiredBody =>
+      'Diese Version von Cirrus wird nicht mehr unterstützt.';
+
+  @override
+  String get whatsNewTitle => 'Was ist neu';
+
+  @override
+  String get whatsNewReason => 'Das hat sich in dieser Version geändert.';
+
+  @override
+  String get whatsNewDone => 'Alles klar';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'Eine kurze Frage zu Zigaretten und die neue Seite „Mehr Hilfe“';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'Jeden Tag eine kurze Nachricht rund um deinen Aufhör-Tag';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'Eine kurze Frage zu Zigaretten und die neue Seite „Mehr Hilfe“';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'Jeden Tag eine kurze Nachricht rund um deinen Aufhör-Tag';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget';
 }

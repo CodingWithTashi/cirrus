@@ -16,6 +16,10 @@ import 'harness.dart';
 /// carried the bug. The quiet-hours rail is a horizontal drag inside a modal
 /// sheet that also owns a vertical drag (dismiss) and a scroll view — the
 /// gesture arena is a device question.
+///
+/// English hours are written with a narrow no-break space ("11\u202fPM") since
+/// Flutter 3.43 (CLDR 48, flutter#182189), so the labels matched below carry
+/// the U+202F as an escape (docs/10 §56).
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -98,10 +102,10 @@ void main() {
         reason: 'on screen: ${e2e.texts()}');
 
     // 11 PM first: the hour the new window is about to swallow.
-    await e2e.tap(find.widgetWithText(LpChip, '11 PM'), why: '11 PM chip');
+    await e2e.tap(find.widgetWithText(LpChip, '11\u202fPM'), why: '11 PM chip');
     await e2e.settle();
     expect(
-      e2e.showing(e2e.l10n.settingsDangerHoursNudge('10:50 PM')),
+      e2e.showing(e2e.l10n.settingsDangerHoursNudge('10:50\u202fPM')),
       isTrue,
     );
 
@@ -117,15 +121,15 @@ void main() {
     await e2e.settle();
 
     expect(
-      e2e.showing(e2e.l10n.settingsQuietHours('9 PM – 8 AM')),
+      e2e.showing(e2e.l10n.settingsQuietHours('9\u202fPM – 8\u202fAM')),
       isTrue,
       reason: 'the window did not move; on screen: ${e2e.texts()}',
     );
-    expect(e2e.showing(e2e.l10n.settingsDangerHoursNudge('8:50 PM')), isTrue,
+    expect(e2e.showing(e2e.l10n.settingsDangerHoursNudge('8:50\u202fPM')), isTrue,
         reason: 'the selection did not step to 9 PM');
-    expect(find.widgetWithText(LpChip, '11 PM').evaluate(), isEmpty,
+    expect(find.widgetWithText(LpChip, '11\u202fPM').evaluate(), isEmpty,
         reason: '11 PM would fire inside the window and must leave the grid');
-    expect(find.widgetWithText(LpChip, '10 PM').evaluate(), isEmpty);
+    expect(find.widgetWithText(LpChip, '10\u202fPM').evaluate(), isEmpty);
     expect(e2e.showing(e2e.l10n.settingsDangerHoursTitle), isTrue,
         reason: 'the horizontal drag must not have dismissed the sheet');
 

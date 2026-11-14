@@ -168,7 +168,11 @@ void main() {
     expect(path(e2e), Routes.home);
     expect(e2e.visible(l10n.homeVapeFreeToday), isTrue);
     expect(e2e.showing(l10n.homeZeroDayDone), isTrue);
-    expect(e2e.showing(l10n.homeFinishSetup(1)), isTrue);
+    expect(
+      e2e.showing(l10n.homeFinishSetup(1)),
+      isTrue,
+      reason: 'no Finish-setup card; on screen: ${e2e.texts()}',
+    );
     expect(e2e.showing(l10n.homeLeftTight(0)), isFalse);
     expect(e2e.showing(l10n.homeOfLimit(0)), isFalse);
 
@@ -219,7 +223,12 @@ void main() {
     await e2e.scrollTo(find.text(l10n.homePlanEndedTitle));
     await e2e.tapText(l10n.homePlanEndedTitle);
     await e2e.waitFor(const Duration(seconds: 1));
-    expect(find.byType(NewPlanScreen), findsOneWidget);
+    expect(
+      find.byType(NewPlanScreen),
+      findsOneWidget,
+      reason: 'the plan-ended card did not open the page; on screen: '
+          '${e2e.texts()}',
+    );
     expect(e2e.showing(l10n.newPlanLead), isTrue);
     expect(find.widgetWithText(TextField, '82'), findsOneWidget);
     expect(e2e.showing(l10n.newPlanLevelHint(82)), isTrue);

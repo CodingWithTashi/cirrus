@@ -4251,4 +4251,57 @@ class AppLocalizationsPt extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return '$count notificações por ler';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Versão $version';
+  }
+
+  @override
+  String get updateTitle => 'Há uma versão nova do Cirrus';
+
+  @override
+  String get updateReason => 'Atualiza para teres as últimas mudanças.';
+
+  @override
+  String get updateCta => 'Atualizar';
+
+  @override
+  String get updateRequiredTitle => 'É preciso atualizar';
+
+  @override
+  String get updateRequiredBody => 'Esta versão do Cirrus já não é suportada.';
+
+  @override
+  String get whatsNewTitle => 'Novidades';
+
+  @override
+  String get whatsNewReason => 'Isto é o que muda nesta versão.';
+
+  @override
+  String get whatsNewDone => 'Entendido';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'Uma pergunta rápida sobre cigarros e a nova página Mais ajuda';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'Uma mensagem curta por dia à volta da tua data para deixar';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Regista uma passa a partir do ecrã principal com o widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'Uma pergunta rápida sobre cigarros e a nova página Mais ajuda';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'Uma mensagem curta por dia à volta da tua data para deixar';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Regista uma passa a partir do ecrã principal com o widget';
 }

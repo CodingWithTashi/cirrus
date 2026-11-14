@@ -380,6 +380,14 @@ void main() {
     await e2e.tester.tap(find.text(l10n.widgetPromptAdd), warnIfMissed: false);
     // One frame, then no more: the launcher's dialog takes the app off screen.
     await e2e.tester.pump();
+    // The acceptance is reported once the launcher has answered — two platform
+    // calls (`canPin`, `requestPinWidget`) that take longer than one frame on a
+    // real device — so wait for it in real time, never by pumping.
+    final reported = DateTime.now().add(const Duration(seconds: 5));
+    while (DateTime.now().isBefore(reported) &&
+        analytics.propsOfAll('widget_prompt_accepted').isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
     expect(
       analytics.propsOfAll('widget_prompt_accepted'),
       [

@@ -8,6 +8,7 @@ import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/home/home_screen.dart';
+import 'package:last_puff/features/home/widgets/program_card.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
@@ -137,6 +138,34 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     await tester.pumpAndSettle();
     expect(optional(), isEmpty);
+  });
+
+  testWidgets('on cold turkey the daily program is up on every day "finish '
+      'setup" is allowed, and setup still shows beside it — nothing else does',
+      (tester) async {
+    // Cold turkey's quit date is day one, and the program has a message on each
+    // of days 1, 2 and 3. A program that counted as "needs the person" starved
+    // setup for the whole of its three-day window: the way back after "Skip
+    // setup for now" never appeared (found on a device, Nov 14 2026). Day 2,
+    // because on day one the router sends an unfinished checklist to the
+    // checklist first; `n_zero_day_and_new_plan` covers day one through "Skip".
+    final taper = journeyOnDay(2, now: now);
+    final coldTurkey = taper.copyWith(
+      plan: taper.plan.copyWith(method: QuitMethod.coldTurkey),
+      profile: UserProfile(
+        alias: taper.profile.alias,
+        avatarEmoji: taper.profile.avatarEmoji,
+        smoking: null,
+      ),
+      day1TasksDone: const {},
+    );
+    await pumpHome(tester, coldTurkey);
+
+    expect(find.byType(ProgramCard), findsOneWidget,
+        reason: 'the program is up on day two of cold turkey');
+    // Setup shares the screen; the cigarettes question (also due) waits for
+    // the program to be over, as the widget offer would.
+    expect(optional(), ['setup']);
   });
 
   testWidgets('and none while something needs the person today', (tester) async {

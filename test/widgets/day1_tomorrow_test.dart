@@ -23,6 +23,9 @@ import '../helpers.dart';
 ///
 /// And a list somebody skipped stays reachable from Home for the first three
 /// days, instead of being gone for good at the first tap of "Skip".
+///
+/// English hours are written with a narrow no-break space ("8\u202fPM") since
+/// Flutter 3.43 (CLDR 48, flutter#182189), so the check-in's hour carries it.
 void main() {
   late AppLocalizations l10n;
   setUpAll(() async {
@@ -99,7 +102,7 @@ void main() {
     ) async {
       await open(tester, journey(afternoon), now: afternoon, route: Routes.day1);
 
-      expect(find.text(l10n.day1NextCheckin('8 PM')), findsOneWidget);
+      expect(find.text(l10n.day1NextCheckin('8\u202fPM')), findsOneWidget);
     });
 
     testWidgets('but promises no check-in without the permission for one', (

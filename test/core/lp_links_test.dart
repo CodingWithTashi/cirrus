@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/core/utils/lp_links.dart';
+import 'package:last_puff/core/utils/lp_review.dart';
 
 /// The app's outbound links, pinned.
 ///
@@ -13,6 +14,22 @@ import 'package:last_puff/core/utils/lp_links.dart';
 /// free to drift apart — the Firebase copies now 301 to the apex instead.
 void main() {
   group('LpLinks', () {
+    // The update prompt's Update (docs/10 §55). The ids must be the ones the
+    // stores know, or Update opens somebody else's listing — or nothing.
+    test('the store listing is this app\'s, on each store', () {
+      final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+      expect(gradle, contains('applicationId = "${LpLinks.playPackage}"'));
+      expect(LpLinks.appStoreId, LpReview.appStoreId);
+      expect(
+        LpLinks.storeListing(TargetPlatform.android).toString(),
+        'https://play.google.com/store/apps/details?id=com.quitvape.last_puff',
+      );
+      expect(
+        LpLinks.storeListing(TargetPlatform.iOS).toString(),
+        'https://apps.apple.com/app/id6806871144',
+      );
+    });
+
     test('point at the published pages on the brand domain', () {
       expect(LpLinks.website.toString(), 'https://cirrusquit.com');
       expect(LpLinks.privacy.toString(), 'https://cirrusquit.com/privacy');

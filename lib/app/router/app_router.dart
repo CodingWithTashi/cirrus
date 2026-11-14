@@ -7,6 +7,9 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/widgets/lp_error.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/providers.dart';
+import '../../data/stores/update_check_store.dart';
+import '../../domain/logic/update_prompt_policy.dart';
+import '../update_prompt.dart';
 import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
@@ -37,6 +40,7 @@ import '../../features/shell/app_shell.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/slip/slip_screen.dart';
 import '../../features/stats/stats_screen.dart';
+import '../../features/update/update_views.dart';
 
 abstract final class Routes {
   static const splash = '/';
@@ -114,6 +118,30 @@ abstract final class Routes {
   /// [help], tagged with the door it was reached through — the
   /// `help_viewed.source` dimension. A query parameter, like [paywallFrom].
   static String helpFrom(String source) => '$help?source=$source';
+
+  /// The forced update screen (docs/10 §55). Reached only by the redirect,
+  /// and left only by it: a visit here without a forced verdict goes back to
+  /// the splash, which decides the first screen again.
+  static const updateRequired = '/update-required';
+}
+
+/// The router's path, reduced to what the update rules care about
+/// (`UpdatePromptPolicy`). An unknown path — and go_router's error page —
+/// reads as [UpdateSurface.other].
+UpdateSurface updateSurfaceOf(String path) {
+  if (path == Routes.splash) return UpdateSurface.splash;
+  // Before [Routes.panic]: the Survived screen sits under it.
+  if (path.startsWith(Routes.survived)) return UpdateSurface.survived;
+  if (path.startsWith(Routes.panic)) return UpdateSurface.panic;
+  if (path.startsWith(Routes.onboarding)) return UpdateSurface.onboarding;
+  if (path.startsWith(Routes.auth)) return UpdateSurface.auth;
+  if (path.startsWith(Routes.day1)) return UpdateSurface.dayOne;
+  if (path.startsWith(Routes.paywall) ||
+      path.startsWith(Routes.premiumWelcome)) {
+    return UpdateSurface.paywall;
+  }
+  if (path == Routes.home) return UpdateSurface.home;
+  return UpdateSurface.other;
 }
 
 /// Root navigator key — gives app-level error surfaces (app_errors.dart) a
@@ -145,6 +173,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
   ref.onDispose(refresh.dispose);
   ref.listen(quitStoreProvider, (_, _) => refresh.value++);
+  // A bool, so it refreshes only when the forced screen should appear or go:
+  // the verdict landing, a store sheet closing under a forced verdict. This
+  // listen is also what starts the store check — at launch, in the
+  // background; nothing waits for it.
+  ref.listen(forcedUpdateArmedProvider, (_, _) => refresh.value++);
 
   bool hasJourney() => ref.read(quitStoreProvider) != null;
 
@@ -161,6 +194,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     errorBuilder: (_, _) => const RouteNotFoundScreen(),
     redirect: (context, state) {
       final path = state.uri.path;
+      // A forced update stands in front of everything, signed in or not —
+      // except the splash (it has not decided the first screen yet), a
+      // craving, the Survived screen and a store sheet: those finish first,
+      // and their own `go` lands here. Fails open: no verdict, no screen.
+      final forced = ref.read(updateCheckProvider).forced;
+      if (path == Routes.updateRequired) {
+        return forced ? null : Routes.splash;
+      }
+      if (forced &&
+          UpdatePromptPolicy.forcedMayShow(
+            surface: updateSurfaceOf(path),
+            storeSheetOpen: ref.read(storeSheetsOpenProvider) > 0,
+          )) {
+        return Routes.updateRequired;
+      }
       final authed = hasJourney();
       final needsJourney =
           path.startsWith(Routes.home) ||
@@ -216,6 +264,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
+      GoRoute(
+        path: Routes.updateRequired,
+        builder: (_, _) => const ForcedUpdateScreen(),
+      ),
       GoRoute(path: Routes.auth, builder: (_, _) => const SignInScreen()),
       GoRoute(path: Routes.register, builder: (_, _) => const RegisterScreen()),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
@@ -262,11 +314,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.day1, builder: (_, _) => const Day1Screen()),
       StatefulShellRoute.indexedStack(
+        // go_router 17 made a shell's navigators notify the root observers by
+        // default, so every tab's first page reached `LpAnalyticsObserver` as
+        // well — and `AppShell` already reports the four tabs itself (it must:
+        // switching tabs pushes no route). Each tab was counted twice. Off
+        // restores the contract `screen_view_test` pins: one view per arrival.
+        notifyRootObserver: false,
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
           StatefulShellBranch(
             routes: [
-              GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
+              GoRoute(
+                path: Routes.home,
+                // The only place the update prompt and What's New open.
+                builder: (_, _) => const UpdatePrompt(child: HomeScreen()),
+              ),
             ],
           ),
           StatefulShellBranch(

@@ -18,6 +18,11 @@ import '../helpers.dart';
 /// whose nudge will actually fire, and prints the exact time for the hour
 /// under the thumb. These tests pin that the words reach the screen and that
 /// Save stores what the sentence promised.
+///
+/// English hours are written with a narrow no-break space ("9\u202fAM") since
+/// Flutter 3.43 (CLDR 48, flutter#182189): `GlobalMaterialLocalizations`
+/// installs that date data into `intl`. The labels below carry the U+202F as an
+/// escape so it stays visible in the source.
 void main() {
   late AppLocalizations l10n;
   setUpAll(() async {
@@ -70,11 +75,11 @@ void main() {
     // then never fire, which is exactly the trap the old slider set. Scoped
     // to the chips: the rail under them labels its axis "12 AM" too.
     Finder chip(String label) => find.widgetWithText(LpChip, label);
-    expect(chip('9 AM'), findsOneWidget);
-    expect(chip('11 PM'), findsOneWidget);
-    expect(chip('8 AM'), findsNothing);
-    expect(chip('12 AM'), findsNothing);
-    expect(chip('2 AM'), findsNothing);
+    expect(chip('9\u202fAM'), findsOneWidget);
+    expect(chip('11\u202fPM'), findsOneWidget);
+    expect(chip('8\u202fAM'), findsNothing);
+    expect(chip('12\u202fAM'), findsNothing);
+    expect(chip('2\u202fAM'), findsNothing);
   });
 
   testWidgets('says the exact time, follows the tap, and saves it', (
@@ -84,12 +89,12 @@ void main() {
     await openSheet(tester);
 
     // The shipped default is 9pm, so the promise opens as 8:50pm.
-    expect(find.text(l10n.settingsDangerHoursNudge('8:50 PM')), findsOneWidget);
+    expect(find.text(l10n.settingsDangerHoursNudge('8:50\u202fPM')), findsOneWidget);
 
-    await tester.tap(find.text('10 PM'));
+    await tester.tap(find.text('10\u202fPM'));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.settingsDangerHoursNudge('9:50 PM')), findsOneWidget);
-    expect(find.text(l10n.settingsDangerHoursNudge('8:50 PM')), findsNothing);
+    expect(find.text(l10n.settingsDangerHoursNudge('9:50\u202fPM')), findsOneWidget);
+    expect(find.text(l10n.settingsDangerHoursNudge('8:50\u202fPM')), findsNothing);
 
     // The rail made the sheet taller than the test viewport; Save may sit
     // below the fold, as it does on a short phone.
@@ -103,7 +108,7 @@ void main() {
     // Sheet gone, and the Settings row shows the hour — not a range nothing
     // reads.
     expect(find.text(l10n.settingsDangerHoursTitle), findsNothing);
-    expect(find.text(l10n.settingsDangerHoursEdit('10 PM')), findsOneWidget);
+    expect(find.text(l10n.settingsDangerHoursEdit('10\u202fPM')), findsOneWidget);
   });
 
   testWidgets('a start the old slider saved inside quiet hours lands on the '
@@ -116,7 +121,7 @@ void main() {
 
     // 11pm is one hour away on the clock face; 9am is nine. The sheet opens
     // on a choice that fires rather than on nothing.
-    expect(find.text(l10n.settingsDangerHoursNudge('10:50 PM')), findsOneWidget);
+    expect(find.text(l10n.settingsDangerHoursNudge('10:50\u202fPM')), findsOneWidget);
   });
 
   group('quiet hours on the rail (docs/10 §28)', () {
@@ -139,10 +144,10 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('11 PM – 8 AM · ${l10n.settingsQuietHoursLength(9)}'),
+        find.text('11\u202fPM – 8\u202fAM · ${l10n.settingsQuietHoursLength(9)}'),
         findsOneWidget,
       );
-      expect(find.text(l10n.settingsQuietHours('11 PM – 8 AM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('11\u202fPM – 8\u202fAM')), findsOneWidget);
     });
 
     testWidgets('dragging the start knob re-answers the chips and the promise, '
@@ -150,9 +155,9 @@ void main() {
       final container = await openSettings(tester);
       await openSheet(tester);
       // 11 PM first: the hour the new window is about to swallow.
-      await tester.tap(find.text('11 PM'));
+      await tester.tap(find.text('11\u202fPM'));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.settingsDangerHoursNudge('10:50 PM')), findsOneWidget);
+      expect(find.text(l10n.settingsDangerHoursNudge('10:50\u202fPM')), findsOneWidget);
 
       // The start knob sits at cell 11 (11 PM on a noon-to-noon rail). Two
       // cells left is 9 PM.
@@ -163,12 +168,12 @@ void main() {
       // 10 PM and 11 PM would fire inside the new window, so they are gone;
       // the selection stepped to 9 PM, the nearest hour that still fires,
       // and the promise followed it.
-      expect(find.textContaining('11 PM'), findsNothing);
-      expect(find.text('10 PM'), findsNothing);
-      expect(find.text(l10n.settingsDangerHoursNudge('8:50 PM')), findsOneWidget);
-      expect(find.text(l10n.settingsQuietHours('9 PM – 8 AM')), findsOneWidget);
+      expect(find.textContaining('11\u202fPM'), findsNothing);
+      expect(find.text('10\u202fPM'), findsNothing);
+      expect(find.text(l10n.settingsDangerHoursNudge('8:50\u202fPM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('9\u202fPM – 8\u202fAM')), findsOneWidget);
       expect(
-        find.text('9 PM – 8 AM · ${l10n.settingsQuietHoursLength(11)}'),
+        find.text('9\u202fPM – 8\u202fAM · ${l10n.settingsQuietHoursLength(11)}'),
         findsOneWidget,
       );
 
@@ -194,14 +199,14 @@ void main() {
       await tester.dragFrom(onRail(rect, cell, 15.5), Offset(2 * cell, 0));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.settingsQuietHours('1 AM – 10 AM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('1\u202fAM – 10\u202fAM')), findsOneWidget);
       expect(
-        find.text('1 AM – 10 AM · ${l10n.settingsQuietHoursLength(9)}'),
+        find.text('1\u202fAM – 10\u202fAM · ${l10n.settingsQuietHoursLength(9)}'),
         findsOneWidget,
       );
       // 10 AM's nudge (9:50 AM) now lands inside; 1 AM's (12:50 AM) does not.
-      expect(find.text('10 AM'), findsNothing);
-      expect(find.text('1 AM'), findsOneWidget);
+      expect(find.text('10\u202fAM'), findsNothing);
+      expect(find.text('1\u202fAM'), findsOneWidget);
     });
 
     testWidgets('a tap on the rail brings the nearer knob to it', (tester) async {
@@ -214,7 +219,7 @@ void main() {
       await tester.tapAt(onRail(rect, cell, 8));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.settingsQuietHours('8 PM – 8 AM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('8\u202fPM – 8\u202fAM')), findsOneWidget);
     });
 
     testWidgets('closing the sheet unsaved keeps the stored window', (
@@ -225,7 +230,7 @@ void main() {
       final (rect, cell) = rail(tester);
       await tester.dragFrom(onRail(rect, cell, 11), Offset(-2 * cell, 0));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.settingsQuietHours('9 PM – 8 AM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('9\u202fPM – 8\u202fAM')), findsOneWidget);
 
       // Swipe away, no Save.
       await tester.tapAt(const Offset(10, 10));
@@ -245,7 +250,7 @@ void main() {
       final start = tester.getSemantics(
         find.bySemanticsLabel(l10n.settingsQuietHoursStartHandle),
       );
-      expect(start.value, '11 PM');
+      expect(start.value, '11\u202fPM');
       final actions = start.getSemanticsData();
       expect(actions.hasAction(SemanticsAction.increase), isTrue);
       expect(actions.hasAction(SemanticsAction.decrease), isTrue);
@@ -255,12 +260,12 @@ void main() {
         SemanticsAction.decrease,
       );
       await tester.pumpAndSettle();
-      expect(find.text(l10n.settingsQuietHours('10 PM – 8 AM')), findsOneWidget);
+      expect(find.text(l10n.settingsQuietHours('10\u202fPM – 8\u202fAM')), findsOneWidget);
 
       final end = tester.getSemantics(
         find.bySemanticsLabel(l10n.settingsQuietHoursEndHandle),
       );
-      expect(end.value, '8 AM');
+      expect(end.value, '8\u202fAM');
       handle.dispose();
     });
   });

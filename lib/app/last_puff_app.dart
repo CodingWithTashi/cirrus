@@ -11,6 +11,7 @@ import '../core/utils/program_copy.dart';
 import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
 import '../data/stores/providers.dart';
+import '../data/stores/update_check_store.dart';
 import '../data/stores/widget_mirror.dart';
 import '../domain/analytics/lp_events.dart';
 import '../domain/logic/reminder_planner.dart';
@@ -485,6 +486,10 @@ class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
         // its timers may never have fired.
         ref.read(dayClockProvider.notifier).refresh();
       },
+      // A visit ends when the app leaves the screen: the next one may open a
+      // modal again (one a visit — update prompt, What's New, the
+      // notification ask, the rating ask; docs/10 §55).
+      onHide: () => ref.read(visitModalsProvider.notifier).newVisit(),
     );
   }
 

@@ -274,7 +274,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       }
     });
     final offeringAsync = ref.watch(offeringsProvider);
-    final offering = offeringAsync.valueOrNull;
+    final offering = offeringAsync.value;
     // An offering with no plans is not a live price list — it is the store
     // having nothing to sell, and the typed fallbacks with their caption say
     // so more honestly than an empty card list under a live disclosure.
@@ -1091,7 +1091,7 @@ class _FreePlanScreenState extends ConsumerState<FreePlanScreen> {
     // The live trial length when the store has answered, the founder-locked
     // figure when it has not — the same fallback order the paywall uses, and
     // never a number this screen invented.
-    final offering = ref.watch(offeringsProvider).valueOrNull;
+    final offering = ref.watch(offeringsProvider).value;
     final int? trialDays = offering != null && offering.plans.isNotEmpty
         ? offering[PlanPeriod.yearly]?.trialDays
         : LpPricing.trialDays;

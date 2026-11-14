@@ -122,8 +122,9 @@ class CommunityStore extends Notifier<CommunityState> {
 
   @override
   CommunityState build() {
-    // Riverpod 2.x Notifiers have no `ref.mounted`; guard the async load
-    // against provider invalidation (sign-out) mid-fetch.
+    // Guard the async load against provider invalidation (sign-out) mid-fetch.
+    // Not `ref.mounted`: that reports only disposal, while `onDispose` also
+    // runs on the rebuild an invalidation causes — the case to catch here.
     var alive = true;
     ref.onDispose(() {
       alive = false;

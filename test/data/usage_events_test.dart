@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3 moved `Override` out of the main library.
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/network/connectivity.dart';

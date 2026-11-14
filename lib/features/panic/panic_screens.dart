@@ -24,9 +24,11 @@ import '../../core/widgets/lp_selectables.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
+import '../../data/stores/update_check_store.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/logic/games/games.dart';
 import '../../domain/logic/review_ask_policy.dart';
+import '../../domain/logic/update_prompt_policy.dart';
 import '../../domain/models/models.dart';
 import '../community/push_permission_ask.dart';
 import 'breath_pacer.dart';
@@ -865,6 +867,13 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
   /// asked two things after one craving.
   late final bool _reviewDue;
 
+  /// Whether this visit still has room for the rating card: nothing that
+  /// outranks it (the update prompt, What's New, the notification ask) has
+  /// opened since the app came to the front (docs/10 §55). Read once, on the
+  /// way in — the card's own appearance fills the visit, and must not then
+  /// hide the card.
+  late final bool _visitAllowsReview;
+
   @override
   void initState() {
     super.initState();
@@ -873,7 +882,11 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
     LpHaptics.celebrate();
     final snap = ref.read(todayProvider);
     final settings = ref.read(settingsStoreProvider);
+    _visitAllowsReview = ref
+        .read(visitModalsProvider.notifier)
+        .mayOpen(AppModal.ratingAsk);
     _reviewDue =
+        _visitAllowsReview &&
         snap != null &&
         ReviewAskPolicy.shouldAsk(
           planDay: snap.dayNumber,
@@ -894,7 +907,7 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
     // by policy alone meant yielding to a card nobody was shown, and the
     // person left having been asked nothing at all.
     final route =
-        ref.read(reviewRouteProvider).valueOrNull ?? ReviewRoute.none;
+        ref.read(reviewRouteProvider).value ?? ReviewRoute.none;
     final reviewShown =
         _reviewDue &&
         ref.read(settingsStoreProvider).hydrated &&
@@ -1071,7 +1084,7 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
                               ),
                             ),
                           ),
-                          const _ReviewAsk(),
+                          _ReviewAsk(visitAllows: _visitAllowsReview),
                           const Spacer(),
                           LpButton(l10n.survivedBack, onTap: _leave),
                         ],
@@ -1115,7 +1128,10 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
 /// reader of settings — on the defaults, a device already asked twice reads as
 /// never asked.
 class _ReviewAsk extends ConsumerWidget {
-  const _ReviewAsk();
+  const _ReviewAsk({required this.visitAllows});
+
+  /// `_SurvivedScreenState._visitAllowsReview`.
+  final bool visitAllows;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1124,8 +1140,11 @@ class _ReviewAsk extends ConsumerWidget {
     final snap = ref.watch(todayProvider);
     final settings = ref.watch(settingsStoreProvider);
     final route =
-        ref.watch(reviewRouteProvider).valueOrNull ?? ReviewRoute.none;
-    if (snap == null || !settings.hydrated || route == ReviewRoute.none) {
+        ref.watch(reviewRouteProvider).value ?? ReviewRoute.none;
+    if (!visitAllows ||
+        snap == null ||
+        !settings.hydrated ||
+        route == ReviewRoute.none) {
       return const SizedBox.shrink();
     }
     final now = snap.now;
@@ -1137,6 +1156,14 @@ class _ReviewAsk extends ConsumerWidget {
       now: now,
     );
     if (!ask) return const SizedBox.shrink();
+    // On screen: this visit's one modal is spent, so Home does not follow the
+    // card with an update prompt or What's New. After the frame — Riverpod
+    // refuses a provider write during build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        ref.read(visitModalsProvider.notifier).opened(AppModal.ratingAsk);
+      }
+    });
 
     void answered() =>
         ref.read(settingsStoreProvider.notifier).markReviewAsked(now);

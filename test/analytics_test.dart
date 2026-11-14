@@ -94,7 +94,11 @@ void main() {
         ..quitStatusReported(at: 30, vapeFree: true)
         ..widgetPromptShown(WidgetAddWay.pinDialog)
         ..widgetPromptAccepted(WidgetAddWay.walkthrough)
-        ..widgetInstalled();
+        ..widgetInstalled()
+        ..updatePromptShown(forced: true)
+        ..updatePromptUpdate()
+        ..updatePromptLater()
+        ..whatsNewShown('1.0.32');
 
       expect(a.names, [
         'onboarding_start',
@@ -180,6 +184,11 @@ void main() {
         'widget_prompt_shown',
         'widget_prompt_accepted',
         'widget_installed',
+        // The update prompt and What's New (docs/10 §55).
+        'update_prompt_shown',
+        'update_prompt_update',
+        'update_prompt_later',
+        'whats_new_shown',
       ]);
       expect(a.propsOf('help_viewed'), {'source': 'settings'});
       expect(a.propsOf('help_link_opened'), {'kind': 'call'});
@@ -193,6 +202,10 @@ void main() {
       expect(a.propsOf('widget_prompt_shown'), {'way': 'pinDialog'});
       expect(a.propsOf('widget_prompt_accepted'), {'way': 'walkthrough'});
       expect(a.propsOf('widget_installed'), isEmpty);
+      expect(a.propsOf('update_prompt_shown'), {'forced': 'true'});
+      expect(a.propsOf('update_prompt_update'), isEmpty);
+      expect(a.propsOf('update_prompt_later'), isEmpty);
+      expect(a.propsOf('whats_new_shown'), {'version': '1.0.32'});
       expect(a.propsOf('sign_in_completed'), {
         'method': 'email_register',
         'returning': 'false',
@@ -279,7 +292,11 @@ void main() {
         ..limitReached(LpLimit.communityPost, premium: false)
         ..limitReached(LpLimit.communityCap, premium: true, used: 3)
         ..limitReached(LpLimit.panicAi, premium: false, used: 2)
-        ..cravingSurvived(survived: false);
+        ..cravingSurvived(survived: false)
+        ..updatePromptShown(forced: false)
+        ..updatePromptUpdate()
+        ..updatePromptLater()
+        ..whatsNewShown('1.0.32');
 
       final snake = RegExp(r'^[a-z][a-z0-9_]*$');
       for (final event in a.events) {
@@ -388,10 +405,9 @@ void main() {
       expect(analyticsEnabled(BackendMode.fake), isFalse);
 
       final c = ProviderContainer(
-        overrides: [
-          ...fastBackendOverrides(),
-          backendModeProvider.overrideWithValue(BackendMode.firebase),
-        ],
+        overrides: fastBackendOverrides(
+          extra: [backendModeProvider.overrideWithValue(BackendMode.firebase)],
+        ),
       );
       addTearDown(c.dispose);
       expect(c.read(analyticsProvider), isA<NoopAnalytics>());

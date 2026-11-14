@@ -82,7 +82,7 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     final locale = context.localeTag;
     final snap = ref.watch(todayProvider);
     final journey = ref.watch(quitStoreProvider);
-    final report = ref.watch(weeklyInsightProvider).valueOrNull;
+    final report = ref.watch(weeklyInsightProvider).value;
     // The week is the REPORT's, not the reader's: `weeklyInsight` windows the
     // seven days before its own `weekId` (the user's Sunday), and a report
     // opened on Thursday is still about that week. Anchoring on `now` drew

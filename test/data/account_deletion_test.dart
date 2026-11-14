@@ -135,6 +135,34 @@ void main() {
     });
   });
 
+  group('What\'s New is per install, not per account', () {
+    // The opposite call from the widget offer above, on purpose: the notes are
+    // about the build on this phone, and signing out and back in installs
+    // nothing new. Forgetting it would show the same sheet again to the same
+    // person on the next Home.
+    test('signing out keeps it', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+      c.read(settingsStoreProvider.notifier).markWhatsNewSeen('1.0.32');
+
+      store.signOut();
+
+      expect(c.read(settingsStoreProvider).whatsNewSeenVersion, '1.0.32');
+    });
+
+    test('deleting the account keeps it too', () async {
+      final c = harness();
+      final store = c.read(quitStoreProvider.notifier);
+      await store.logIn(email: 'maya@quitmail.com', password: 'secret1');
+      c.read(settingsStoreProvider.notifier).markWhatsNewSeen('1.0.32');
+
+      await store.deleteAccount();
+
+      expect(c.read(settingsStoreProvider).whatsNewSeenVersion, '1.0.32');
+    });
+  });
+
   test('a failed deletion throws and leaves the session standing', () async {
     final c = harness(deletionFails: true);
     final store = c.read(quitStoreProvider.notifier);

@@ -6878,6 +6878,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} unread notifications'**
   String notificationsBadgeLabel(int count);
+
+  /// Screen-reader label for the version chip on the update prompt and What's New (the chip itself shows only the number).
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String updateVersionLabel(String version);
+
+  /// Optional update sheet title, over Home. Calm: no urgency, no guilt.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version of Cirrus is out'**
+  String get updateTitle;
+
+  /// One line under the update title. Above the list of what is in the new version.
+  ///
+  /// In en, this message translates to:
+  /// **'Update to get the latest changes.'**
+  String get updateReason;
+
+  /// The single primary action: opens the store listing.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateCta;
+
+  /// Forced update screen title (Remote Config force_update_app). Honest and neutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get updateRequiredTitle;
+
+  /// Forced update screen line. Says why there is no way past it, nothing more.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Cirrus is no longer supported.'**
+  String get updateRequiredBody;
+
+  /// One-time sheet after an update (and on a fresh install): what is in the version now installed.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get whatsNewTitle;
+
+  /// One line under the What's New title.
+  ///
+  /// In en, this message translates to:
+  /// **'Here\'s what changed in this version.'**
+  String get whatsNewReason;
+
+  /// Closes What's New. Same word as the app's other 'Got it' buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get whatsNewDone;
+
+  /// What's New 1.0.32, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick question about cigarettes, and a new More help page'**
+  String get whatsNew1032Item1;
+
+  /// What's New 1.0.32, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after.
+  ///
+  /// In en, this message translates to:
+  /// **'One short message a day around your quit date'**
+  String get whatsNew1032Item2;
+
+  /// What's New 1.0.32, bullet 3 of 3. The home-screen widget.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a puff from your home screen with the widget'**
+  String get whatsNew1032Item3;
+
+  /// What's New 1.0.34, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick question about cigarettes, and a new More help page'**
+  String get whatsNew1034Item1;
+
+  /// What's New 1.0.34, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after.
+  ///
+  /// In en, this message translates to:
+  /// **'One short message a day around your quit date'**
+  String get whatsNew1034Item2;
+
+  /// What's New 1.0.34, bullet 3 of 3. The home-screen widget.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a puff from your home screen with the widget'**
+  String get whatsNew1034Item3;
 }
 
 class _AppLocalizationsDelegate

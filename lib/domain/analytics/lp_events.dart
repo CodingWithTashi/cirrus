@@ -462,6 +462,33 @@ extension LpEvents on AnalyticsSink {
   /// nothing can tell the two apart.
   void widgetInstalled() => track(const AnalyticsEvent('widget_installed', {}));
 
+  /// The update prompt was put on screen (docs/10 §55). [forced] is the
+  /// full-screen card Remote Config's `force_update_app` raises; false is the
+  /// optional sheet over Home. Once per optional sheet, and once per forced
+  /// screen built — a forced screen can be rebuilt by a later launch, and
+  /// each one is somebody shown it again.
+  ///
+  /// The flag is sent as a string, like every boolean in this vocabulary:
+  /// Firebase Analytics accepts only strings and numbers as parameters.
+  void updatePromptShown({required bool forced}) =>
+      track(AnalyticsEvent('update_prompt_shown', {'forced': '$forced'}));
+
+  /// Update was tapped and the store listing was asked to open. Not that the
+  /// update was installed — nothing reports that, and the next launch's
+  /// version is the only evidence.
+  void updatePromptUpdate() =>
+      track(const AnalyticsEvent('update_prompt_update', {}));
+
+  /// The optional sheet was left without Update: "Not now", a swipe or a tap
+  /// outside. Upgrader's three-day quiet starts either way.
+  void updatePromptLater() =>
+      track(const AnalyticsEvent('update_prompt_later', {}));
+
+  /// What's New was put on screen for [version] (`x.y.z`, the installed
+  /// build — never free text). Once per version per device.
+  void whatsNewShown(String version) =>
+      track(AnalyticsEvent('whats_new_shown', {'version': version}));
+
   /// "Adjust my plan" moved Freedom Day (docs/15 QP-A11). [deltaDays] is the
   /// shift in calendar days: negative when the date came closer, positive when
   /// it moved out. Never reported for an adjustment that left the date where it

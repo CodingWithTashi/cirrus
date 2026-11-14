@@ -36,9 +36,11 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// A draft read from disk, held until the user accepts or rejects it.
   OnboardingDraft? _pending;
 
-  /// Riverpod 2's `Ref` has no `mounted`, and the async draft read here can
-  /// outlive a fast user: it can land after the notifier is gone (`complete`
-  /// invalidates it), and writing state then throws.
+  /// The async draft read here can outlive a fast user: it can land after the
+  /// notifier was rebuilt or is gone (`complete` invalidates it), and writing
+  /// state then throws. A flag rather than `ref.mounted`, which reports only
+  /// disposal — `onDispose` also runs on a rebuild, and that is the case this
+  /// has to catch.
   bool _disposed = false;
 
   @override

@@ -4,7 +4,7 @@ import 'package:last_puff/domain/logic/home_card_plan.dart';
 /// Home is the screen people open most, and the one they leave when it asks too
 /// much of them. Everything that stacks below the numbers is either something
 /// that needs the person TODAY (a slip, the evening mood, yesterday's missing
-/// answer, the day's vape-free confirmation, the daily program) or something
+/// answer, the day's vape-free confirmation) or something
 /// that can wait (finish setup, the cigarettes question, the widget offer, the
 /// coach nudge). The optional ones now take turns: at most one, and none while
 /// something needs the person — so the calm moments are where the extras show.
@@ -12,6 +12,7 @@ void main() {
   HomeCardPlan plan({
     bool actionUp = false,
     bool offerUp = false,
+    bool programUp = false,
     bool setupDue = false,
     bool smokingDue = false,
     bool widgetUp = false,
@@ -19,6 +20,7 @@ void main() {
   }) => HomeCardPlan.decide(
     actionUp: actionUp,
     offerUp: offerUp,
+    programUp: programUp,
     setupDue: setupDue,
     smokingDue: smokingDue,
     widgetUp: widgetUp,
@@ -69,6 +71,28 @@ void main() {
           widgetUp: true, nudgeDue: true)),
       isEmpty,
     );
+  });
+
+  test('the daily program lets "finish setup" share the screen, and nothing '
+      'else', () {
+    // On cold turkey the program has a message on each of the first three days
+    // — every day setup is allowed — so a program that blocked setup meant the
+    // way back after "Skip setup for now" never showed for those accounts.
+    expect(shown(plan(programUp: true, setupDue: true)), ['setup']);
+    expect(
+      shown(plan(programUp: true, setupDue: true, smokingDue: true,
+          widgetUp: true, nudgeDue: true)),
+      ['setup'],
+    );
+    // Everything below setup still waits for the program to be over.
+    expect(shown(plan(programUp: true, smokingDue: true)), isEmpty);
+    expect(shown(plan(programUp: true, widgetUp: true)), isEmpty);
+    expect(shown(plan(programUp: true, nudgeDue: true)), isEmpty);
+    // ...and a real action still blocks setup too, program or not.
+    expect(shown(plan(programUp: true, actionUp: true, setupDue: true)),
+        isEmpty);
+    expect(shown(plan(programUp: true, offerUp: true, setupDue: true)),
+        isEmpty);
   });
 
   test('none beside the offer, which was counted the moment the splash '

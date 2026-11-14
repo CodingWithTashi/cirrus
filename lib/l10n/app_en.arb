@@ -2826,5 +2826,71 @@
         "type": "int"
       }
     }
+  },
+  "updateVersionLabel": "Version {version}",
+  "@updateVersionLabel": {
+    "description": "Screen-reader label for the version chip on the update prompt and What's New (the chip itself shows only the number).",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.33"
+      }
+    }
+  },
+  "updateTitle": "A new version of Cirrus is out",
+  "@updateTitle": {
+    "description": "Optional update sheet title, over Home. Calm: no urgency, no guilt."
+  },
+  "updateReason": "Update to get the latest changes.",
+  "@updateReason": {
+    "description": "One line under the update title. Above the list of what is in the new version."
+  },
+  "updateCta": "Update",
+  "@updateCta": {
+    "description": "The single primary action: opens the store listing."
+  },
+  "updateRequiredTitle": "Update required",
+  "@updateRequiredTitle": {
+    "description": "Forced update screen title (Remote Config force_update_app). Honest and neutral."
+  },
+  "updateRequiredBody": "This version of Cirrus is no longer supported.",
+  "@updateRequiredBody": {
+    "description": "Forced update screen line. Says why there is no way past it, nothing more."
+  },
+  "whatsNewTitle": "What's new",
+  "@whatsNewTitle": {
+    "description": "One-time sheet after an update (and on a fresh install): what is in the version now installed."
+  },
+  "whatsNewReason": "Here's what changed in this version.",
+  "@whatsNewReason": {
+    "description": "One line under the What's New title."
+  },
+  "whatsNewDone": "Got it",
+  "@whatsNewDone": {
+    "description": "Closes What's New. Same word as the app's other 'Got it' buttons."
+  },
+  "whatsNew1032Item1": "A quick question about cigarettes, and a new More help page",
+  "@whatsNew1032Item1": {
+    "description": "What's New 1.0.32, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1032Item2": "One short message a day around your quit date",
+  "@whatsNew1032Item2": {
+    "description": "What's New 1.0.32, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after."
+  },
+  "whatsNew1032Item3": "Log a puff from your home screen with the widget",
+  "@whatsNew1032Item3": {
+    "description": "What's New 1.0.32, bullet 3 of 3. The home-screen widget."
+  },
+  "whatsNew1034Item1": "A quick question about cigarettes, and a new More help page",
+  "@whatsNew1034Item1": {
+    "description": "What's New 1.0.34, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1034Item2": "One short message a day around your quit date",
+  "@whatsNew1034Item2": {
+    "description": "What's New 1.0.34, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after."
+  },
+  "whatsNew1034Item3": "Log a puff from your home screen with the widget",
+  "@whatsNew1034Item3": {
+    "description": "What's New 1.0.34, bullet 3 of 3. The home-screen widget."
   }
 }

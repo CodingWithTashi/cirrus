@@ -51,6 +51,29 @@ abstract final class LpLinks {
   static const supportEmail = 'support@cirrusquit.com';
   static final support = Uri.parse('mailto:$supportEmail');
 
+  /// The Android package and the App Store record. The store's numeric id is
+  /// [LpReview.appStoreId]'s twin; both are what App Store Connect and Play
+  /// Console show, and `test/core/lp_links_test.dart` pins them.
+  static const playPackage = 'com.quitvape.last_puff';
+  static const appStoreId = '6806871144';
+
+  /// The store page the update prompt's Update opens.
+  ///
+  /// Our own URL rather than upgrader's `sendUserToAppStore()`, which asks
+  /// `canLaunchUrl` first — and on Android 11+ that answers false for https
+  /// unless the manifest declares a VIEW `<queries>` entry (this one declares
+  /// only PROCESS_TEXT), so Update would silently do nothing. [open] skips the
+  /// check. Both are https links the store apps claim: the Play Store and the
+  /// App Store open on them, a browser only when neither is installed.
+  static Uri storeListing(TargetPlatform platform) => switch (platform) {
+    TargetPlatform.iOS || TargetPlatform.macOS => Uri.parse(
+      'https://apps.apple.com/app/id$appStoreId',
+    ),
+    _ => Uri.parse(
+      'https://play.google.com/store/apps/details?id=$playPackage',
+    ),
+  };
+
   /// Opens [url] in the browser. Returns whether anything handled it.
   ///
   /// Never throws: a device with no browser is an odd device, not a reason to

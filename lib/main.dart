@@ -12,6 +12,7 @@ import 'data/api/firebase/app_check_setup.dart';
 import 'data/api/firebase/push_service.dart';
 import 'data/backend_mode.dart';
 import 'data/repositories/revenuecat_billing_repository.dart';
+import 'data/stores/providers.dart' show lpNoRetry;
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -49,5 +50,10 @@ Future<void> main() async {
     // and never from debug builds — see LpErrors.install.
     reportCrashes: resolveBackendMode() == BackendMode.firebase && !kDebugMode,
   );
-  runApp(const ProviderScope(child: LastPuffApp()));
+  runApp(
+    // Riverpod 3 retries failing providers on its own; this app surfaces the
+    // first failure instead (see `lpNoRetry`). The providers that exist today
+    // say so themselves — this is the default for any added later.
+    const ProviderScope(retry: lpNoRetry, child: LastPuffApp()),
+  );
 }

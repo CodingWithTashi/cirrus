@@ -550,3 +550,29 @@ abstract interface class CoachNameRepository {
   /// worse failure.
   Future<bool> reserve(String name);
 }
+
+/// What Remote Config says about the update prompt, read once at launch.
+class RemoteFlags {
+  const RemoteFlags({this.forceUpdate = false, this.releaseNotes = '{}'});
+
+  /// What a backend that could not be asked answers: nothing forced, no
+  /// notes. The fail-open value.
+  static const RemoteFlags none = RemoteFlags();
+
+  /// `force_update_app`. True ONLY when this launch's fetch completed — a
+  /// value cached from an earlier launch never forces (fail open).
+  final bool forceUpdate;
+
+  /// `update_release_notes`, the raw JSON string (`RemoteReleaseNotes.parse`).
+  /// May come from the cache or the in-app default: notes are only shown for
+  /// the version the store is offering, so a stale copy is harmless.
+  final String releaseNotes;
+}
+
+/// The update prompt's two console switches (docs/10 §55).
+abstract interface class RemoteFlagsRepository {
+  /// Never throws, and never takes longer than its own short timeout: a
+  /// launch must not wait on a fetch, and every failure answers
+  /// [RemoteFlags.none]-shaped values (no force).
+  Future<RemoteFlags> fetch();
+}

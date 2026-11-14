@@ -286,7 +286,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       actionUp:
           journey.pendingSlipCleanDays != null ||
           showMoodPrompt ||
-          programShows ||
           (!tourLocked && Program90Card.shows(journey, now)) ||
           askYesterday ||
           showVapeFree ||
@@ -295,6 +294,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           (planOver && stillLogging) ||
           _smokingRuleFor != null,
       offerUp: showOffer || showFoundingOffer,
+      // The daily program yields the slot to "finish setup" and to nothing
+      // else (`HomeCardPlan`): on cold turkey it is up on every day setup is.
+      programUp: programShows,
       setupDue:
           journey.day1TasksDone.length < 3 &&
           journey.plan.planNumber == 1 &&
