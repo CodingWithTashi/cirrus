@@ -146,7 +146,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
+          // Scrolls under a minimum height like the three forms beside it. It
+          // is mounted UNDER the register and log-in forms, so their keyboard
+          // squeezes it too: on an iPhone 16e a bare Column here overflowed by
+          // 99 points and failed every device suite at its first sign-in, and
+          // it clips for real on a short phone or at a large text size. The
+          // Spacers still pin the footer whenever there is room.
+          child: _AuthScrollView(child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // This screen is the root for someone who signed out, and a
@@ -245,7 +251,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               // has signed in, so the first thing a new user could do is give
               // themselves somebody else's twelve-day streak.
             ],
-          ),
+          )),
         ),
       ),
     );

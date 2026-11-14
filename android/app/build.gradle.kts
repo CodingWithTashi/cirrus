@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
@@ -21,7 +22,11 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.quitvape.last_puff"
-    compileSdk = flutter.compileSdkVersion
+    // 37, not `flutter.compileSdkVersion` (36): flutter_local_notifications 23
+    // and androidx.core 1.19 both compile against API 37, and the AAR metadata
+    // check refuses an app compiled lower. compileSdk only decides which APIs
+    // the code may call; targetSdk (runtime behaviour) is left to Flutter.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -30,10 +35,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -66,6 +67,12 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 

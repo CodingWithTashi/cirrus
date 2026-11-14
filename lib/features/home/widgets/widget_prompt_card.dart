@@ -47,10 +47,16 @@ import '../../../domain/logic/widget_prompt_policy.dart';
 /// listener living in it would die before the person got back from the
 /// launcher. It lives in `HomeScreen`'s State (docs/10 §54.4).
 class WidgetPromptCard extends ConsumerStatefulWidget {
-  const WidgetPromptCard({super.key, required this.now});
+  const WidgetPromptCard({super.key, required this.now, this.allowed = true});
 
   /// The clock Home runs on, so the policy and the screen agree on today.
   final DateTime now;
+
+  /// Whether Home has given this card the slot (`HomeCardPlan`): optional cards
+  /// take turns and give way while something needs the person. A card that is
+  /// not allowed draws nothing and is **not spent** — it was never seen — so it
+  /// is offered the next time Home is calm.
+  final bool allowed;
 
   @override
   ConsumerState<WidgetPromptCard> createState() => _WidgetPromptCardState();
@@ -127,6 +133,7 @@ class _WidgetPromptCardState extends ConsumerState<WidgetPromptCard> {
     // guess, and a cold start where this ran first would put up a card the
     // stored flag says was already seen.
     final offered =
+        widget.allowed &&
         journey != null &&
         settings.hydrated &&
         WidgetPromptPolicy.shouldShow(
@@ -141,7 +148,7 @@ class _WidgetPromptCardState extends ConsumerState<WidgetPromptCard> {
     // The latch holds the card up across the policy turning false, but never
     // over the Day-1 tour: every other card on Home stands down for it, and a
     // row tapped on the checklist can start it on any day.
-    final up = prompt.visible && way != null && !tourLocked;
+    final up = widget.allowed && prompt.visible && way != null && !tourLocked;
     _waiting = offered && !prompt.visible;
     if (!offered && !up) return const SizedBox.shrink();
 

@@ -65,14 +65,21 @@ void main() {
 
     final analytics = RecordingAnalytics();
     final container = ProviderContainer(
-      overrides: [
-        ...fastBackendOverrides(now: now, analytics: analytics),
-        widgetStoreProvider.overrideWithValue(widgets),
-        // A restart has to survive on real (mock) preferences, not on state
-        // that dies with the container.
-        if (persist) settingsStoreProvider.overrideWith(() => SettingsStore()),
-        if (settings != null) settingsStoreProvider.overrideWith(settings),
-      ],
+      overrides: fastBackendOverrides(
+        now: now,
+        analytics: analytics,
+        extra: [
+          widgetStoreProvider.overrideWithValue(widgets),
+          // A restart has to survive on real (mock) preferences, not on state
+          // that dies with the container. One settings override, never two:
+          // an explicit store wins over `persist`, as the later override did
+          // before Riverpod 3 refused a provider overridden twice.
+          if (settings != null)
+            settingsStoreProvider.overrideWith(settings)
+          else if (persist)
+            settingsStoreProvider.overrideWith(() => SettingsStore()),
+        ],
+      ),
     );
     addTearDown(container.dispose);
     await tester.pumpWidget(
@@ -214,12 +221,13 @@ void main() {
 
     testWidgets('not while the Day-1 tour is running, and the offer is not spent',
         (tester) async {
-      // Three puffs yesterday and the tour already running: logging two more
-      // makes the account qualify in the middle of the tour.
+      // Four puffs on one earlier day and the tour already running: logging one
+      // more makes the account qualify in the middle of the tour. Day 5, so
+      // "finish setup" (the first three days) is not what holds the slot.
       final journey = journeyOnDay(
-        2,
+        5,
         now: now,
-        puffsByDay: {1: 3},
+        puffsByDay: {1: 4, 2: 0, 3: 0, 4: 0},
       ).copyWith(day1TasksDone: const {});
       final (container, analytics) = await pumpHome(
         tester,
@@ -231,7 +239,6 @@ void main() {
       expect(container.read(day1TourLockedProvider), isTrue);
 
       final store = container.read(quitStoreProvider.notifier);
-      store.logPuff();
       store.logPuff();
       await tester.pumpAndSettle();
 
@@ -247,7 +254,11 @@ void main() {
 
     testWidgets('a card already up stands down when the tour starts',
         (tester) async {
-      final journey = taper().copyWith(day1TasksDone: const {});
+      // Day 5: "finish setup" is for the first three days, so it does not hold
+      // the slot, and the checklist rows are still undone.
+      final journey = journeyOnDay(5, now: now).copyWith(
+        day1TasksDone: const {},
+      );
       final (container, _) = await pumpHome(
         tester,
         journey,

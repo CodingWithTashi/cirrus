@@ -4112,7 +4112,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Touch and hold an empty spot on your home screen until the icons wiggle.';
 
   @override
-  String get widgetPromptStep2 => 'Tap + in the top-left corner.';
+  String get widgetPromptStep2 =>
+      'Tap Edit (or +) in the top-left corner, then Add Widget.';
 
   @override
   String get widgetPromptStep3 => 'Search for Cirrus and tap Add Widget.';
@@ -4231,4 +4232,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return '$count unread notifications';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateTitle => 'A new version of Cirrus is out';
+
+  @override
+  String get updateReason => 'Update to get the latest changes.';
+
+  @override
+  String get updateCta => 'Update';
+
+  @override
+  String get updateRequiredTitle => 'Update required';
+
+  @override
+  String get updateRequiredBody =>
+      'This version of Cirrus is no longer supported.';
+
+  @override
+  String get whatsNewTitle => 'What\'s new';
+
+  @override
+  String get whatsNewReason => 'Here\'s what changed in this version.';
+
+  @override
+  String get whatsNewDone => 'Got it';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'A quick question about cigarettes, and a new More help page';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'One short message a day around your quit date';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Log a puff from your home screen with the widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'A quick question about cigarettes, and a new More help page';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'One short message a day around your quit date';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Log a puff from your home screen with the widget';
 }

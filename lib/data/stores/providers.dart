@@ -1,8 +1,14 @@
 import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3 moved the legacy providers to their own library. These two are
+// plain counters/flags with no notifier of their own; `==` filtering is a no-op
+// for an int and a bool, so the legacy import is behaviour-identical.
+import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:upgrader/upgrader.dart';
 
 import '../../domain/logic/coach_name.dart';
 import '../../domain/models/journey_state.dart';
@@ -29,6 +35,8 @@ import '../repositories/api_coach_repository.dart';
 import '../repositories/api_community_repository.dart';
 import '../repositories/api_journey_repository.dart';
 import '../repositories/fake_billing_repository.dart';
+import '../repositories/fake_remote_flags_repository.dart';
+import '../repositories/firebase_remote_flags_repository.dart';
 import '../repositories/firebase_auth_repository.dart';
 import '../api/firebase/push_messages.dart';
 import '../api/firebase/push_service.dart';
@@ -59,6 +67,19 @@ import '../api/widget_store.dart';
 import '../../domain/date_key.dart';
 import '../../core/utils/lp_links.dart';
 import '../../core/utils/lp_review.dart';
+
+/// Riverpod 3 retries a failing provider by default — ten times, backing off
+/// to 6.4s — and reports the whole stretch as `AsyncLoading`. Every failure
+/// surface in this app is built on the opposite contract: the FIRST failure is
+/// the answer, so `AsyncError` reaches `LpErrorState` and its "Try again" at
+/// once instead of a spinner that sits for most of a minute and then fails
+/// anyway (docs: CLAUDE.md "Error handling"). Each retry is also a pending
+/// `Timer`, which fails any widget test that meets one.
+///
+/// Passed as `retry:` to every async provider below, and as the app-wide
+/// default on the root `ProviderScope` (`main.dart`) for anything added later.
+/// `test/data/provider_retry_test.dart` pins it against the real providers.
+Duration? lpNoRetry(int retryCount, Object error) => null;
 
 // ---- backend seam -----------------------------------------------------------
 // [backendModeProvider] picks who answers the domain contracts: mobile runs
@@ -158,7 +179,7 @@ final accountProviderProvider = FutureProvider.autoDispose<AccountProvider?>((
   // not a subtype of the auth contract, on purpose.
   final Object auth = ref.watch(authRepositoryProvider);
   return auth is SignInMethodSource ? auth.signInProvider() : null;
-});
+}, retry: lpNoRetry);
 
 final journeyRepositoryProvider = Provider<JourneyRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
@@ -243,6 +264,7 @@ final moderationRepositoryProvider = Provider<ModerationRepository>(
 /// everyone else.
 final isModeratorProvider = FutureProvider<bool>(
   (ref) => ref.watch(moderationRepositoryProvider).isModerator(),
+  retry: lpNoRetry,
 );
 
 /// Read side of the server-owned user document: nightly taper advice and the
@@ -297,6 +319,15 @@ final isPremiumProvider = Provider<bool>(
   (ref) => ref.watch(entitlementProvider).isActive,
 );
 
+/// How many store sheets — a purchase or a restore — are open right now.
+///
+/// The forced update screen waits for this to reach zero
+/// (`UpdatePromptPolicy.forcedMayShow`): it must never land on top of a sheet
+/// that is taking somebody's money. Counted by `EntitlementStore`, around the
+/// whole store call; a count rather than a flag so two overlapping calls
+/// cannot clear each other.
+final storeSheetsOpenProvider = StateProvider<int>((_) => 0);
+
 /// The plans on sale, priced by the store. Null when they cannot be loaded —
 /// the paywall then shows its fixed copy. Auto-disposed so a paywall opened
 /// a day later asks the store again.
@@ -306,7 +337,7 @@ final offeringsProvider = FutureProvider.autoDispose<BillingOffering?>((ref) {
   // rather than sitting on a null until the user leaves and returns.
   ref.watch(connectivityProvider);
   return ref.watch(billingRepositoryProvider).offerings();
-});
+}, retry: lpNoRetry);
 
 /// Today's date, as a local midnight, ticked over when the day actually turns.
 ///
@@ -556,6 +587,7 @@ final widgetSessionProvider = NotifierProvider<WidgetSession, String?>(
 /// session that stays open past Sunday.
 final weeklyInsightProvider = FutureProvider.autoDispose<WeeklyInsight?>(
   (ref) => ref.watch(serverStateRepositoryProvider).latestInsight(),
+  retry: lpNoRetry,
 );
 
 final moderationStoreProvider =
@@ -570,6 +602,7 @@ final moderationStoreProvider =
 /// stale list here would show someone a disclosure they had already deleted.
 final coachMemoriesProvider = FutureProvider.autoDispose<List<CoachMemory>>(
   (ref) => ref.watch(coachRepositoryProvider).memories(),
+  retry: lpNoRetry,
 );
 
 /// Where a "Rate Cirrus" tap would go on this device — the OS review sheet,
@@ -584,7 +617,66 @@ final coachMemoriesProvider = FutureProvider.autoDispose<List<CoachMemory>>(
 /// `none`, which is why the widget tests must.
 final reviewRouteProvider = FutureProvider<ReviewRoute>(
   (_) => LpReview.route(),
+  retry: lpNoRetry,
 );
+
+/// `--dart-define=UPGRADER_DEBUG=true`: the update prompt once per launch
+/// whatever the store says, and upgrader's own `upgrader:` log lines. A
+/// define, never a code edit, so there is nothing to revert before release.
+const bool _debugUpgrader = bool.fromEnvironment('UPGRADER_DEBUG');
+
+/// What asks the App Store or Google Play for a newer version (the shared
+/// `flutter-upgrader` skill's seam, kept by name). Null where nothing may ask:
+/// the fake backend — and so every widget test, which `fastBackendOverrides()`
+/// pins to it and overrides to null besides.
+///
+/// It asks the store of the device's region (the US when it has none), once,
+/// as the app starts — `checkOnResume: false`, because Google Play answers
+/// with its whole listing page. upgrader is the lookup and the three-day
+/// "Not now" clock and nothing else: the dialog is Cirrus's own
+/// (`features/update/`), and the listing's `[:mav:]` tag is never read — force
+/// comes from Remote Config (`UpdatePromptPolicy`).
+final upgraderProvider = Provider<Upgrader?>((ref) {
+  if (ref.watch(backendModeProvider) == BackendMode.fake) return null;
+  final upgrader = Upgrader(
+    checkOnResume: false,
+    debugDisplayOnce: _debugUpgrader,
+    debugLogging: _debugUpgrader,
+  );
+  ref.onDispose(upgrader.dispose);
+  return upgrader;
+});
+
+/// Remote Config's update switches. The fake answers "nothing forced, no
+/// notes" — what a real device answers whenever Remote Config is out of
+/// reach — so the fake backend and every test never touch Firebase.
+final remoteFlagsRepositoryProvider = Provider<RemoteFlagsRepository>(
+  (ref) => switch (ref.watch(backendModeProvider)) {
+    BackendMode.fake => FakeRemoteFlagsRepository(),
+    BackendMode.firebase => FirebaseRemoteFlagsRepository(),
+  },
+);
+
+/// `--dart-define=UPDATE_FORCE_DEBUG=true` shows the forced update screen
+/// without a release to force. Honoured only outside release builds, so a
+/// stray define can never lock a store build.
+final updateForceDebugProvider = Provider<bool>(
+  (_) => !kReleaseMode && const bool.fromEnvironment('UPDATE_FORCE_DEBUG'),
+);
+
+/// The installed version alone, `1.0.32` — what What's New is keyed by.
+///
+/// Null where the platform cannot say. `flutter test` has no plugin registry,
+/// so every widget test reads null here and no Home fixture is ever handed a
+/// What's New sheet it did not ask for; a test about it overrides this.
+final installedVersionProvider = FutureProvider<String?>((ref) async {
+  try {
+    final version = (await PackageInfo.fromPlatform()).version;
+    return version.isEmpty ? null : version;
+  } on Object {
+    return null;
+  }
+}, retry: lpNoRetry);
 
 final settingsStoreProvider = NotifierProvider<SettingsStore, SettingsState>(
   SettingsStore.new,
@@ -603,4 +695,4 @@ final appVersionProvider = FutureProvider<String?>((ref) async {
   } on Object {
     return null;
   }
-});
+}, retry: lpNoRetry);

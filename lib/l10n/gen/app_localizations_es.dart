@@ -4130,7 +4130,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mantén pulsado un hueco vacío de la pantalla de inicio hasta que los iconos se muevan.';
 
   @override
-  String get widgetPromptStep2 => 'Toca + en la esquina superior izquierda.';
+  String get widgetPromptStep2 =>
+      'Toca «Editar» (o +) arriba a la izquierda y luego «Añadir widget».';
 
   @override
   String get widgetPromptStep3 => 'Busca Cirrus y toca «Añadir widget».';
@@ -4249,4 +4250,58 @@ class AppLocalizationsEs extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return '$count notificaciones sin leer';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Versión $version';
+  }
+
+  @override
+  String get updateTitle => 'Hay una versión nueva de Cirrus';
+
+  @override
+  String get updateReason => 'Actualiza para tener los últimos cambios.';
+
+  @override
+  String get updateCta => 'Actualizar';
+
+  @override
+  String get updateRequiredTitle => 'Hace falta actualizar';
+
+  @override
+  String get updateRequiredBody =>
+      'Esta versión de Cirrus ya no tiene soporte.';
+
+  @override
+  String get whatsNewTitle => 'Novedades';
+
+  @override
+  String get whatsNewReason => 'Esto es lo que cambia en esta versión.';
+
+  @override
+  String get whatsNewDone => 'Vale';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'Una pregunta rápida sobre cigarrillos y la nueva página Más ayuda';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'Un mensaje corto al día alrededor de tu fecha para dejarlo';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Registra una calada desde la pantalla de inicio con el widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'Una pregunta rápida sobre cigarrillos y la nueva página Más ayuda';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'Un mensaje corto al día alrededor de tu fecha para dejarlo';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Registra una calada desde la pantalla de inicio con el widget';
 }

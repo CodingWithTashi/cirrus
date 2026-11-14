@@ -28,11 +28,11 @@ void main() {
   /// One "app session": its own container, sharing the one backend.
   Future<ProviderContainer> session(String email) async {
     final container = ProviderContainer(
-      overrides: [
-        ...fastBackendOverrides(),
-        backendModeProvider.overrideWithValue(BackendMode.fake),
-        fakeServerProvider.overrideWithValue(server),
-      ],
+      // The helper already pins the fake backend; the one thing this suite
+      // needs different is the server, shared by every session.
+      overrides: fastBackendOverrides(
+        extra: [fakeServerProvider.overrideWithValue(server)],
+      ),
     );
     addTearDown(container.dispose);
     await container

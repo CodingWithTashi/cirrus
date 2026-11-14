@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3 moved `Override` out of the main library.
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/core/widgets/lp_misc.dart';
@@ -34,9 +36,17 @@ class E2E {
   /// Boots the app the way `main()` does, minus the Firebase init the caller
   /// owns. [online] false pins the connectivity store offline so the airplane
   /// -mode paths can be exercised without touching the device's radio.
+  ///
+  /// The installed version reads as unknown unless [realInstalledVersion]:
+  /// the device's own `PackageInfo` says the build's version, and What's New
+  /// then opens over Home on the first Home visit of a fresh install — which
+  /// swallows the first tap of every suite that is not about it (docs/10 §55).
+  /// The widget helper (`fastBackendOverrides`) makes the same choice;
+  /// `s_update_prompt` is about What's New and asks for the real one.
   static Future<E2E> boot(
     WidgetTester tester, {
     bool online = true,
+    bool realInstalledVersion = false,
     List<Override> overrides = const [],
   }) async {
     final container = ProviderContainer(
@@ -47,6 +57,8 @@ class E2E {
         connectivityProvider.overrideWith(
           () => TestConnectivity(startOnline: online),
         ),
+        if (!realInstalledVersion)
+          installedVersionProvider.overrideWith((_) async => null),
         ...overrides,
       ],
     );
@@ -125,6 +137,12 @@ class E2E {
   /// its own Text widget, which is exactly how the first run of this suite
   /// failed.
   Future<void> tapSpan(String label) async {
+    // An iPhone's software keyboard is up whenever an auth form has focus (the
+    // register screen autofocuses its field) and it covers the "Log in" link,
+    // so the span is in the tree but not hit-testable. A person dismisses the
+    // keyboard or scrolls; do the first. Harmless anywhere else.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(frames: 30);
     final range = find.textRange.ofSubstring(label);
     if (range.evaluate().isEmpty) {
       fail('No span "$label".\nOn screen: ${texts()}');
@@ -184,18 +202,33 @@ class E2E {
     return false;
   }
 
-  /// Scrolls the nearest scrollable until [finder] is on screen. Several
+  /// Scrolls the nearest scrollable until [finder] can take a touch. Several
   /// screens are longer than a phone.
+  ///
+  /// "Built" is not "tappable": a lazily built list keeps what is inside its
+  /// cache extent in the tree, and a scroll view that runs under a pinned
+  /// control (Home's) counts a card beneath it as visible. Stopping there left
+  /// the tap on the control's background — which is how a card that a person
+  /// reaches by scrolling one more notch looked unopenable. So this scrolls
+  /// until a touch at the target would land on it.
   Future<void> scrollTo(Finder finder) async {
-    if (finder.evaluate().isNotEmpty) return;
     final scrollable = find.byType(Scrollable);
     if (scrollable.evaluate().isEmpty) return;
-    await tester.scrollUntilVisible(
-      finder,
-      120,
-      scrollable: scrollable.first,
-      maxScrolls: 30,
-    );
+    for (var step = 0; step < 30; step++) {
+      if (finder.hitTestable().evaluate().isNotEmpty) break;
+      if (finder.evaluate().isEmpty) {
+        // Not built yet: scroll it into existence first.
+        await tester.scrollUntilVisible(
+          finder,
+          120,
+          scrollable: scrollable.first,
+          maxScrolls: 30,
+        );
+      } else {
+        await tester.drag(scrollable.first, const Offset(0, -120));
+        await tester.pump();
+      }
+    }
     await settle();
   }
 }

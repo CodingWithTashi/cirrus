@@ -38,6 +38,7 @@ class SettingsState {
     this.reviewAskedAt,
     this.reviewAskedCount = 0,
     this.widgetPromptShown = false,
+    this.whatsNewSeenVersion,
     this.hydrated = true,
   });
 
@@ -213,6 +214,20 @@ class SettingsState {
   /// is not offered it either way — that is read from the launcher, not here.
   final bool widgetPromptShown;
 
+  /// The installed version whose What's New sheet this device last showed
+  /// (`UpdatePromptPolicy.whatsNewDue`), or null when it never has — a fresh
+  /// install, and every install from before 1.0.32.
+  ///
+  /// Written when the sheet opens: shown once means seen once, and a sheet
+  /// that was due but held back (another modal this visit, the Day-1 tour)
+  /// is NOT marked, so it comes back on the next visit.
+  ///
+  /// Device-scoped and deliberately NOT on the sign-out forget list, like
+  /// [reviewAskedAt]: it is about the build installed on this phone, not about
+  /// an account. Somebody who signs out and back in has not installed
+  /// anything new.
+  final String? whatsNewSeenVersion;
+
   /// Whether this state is the one on disk (or a change made on top of it),
   /// as opposed to the defaults the store shows while disk is still answering.
   ///
@@ -254,6 +269,7 @@ class SettingsState {
     DateTime? reviewAskedAt,
     int? reviewAskedCount,
     bool? widgetPromptShown,
+    String? whatsNewSeenVersion,
     bool? hydrated,
   }) => SettingsState(
     themeMode: themeMode ?? this.themeMode,
@@ -289,6 +305,7 @@ class SettingsState {
     reviewAskedAt: reviewAskedAt ?? this.reviewAskedAt,
     reviewAskedCount: reviewAskedCount ?? this.reviewAskedCount,
     widgetPromptShown: widgetPromptShown ?? this.widgetPromptShown,
+    whatsNewSeenVersion: whatsNewSeenVersion ?? this.whatsNewSeenVersion,
     hydrated: hydrated ?? this.hydrated,
   );
 }
@@ -317,6 +334,10 @@ class SettingsStore extends Notifier<SettingsState> {
 
   Future<void> _hydrate() async {
     final stored = await SettingsPersistence.load();
+    // The container can be gone before disk answers (a test tearing down, or a
+    // scope unmounting): Riverpod 3 throws on a write to a disposed notifier,
+    // where 2.x let it through. Nothing to hydrate then.
+    if (!ref.mounted) return;
     // The user may have changed something while disk was answering; their
     // action wins over the older stored value — but disk HAS answered now,
     // and the automatic writers waiting on that must be let through.
@@ -598,6 +619,15 @@ class SettingsStore extends Notifier<SettingsState> {
     // Nothing to forget: skip a second whole-state write on every sign-out.
     if (!state.widgetPromptShown) return;
     _commit(state.copyWith(widgetPromptShown: false));
+  }
+
+  /// What's New for [version] has been put on screen. Called only with
+  /// hydrated settings: an automatic writer must not act on the defaults
+  /// (see [SettingsState.hydrated]) — marking before disk answers would set
+  /// `_dirty` and throw away everything stored.
+  void markWhatsNewSeen(String version) {
+    if (state.whatsNewSeenVersion == version) return;
+    _commit(state.copyWith(whatsNewSeenVersion: version));
   }
 
   /// Records that the store-rating ask was shown and answered — "Rate Cirrus"

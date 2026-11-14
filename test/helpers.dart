@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3 moved `Override` out of the main library.
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/app/last_puff_app.dart';
 import 'package:last_puff/app/router/app_router.dart';
@@ -8,6 +10,7 @@ import 'package:last_puff/data/dto/entitlement_codec.dart';
 import 'package:last_puff/data/network/connectivity.dart';
 import 'package:last_puff/data/stores/entitlement_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/data/repositories/fake_remote_flags_repository.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:last_puff/domain/date_key.dart';
@@ -15,6 +18,7 @@ import 'package:last_puff/domain/logic/taper_engine.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/features/onboarding/onboarding_view_model.dart';
+import 'package:upgrader/upgrader.dart';
 
 /// Takes a signed-out app past the splash and parks it on the sign-in screen.
 ///
@@ -54,13 +58,34 @@ Future<void> parkOnSignIn(WidgetTester tester) async {
 /// on BOTH sides of the seam: the fake server (what `createPost` would refuse)
 /// and the store (what every gate reads). `premium: false` is the free
 /// account the gates exist for.
+///
+/// The update check (docs/10 §55) asks nobody by default: no [upgrader] (no
+/// store lookup), Remote Config's defaults, and no installed version — so no
+/// suite meets the update prompt or What's New unless it is about them.
+/// Those suites pass a real `Upgrader` over a fake store answer, the flags
+/// they want, and the version "installed".
+///
+/// [extra] is for a suite that needs one of the providers pinned here to be
+/// something else — a restoring `SettingsStore`, its own `FakeServer`, the
+/// Firebase mode. It REPLACES the helper's override of the same provider.
+/// Riverpod 3 refuses a provider overridden twice in one container (2.x let
+/// the last one win without a word), so a test must never spread this list and
+/// then append another override of something already in it; say it here.
 List<Override> fastBackendOverrides({
   bool online = true,
   DateTime? now,
   AnalyticsSink? analytics,
   bool premium = true,
-}) => [
+  Upgrader? upgrader,
+  FakeRemoteFlagsRepository? remoteFlags,
+  String? installedVersion,
+  List<Override> extra = const [],
+}) => _layered([
   if (analytics != null) analyticsProvider.overrideWithValue(analytics),
+  upgraderProvider.overrideWithValue(upgrader),
+  if (remoteFlags != null)
+    remoteFlagsRepositoryProvider.overrideWithValue(remoteFlags),
+  installedVersionProvider.overrideWith((_) async => installedVersion),
   backendModeProvider.overrideWithValue(BackendMode.fake),
   apiLatencyProvider.overrideWithValue(Duration.zero),
   connectivityPollIntervalProvider.overrideWithValue(null),
@@ -74,7 +99,15 @@ List<Override> fastBackendOverrides({
   if (now != null) nowProvider.overrideWithValue(() => now),
   if (!online) connectivityProvider.overrideWith(ToggleConnectivity.new),
   if (premium) ...demoSubscriptionOverrides(),
-];
+], extra);
+
+/// [base] with [extra] on top: an `extra` override replaces [base]'s override
+/// of the same provider (matched by `Override.origin`, the key Riverpod's own
+/// duplicate check uses), and the rest of [base] is kept as it was.
+List<Override> _layered(List<Override> base, List<Override> extra) {
+  final replaced = {for (final e in extra) e.origin};
+  return [...base.where((o) => !replaced.contains(o.origin)), ...extra];
+}
 
 /// The demo persona's subscription on both sides of the seam, from ONE row —
 /// so the first `identify()` answers exactly the store's initial value and no

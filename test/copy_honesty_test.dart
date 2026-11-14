@@ -64,7 +64,9 @@ void main() {
   /// bar than the rest: it may say what a trial found and where to ask, and
   /// never that anything works, cures or is safe, and never a dose. Applied to
   /// every key under the `help`, `smokingRule` and `program` prefixes, so the daily program's
-  /// strings (stage B) are covered the moment they exist.
+  /// strings (stage B) are covered the moment they exist — and under `update`
+  /// and `whatsNew` (docs/10 §55), because release notes are where a
+  /// marketing line slips in unreviewed.
   group('medical claims', () {
     /// Stems that make a health claim or state a dose, per locale. A stem is
     /// matched as a substring of the lower-cased string.
@@ -113,7 +115,9 @@ void main() {
         for (final key in strings.keys) {
           if (!(key.startsWith('help') ||
               key.startsWith('program') ||
-              key.startsWith('smokingRule'))) {
+              key.startsWith('smokingRule') ||
+              key.startsWith('update') ||
+              key.startsWith('whatsNew'))) {
             continue;
           }
           final value = strings[key];
@@ -127,6 +131,64 @@ void main() {
         }
       }
       // Guard against the prefixes matching nothing and the test passing empty.
+      expect(checked, greaterThanOrEqualTo(12 * locales.length));
+    });
+  });
+
+  /// docs/10 §55. The update prompt and What's New say what changed in the
+  /// app, never what it will do for the person reading. "Quit" and "help"
+  /// cannot be banned outright — the notes name the quit date and the More
+  /// help page — so this bans the promise, phrase by phrase.
+  group('update and What\'s New copy', () {
+    const promises = {
+      'en': ['help you', 'helps you', 'quit faster', 'for good', 'easier to quit', 'stay quit'],
+      'de': ['hilft dir', 'hilft beim', 'schneller aufhör', 'für immer', 'leichter aufhör'],
+      'es': ['te ayuda', 'ayudarte', 'para siempre', 'más fácil dejar', 'dejarlo antes'],
+      'fr': ["t'aide", 'aider à arrêter', 'pour de bon', "plus facile d'arrêter", 'arrêter plus vite'],
+      'it': ['ti aiuta', 'aiutarti', 'per sempre', 'più facile smettere', 'smettere prima'],
+      'pt': ['te ajuda', 'ajudar-te', 'para sempre', 'mais fácil deixar', 'deixar mais depressa'],
+    };
+
+    String? promise(String locale, String text) {
+      final lower = text.toLowerCase();
+      for (final stem in promises[locale]!) {
+        if (lower.contains(stem)) return stem;
+      }
+      return null;
+    }
+
+    test('the check catches what it exists to catch, in every locale', () {
+      const bad = {
+        'en': 'New reminders that help you quit for good',
+        'de': 'Neue Erinnerungen, die dir helfen – hilft dir beim Aufhören',
+        'es': 'Recordatorios que te ayudan a dejarlo para siempre',
+        'fr': "Des rappels qui t'aident à arrêter pour de bon",
+        'it': 'Promemoria che ti aiutano a smettere per sempre',
+        'pt': 'Lembretes que te ajudam a deixar para sempre',
+      };
+      for (final locale in locales) {
+        expect(promise(locale, bad[locale]!), isNotNull, reason: locale);
+      }
+    });
+
+    test('promises nothing about quitting', () {
+      var checked = 0;
+      for (final locale in locales) {
+        final strings = arb(locale);
+        for (final key in strings.keys) {
+          if (!(key.startsWith('update') || key.startsWith('whatsNew'))) {
+            continue;
+          }
+          final value = strings[key];
+          if (value is! String) continue;
+          checked++;
+          expect(
+            promise(locale, value),
+            isNull,
+            reason: '$locale/$key promises "${promise(locale, value)}": $value',
+          );
+        }
+      }
       expect(checked, greaterThanOrEqualTo(12 * locales.length));
     });
   });
@@ -354,6 +416,25 @@ void main() {
             );
           }
         }
+      }
+    });
+
+    /// Step 2 once said "Tap + in the top-left corner". From iOS 18 that
+    /// control is **Edit**, with "Add Widget" in its menu (seen on an iOS 26.3
+    /// simulator, Nov 13 2026; the XCUITest notes say iOS 18 too). Each locale
+    /// must name the control by the word iOS itself uses in that language.
+    test('step 2 names the Edit control iOS 18+ shows, not only a plus', () {
+      const edit = {
+        'en': 'edit',
+        'de': 'bearbeiten',
+        'es': 'editar',
+        'fr': 'modifier',
+        'it': 'modifica',
+        'pt': 'editar',
+      };
+      for (final locale in locales) {
+        final step = (arb(locale)['widgetPromptStep2'] as String).toLowerCase();
+        expect(step, contains(edit[locale]!), reason: '$locale: $step');
       }
     });
 

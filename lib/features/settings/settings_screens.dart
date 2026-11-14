@@ -398,7 +398,7 @@ class SettingsScreen extends ConsumerWidget {
             // Founder-only. `isModeratorProvider` reads the signed token's
             // `admin` claim, so a non-admin never sees this row and a client
             // that forced the route would still be refused by the callables.
-            if (ref.watch(isModeratorProvider).valueOrNull ?? false)
+            if (ref.watch(isModeratorProvider).value ?? false)
               row(
                 icon: Icons.shield_outlined,
                 label: l10n.moderationTitle,
@@ -454,7 +454,7 @@ class SettingsScreen extends ConsumerWidget {
             // store's review page rather than asking StoreKit for a sheet it
             // shows three times a year at most. Hidden when no store would
             // open: a row that does nothing is worse than no row.
-            if ((ref.watch(reviewRouteProvider).valueOrNull ??
+            if ((ref.watch(reviewRouteProvider).value ??
                     ReviewRoute.none) !=
                 ReviewRoute.none)
               row(
@@ -484,7 +484,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => _confirmSignOut(context, ref),
               ),
             ),
-            if (ref.watch(appVersionProvider).valueOrNull case final version?)
+            if (ref.watch(appVersionProvider).value case final version?)
               Center(
                 child: Text(
                   l10n.appVersionFooter(version),
@@ -696,7 +696,7 @@ class _SignOutNotes extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final lp = context.lp;
-    final method = ref.watch(accountProviderProvider).valueOrNull;
+    final method = ref.watch(accountProviderProvider).value;
     final premium = ref.watch(isPremiumProvider);
     final methodLine = switch (method) {
       AccountProvider.apple => l10n.settingsSignOutMethodApple,

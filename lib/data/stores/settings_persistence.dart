@@ -50,6 +50,7 @@ abstract final class SettingsPersistence {
   static const _reviewAskedAt = 'settings.reviewAskedAt';
   static const _reviewAskedCount = 'settings.reviewAskedCount';
   static const _widgetPromptShown = 'settings.widgetPromptShown';
+  static const _whatsNewSeen = 'settings.whatsNewSeenVersion';
 
   /// Sentinel for "follow the system language". An absent key means the same
   /// thing, so a fresh install and an explicit reset behave identically.
@@ -102,6 +103,7 @@ abstract final class SettingsPersistence {
             prefs.getInt(_reviewAskedCount) ?? defaults.reviewAskedCount,
         widgetPromptShown:
             prefs.getBool(_widgetPromptShown) ?? defaults.widgetPromptShown,
+        whatsNewSeenVersion: prefs.getString(_whatsNewSeen),
       );
     } on Object {
       // A broken preferences store must not stop the app booting.
@@ -182,6 +184,12 @@ abstract final class SettingsPersistence {
       }
       await prefs.setInt(_reviewAskedCount, state.reviewAskedCount);
       await prefs.setBool(_widgetPromptShown, state.widgetPromptShown);
+      final seen = state.whatsNewSeenVersion;
+      if (seen == null) {
+        await prefs.remove(_whatsNewSeen);
+      } else {
+        await prefs.setString(_whatsNewSeen, seen);
+      }
       final askedAt = state.reviewAskedAt;
       if (askedAt == null) {
         await prefs.remove(_reviewAskedAt);

@@ -83,10 +83,9 @@ void main() {
         'settings.milestonesAdopted': true,
       });
       final c = ProviderContainer(
-        overrides: [
-          ...fastBackendOverrides(),
-          settingsStoreProvider.overrideWith(SettingsStore.new),
-        ],
+        overrides: fastBackendOverrides(
+          extra: [settingsStoreProvider.overrideWith(SettingsStore.new)],
+        ),
       );
       addTearDown(c.dispose);
 
@@ -105,10 +104,9 @@ void main() {
     test('a change made before disk answers still ends up hydrated', () async {
       SharedPreferences.setMockInitialValues({'settings.themeMode': 'dark'});
       final c = ProviderContainer(
-        overrides: [
-          ...fastBackendOverrides(),
-          settingsStoreProvider.overrideWith(SettingsStore.new),
-        ],
+        overrides: fastBackendOverrides(
+          extra: [settingsStoreProvider.overrideWith(SettingsStore.new)],
+        ),
       );
       addTearDown(c.dispose);
 

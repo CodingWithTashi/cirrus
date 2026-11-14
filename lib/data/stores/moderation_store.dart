@@ -49,14 +49,11 @@ class ModerationState {
 /// not accept is dangerous: the founder would tick a report off the list and
 /// move on while the post stayed live, and Guideline 1.2's 24-hour commitment
 /// would be quietly broken by an offline moment.
-class ModerationStore extends AutoDisposeNotifier<ModerationState> {
-  bool _disposed = false;
-
+class ModerationStore extends Notifier<ModerationState> {
   ModerationRepository get _repo => ref.read(moderationRepositoryProvider);
 
   @override
   ModerationState build() {
-    ref.onDispose(() => _disposed = true);
     // Kicks the fetch without READING OR WRITING `state` — build() has not
     // returned yet, and either one throws. `includeReviewed` is therefore
     // passed as an argument rather than read off the state, which is also
@@ -74,12 +71,12 @@ class ModerationStore extends AutoDisposeNotifier<ModerationState> {
   Future<void> _fetch({required bool includeReviewed}) async {
     try {
       final items = await _repo.queue(includeReviewed: includeReviewed);
-      if (_disposed) return;
+      if (!ref.mounted) return;
       state = state.copyWith(items: items, status: ModerationStatus.ready);
     } on Object {
       // Offline, or the claim was revoked between opening Settings and
       // opening the queue — the screen offers a retry either way.
-      if (_disposed) return;
+      if (!ref.mounted) return;
       state = state.copyWith(status: ModerationStatus.failed);
     }
   }
@@ -100,14 +97,12 @@ class ModerationStore extends AutoDisposeNotifier<ModerationState> {
     try {
       await _repo.resolve(flagId, action: action);
     } on Object {
-      if (!_disposed) {
-        state = state.copyWith(
-          resolving: {...state.resolving}..remove(flagId),
-        );
+      if (ref.mounted) {
+        state = state.copyWith(resolving: {...state.resolving}..remove(flagId));
       }
       return false;
     }
-    if (_disposed) return true;
+    if (!ref.mounted) return true;
     state = state.copyWith(
       // Dropped locally rather than re-fetched: the queue is paged and a
       // reload after every decision would re-walk it 50 rows at a time.

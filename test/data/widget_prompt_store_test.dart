@@ -33,11 +33,13 @@ void main() {
     widgets = store ?? android();
     analytics = RecordingAnalytics();
     final container = ProviderContainer(
-      overrides: [
-        ...fastBackendOverrides(analytics: analytics),
-        widgetStoreProvider.overrideWithValue(widgets),
-        if (settings != null) settingsStoreProvider.overrideWith(settings),
-      ],
+      overrides: fastBackendOverrides(
+        analytics: analytics,
+        extra: [
+          widgetStoreProvider.overrideWithValue(widgets),
+          if (settings != null) settingsStoreProvider.overrideWith(settings),
+        ],
+      ),
     );
     addTearDown(container.dispose);
     return container;

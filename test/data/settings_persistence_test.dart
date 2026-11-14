@@ -29,6 +29,8 @@ void main() {
     expect(loaded.winbackShown, isFalse);
     // Nobody has been offered the widget yet.
     expect(loaded.widgetPromptShown, isFalse);
+    // A fresh install has seen no What's New — it is shown once there too.
+    expect(loaded.whatsNewSeenVersion, isNull);
   });
 
   test('every field survives a save and reload', () async {
@@ -60,6 +62,7 @@ void main() {
       reviewAskedAt: DateTime(2026, 9, 10, 21, 30),
       reviewAskedCount: 1,
       widgetPromptShown: true,
+      whatsNewSeenVersion: '1.0.32',
     );
 
     await SettingsPersistence.save(saved);
@@ -90,6 +93,9 @@ void main() {
     // "Shown once" that a restart forgot would put the card back on the next
     // launch, for everyone who ignored it.
     expect(loaded.widgetPromptShown, isTrue);
+    // What's New is once per version: a restart that forgot it would show the
+    // same notes on every launch.
+    expect(loaded.whatsNewSeenVersion, '1.0.32');
     expect(loaded.notificationsOn, isFalse);
     expect(loaded.dangerStartHour, 19);
     expect(loaded.dangerEndHour, 23);
@@ -174,6 +180,9 @@ void main() {
       // The one-time home-screen widget offer (`WidgetPromptPolicy`). Unlike
       // the rating ledger above it IS on the sign-out forget list.
       'widgetPromptShown',
+      // What's New, once per installed version. Device-shaped, like the rating
+      // ledger: NOT on the sign-out forget list.
+      'whatsNewSeenVersion',
     }, reason: 'a new SettingsState field must be added to the save/reload '
         'round trip above, and to this list');
   });

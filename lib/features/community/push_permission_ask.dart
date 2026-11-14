@@ -8,8 +8,10 @@ import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_card.dart';
 import '../../data/api/firebase/push_service.dart';
 import '../../data/stores/providers.dart';
+import '../../data/stores/update_check_store.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
+import '../../domain/logic/update_prompt_policy.dart';
 
 /// Why this ask is happening — which decides the words on the sheet.
 ///
@@ -59,12 +61,18 @@ Future<void> maybeAskPushPermission(
   if (settings.pushAsksShown.contains(reason.name)) return;
   final today = LpDate.dayKey(ref.read(nowProvider)());
   if (settings.pushAskDay == today) return;
+  // One modal a visit (docs/10 §55): after the update prompt or What's New,
+  // this waits for the next of its moments rather than stacking a second
+  // sheet on the first. Not marked, so that moment still counts as unasked.
+  final visit = ref.read(visitModalsProvider.notifier);
+  if (!visit.mayOpen(AppModal.pushAsk)) return;
   // No OS to ask: the fake backend, desktop and web.
   final permissions = ref.read(pushPermissionsProvider);
   if (permissions == null) return;
   if (await permissions.status() != PushPermission.notAsked) return;
-  if (!context.mounted) return;
+  if (!context.mounted || !visit.mayOpen(AppModal.pushAsk)) return;
 
+  visit.opened(AppModal.pushAsk);
   ref.read(settingsStoreProvider.notifier).markPushAskShown(reason.name, today);
   final accepted = await showModalBottomSheet<bool>(
     context: context,

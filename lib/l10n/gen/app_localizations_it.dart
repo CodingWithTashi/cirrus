@@ -4152,7 +4152,8 @@ class AppLocalizationsIt extends AppLocalizations {
       'Tieni premuto su uno spazio vuoto della schermata Home finché le icone non iniziano a muoversi.';
 
   @override
-  String get widgetPromptStep2 => 'Tocca + in alto a sinistra.';
+  String get widgetPromptStep2 =>
+      'Tocca «Modifica» (o +) in alto a sinistra, poi «Aggiungi widget».';
 
   @override
   String get widgetPromptStep3 => 'Cerca Cirrus e tocca «Aggiungi widget».';
@@ -4272,4 +4273,58 @@ class AppLocalizationsIt extends AppLocalizations {
   String notificationsBadgeLabel(int count) {
     return 'Notifiche non lette: $count';
   }
+
+  @override
+  String updateVersionLabel(String version) {
+    return 'Versione $version';
+  }
+
+  @override
+  String get updateTitle => 'C\'è una nuova versione di Cirrus';
+
+  @override
+  String get updateReason => 'Aggiorna per avere le ultime novità.';
+
+  @override
+  String get updateCta => 'Aggiorna';
+
+  @override
+  String get updateRequiredTitle => 'Serve un aggiornamento';
+
+  @override
+  String get updateRequiredBody =>
+      'Questa versione di Cirrus non è più supportata.';
+
+  @override
+  String get whatsNewTitle => 'Novità';
+
+  @override
+  String get whatsNewReason => 'Ecco cosa cambia in questa versione.';
+
+  @override
+  String get whatsNewDone => 'Ok, capito';
+
+  @override
+  String get whatsNew1032Item1 =>
+      'Una domanda veloce sulle sigarette e la nuova pagina Più aiuto';
+
+  @override
+  String get whatsNew1032Item2 =>
+      'Un messaggio breve al giorno intorno alla data in cui smetti';
+
+  @override
+  String get whatsNew1032Item3 =>
+      'Segna un tiro dalla schermata Home con il widget';
+
+  @override
+  String get whatsNew1034Item1 =>
+      'Una domanda veloce sulle sigarette e la nuova pagina Più aiuto';
+
+  @override
+  String get whatsNew1034Item2 =>
+      'Un messaggio breve al giorno intorno alla data in cui smetti';
+
+  @override
+  String get whatsNew1034Item3 =>
+      'Segna un tiro dalla schermata Home con il widget';
 }

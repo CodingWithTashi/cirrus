@@ -25,6 +25,7 @@ import 'package:last_puff/features/profile/profile_screen.dart';
 import 'package:last_puff/features/settings/settings_screens.dart';
 import 'package:last_puff/features/slip/slip_screen.dart';
 import 'package:last_puff/features/stats/stats_screen.dart';
+import 'package:last_puff/features/update/update_views.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
 import '../helpers.dart';
@@ -71,6 +72,7 @@ void main() {
     'Winback': const WinbackScreen(),
     'TrialEnding': const TrialEndingScreen(),
     'Onboarding': const OnboardingFlow(),
+    'ForcedUpdate': const ForcedUpdateScreen(),
     for (final name in [
       'ObBirthYear',
       'ObSpend',

@@ -166,6 +166,10 @@ class EntitlementStore extends Notifier<Entitlement> {
     final analytics = ref.read(analyticsProvider);
     final plan = BillingCatalog.periodOfPackage(planId)?.name ?? planId;
     _selfChanges++;
+    // A store sheet is (about to be) up: the forced update screen waits for
+    // it to close (`storeSheetsOpenProvider`).
+    final sheets = ref.read(storeSheetsOpenProvider.notifier);
+    sheets.state++;
     try {
       await _ensureBound(repo);
       if (state.isActive) return PurchaseCompleted(state);
@@ -186,6 +190,7 @@ class EntitlementStore extends Notifier<Entitlement> {
       rethrow;
     } finally {
       _selfChanges--;
+      sheets.state--;
     }
   }
 
@@ -196,6 +201,9 @@ class EntitlementStore extends Notifier<Entitlement> {
     final repo = ref.read(billingRepositoryProvider);
     final analytics = ref.read(analyticsProvider);
     _selfChanges++;
+    // Restoring can raise the store's own sign-in sheet; see [purchase].
+    final sheets = ref.read(storeSheetsOpenProvider.notifier);
+    sheets.state++;
     try {
       await _ensureBound(repo);
       final e = await repo.restore();
@@ -205,6 +213,7 @@ class EntitlementStore extends Notifier<Entitlement> {
       return e;
     } finally {
       _selfChanges--;
+      sheets.state--;
     }
   }
 

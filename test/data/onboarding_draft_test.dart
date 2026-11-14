@@ -26,12 +26,14 @@ void main() {
 
   ProviderContainer container({DateTime? clock, bool restore = true}) {
     final c = ProviderContainer(
-      overrides: [
-        ...fastBackendOverrides(now: clock ?? now),
-        onboardingProvider.overrideWith(
-          () => OnboardingViewModel(restore: restore),
-        ),
-      ],
+      overrides: fastBackendOverrides(
+        now: clock ?? now,
+        extra: [
+          onboardingProvider.overrideWith(
+            () => OnboardingViewModel(restore: restore),
+          ),
+        ],
+      ),
     );
     addTearDown(c.dispose);
     return c;
@@ -390,10 +392,11 @@ void main() {
       // The paywall's retry contract: the throw happens before the clear, so
       // nothing is lost in memory or on disk.
       final c = ProviderContainer(
-        overrides: [
-          ...fastBackendOverrides(online: false, now: now),
-          onboardingProvider.overrideWith(OnboardingViewModel.new),
-        ],
+        overrides: fastBackendOverrides(
+          online: false,
+          now: now,
+          extra: [onboardingProvider.overrideWith(OnboardingViewModel.new)],
+        ),
       );
       addTearDown(c.dispose);
       filled(c);

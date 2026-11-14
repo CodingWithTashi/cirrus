@@ -2,13 +2,13 @@ name: last_puff
 description: "Cirrus — the honest, AI-native quit-vaping app."
 publish_to: 'none'
 
-version: 1.0.32+32
+version: 1.0.34+34
 
 environment:
   sdk: ^3.11.4
   # The one Flutter pin for this app: CI reads it (flutter-version-file in .github/workflows) and
   # `flutter pub get` refuses any other local Flutter, so local and CI builds always match.
-  flutter: 3.41.6
+  flutter: 3.50.0
 
 dependencies:
   flutter:
@@ -17,49 +17,58 @@ dependencies:
     sdk: flutter
 
   # State management (MVVM view models) — founder-locked in docs/05.
-  flutter_riverpod: ^2.6.1
+  flutter_riverpod: ^3.5.0
   # Declarative navigation + deep-linkable routes — founder-locked in docs/05.
-  go_router: ^16.0.0
+  go_router: ^18.1.4
   # Currency / date / number formatting for l10n.
   intl: any
-  firebase_core: ^4.13.0
-  cloud_firestore: ^6.8.0
-  firebase_messaging: ^16.5.0
-  firebase_auth: ^6.5.7
+  firebase_core: ^5.1.0
+  cloud_firestore: ^7.1.0
+  firebase_messaging: ^17.0.1
+  firebase_auth: ^7.0.1
   # Native Google account sheet (Android); Apple sign-in needs no package —
   # firebase_auth's AppleAuthProvider drives the native sheet on iOS.
   google_sign_in: ^7.2.0
 
-  cloud_functions: ^6.4.0
-  firebase_app_check: ^0.4.7
-  flutter_timezone: ^5.1.0
-  shared_preferences: ^2.5.5
+  cloud_functions: ^7.0.1
+  firebase_app_check: ^0.5.1
+  flutter_timezone: ^5.1.1
+  shared_preferences: ^2.5.6
   # Opens the under-18 quit resources. Those are real destinations — an SMS
   # shortcode and a live site — and someone we have just told we cannot coach
   # should not have to copy a string and find their own way there.
-  url_launcher: ^6.3.1
+  url_launcher: ^6.3.3
   # The native store review sheet. Wrapped in `core/utils/lp_review.dart`:
   # neither platform tells you whether the sheet appeared or what the user
   # did, so nothing in the UI may claim a rating was submitted.
-  in_app_review: ^2.0.10
-  firebase_crashlytics: ^5.3.0
-  firebase_analytics: ^12.5.0
-  flutter_local_notifications: ^22.3.0
+  in_app_review: ^2.0.12
+  firebase_crashlytics: ^6.0.1
+  firebase_analytics: ^13.0.1
+  flutter_local_notifications: ^23.0.2
   # Needed by flutter_local_notifications' zonedSchedule: a repeating daily
   # alarm has to be anchored in a real timezone, or DST silently shifts it.
-  timezone: ^0.11.1
-  amplitude_flutter: ^4.7.1
+  timezone: ^0.11.2
+  amplitude_flutter: ^4.8.2
   showcaseview: ^5.1.0
-  purchases_flutter: ^10.10.1
-  package_info_plus: ^10.2.1
+  purchases_flutter: ^11.0.2
+  package_info_plus: ^10.2.2
   # The home-screen widget bridge (docs/03 §10). MUST stay a real dependency:
   # Flutter's Gradle plugin strips dev-dependency plugins from RELEASE builds
   # (PluginHandler.kt), so under `dev_dependencies` the widget works under
   # `flutter run` and silently vanishes from the Play bundle — the same shape
   # as the B18 receivers that fired into nothing. `test/android_widget_test.dart`
   # fails if it moves back.
-  home_widget: ^0.9.4
-  connectivity_plus: ^7.3.1
+  home_widget: ^0.10.0
+  connectivity_plus: ^7.3.2
+  # The store check for the update prompt (`app/update_prompt.dart`): asks the
+  # App Store or Google Play for the latest version, once, at start. The
+  # dialog is Cirrus's own; upgrader is the lookup and the 3-day "later" clock.
+  upgrader: ^13.8.0
+  # `force_update_app` and `update_release_notes` (`RemoteFlagsRepository`).
+  # 7.x moves with the other Firebase plugins (firebase_core 5, Nov 13 2026,
+  # docs/10 §56); the earlier hold under 6.7.1 existed only to keep
+  # firebase_core at 4.x and ended with that upgrade.
+  firebase_remote_config: ^7.0.1
 
 
 dev_dependencies:
@@ -71,6 +80,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # `MockClient` for the update prompt's fake App Store answer
+  # (test/widgets/update_prompt_test.dart). Already in the lock through
+  # upgrader; pinned at the version it resolved.
+  http: ^1.6.0
   # Build-time only: `dart run flutter_launcher_icons` (see the block below).
   flutter_launcher_icons: ^0.14.4
 

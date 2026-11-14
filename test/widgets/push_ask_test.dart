@@ -162,6 +162,20 @@ void main() {
       await tester.tap(find.text(l10n.commonMaybeLater));
       await tester.pumpAndSettle();
 
+      // A day passes the way it does on a phone: the app leaves the screen
+      // and comes back. Without that it is still the visit the first ask was
+      // made in, and one modal a visit holds (docs/10 §55).
+      for (final state in [
+        AppLifecycleState.resumed,
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
       today = DateTime(2026, 11, 13, 21);
       await surviveAndLeave(tester, container);
 
