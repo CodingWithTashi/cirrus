@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,7 +48,9 @@ class LastPuffApp extends ConsumerWidget {
       darkTheme: LpTheme.dark(palette),
       themeMode: settings.themeMode,
       locale: settings.locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      // Never the generated `AppLocalizations.localizationsDelegates`; see
+      // [lpLocalizationsDelegates].
+      localizationsDelegates: lpLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       // App-level chrome: the offline strip floats above every screen.
       builder: (context, child) => Stack(
@@ -58,7 +60,18 @@ class LastPuffApp extends ConsumerWidget {
           _ServerStateSync(
             child: _PushSync(
               child: _ReminderSync(
-                child: _WidgetSync(child: child ?? const SizedBox.shrink()),
+                child: _WidgetSync(
+                  // showcaseview (the Day-1 tour) still imports the SDK's
+                  // Material, a separate set of classes: without the bridge
+                  // its `Theme.of` is Flutter's fallback theme. The bridge is
+                  // deprecated from birth because it is temporary; it goes
+                  // when no dependency in the tree imports
+                  // package:flutter/material.dart.
+                  // ignore: deprecated_member_use
+                  child: MaterialUiCompatibilityBridge(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ),
               ),
             ),
           ),

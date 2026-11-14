@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Type system: Space Grotesk (700/500) for display + every number
 /// (tabular figures), Inter (400–700) for body. Never serif (docs/07 §3).

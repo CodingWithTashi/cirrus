@@ -78,6 +78,14 @@ abstract final class PushService {
       final settings = await messaging.getNotificationSettings();
       if (!_granted(settings.authorizationStatus)) return null;
       if (!await _apnsReady(messaging)) return null;
+      // Deprecated in firebase_messaging 17 and kept on purpose. Its
+      // replacement, `register()` + `onRegistered`, is not a rename: it hands
+      // back a Firebase Installation ID, and the server sends to the FCM
+      // TOKENS in `users/{uid}/devices`. Switching the client alone would
+      // stop every push without an error anywhere (docs/10 §56.3). The three
+      // other ignores in this file are the same decision; all four move
+      // together, with the server.
+      // ignore: deprecated_member_use
       return await messaging.getToken();
     } on Object catch (error) {
       debugPrint('push: token lookup failed — $error');
@@ -142,6 +150,8 @@ abstract final class PushService {
   /// registers cleanly.
   static Future<void> deleteToken() async {
     try {
+      // Kept with `getToken()`; see [tokenOrNull].
+      // ignore: deprecated_member_use
       await FirebaseMessaging.instance.deleteToken();
     } on Object catch (error) {
       // Nothing to do about it, and nothing worth showing: the account is
@@ -278,6 +288,8 @@ abstract final class PushService {
   /// happened: every reinstall orphaned the device and nobody found out,
   /// because the failure of a push is silence and silence looks like nothing.
   static Stream<String> get onTokenRefresh =>
+      // Kept with `getToken()`; see [tokenOrNull].
+      // ignore: deprecated_member_use
       FirebaseMessaging.instance.onTokenRefresh;
 
   /// A push arriving while the app is open and in front of the user.
@@ -381,6 +393,8 @@ Future<void> logPushStatus() async {
   }
 
   try {
+    // Kept on purpose; see [PushService.tokenOrNull].
+    // ignore: deprecated_member_use
     final token = await messaging.getToken();
     if (token == null || token.isEmpty) {
       debugPrint('push: NO FCM TOKEN — no device row can be registered.');

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/core/widgets/lp_premium_gate.dart';
