@@ -129,6 +129,12 @@ platform :ios do
     # the archive below compiles the Dart code once. CocoaPods runs on its own Ruby and breaks inside
     # this bundle's environment, so the step runs outside it.
     Bundler.with_unbundled_env { flutter("build", "ios", "--release", "--config-only") }
+    # build_app first reads `xcodebuild -showBuildSettings`, and fastlane allows it 3s doubling over
+    # four tries (45s in all). A Swift Package Manager project re-resolves its package graph there,
+    # which on a fresh runner takes longer than that, so the archive never starts. Two tries of 120s
+    # and 240s cap the wait at 6 minutes.
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] ||= "120"
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] ||= "1"
     build_app(
       workspace: "#{PROJECT_DIR}/ios/Runner.xcworkspace",
       scheme: "Runner",

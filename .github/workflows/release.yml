@@ -49,10 +49,11 @@ jobs:
             /usr/local/share/boost /opt/hostedtoolcache/CodeQL
           df -h /
       - uses: actions/checkout@v5
+      # Java 21: the AGP in android/settings.gradle.kts runs lint only on this JDK.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: gradle
       - uses: subosito/flutter-action@v2
         with:
