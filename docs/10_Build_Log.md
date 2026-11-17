@@ -5326,7 +5326,7 @@ The three items §40 closed on, and what fixing them turned up. App, rules and t
 
 §40.3 hid the palette from the author, but any client could still write `posts/{id}/reactors/{uid}` for its own post and `onReaction` would count it. No function change was needed: `firestore.rules` gains `isAuthorOf(postId)` — `exists()` + `get()` on the server-only `postAuthors/{postId}` — and the reactors create/update rule now ends `&& !isAuthorOf(postId)`. Delete stays open to the reactor, so anything written before the rule can still be taken back; a post with no `postAuthors` row (seeded) is unaffected. Four new cases in `functions/test/rules/firestore.rules.test.ts`; `npm run test:rules` 57/57.
 
-Self-reactions already stored: `tool/reaction_self_backfill.mjs` (a dry run unless `--apply`, which deletes them and lets `onReaction` take the counts back) scanned production on Sep 13 — 1 authored post, **0 self-reactions**, nothing to backfill. **To deploy:** `firebase deploy --only firestore:rules`.
+Self-reactions already stored: `tool/reaction_self_backfill.mjs` (a dry run unless `--apply`, which deletes them and lets `onReaction` take the counts back) scanned production on Sep 13 — 1 authored post, **0 self-reactions**, nothing to backfill. **Deployed Nov 17 05:28 UTC** (`firebase deploy --only firestore:rules`, on the founder's go, after `test:rules` 57): until then production ran the Sep 12 rules, so the client was the only thing refusing a self-reaction for two months. The live release was read back identical to `firestore.rules`, and the same scan run again afterwards (read-only, on gcloud's credentials — the admin key is not on the Mac) found 2 authored posts and **0 self-reactions**.
 
 ### 41.2 The nicotine card
 
