@@ -4404,4 +4404,16 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get whatsNew1034Item3 =>
       'Segna un tiro dalla schermata Home con il widget';
+
+  @override
+  String get whatsNew1036Item1 =>
+      'Una domanda veloce sulle sigarette e la nuova pagina Più aiuto';
+
+  @override
+  String get whatsNew1036Item2 =>
+      'Un messaggio breve al giorno intorno alla data in cui smetti';
+
+  @override
+  String get whatsNew1036Item3 =>
+      'Segna un tiro dalla schermata Home con il widget';
 }

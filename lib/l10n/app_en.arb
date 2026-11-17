@@ -2939,5 +2939,17 @@
   "whatsNew1034Item3": "Log a puff from your home screen with the widget",
   "@whatsNew1034Item3": {
     "description": "What's New 1.0.34, bullet 3 of 3. The home-screen widget."
+  },
+  "whatsNew1036Item1": "A quick question about cigarettes, and a new More help page",
+  "@whatsNew1036Item1": {
+    "description": "What's New 1.0.36, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1036Item2": "One short message a day around your quit date",
+  "@whatsNew1036Item2": {
+    "description": "What's New 1.0.36, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after."
+  },
+  "whatsNew1036Item3": "Log a puff from your home screen with the widget",
+  "@whatsNew1036Item3": {
+    "description": "What's New 1.0.36, bullet 3 of 3. The home-screen widget."
   }
 }

@@ -7082,6 +7082,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Log a puff from your home screen with the widget'**
   String get whatsNew1034Item3;
+
+  /// What's New 1.0.36, bullet 1 of 3. At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick question about cigarettes, and a new More help page'**
+  String get whatsNew1036Item1;
+
+  /// What's New 1.0.36, bullet 2 of 3. The daily quit-program message, which runs from a week before the quit date to eight weeks after.
+  ///
+  /// In en, this message translates to:
+  /// **'One short message a day around your quit date'**
+  String get whatsNew1036Item2;
+
+  /// What's New 1.0.36, bullet 3 of 3. The home-screen widget.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a puff from your home screen with the widget'**
+  String get whatsNew1036Item3;
 }
 
 class _AppLocalizationsDelegate

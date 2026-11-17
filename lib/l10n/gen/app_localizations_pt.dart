@@ -4381,4 +4381,16 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get whatsNew1034Item3 =>
       'Regista uma passa a partir do ecrã principal com o widget';
+
+  @override
+  String get whatsNew1036Item1 =>
+      'Uma pergunta rápida sobre cigarros e a nova página Mais ajuda';
+
+  @override
+  String get whatsNew1036Item2 =>
+      'Uma mensagem curta por dia à volta da tua data para deixar';
+
+  @override
+  String get whatsNew1036Item3 =>
+      'Regista uma passa a partir do ecrã principal com o widget';
 }

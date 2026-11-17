@@ -4381,4 +4381,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatsNew1034Item3 =>
       'Registra una calada desde la pantalla de inicio con el widget';
+
+  @override
+  String get whatsNew1036Item1 =>
+      'Una pregunta rápida sobre cigarrillos y la nueva página Más ayuda';
+
+  @override
+  String get whatsNew1036Item2 =>
+      'Un mensaje corto al día alrededor de tu fecha para dejarlo';
+
+  @override
+  String get whatsNew1036Item3 =>
+      'Registra una calada desde la pantalla de inicio con el widget';
 }

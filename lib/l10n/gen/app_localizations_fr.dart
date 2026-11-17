@@ -4396,4 +4396,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get whatsNew1034Item3 =>
       'Enregistre une taffe depuis ton écran d\'accueil avec le widget';
+
+  @override
+  String get whatsNew1036Item1 =>
+      'Une question rapide sur la cigarette, et une nouvelle page Plus d\'aide';
+
+  @override
+  String get whatsNew1036Item2 =>
+      'Un petit message par jour autour de ta date d\'arrêt';
+
+  @override
+  String get whatsNew1036Item3 =>
+      'Enregistre une taffe depuis ton écran d\'accueil avec le widget';
 }

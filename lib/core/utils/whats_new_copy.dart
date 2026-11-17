@@ -29,6 +29,14 @@ abstract final class WhatsNewCatalog {
       l10n.whatsNew1034Item2,
       l10n.whatsNew1034Item3,
     ],
+    // The stores still carry 1.0.28, so this sheet is again the first one an
+    // updating person meets, and the same three changes are still the ones
+    // they have not seen. Copied for the same reason as 1.0.34 above.
+    '1.0.36': (l10n) => [
+      l10n.whatsNew1036Item1,
+      l10n.whatsNew1036Item2,
+      l10n.whatsNew1036Item3,
+    ],
   };
 
   /// The versions with notes, for the catalog test.

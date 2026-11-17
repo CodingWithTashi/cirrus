@@ -4398,4 +4398,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get whatsNew1034Item3 =>
       'Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget';
+
+  @override
+  String get whatsNew1036Item1 =>
+      'Eine kurze Frage zu Zigaretten und die neue Seite „Mehr Hilfe“';
+
+  @override
+  String get whatsNew1036Item2 =>
+      'Jeden Tag eine kurze Nachricht rund um deinen Aufhör-Tag';
+
+  @override
+  String get whatsNew1036Item3 =>
+      'Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget';
 }
