@@ -2777,8 +2777,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newPlanTitle => 'A new plan';
 
   @override
-  String get newPlanLead =>
-      'Nothing resets. Your streak, your history and the money you\'ve saved all come with you.';
+  String get newPlanPlanSubtitle =>
+      'Day one is today. Start the line from where you are right now.';
 
   @override
   String get newPlanLevelLabel => 'PUFFS A DAY, RIGHT NOW';
@@ -2815,6 +2815,81 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String newPlanStarted(String date) {
     return 'New plan started. Freedom Day: $date';
+  }
+
+  @override
+  String get newPlanHistoryTitle => 'What about your history?';
+
+  @override
+  String get newPlanHistorySubtitle => 'Your new plan starts today either way.';
+
+  @override
+  String newPlanStatStreak(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'days in a row',
+      one: 'day in a row',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newPlanKeepTitle => 'Keep my history';
+
+  @override
+  String get newPlanKeepBody =>
+      'Your streak, badges, stats and money saved carry on.';
+
+  @override
+  String get newPlanFreshTitle => 'Start from scratch';
+
+  @override
+  String newPlanFreshBody(String name) {
+    return 'Everything goes back to zero: every puff logged, your stats, streak, badges, money saved, cravings beaten and your chat with $name.';
+  }
+
+  @override
+  String get newPlanFreshCta => 'Erase and start Day 1';
+
+  @override
+  String get newPlanFreshDialogTitle => 'Erase your history?';
+
+  @override
+  String get newPlanFreshDialogIntro => 'This permanently deletes:';
+
+  @override
+  String get newPlanFreshGoesLog =>
+      'Every puff and mood you\'ve logged, and your stats';
+
+  @override
+  String get newPlanFreshGoesStreak => 'Your streak, badges and money saved';
+
+  @override
+  String get newPlanFreshGoesCravings =>
+      'Cravings beaten, game bests and check-ins';
+
+  @override
+  String get newPlanFreshGoesGoals => 'Your savings goals';
+
+  @override
+  String newPlanFreshGoesCoach(String name) {
+    return 'Your chat with $name, and everything $name remembers';
+  }
+
+  @override
+  String get newPlanFreshStays =>
+      'Your account, settings, community posts and any subscription stay.';
+
+  @override
+  String get newPlanFreshNoUndo => 'This can\'t be undone.';
+
+  @override
+  String get newPlanFreshConfirm => 'Erase and start';
+
+  @override
+  String newPlanFreshStarted(String date) {
+    return 'Fresh start. Freedom Day: $date';
   }
 
   @override

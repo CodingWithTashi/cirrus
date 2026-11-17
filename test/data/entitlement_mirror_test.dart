@@ -117,4 +117,7 @@ class _RecordingServerState implements ServerStateRepository {
 
   @override
   Future<WeeklyInsight?> latestInsight() async => null;
+
+  @override
+  Future<void> eraseHistory() async {}
 }

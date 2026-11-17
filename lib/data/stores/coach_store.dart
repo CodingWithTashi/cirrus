@@ -143,6 +143,25 @@ class CoachStore extends Notifier<CoachState> {
     if (stored.isEmpty) seedGreetingIfEmpty();
   }
 
+  /// The thread after its history was erased on the server (a fresh start on
+  /// the new-plan screen): the greeting and nothing else.
+  ///
+  /// Not an `invalidate`. The coach tab stays mounted in the shell's indexed
+  /// stack and restores its transcript only from `initState`, so a rebuilt,
+  /// empty store would leave it showing a blank thread with no greeting until
+  /// the app restarted. And the allowance is NOT forgotten: the server keeps
+  /// counting today's messages through an erase (it has to, or erasing would
+  /// refill a free cap on demand), so the counter it last reported still
+  /// stands.
+  void forgetThread() {
+    state = CoachState(
+      freeUsedToday: state.freeUsedToday,
+      messagesLeft: state.messagesLeft,
+      isFreeTier: state.isFreeTier,
+    );
+    seedGreetingIfEmpty();
+  }
+
   Future<void> send(String text, {int? panicIntensity}) =>
       _handle(userText: text, panicIntensity: panicIntensity);
 

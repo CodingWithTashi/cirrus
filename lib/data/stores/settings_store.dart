@@ -588,6 +588,32 @@ class SettingsStore extends Notifier<SettingsState> {
     ),
   );
 
+  /// Forgets which badges were celebrated, because a fresh start just erased
+  /// every one of them (`PlanRestart.fresh`) — and a badge left "settled" here
+  /// would never be celebrated again when it is earned a second time.
+  ///
+  /// Deliberately narrower than [resetMilestoneLedger]: the person is still
+  /// the same person, so their push preferences, the asks already made and
+  /// the check-in hour all stay. And the ledger stays ADOPTED, which is the
+  /// half that matters: adoption means "what is already earned was earned
+  /// before this device was watching, celebrate none of it", and after an
+  /// erase nothing is earned — so every badge from here is new and owed.
+  ///
+  /// A user's tap, never an automatic writer, but checked against [hydrated]
+  /// all the same: committing over unread preferences would write fourteen
+  /// defaults over theirs.
+  void forgetCelebrations() {
+    if (!state.hydrated) return;
+    _commit(
+      state.copyWith(
+        celebratedMilestones: const {},
+        armedMilestone: () => null,
+        armedMilestoneAt: () => null,
+        milestonesAdopted: true,
+      ),
+    );
+  }
+
   /// Records that today's offer was made (the Home card since Oct 16 2026,
   /// a pushed paywall before), so it is not made again before the next local
   /// day and counts toward the lifetime cap.

@@ -2797,8 +2797,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get newPlanTitle => 'Un nuovo piano';
 
   @override
-  String get newPlanLead =>
-      'Non si azzera niente. La serie, lo storico e i soldi risparmiati restano con te.';
+  String get newPlanPlanSubtitle =>
+      'Il giorno 1 è oggi. Il limite parte da dove sei adesso.';
 
   @override
   String get newPlanLevelLabel => 'TIRI AL GIORNO, ADESSO';
@@ -2835,6 +2835,83 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String newPlanStarted(String date) {
     return 'Nuovo piano avviato. Freedom Day: $date';
+  }
+
+  @override
+  String get newPlanHistoryTitle => 'E il tuo storico?';
+
+  @override
+  String get newPlanHistorySubtitle =>
+      'In ogni caso, il nuovo piano parte oggi.';
+
+  @override
+  String newPlanStatStreak(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'giorni di fila',
+      one: 'giorno di fila',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newPlanKeepTitle => 'Mantieni lo storico';
+
+  @override
+  String get newPlanKeepBody =>
+      'La serie, i badge, le statistiche e i soldi risparmiati restano con te.';
+
+  @override
+  String get newPlanFreshTitle => 'Ricomincia da zero';
+
+  @override
+  String newPlanFreshBody(String name) {
+    return 'Tutto torna a zero: ogni tiro registrato, le statistiche, la serie, i badge, i soldi risparmiati, le voglie battute e la chat con $name.';
+  }
+
+  @override
+  String get newPlanFreshCta => 'Cancella e inizia il giorno 1';
+
+  @override
+  String get newPlanFreshDialogTitle => 'Cancellare lo storico?';
+
+  @override
+  String get newPlanFreshDialogIntro => 'Questo elimina per sempre:';
+
+  @override
+  String get newPlanFreshGoesLog =>
+      'Ogni tiro e ogni umore che hai registrato, e le statistiche';
+
+  @override
+  String get newPlanFreshGoesStreak =>
+      'La serie, i badge e i soldi risparmiati';
+
+  @override
+  String get newPlanFreshGoesCravings =>
+      'Le voglie battute, i record nei giochi e i check-in';
+
+  @override
+  String get newPlanFreshGoesGoals => 'I tuoi obiettivi di risparmio';
+
+  @override
+  String newPlanFreshGoesCoach(String name) {
+    return 'La chat con $name, e tutto ciò che ricorda $name';
+  }
+
+  @override
+  String get newPlanFreshStays =>
+      'Restano l\'account, le impostazioni, i post nella community e l\'eventuale abbonamento.';
+
+  @override
+  String get newPlanFreshNoUndo => 'Non si può annullare.';
+
+  @override
+  String get newPlanFreshConfirm => 'Cancella e inizia';
+
+  @override
+  String newPlanFreshStarted(String date) {
+    return 'Si riparte da zero. Freedom Day: $date';
   }
 
   @override

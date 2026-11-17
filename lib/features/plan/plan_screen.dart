@@ -330,7 +330,10 @@ class PlanScreen extends ConsumerWidget {
                               selected: pace == p,
                               onTap: () => setState(() => pace = p),
                               fontSize: 14,
-                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 11,
+                              ),
                             ),
                           ),
                         ],

@@ -7,9 +7,19 @@ import 'press_scale.dart';
 
 /// Check circle used across option cards.
 class SelectCheck extends StatelessWidget {
-  const SelectCheck({super.key, required this.selected});
+  const SelectCheck({
+    super.key,
+    required this.selected,
+    this.destructive = false,
+  });
 
   final bool selected;
+
+  /// Marks a choice that erases something: the danger tint and border in
+  /// place of the volt fill. There is no ink token for a danger fill, so the
+  /// check is drawn in `dangerText` on `dangerSoft`, which reads in all six
+  /// palettes.
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +31,22 @@ class SelectCheck extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: selected ? lp.volt : Colors.transparent,
-        border: selected ? null : Border.all(color: lp.border, width: 1.5),
+        color: !selected
+            ? Colors.transparent
+            : destructive
+            ? lp.dangerSoft
+            : lp.volt,
+        border: !selected
+            ? Border.all(color: lp.border, width: 1.5)
+            : destructive
+            ? Border.all(color: lp.danger, width: 1.5)
+            : null,
       ),
       child: selected
           ? Text(
               '✓',
               style: TextStyle(
-                color: lp.onVolt,
+                color: destructive ? lp.dangerText : lp.onVolt,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -49,6 +67,7 @@ class OptionCard extends StatelessWidget {
     this.subtitle,
     this.titleColorSelected = true,
     this.trailingCheck = true,
+    this.destructive = false,
     this.child,
   });
 
@@ -58,11 +77,17 @@ class OptionCard extends StatelessWidget {
   final String? subtitle;
   final bool titleColorSelected;
   final bool trailingCheck;
+
+  /// A choice that erases something ("Start from scratch"): selected, it
+  /// wears the danger colour instead of volt, so picking it never looks like
+  /// picking the safe answer.
+  final bool destructive;
   final Widget? child;
 
   @override
   Widget build(BuildContext context) {
     final lp = context.lp;
+    final accent = destructive ? lp.danger : lp.volt;
     return PressScale(
       onTap: onTap,
       child: AnimatedContainer(
@@ -73,13 +98,17 @@ class OptionCard extends StatelessWidget {
           color: lp.surface,
           borderRadius: BorderRadius.circular(LpDimens.rCard),
           border: Border.all(
-            color: selected ? lp.voltFocus : lp.border,
+            color: !selected
+                ? lp.border
+                : destructive
+                ? lp.danger
+                : lp.voltFocus,
             width: 1.5,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: lp.volt.withValues(alpha: 0.15),
+                    color: accent.withValues(alpha: 0.15),
                     blurRadius: 20,
                   ),
                 ]
@@ -96,9 +125,11 @@ class OptionCard extends StatelessWidget {
                       Text(
                         title,
                         style: LpType.emphasis(
-                          selected && titleColorSelected
-                              ? lp.voltText
-                              : lp.textPrimary,
+                          !(selected && titleColorSelected)
+                              ? lp.textPrimary
+                              : destructive
+                              ? lp.dangerText
+                              : lp.voltText,
                           size: 16,
                         ),
                       ),
@@ -109,7 +140,8 @@ class OptionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailingCheck) SelectCheck(selected: selected),
+                if (trailingCheck)
+                  SelectCheck(selected: selected, destructive: destructive),
               ],
             ),
       ),
@@ -162,8 +194,16 @@ class LpChip extends StatelessWidget {
             width: 1.5,
           ),
         ),
+        // Centred, because a chip stretched by `Expanded` gets a tight width
+        // and would otherwise set its label flush against the left border (the
+        // new-plan screen's method and pace rows did). A chip in a `Wrap` is
+        // loosely constrained and sized to its text, so this changes nothing
+        // there — which is also why it is not `alignment:` on the container: an
+        // `Align` grows to the space offered and would turn every wrapped chip
+        // into a full-width bar.
         child: Text(
           selected ? '$label ✓' : label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: LpType.body,
             fontWeight: FontWeight.w600,

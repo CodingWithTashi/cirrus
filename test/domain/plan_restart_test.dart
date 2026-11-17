@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/logic/day_window.dart';
+import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/domain/logic/money_engine.dart';
 import 'package:last_puff/domain/logic/plan_restart.dart';
 import 'package:last_puff/domain/logic/streak_engine.dart';
@@ -282,6 +283,115 @@ void main() {
       final next = restart(withToday);
 
       expect(next.days[today]!.limit, TaperEngine.limitFor(next.plan, 1));
+    });
+  });
+  group('starting from scratch', () {
+    /// [finished] with every kind of record on it, so each one can be shown
+    /// to go.
+    JourneyState lived() {
+      final j = finished();
+      return j.copyWith(
+        goals: const [
+          SavingsGoal(id: 'g', emoji: '🎒', name: 'Lisbon', price: 400),
+        ],
+        lastPuffAt: () => today.add(const Duration(hours: 9)),
+        moodCheckIns: 9,
+        gameBests: const {GameId.orbs: 40},
+        lastGame: GameId.orbs,
+        checkups: {
+          LpDate.addDays(today, -2): const {
+            CheckupKind.nicotine: CheckupAnswer.noOther,
+          },
+        },
+        day1TasksDone: const {1, 2, 3},
+        longestStreak: 12,
+        repairTokens: 2,
+      );
+    }
+
+    JourneyState fresh(
+      JourneyState s, {
+      QuitMethod method = QuitMethod.taper,
+    }) =>
+        PlanRestart.fresh(s, now: now, method: method, paceDays: 21, level: 82);
+
+    test('leaves one day on record: today, untouched, on the new line', () {
+      final next = fresh(lived());
+
+      expect(next.days.keys, [today]);
+      expect(next.days[today]!.puffs, 0);
+      expect(next.days[today]!.limit, TaperEngine.limitFor(next.plan, 1));
+      expect(next.historyStart, today);
+    });
+
+    test('even today\'s puffs go — "from scratch" means from zero', () {
+      final j = lived();
+      final busyToday = j.copyWith(
+        days: {
+          ...j.days,
+          today: DayLog(date: today, puffs: 30, limit: 0, hourBuckets: {9: 30}),
+        },
+      );
+      final next = fresh(busyToday);
+
+      expect(next.days[today]!.puffs, 0);
+      expect(next.days[today]!.hourBuckets, isEmpty);
+      expect(TodaySnapshot.of(next, now).isOverLimit, isFalse);
+    });
+
+    test('every record is erased', () {
+      final next = fresh(lived());
+
+      expect(next.cravingsSurvivedTotal, 0);
+      expect(next.repairTokens, 0);
+      expect(next.longestStreak, 0);
+      expect(next.earnedBadges, isEmpty);
+      expect(next.goals, isEmpty);
+      expect(next.lastPuffAt, isNull);
+      expect(next.moodCheckIns, 0);
+      expect(next.gameBests, isEmpty);
+      expect(next.checkups, isEmpty);
+      expect(next.pendingSlipCleanDays, isNull);
+      expect(next.planAdvice, isNull);
+    });
+
+    test('so nothing reads as saved or kept from before', () {
+      final next = fresh(lived());
+
+      expect(MoneyEngine.lifetimeSaved(next.plan, next.days.values), 0);
+      expect(StreakEngine.currentStreak(next.days, now), 0);
+      expect(
+        DayWindow.trailing(next, now, 7).where((d) => d.puffs > 0),
+        isEmpty,
+      );
+    });
+
+    test('who the person is stays: the profile and their answers', () {
+      final before = lived();
+      final next = fresh(before);
+
+      expect(next.profile, same(before.profile));
+      expect(next.plan.baselinePuffsPerDay, 200);
+      expect(next.plan.weeklySpend, 60);
+      expect(next.lastGame, GameId.orbs);
+    });
+
+    test('it is a new plan like any other, not a new account', () {
+      final next = fresh(lived());
+
+      expect(next.plan.startDate, today);
+      expect(next.plan.planNumber, 2);
+      expect(next.plan.taperFrom, 82);
+      expect(next.plan.paceDays, 21);
+      // Setup is not handed back to somebody who has done it.
+      expect(next.day1TasksDone, {1, 2, 3});
+    });
+
+    test('cold turkey is zero from today here too', () {
+      final next = fresh(lived(), method: QuitMethod.coldTurkey);
+
+      expect(next.limitOn(now), 0);
+      expect(next.days[today]!.limit, 0);
     });
   });
 }

@@ -655,6 +655,110 @@ void main() {
     expect(PostStatus.values, contains(status));
   });
 
+  testWidgets('starting from scratch erases the history and keeps the '
+      'account', (tester) async {
+    // Runs after the coach, panic and community cases on purpose: by now the
+    // account has a transcript, memories, a summary, a craving, a coach name
+    // and a post — the things that must go and the things that must stay.
+    final e2e = await session(tester);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseFirestore.instance.collection('users').doc(uid);
+    Future<int> count(String sub) async =>
+        (await user.collection(sub).get()).docs.length;
+
+    final before = (await user.get()).data() ?? const {};
+    final coachName = before['coachName'];
+    final usage = before['aiUsage'];
+    final posts = await count('posts');
+    expect(await count('coachMessages'), greaterThan(0), reason: 'fixture');
+    expect(await count('cravings'), greaterThan(0), reason: 'fixture');
+    expect(usage, isNotNull, reason: 'fixture: the coach ran');
+    // The transcript in this device's offline cache, the way reopening the
+    // coach tab leaves it.
+    final transcript = user.collection('coachMessages');
+    await transcript.get(const GetOptions(source: Source.server));
+    expect(
+      (await transcript.get(const GetOptions(source: Source.cache))).docs,
+      isNotEmpty,
+      reason: 'fixture: the cache holds the thread',
+    );
+
+    // The callable on its own first. Nothing on this path reads the
+    // transcript back, so this is what the device holds after an erase
+    // without the app's refresh — the reason the refresh exists.
+    await LpFunctions().call(
+      'eraseHistory',
+      const {},
+      const Duration(minutes: 5),
+    );
+    expect(
+      (await transcript.get(const GetOptions(source: Source.cache))).docs,
+      isNotEmpty,
+      reason:
+          'the cache forgot the erased thread by itself, so the refresh '
+          'after an erase is not needed',
+    );
+
+    // Then the app's own erase (idempotent, so running it again is safe),
+    // read cache-only before anything below goes online: an app opened with
+    // no signal after the erase must not bring the thread back.
+    final store = e2e.container.read(quitStoreProvider.notifier);
+    final planBefore = e2e.container.read(quitStoreProvider)!.plan;
+    Object? failure;
+    try {
+      await store.eraseServerHistory();
+    } on Object catch (error) {
+      failure = error;
+    }
+    expect(failure, isNull, reason: 'eraseHistory threw: $failure');
+    expect(
+      (await transcript.get(const GetOptions(source: Source.cache))).docs,
+      isEmpty,
+      reason: 'the erased transcript is still in the offline cache',
+    );
+    store.startNewPlan(
+      method: QuitMethod.taper,
+      paceDays: 21,
+      level: 120,
+      keepHistory: false,
+    );
+    await e2e.waitFor(const Duration(seconds: 6));
+
+    // Gone: the transcript, what Ember remembers, the summary, the cravings,
+    // the insights and last night's plan advice.
+    expect(await count('coachMessages'), 0);
+    expect(await count('memories'), 0);
+    expect(await count('cravings'), 0);
+    expect(await count('insights'), 0);
+    final after = (await user.get()).data() ?? const {};
+    expect(after.containsKey('coachSummary'), isFalse, reason: '$after');
+    expect(after.containsKey('planAdvice'), isFalse, reason: '$after');
+    expect(
+      await e2e.container.read(coachRepositoryProvider).memories(),
+      isEmpty,
+    );
+
+    // Kept: the account, the coach's name, today's message count (or the free
+    // cap refills on demand) and what they posted to the community.
+    expect(FirebaseAuth.instance.currentUser?.uid, uid);
+    expect(after['coachName'], coachName);
+    expect(after['aiUsage'], usage);
+    expect(await count('posts'), posts);
+
+    // And the journey the app wrote after it: day one of the next plan,
+    // nothing before it.
+    final journeyDoc = await FirebaseFirestore.instance
+        .collection('journeys')
+        .doc(uid)
+        .get();
+    final journey = journeyDoc.data()!;
+    final days = journey['days'] as Map<String, dynamic>;
+    expect(days.length, 1, reason: 'days left behind: ${days.keys}');
+    expect(journey['plan']['planNumber'], planBefore.planNumber + 1);
+    expect(journey['plan']['baselinePuffsPerDay'], 200);
+    expect(journey['cravingsSurvivedTotal'] ?? 0, 0);
+  });
+
   testWidgets('deleteUserData erases the account and everything under it', (
     tester,
   ) async {

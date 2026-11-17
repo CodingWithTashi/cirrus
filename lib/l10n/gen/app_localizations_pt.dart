@@ -2790,8 +2790,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get newPlanTitle => 'Um plano novo';
 
   @override
-  String get newPlanLead =>
-      'Nada volta a zero. A tua sequência, o teu histórico e o dinheiro poupado vão contigo.';
+  String get newPlanPlanSubtitle =>
+      'O dia 1 é hoje. A linha começa onde estás agora.';
 
   @override
   String get newPlanLevelLabel => 'PASSAS POR DIA, AGORA';
@@ -2828,6 +2828,83 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String newPlanStarted(String date) {
     return 'Plano novo em marcha. Dia da Liberdade: $date';
+  }
+
+  @override
+  String get newPlanHistoryTitle => 'E o teu histórico?';
+
+  @override
+  String get newPlanHistorySubtitle =>
+      'Em qualquer caso, o teu novo plano começa hoje.';
+
+  @override
+  String newPlanStatStreak(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'dias seguidos',
+      one: 'dia seguido',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newPlanKeepTitle => 'Manter o meu histórico';
+
+  @override
+  String get newPlanKeepBody =>
+      'A tua sequência, as medalhas, os dados e o dinheiro poupado vão contigo.';
+
+  @override
+  String get newPlanFreshTitle => 'Começar do zero';
+
+  @override
+  String newPlanFreshBody(String name) {
+    return 'Tudo volta a zero: cada passa registada, os teus dados, a sequência, as medalhas, o dinheiro poupado, os cravings vencidos e a tua conversa com $name.';
+  }
+
+  @override
+  String get newPlanFreshCta => 'Apagar e começar o dia 1';
+
+  @override
+  String get newPlanFreshDialogTitle => 'Apagar o teu histórico?';
+
+  @override
+  String get newPlanFreshDialogIntro => 'Isto apaga para sempre:';
+
+  @override
+  String get newPlanFreshGoesLog =>
+      'Cada passa e cada humor que registaste, e os teus dados';
+
+  @override
+  String get newPlanFreshGoesStreak =>
+      'A tua sequência, as medalhas e o dinheiro poupado';
+
+  @override
+  String get newPlanFreshGoesCravings =>
+      'Os cravings vencidos, os recordes nos jogos e os balanços do dia';
+
+  @override
+  String get newPlanFreshGoesGoals => 'As tuas metas de poupança';
+
+  @override
+  String newPlanFreshGoesCoach(String name) {
+    return 'A tua conversa com $name, e tudo o que $name recorda';
+  }
+
+  @override
+  String get newPlanFreshStays =>
+      'Ficam a tua conta, as definições, os posts na comunidade e qualquer subscrição.';
+
+  @override
+  String get newPlanFreshNoUndo => 'Não dá para desfazer.';
+
+  @override
+  String get newPlanFreshConfirm => 'Apagar e começar';
+
+  @override
+  String newPlanFreshStarted(String date) {
+    return 'Recomeço do zero. Dia da Liberdade: $date';
   }
 
   @override

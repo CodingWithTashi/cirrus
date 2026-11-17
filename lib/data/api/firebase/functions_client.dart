@@ -33,12 +33,22 @@ class LpFunctions {
   /// when `syncUserContext` re-derives the cron hour.
   static String? _cachedZone;
 
+  /// [timeout] is the plugin's 60 seconds unless given. A callable whose
+  /// server half may run longer passes its own, or the app reports a failure
+  /// for work that is still going on and then lands.
   Future<Map<String, dynamic>> call(
     String name, [
     Map<String, Object?> data = const {},
+    Duration? timeout,
   ]) async {
     try {
-      final result = await _functions.httpsCallable(name).call<Object?>({
+      final callable = timeout == null
+          ? _functions.httpsCallable(name)
+          : _functions.httpsCallable(
+              name,
+              options: HttpsCallableOptions(timeout: timeout),
+            );
+      final result = await callable.call<Object?>({
         ...data,
         'timeZone': await _timeZone(),
         'locale': _locale(),

@@ -4485,11 +4485,11 @@ abstract class AppLocalizations {
   /// **'A new plan'**
   String get newPlanTitle;
 
-  /// No description provided for @newPlanLead.
+  /// No description provided for @newPlanPlanSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Nothing resets. Your streak, your history and the money you\'ve saved all come with you.'**
-  String get newPlanLead;
+  /// **'Day one is today. Start the line from where you are right now.'**
+  String get newPlanPlanSubtitle;
 
   /// No description provided for @newPlanLevelLabel.
   ///
@@ -4532,6 +4532,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New plan started. Freedom Day: {date}'**
   String newPlanStarted(String date);
+
+  /// No description provided for @newPlanHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What about your history?'**
+  String get newPlanHistoryTitle;
+
+  /// No description provided for @newPlanHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your new plan starts today either way.'**
+  String get newPlanHistorySubtitle;
+
+  /// No description provided for @newPlanStatStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{day in a row} other{days in a row}}'**
+  String newPlanStatStreak(num count);
+
+  /// No description provided for @newPlanKeepTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep my history'**
+  String get newPlanKeepTitle;
+
+  /// No description provided for @newPlanKeepBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your streak, badges, stats and money saved carry on.'**
+  String get newPlanKeepBody;
+
+  /// No description provided for @newPlanFreshTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start from scratch'**
+  String get newPlanFreshTitle;
+
+  /// No description provided for @newPlanFreshBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything goes back to zero: every puff logged, your stats, streak, badges, money saved, cravings beaten and your chat with {name}.'**
+  String newPlanFreshBody(String name);
+
+  /// No description provided for @newPlanFreshCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase and start Day 1'**
+  String get newPlanFreshCta;
+
+  /// No description provided for @newPlanFreshDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase your history?'**
+  String get newPlanFreshDialogTitle;
+
+  /// No description provided for @newPlanFreshDialogIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes:'**
+  String get newPlanFreshDialogIntro;
+
+  /// No description provided for @newPlanFreshGoesLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Every puff and mood you\'ve logged, and your stats'**
+  String get newPlanFreshGoesLog;
+
+  /// No description provided for @newPlanFreshGoesStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Your streak, badges and money saved'**
+  String get newPlanFreshGoesStreak;
+
+  /// No description provided for @newPlanFreshGoesCravings.
+  ///
+  /// In en, this message translates to:
+  /// **'Cravings beaten, game bests and check-ins'**
+  String get newPlanFreshGoesCravings;
+
+  /// No description provided for @newPlanFreshGoesGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Your savings goals'**
+  String get newPlanFreshGoesGoals;
+
+  /// No description provided for @newPlanFreshGoesCoach.
+  ///
+  /// In en, this message translates to:
+  /// **'Your chat with {name}, and everything {name} remembers'**
+  String newPlanFreshGoesCoach(String name);
+
+  /// No description provided for @newPlanFreshStays.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account, settings, community posts and any subscription stay.'**
+  String get newPlanFreshStays;
+
+  /// No description provided for @newPlanFreshNoUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'This can\'t be undone.'**
+  String get newPlanFreshNoUndo;
+
+  /// No description provided for @newPlanFreshConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase and start'**
+  String get newPlanFreshConfirm;
+
+  /// No description provided for @newPlanFreshStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Fresh start. Freedom Day: {date}'**
+  String newPlanFreshStarted(String date);
 
   /// No description provided for @homePlanEndedTitle.
   ///

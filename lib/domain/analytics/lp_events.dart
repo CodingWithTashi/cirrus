@@ -380,12 +380,17 @@ extension LpEvents on AnalyticsSink {
   /// had already ended — the two cases the feature exists for are a finished
   /// plan with the person still vaping, and a plan that stopped fitting
   /// half-way. Before Nov 2026 both ended in a sign-out and a new account.
+  ///
+  /// [keptHistory] is false when they chose to start from scratch
+  /// (`PlanRestart.fresh`) — everything, the coach included. Sent only once
+  /// the server has confirmed the erase.
   void planRestarted({
     required int fromDay,
     required bool pastFreedom,
     required String method,
     required int pace,
     required int planNumber,
+    bool keptHistory = true,
   }) => track(
     AnalyticsEvent('plan_restarted', {
       'from_day': fromDay,
@@ -393,6 +398,7 @@ extension LpEvents on AnalyticsSink {
       'method': method,
       'pace': pace,
       'plan_number': planNumber,
+      'kept_history': keptHistory.toString(),
     }),
   );
 

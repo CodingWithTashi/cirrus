@@ -229,7 +229,8 @@ void main() {
       reason: 'the plan-ended card did not open the page; on screen: '
           '${e2e.texts()}',
     );
-    expect(e2e.showing(l10n.newPlanLead), isTrue);
+    expect(e2e.showing(l10n.newPlanTitle), isTrue);
+    expect(e2e.showing(l10n.obProgressOf(1, 2)), isTrue);
     expect(find.widgetWithText(TextField, '82'), findsOneWidget);
     expect(e2e.showing(l10n.newPlanLevelHint(82)), isTrue);
     expect(e2e.showing(l10n.newPlanToday(78)), isTrue);
@@ -246,7 +247,15 @@ void main() {
     await e2e.scrollTo(find.text('21'));
     await e2e.tapText('21');
     expect(e2e.showing(l10n.newPlanToday(76)), isTrue);
-    await e2e.scrollTo(find.text(l10n.newPlanCta));
+    await e2e.tapText(l10n.commonContinue);
+    await e2e.settle();
+    // Step two: the history, kept by default.
+    expect(
+      e2e.showing(l10n.obProgressOf(2, 2)),
+      isTrue,
+      reason: '${e2e.texts()}',
+    );
+    expect(e2e.showing(l10n.newPlanHistoryTitle), isTrue);
     await e2e.tapText(l10n.newPlanCta);
     await e2e.waitFor(const Duration(seconds: 2));
 
@@ -283,6 +292,129 @@ void main() {
     await e2e.settle();
     expect(e2e.showing(l10n.planAdjustCta), isTrue);
     expect(e2e.showing(l10n.planNewCta), isTrue);
+    await e2e.waitFor(const Duration(seconds: 6));
+  });
+
+  testWidgets('starting from scratch: step two shows their own numbers, the '
+      'confirmation lists everything, and Home starts again at zero', (
+    tester,
+  ) async {
+    final e2e = await open(
+      tester,
+      journeyOn(
+        36,
+        lately: const [78, 80, 82, 84, 86, 0, 82],
+      ).copyWith(earnedBadges: const {'spark', 'firstLog'}, longestStreak: 18),
+    );
+    final l10n = e2e.l10n;
+    final before = journeyOf(e2e);
+    final coachName = e2e.container.read(coachNameProvider) ?? l10n.coachName;
+    // Something said to the coach, so its erasure is visible.
+    unawaited(
+      e2e.container
+          .read(coachStoreProvider.notifier)
+          .send('after dinner is the worst'),
+    );
+    await e2e.waitFor(const Duration(seconds: 3));
+    expect(
+      e2e.container.read(coachStoreProvider).messages.length,
+      greaterThan(1),
+      reason: 'fixture: the thread has more than the greeting',
+    );
+
+    unawaited(e2e.container.read(routerProvider).push(Routes.planNew));
+    await e2e.settle();
+    expect(
+      e2e.showing(l10n.obProgressOf(1, 2)),
+      isTrue,
+      reason: e2e.texts().join(' | '),
+    );
+    await e2e.tapText(l10n.commonContinue);
+    await e2e.waitFor(const Duration(seconds: 2));
+
+    // Step two: their own money and cravings, then the choice.
+    final saved = e2e.container.read(todayProvider)!.savedLifetime;
+    expect(saved, greaterThan(0), reason: 'fixture');
+    expect(
+      e2e.visible(LpFormat.money(saved, 'en')),
+      isTrue,
+      reason: 'their own savings on step two: ${e2e.texts()}',
+    );
+    expect(e2e.visible('14'), isTrue, reason: 'cravings beaten');
+    expect(e2e.visible(l10n.newPlanKeepTitle), isTrue);
+    expect(e2e.visible(l10n.newPlanCta), isTrue);
+
+    await e2e.tapText(l10n.newPlanFreshTitle);
+    await e2e.waitFor(const Duration(seconds: 2));
+    expect(
+      e2e.visible(LpFormat.money(0, 'en')),
+      isTrue,
+      reason: 'the numbers roll to zero: ${e2e.texts()}',
+    );
+    expect(e2e.visible(l10n.newPlanFreshBody(coachName)), isTrue);
+    expect(e2e.visible(l10n.newPlanFreshCta), isTrue);
+
+    // The confirmation lists all of it, and fits on the phone.
+    await e2e.tapText(l10n.newPlanFreshCta);
+    await e2e.waitFor(const Duration(seconds: 1));
+    for (final line in [
+      l10n.newPlanFreshDialogTitle,
+      l10n.newPlanFreshGoesLog,
+      l10n.newPlanFreshGoesStreak,
+      l10n.newPlanFreshGoesCravings,
+      l10n.newPlanFreshGoesGoals,
+      l10n.newPlanFreshGoesCoach(coachName),
+      l10n.newPlanFreshStays,
+      l10n.newPlanFreshNoUndo,
+      l10n.commonCancel,
+      l10n.newPlanFreshConfirm,
+    ]) {
+      expect(e2e.visible(line), isTrue, reason: '"$line": ${e2e.texts()}');
+    }
+
+    // Cancel first: nothing changes.
+    await e2e.tapText(l10n.commonCancel);
+    await e2e.waitFor(const Duration(seconds: 1));
+    expect(path(e2e), Routes.planNew);
+    expect(journeyOf(e2e).days.length, before.days.length);
+
+    await e2e.tapText(l10n.newPlanFreshCta);
+    await e2e.waitFor(const Duration(seconds: 1));
+    await e2e.tapText(l10n.newPlanFreshConfirm);
+    await e2e.waitFor(const Duration(seconds: 3));
+
+    expect(path(e2e), Routes.home, reason: e2e.texts().join(' | '));
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(NewPlanScreen), findsNothing);
+    final after = e2e.container.read(todayProvider)!;
+    expect(after.dayNumber, 1);
+    expect(after.streak, 0);
+    expect(after.savedLifetime, 0);
+    expect(after.cravingsSurvivedTotal, 0);
+    final j = journeyOf(e2e);
+    expect(j.days.keys, [today]);
+    expect(j.earnedBadges, isEmpty);
+    expect(j.longestStreak, 0);
+    expect(j.plan.planNumber, before.plan.planNumber + 1);
+    expect(j.profile.alias, before.profile.alias, reason: 'profile kept');
+    expect(
+      e2e.showing(
+        l10n.homeGreetingDate(
+          LpFormat.weekdayDate(now, 'en'),
+          1,
+          j.plan.totalDays,
+        ),
+      ),
+      isTrue,
+      reason: '${e2e.texts()}',
+    );
+
+    // The coach starts over too: the greeting and nothing else.
+    e2e.container.read(routerProvider).go(Routes.coach);
+    await e2e.settle();
+    final thread = e2e.container.read(coachStoreProvider).messages;
+    expect(thread, hasLength(1), reason: '$thread');
+    expect(e2e.showing('after dinner is the worst'), isFalse);
     await e2e.waitFor(const Duration(seconds: 6));
   });
 

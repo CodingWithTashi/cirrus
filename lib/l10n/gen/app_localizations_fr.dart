@@ -2799,8 +2799,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get newPlanTitle => 'Un nouveau plan';
 
   @override
-  String get newPlanLead =>
-      'Rien ne repart de zéro. Ta série, ton historique et l\'argent économisé te suivent.';
+  String get newPlanPlanSubtitle =>
+      'Le jour 1, c\'est aujourd\'hui. La ligne part d\'où tu en es maintenant.';
 
   @override
   String get newPlanLevelLabel => 'TAFFES PAR JOUR, EN CE MOMENT';
@@ -2837,6 +2837,83 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String newPlanStarted(String date) {
     return 'Nouveau plan lancé. Jour de la Liberté : $date';
+  }
+
+  @override
+  String get newPlanHistoryTitle => 'Et ton historique ?';
+
+  @override
+  String get newPlanHistorySubtitle =>
+      'Dans les deux cas, ton nouveau plan commence aujourd\'hui.';
+
+  @override
+  String newPlanStatStreak(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'jours d\'affilée',
+      one: 'jour d\'affilée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newPlanKeepTitle => 'Garder mon historique';
+
+  @override
+  String get newPlanKeepBody =>
+      'Ta série, tes badges, tes stats et l\'argent économisé te suivent.';
+
+  @override
+  String get newPlanFreshTitle => 'Repartir de zéro';
+
+  @override
+  String newPlanFreshBody(String name) {
+    return 'Tout repart de zéro : chaque taffe enregistrée, tes stats, ta série, tes badges, l\'argent économisé, les cravings vaincus et ta discussion avec $name.';
+  }
+
+  @override
+  String get newPlanFreshCta => 'Effacer et commencer le jour 1';
+
+  @override
+  String get newPlanFreshDialogTitle => 'Effacer ton historique ?';
+
+  @override
+  String get newPlanFreshDialogIntro => 'Ceci supprime définitivement :';
+
+  @override
+  String get newPlanFreshGoesLog =>
+      'Chaque taffe et chaque humeur enregistrées, et tes stats';
+
+  @override
+  String get newPlanFreshGoesStreak =>
+      'Ta série, tes badges et l\'argent économisé';
+
+  @override
+  String get newPlanFreshGoesCravings =>
+      'Les cravings vaincus, tes records aux jeux et tes check-ins';
+
+  @override
+  String get newPlanFreshGoesGoals => 'Tes objectifs d\'épargne';
+
+  @override
+  String newPlanFreshGoesCoach(String name) {
+    return 'Ta discussion avec $name, et tout ce que $name retient';
+  }
+
+  @override
+  String get newPlanFreshStays =>
+      'Ton compte, tes réglages, tes posts dans la communauté et ton éventuel abonnement restent.';
+
+  @override
+  String get newPlanFreshNoUndo => 'Impossible de revenir en arrière.';
+
+  @override
+  String get newPlanFreshConfirm => 'Effacer et commencer';
+
+  @override
+  String newPlanFreshStarted(String date) {
+    return 'Nouveau départ. Jour de la Liberté : $date';
   }
 
   @override

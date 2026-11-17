@@ -41,3 +41,4 @@ export {coachMemories, forgetCoachMemory} from './handlers/coachMemories';
 export {seedCoachMemories} from './handlers/seedCoachMemories';
 export {matchedTestimonials} from './handlers/testimonials';
 export {setCoachName} from './handlers/coachName';
+export {eraseHistory} from './handlers/eraseHistory';

@@ -271,7 +271,9 @@ final isModeratorProvider = FutureProvider<bool>(
 /// weekly AI report today, the entitlement mirror next.
 final serverStateRepositoryProvider = Provider<ServerStateRepository>(
   (ref) => switch (ref.watch(backendModeProvider)) {
-    BackendMode.fake => const NoopServerStateRepository(),
+    BackendMode.fake => NoopServerStateRepository(
+      server: ref.watch(fakeServerProvider),
+    ),
     BackendMode.firebase => FirebaseServerStateRepository(),
   },
 );

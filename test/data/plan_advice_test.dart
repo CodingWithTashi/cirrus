@@ -260,4 +260,7 @@ class _StubServerState implements ServerStateRepository {
 
   @override
   Future<bool> refreshEntitlement() async => false;
+
+  @override
+  Future<void> eraseHistory() async {}
 }

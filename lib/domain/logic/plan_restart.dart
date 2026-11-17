@@ -91,4 +91,53 @@ abstract final class PlanRestart {
       planAdvice: () => null,
     );
   }
+
+  /// [s] with everything it has recorded erased, and a new plan beginning
+  /// today: the one exception to "nothing resets", and only ever on request.
+  ///
+  /// Some people want the slate clean: a history they would rather not look
+  /// at, a plan run so far off its line the numbers mean nothing, a phone
+  /// handed on to somebody else on the same account. The new-plan screen
+  /// offers it as a second choice beside keeping everything, behind a
+  /// confirmation that lists what goes, and the server erases its own copies
+  /// FIRST (`ServerStateRepository.eraseHistory`); this is the local half.
+  ///
+  /// **Erased:** every day logged (puffs, moods, hours, confirmations), the
+  /// cravings beaten, the streak and its tokens, the longest streak, every
+  /// badge, the savings goals, game bests, check-up answers, the last-puff
+  /// anchor, any pending slip and any advice.
+  ///
+  /// **Kept:** who the person is (the profile: alias, avatar, coach name, the
+  /// why) and the parts of the plan that are answers rather than history —
+  /// the baseline and the weekly spend still price whatever they log from
+  /// here. The Day-1 setup is kept done or skipped as it was: somebody
+  /// starting over is not new to the app, and walking them through it again
+  /// is the "a plan started again is not the first day of the app" rule
+  /// (`planNumber` still counts up, for the same reason). The last game
+  /// played is a preference, not a record.
+  static JourneyState fresh(
+    JourneyState s, {
+    required DateTime now,
+    required QuitMethod method,
+    required int paceDays,
+    required int level,
+  }) => apply(
+    JourneyState(
+      profile: s.profile,
+      plan: s.plan,
+      days: const {},
+      cravingsSurvivedTotal: 0,
+      repairTokens: 0,
+      longestStreak: 0,
+      goals: const [],
+      earnedBadges: const {},
+      day1TasksDone: s.day1TasksDone,
+      day1TourSkipped: s.day1TourSkipped,
+      lastGame: s.lastGame,
+    ),
+    now: now,
+    method: method,
+    paceDays: paceDays,
+    level: level,
+  );
 }

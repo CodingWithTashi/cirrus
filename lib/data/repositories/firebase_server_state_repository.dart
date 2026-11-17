@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import '../api/fake/fake_server.dart';
 import '../api/firebase/functions_client.dart';
 import '../dto/journey_codec.dart';
 import 'firebase_common.dart';
@@ -114,6 +115,48 @@ class FirebaseServerStateRepository implements ServerStateRepository {
       return false;
     }
   }
+
+  /// The other non-read here, and like [refreshEntitlement] a callable rather
+  /// than a write: `eraseHistory` deletes server-owned documents the rules
+  /// would never let this client touch. Unlike it, a failure here throws —
+  /// see the contract.
+  ///
+  /// The timeout is the function's own (`timeoutSeconds: 300`): at the
+  /// plugin's 60 seconds a long history would be reported as a failure while
+  /// the server went on erasing it.
+  @override
+  Future<void> eraseHistory() async {
+    await _functions.call('eraseHistory', const {}, _eraseTimeout);
+    await _forgetCachedHistory();
+  }
+
+  static const _eraseTimeout = Duration(minutes: 5);
+
+  /// Reads back, from the server, everything the erase deleted that this
+  /// client reads straight from Firestore — the transcript, the weekly
+  /// reports and the user document's advice.
+  ///
+  /// The Admin SDK's deletes never reach the device's offline cache, and an
+  /// offline `get()` answers from it: an app opened with no signal after a
+  /// fresh start would bring the erased thread back. A server read is what
+  /// tells the cache those documents are gone. Best effort — the erase itself
+  /// has already succeeded, and any later online read does the same.
+  Future<void> _forgetCachedHistory() async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    const server = GetOptions(source: Source.server);
+    try {
+      // Bounded: the spinner is still up, and on a weak link a server read
+      // can take a long time to fail after the erase itself has succeeded.
+      await Future.wait([
+        doc.get(server),
+        doc.collection('coachMessages').get(server),
+        doc.collection('insights').get(server),
+      ]).timeout(const Duration(seconds: 10));
+    } on Object {
+      // Nothing to tell anyone: see above.
+    }
+  }
 }
 
 /// The fake-backend stand-in.
@@ -122,8 +165,15 @@ class FirebaseServerStateRepository implements ServerStateRepository {
 /// genuinely nothing to answer with. Returning null keeps the demo on its
 /// designed content — the Insight screen's authored cards, the raw taper
 /// curve — instead of showing invented server output.
+///
+/// [eraseHistory] has nothing to erase either (the fake coach keeps no
+/// transcript and no memories), but it still goes through [server] when one
+/// is given, so an offline erase fails exactly as production's does and the
+/// new-plan screen's error path is reachable from a widget test.
 class NoopServerStateRepository implements ServerStateRepository {
-  const NoopServerStateRepository();
+  const NoopServerStateRepository({this.server});
+
+  final FakeServer? server;
 
   @override
   Future<PlanAdvice?> planAdvice() async => null;
@@ -136,4 +186,9 @@ class NoopServerStateRepository implements ServerStateRepository {
   /// resolves. False means "nothing was refreshed", never "not premium".
   @override
   Future<bool> refreshEntitlement() async => false;
+
+  @override
+  Future<void> eraseHistory() async {
+    await server?.respond(() {});
+  }
 }

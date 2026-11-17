@@ -1183,16 +1183,23 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// Synchronous and optimistic like every other mutation. A screen that
   /// calls this and leaves must leave FIRST: it changes the journey, and the
   /// router's refresh after an imperative navigation undoes the navigation.
+  ///
+  /// With [keepHistory] false it starts from scratch instead
+  /// ([PlanRestart.fresh]): every record on the journey goes, the coach's
+  /// thread included, and so does everything this device holds about it.
+  /// **Only after [eraseServerHistory] has succeeded** — the server's copies
+  /// go first, so a failed erase changes nothing anywhere.
   void startNewPlan({
     required QuitMethod method,
     required int paceDays,
     required int level,
+    bool keepHistory = true,
   }) {
     final s = state;
     if (s == null) return;
     final now = _now;
     final fromDay = s.plan.dayNumber(now);
-    final next = PlanRestart.apply(
+    final next = (keepHistory ? PlanRestart.apply : PlanRestart.fresh)(
       s,
       now: now,
       method: method,
@@ -1207,10 +1214,54 @@ class JourneyStore extends Notifier<JourneyState?> {
           method: method.name,
           pace: paceDays,
           planNumber: next.plan.planNumber,
+          keptHistory: keepHistory,
         );
     // The slip this session may have armed belonged to the plan just left.
     _slipArmedOn = null;
+    if (!keepHistory) _forgetHistoryOnDevice();
     _commit(_withBadges(next));
+    // After the commit, never before it: the thread's new greeting quotes the
+    // plan ("200 a day, taper, Freedom Day …") off the journey as it stands,
+    // and before the commit that is the plan being replaced.
+    if (!keepHistory) _forgetCoachThread();
+  }
+
+  /// The server half of starting from scratch: erases the cravings record,
+  /// the weekly reports, the nightly advice and the coach's transcript,
+  /// summary and memories (`ServerStateRepository.eraseHistory`).
+  ///
+  /// Awaited and allowed to throw, like [deleteAccount] and for the same
+  /// reason: "your history is gone" must never be said over a request that
+  /// failed offline. Changes nothing locally — [startNewPlan] does that once
+  /// this has landed, after the screen has left.
+  Future<void> eraseServerHistory() =>
+      ref.read(serverStateRepositoryProvider).eraseHistory();
+
+  /// Everything this device holds about a history that was just erased.
+  ///
+  /// The undo trail and the token mark name puffs that no longer exist. The
+  /// milestone ledger would otherwise hold every erased badge as already
+  /// celebrated (so re-earning one would be met with silence), and a
+  /// celebration already armed for tomorrow morning would congratulate the
+  /// person on the week they just wiped. The weekly report on screen was
+  /// written about that history. The coach's thread is [_forgetCoachThread].
+  ///
+  /// Not the sign-out list: the person is still here, on the same account,
+  /// so their entitlement, settings, push registration, widget and wrist all
+  /// stay bound — the mirror simply follows the new journey on its next push.
+  void _forgetHistoryOnDevice() {
+    _anchorTrail.clear();
+    _tokenSpentOn = null;
+    ref.read(settingsStoreProvider.notifier).forgetCelebrations();
+    ref.read(reminderCoordinatorProvider)?.withdrawMilestones().ignore();
+    ref.invalidate(weeklyInsightProvider);
+  }
+
+  /// The coach's thread and memories, which went with the server's copies.
+  /// Runs after the new journey is committed (see [startNewPlan]).
+  void _forgetCoachThread() {
+    ref.read(coachStoreProvider.notifier).forgetThread();
+    ref.invalidate(coachMemoriesProvider);
   }
 
   /// Puts Freedom Day [paceDays] days from today (docs/15 QP-A11).

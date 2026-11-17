@@ -185,6 +185,22 @@ class ReminderCoordinator {
     }
   }
 
+  /// Takes down any milestone celebration already armed, for a person who
+  /// has just erased the badges it celebrates (`PlanRestart.fresh`).
+  ///
+  /// The one deliberate exception to "never withdrawn" below: the badge did
+  /// not lapse, its owner asked for it to be gone, and "One week. ONE WEEK."
+  /// arriving the morning after somebody wiped that week is the app
+  /// contradicting the choice it just confirmed. Cancels by id rather than
+  /// `cancelAll()`, which would take every other reminder with it, and forgets
+  /// the fingerprint so the next sync plans against the emptied ledger.
+  Future<void> withdrawMilestones() async {
+    _milestoneApplied = null;
+    for (var i = 0; i < MilestoneReminderPlanner.celebrated.length; i++) {
+      await _sink.cancel(MilestoneReminderPlanner.idBase + i);
+    }
+  }
+
   /// Schedules the celebration owed for a badge already earned.
   ///
   /// **Never withdrawn.** Unlike the trial reminder, whose reason can evaporate

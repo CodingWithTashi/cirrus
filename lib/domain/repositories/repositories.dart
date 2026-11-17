@@ -264,6 +264,23 @@ abstract interface class ServerStateRepository {
   /// trial. **Never throws** — a failure means "not yet", and the webhook
   /// lands the same write on its own; nothing about a purchase depends on it.
   Future<bool> refreshEntitlement();
+
+  /// Erases the server's copies of this account's history, for a person who
+  /// chose to start a new plan from scratch (`PlanRestart.fresh`).
+  ///
+  /// All of it, with no partial version: the cravings record, the weekly
+  /// reports, the nightly advice, and the coach transcript, its rolling
+  /// summary and every memory — a coach that remembers a journey the person
+  /// has erased quotes it back to them. Never: the
+  /// account, the subscription, the coach's name, notification settings,
+  /// community posts, or today's allowances (erasing those would refill a
+  /// free coach cap on demand).
+  ///
+  /// **Awaited, and it throws.** Like account deletion, an erasure that
+  /// quietly failed would leave the person believing their history is gone
+  /// while the server still holds it, so the caller waits for the ack and
+  /// changes nothing locally until it lands.
+  Future<void> eraseHistory();
 }
 
 /// Subscriptions: what is on sale, what this account owns, and the two

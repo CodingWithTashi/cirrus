@@ -5,7 +5,15 @@ import '../../app/theme/lp_dimens.dart';
 import '../../app/theme/lp_typography.dart';
 import 'press_scale.dart';
 
-enum LpButtonStyle { volt, oxygen, surface }
+enum LpButtonStyle {
+  volt,
+  oxygen,
+  surface,
+
+  /// An action that destroys something and cannot be taken back: the danger
+  /// tint and a danger border, never a fill (there is no ink token for one).
+  danger,
+}
 
 /// The signature CTA — Volt fill, Space Grotesk 700, soft glow.
 class LpButton extends StatelessWidget {
@@ -42,6 +50,7 @@ class LpButton extends StatelessWidget {
         glow ? lp.oxygenGlow() : null,
       ),
       LpButtonStyle.surface => (lp.surface, lp.textPrimary, null),
+      LpButtonStyle.danger => (lp.dangerSoft, lp.dangerText, null),
     };
     return PressScale(
       onTap: busy ? null : onTap,
@@ -51,9 +60,14 @@ class LpButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(LpDimens.rButton),
-          border: style == LpButtonStyle.surface
-              ? Border.all(color: lp.border, width: 1.5)
-              : null,
+          border: switch (style) {
+            LpButtonStyle.surface => Border.all(color: lp.border, width: 1.5),
+            LpButtonStyle.danger => Border.all(
+              color: lp.danger.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+            _ => null,
+          },
           boxShadow: shadows,
         ),
         child: busy

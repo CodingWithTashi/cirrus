@@ -1780,7 +1780,7 @@
     }
   },
   "newPlanTitle": "A new plan",
-  "newPlanLead": "Nothing resets. Your streak, your history and the money you've saved all come with you.",
+  "newPlanPlanSubtitle": "Day one is today. Start the line from where you are right now.",
   "newPlanLevelLabel": "PUFFS A DAY, RIGHT NOW",
   "newPlanLevelHint": "On the days you vaped this past week, you averaged {count}.",
   "@newPlanLevelHint": {
@@ -1810,6 +1810,53 @@
   "newPlanCta": "Start Day 1 today",
   "newPlanStarted": "New plan started. Freedom Day: {date}",
   "@newPlanStarted": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "newPlanHistoryTitle": "What about your history?",
+  "newPlanHistorySubtitle": "Your new plan starts today either way.",
+  "newPlanStatStreak": "{count, plural, one{day in a row} other{days in a row}}",
+  "@newPlanStatStreak": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "newPlanKeepTitle": "Keep my history",
+  "newPlanKeepBody": "Your streak, badges, stats and money saved carry on.",
+  "newPlanFreshTitle": "Start from scratch",
+  "newPlanFreshBody": "Everything goes back to zero: every puff logged, your stats, streak, badges, money saved, cravings beaten and your chat with {name}.",
+  "@newPlanFreshBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newPlanFreshCta": "Erase and start Day 1",
+  "newPlanFreshDialogTitle": "Erase your history?",
+  "newPlanFreshDialogIntro": "This permanently deletes:",
+  "newPlanFreshGoesLog": "Every puff and mood you've logged, and your stats",
+  "newPlanFreshGoesStreak": "Your streak, badges and money saved",
+  "newPlanFreshGoesCravings": "Cravings beaten, game bests and check-ins",
+  "newPlanFreshGoesGoals": "Your savings goals",
+  "newPlanFreshGoesCoach": "Your chat with {name}, and everything {name} remembers",
+  "@newPlanFreshGoesCoach": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newPlanFreshStays": "Your account, settings, community posts and any subscription stay.",
+  "newPlanFreshNoUndo": "This can't be undone.",
+  "newPlanFreshConfirm": "Erase and start",
+  "newPlanFreshStarted": "Fresh start. Freedom Day: {date}",
+  "@newPlanFreshStarted": {
     "placeholders": {
       "date": {
         "type": "String"

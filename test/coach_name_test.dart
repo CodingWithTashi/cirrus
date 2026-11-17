@@ -50,6 +50,10 @@ void main() {
     // the very tooltip pointing at the composer told everyone who renamed
     // their coach that the rename didn't take.
     'day1TourCoachBody',
+    // Starting a new plan from scratch: the switch that takes the coach's
+    // thread and memories with it, and the confirmation line that says so.
+    'newPlanFreshBody',
+    'newPlanFreshGoesCoach',
   ];
 
   Map<String, dynamic> arb(String locale) =>
@@ -78,6 +82,8 @@ void main() {
       l10n.obWhyWordsNote(name),
       l10n.day1TourCoachBody(name),
       l10n.coachRenamed(name),
+      l10n.newPlanFreshBody(name),
+      l10n.newPlanFreshGoesCoach(name),
     ];
   }
 

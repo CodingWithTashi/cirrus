@@ -4,6 +4,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
+import 'package:last_puff/domain/repositories/repositories.dart';
 
 import '../helpers.dart';
 
@@ -57,6 +58,7 @@ void main() {
         'method': 'coldTurkey',
         'pace': 30,
         'plan_number': 2,
+        'kept_history': 'true',
       },
     ]);
   });
@@ -204,5 +206,165 @@ void main() {
     final stored = c.read(fakeServerProvider).journeyJsonForCurrentSession();
     expect((stored!['plan'] as Map<String, dynamic>)['taperFrom'], 82);
     expect((stored['plan'] as Map<String, dynamic>)['planNumber'], 2);
+  });
+  group('starting from scratch', () {
+    /// Day 36 of a finished plan, with a little of everything on it.
+    JourneyState lived() => journeyOnDay(36, now: now, baseline: 200).copyWith(
+      cravingsSurvivedTotal: 12,
+      earnedBadges: const {'spark', 'weekFlame', 'firstLog'},
+      longestStreak: 20,
+    );
+
+    void startFresh(ProviderContainer c) => c
+        .read(quitStoreProvider.notifier)
+        .startNewPlan(
+          method: QuitMethod.taper,
+          paceDays: 21,
+          level: 82,
+          keepHistory: false,
+        );
+
+    test('erases the journey down to a day one with nothing on it', () {
+      final (c, _) = boot(lived());
+
+      startFresh(c);
+
+      final j = c.read(quitStoreProvider)!;
+      expect(j.days.keys, [today]);
+      expect(j.cravingsSurvivedTotal, 0);
+      expect(j.longestStreak, 0);
+      expect(j.earnedBadges, isEmpty);
+      expect(j.plan.planNumber, 2);
+      expect(c.read(todayProvider)!.dayNumber, 1);
+      expect(c.read(todayProvider)!.savedLifetime, 0);
+    });
+
+    test('says it started from scratch', () {
+      final (c, analytics) = boot(lived());
+
+      startFresh(c);
+
+      expect(
+        analytics.propsOf('plan_restarted'),
+        containsPair('kept_history', 'false'),
+      );
+    });
+
+    test('erased badges can be celebrated again when they are re-earned', () {
+      final (c, _) = boot(lived());
+      final settings = c.read(settingsStoreProvider.notifier);
+      settings.adoptMilestones({'spark', 'weekFlame'});
+
+      startFresh(c);
+
+      final ledger = c.read(settingsStoreProvider);
+      expect(ledger.celebratedMilestones, isEmpty);
+      expect(ledger.armedMilestone, isNull);
+      // Still adopted: what is earned from here is new, and owed.
+      expect(ledger.milestonesAdopted, isTrue);
+    });
+
+    test('but leaves the person\'s own settings where they were', () {
+      final (c, _) = boot(lived());
+      final settings = c.read(settingsStoreProvider.notifier);
+      settings.setCheckinHour(19);
+
+      startFresh(c);
+
+      expect(c.read(settingsStoreProvider).checkinHour, 19);
+    });
+
+    test('the coach thread is forgotten with the rest of it', () async {
+      final (c, _) = boot(lived());
+      final coach = c.read(coachStoreProvider.notifier);
+      await coach.send('I keep reaching for it after dinner');
+      expect(
+        c
+            .read(coachStoreProvider)
+            .messages
+            .where((m) => m.role == CoachRole.user),
+        isNotEmpty,
+        reason: 'fixture',
+      );
+
+      startFresh(c);
+
+      final thread = c.read(coachStoreProvider).messages;
+      expect(thread, hasLength(1));
+      expect(thread.single.template, CoachTemplate.greeting);
+    });
+
+    test('and its new greeting reads the plan just started, not the one '
+        'replaced', () {
+      final (c, _) = boot(lived());
+      final old = c.read(quitStoreProvider)!.plan;
+
+      c
+          .read(quitStoreProvider.notifier)
+          .startNewPlan(
+            method: QuitMethod.coldTurkey,
+            paceDays: 21,
+            level: 82,
+            keepHistory: false,
+          );
+
+      final plan = c.read(quitStoreProvider)!.plan;
+      final args = c.read(coachStoreProvider).messages.single.args;
+      expect(plan.method, isNot(old.method), reason: 'fixture');
+      expect(args['method'], plan.method.name);
+      expect(args['freedomYmd'], LpDate.toYmdInt(plan.freedomDate));
+      expect(args['freedomYmd'], isNot(LpDate.toYmdInt(old.freedomDate)));
+    });
+
+    test('and kept, with everything else, when history is kept', () async {
+      final (c, _) = boot(lived());
+      await c.read(coachStoreProvider.notifier).send('after dinner');
+      final before = c.read(coachStoreProvider).messages;
+
+      c
+          .read(quitStoreProvider.notifier)
+          .startNewPlan(method: QuitMethod.taper, paceDays: 21, level: 82);
+
+      expect(c.read(coachStoreProvider).messages, before);
+    });
+
+    test('keeping history touches none of it', () {
+      final (c, _) = boot(lived());
+      c.read(settingsStoreProvider.notifier).adoptMilestones({'spark'});
+
+      c
+          .read(quitStoreProvider.notifier)
+          .startNewPlan(method: QuitMethod.taper, paceDays: 21, level: 82);
+
+      expect(c.read(quitStoreProvider)!.cravingsSurvivedTotal, 12);
+      expect(c.read(settingsStoreProvider).celebratedMilestones, {'spark'});
+    });
+
+    // That a failed erase commits nothing is the screen's half, and is pinned
+    // there ("offline, the erase fails …" in new_plan_test).
+    test('an offline server erase throws', () async {
+      final c = ProviderContainer(
+        overrides: fastBackendOverrides(now: now, online: false),
+      );
+      addTearDown(c.dispose);
+      c.read(quitStoreProvider.notifier).replaceForTest(lived());
+
+      await expectLater(
+        c.read(quitStoreProvider.notifier).eraseServerHistory(),
+        throwsA(isA<NoConnectionException>()),
+      );
+    });
+
+    test('the erased journey is what reaches the backend', () async {
+      final (c, _) = boot(lived());
+
+      await c.read(quitStoreProvider.notifier).eraseServerHistory();
+      startFresh(c);
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+
+      final stored = c.read(fakeServerProvider).journeyJsonForCurrentSession();
+      expect((stored!['days'] as Map<String, dynamic>).keys, hasLength(1));
+      expect(stored['cravingsSurvivedTotal'], 0);
+    });
   });
 }

@@ -694,6 +694,11 @@ D1 ≥ 45% · D7 ≥ 25% · D30 ≥ 12% · craving-survived rate ≥ 70% · stor
 
 **Session history lives in `docs/10_Build_Log.md`** — dated, append-only; cite as `docs/10 §N`.
 
+**Start from scratch — Nov 16 2026** (docs/10 §57). Unreleased, like the new-plan screen it extends.
+
+- [x] `S7-25` **Start a new plan from scratch** — `/plan/new` is two steps (the plan, then the history); step two keeps everything by default or erases all of it, the coach included, with the person's own numbers rolling to zero, a confirmation that cannot be dismissed, and the server erased first (`eraseHistory`). The screen's option pills centre their labels. `test/domain/plan_restart_test.dart`, `test/data/new_plan_store_test.dart`, `test/widgets/new_plan_test.dart`, `functions/test/integration/eraseHistory.test.ts`
+- [x] `S7-26` **`eraseHistory` deployed** Nov 17 04:16 UTC (founder), alone, after `verify` 380; listed live as a v2 callable in us-central1, App Check enforced through the shared flag. A build carrying `S7-25` may now ship. Exercised against production Nov 17 by `f_firebase_backend_test` on a throwaway account (docs/10 §57.5)
+
 **Tier decisions live in `docs/12_Monetisation_Study.md`** (Sep 3, 2026) — the verified door inventory, the sourced conversion evidence, and the free/premium matrix. §7 rows 23–28 above are its resolutions; when this board and `docs/01 §10` / `docs/02 §4–5` disagree on what is free, docs/12 is the reason.
 
 *Built from a full repo audit on Aug 29, 2026. Every ✅ and every blocker in §3 carries its evidence. Anything unverified is marked ❓ and treated as not done.*
