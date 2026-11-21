@@ -6111,3 +6111,134 @@ Rendered with the real fonts at 393×852 dp for review, in English dark and ligh
 - **Production (Pixel 8, `alastpuff`, Nov 17):** `f_firebase_backend_test` **18/19**, twice, each on a throwaway account the suite deletes, with a debug token the founder registered for the run (the one pinned in `.appcheck_token` is not registered). The new case passed against the deployed callable, after the coach, panic and community cases had filled the account. The second run separated the cache from the fix: after the bare callable the transcript was **still in the device's offline cache** (the review's finding was real), and after the app's own erase it was gone, read cache-only before any online read in the case. Then: the transcript, memories, cravings and insights are gone on the server, `coachSummary` and `planAdvice` are gone, the coach repository lists no memories, and the account, `coachName`, `aiUsage` and the posts mirror are unchanged; the journey the app wrote after it holds one day, `planNumber` 2 and the original baseline. `deleteUserData` then erased the account. The one failure is not this change: `setCoachName` accepted `sh1t` ("the denylist did not ship with the deploy"). `functions/data/name-denylist.json` is gitignored and is not on the Mac, and `setCoachName` was last deployed Nov 13 18:13 UTC, so the live guard has run on impersonation checks alone since then.
 - **Not proven:** a scratch start through the UI against production (the device case drives the screen on the fake backend, the production case drives the store), and a second signed-in device (below).
 - **Known limit, not fixed here:** a second signed-in device (an iPhone, or an older build) still holds the old journey in memory, and its next mutation `set()`s the whole document back, returning the erased days. The same last-writer-wins limit the check-up answers already carry (§53); it matters more here because the dialog says "permanently". Not verified here: what the other device does on resume rather than a cold start.
+
+## 58. THE 1.0.36 READ (Nov 21) — where people go, what changed, and what has to be measured before buying installs
+
+**Asked for:** review App Store Connect and Amplitude against 1.0.36 (live on iOS Nov 17, Android ~Nov 15), confirm how people drop and what to add, aimed at a founder brief: fix early churn, then test paid installs, then scale only if a user earns more than an install costs. The goal set in the same session: 100x users. Read-only except the site fixes in §58.6.
+
+### 58.1 How the numbers were read (and two traps)
+
+- **People, not IDs.** Amplitude held 361 IDs in 90 days; 155 are people after the Nov 11 real-user rules (§51.4 lineage; one row per `amplitude_id`): 118 had no device type on any event, 43 were the founder (Toronto/Oshawa), 19 App Review/Play cities, 15 no-city US or Android, 5 Android pre-launch builds, 4 iPads, 2 iOS before Sep 13. Dev builds 1.0.32/1.0.34 were also dropped. The cohort below is the 123 people first seen from Oct 17 (v1.0.28 onward).
+- **Amplitude truncates grouped results without saying so**: 100 rows with one group-by, 500 with two. A per-person pull on `onboarding_start` came back with 100 of 228 users and made it look as if half the sign-ups never started onboarding. Restrict the query to the real-user ID list (`amplitude_id is …`) and group by two properties so it stays under 500. The base `_active` pulls were checked: the largest returned 450 rows, and 361 IDs match Amplitude's own unique count.
+- **ASC installs and deletions are opt-in only** (people who share analytics with developers), and a deletion is credited to the version someone was on when they deleted, so it is not a per-version deletion rate. ASC's D1 (29%, UTC days, opt-in) and Amplitude's (43%, Eastern days, every real person) measure different things; neither is wrong.
+- **Cloudflare Web Analytics is sampled in tens** and split across two site tags; it does not see most of the European visits that App Store attributes to the site. Useful for paths, not for trends.
+
+### 58.2 Acquisition — every channel came down off one bump
+
+App Store Connect, iOS, 90 days: **143 first-time downloads**, 7 redownloads, 1.88K impressions, 205 product-page views, **63 opt-in installs against 43 opt-in deletions**, proceeds $71, 2 paid plans active (MRR $4). Benchmarks (Lifestyle, week of Oct 19): product-page conversion **17.2%, above the 75th percentile (3.7%)**; D1 **29.2%, between the median (23.4%) and the 75th (34.6%)**.
+
+Downloads by source, weeks starting Oct 12 → Nov 16 (the last one 4 days):
+
+| Source | Oct 12 | Oct 19 | Oct 26 | Nov 2 | Nov 9 | Nov 16 |
+|---|---|---|---|---|---|---|
+| Web referrer | 3 | 21 | 12 | 15 | 4 | 0 |
+| App Store search | 1 | 5 | 12 | 10 | 5 | 5 |
+| App referrer | 3 | 2 | 3 | 7 | 3 | 1 |
+| *Search impressions* | 127 | 195 | 209 | 249 | 209 | 163 |
+
+- Named referrers: **cirrusquit.com 34 of the 60 web downloads** (weekly from Oct 5: 1, 0, 16, 8, 7, 2, 0; campaigns `download-page` 12, `fr-hero` 8). **The ChatGPT app sent 21** (2, 3, 2, 3, 7, 3, 1) — an assistant recommending the app is a real channel.
+- **This is not a site outage or a search penalty.** Organic search to the site was close to zero all along (about 10 Google visits in 90 days in Cloudflare's bot-excluded data), and the site agent found the live site identical to the Oct 16 deploy apart from two new posts. Search downloads halved too while impressions held. Every channel came off the Oct 19 – Nov 8 bump; what drove that bump (free-first release, a post, the `fr-hero` link) is the founder's to name, and it is the thing to repeat.
+- Store visibility, not the store page, is the ceiling: ~200 search impressions a week, and the page already converts in the top quartile.
+
+### 58.3 Where people drop (123 people, first seen Oct 17 – Nov 20)
+
+**Onboarding is not the leak.** 120 start → 118 past the birth year → 110 reach the reveal → 102 reach the commit → **100 make an account and land on Home** (81%). Of the 23 who did not: 7 stopped at the age gate, 5 held the commit and never made the account, the rest left within the first screens.
+
+- **The age gate is hit by 19% of new people** (23 of 123). 16 of them then typed an older year and continued (the block is not remembered, §52); 7 left. A founder call, not fixed here.
+- Notifications: 102 asked, **68 granted (67%)**.
+
+**The loss is the day after.** D1 **43%** (52/122) · back at all on days 1–7 **50%** (56/113) · D7 exact **9%** (10/113) · back at all on days 8–14 **15%** (14/92) · **46% are seen on one day only.** Of the 93 who finished onboarding at least a week ago, **37 (40%) never opened it again that week.**
+
+**Day 0 does not tell them apart.** Counting day-0 screens only, leavers and returners visit the same places (Home 86% vs 95%, Stats 84/91, Coach 86/91, Community 51/50, Panic 46/46, Paywall 16/11, Slip 14/7); leavers open the app a median 3 times that day, returners 5. They found the features; nothing brought them back the next day.
+
+What does separate them (suggestive only — groups of 30–50, and this is the 1.0.28 experience that 1.0.30/1.0.36 changed):
+
+| Group (finished onboarding) | D1 | Back days 8–14 |
+|---|---|---|
+| Taper (50) | 60% | 23% (10/43) |
+| Cold turkey (44) | 41% | 14% (5/35) |
+| Notifications granted (63) | 56% | 19% |
+| Notifications refused (30) | 40% | 16% |
+
+Android: 15 people, D1 10/15 — too few to read (two Austrian accounts may be testers; without them 10/13).
+
+Monetization: 2 purchases in the 123; ASC proceeds work out to roughly **$0.50 per download** over 90 days (not a cohort LTV). That is the brief's own break-even install cost, so paid installs cannot pay back yet.
+
+### 58.4 What 1.0.36 changed — confirmed in the data, and what cannot be judged yet
+
+17 real people have run 1.0.36: **6 new** (4 iOS, 2 Android; D1 2 of the 3 old enough) and **11 who updated** — 9 of them already active the week before, 2 back after 10–14 days away. ASC sessions went from 1–12 a day the week before to 15, 24, 9, 19 on Nov 17–20. **No retention verdict is possible**: re-read the first 1.0.36 cohorts around Dec 15, four weeks after release (docs/15 §8), with the real-user list.
+
+| Event | On 1.0.36 (real people) |
+|---|---|
+| `program_shown` (morning and evening), `program_reply`, `reminder_opened{program}` | arriving (`reminder_opened{program}`: 1) |
+| `reminder_opened{danger}` on iOS | arriving since 1.0.30 (9 people in its 4 days) — the iOS delegate fix (§52.1) works |
+| `day_confirmed`, `mood_checked_in`, `slip_resolved`, `plan_restarted`, `help_viewed` | arriving |
+| `puff_logged{source: widget}` | 4 updaters log from the widget |
+| `widget_prompt_shown` | 3 shown, 0 accepted on 1.0.36; `widget_installed` never received |
+| `whats_new_shown` | **all 6 new installs got it** — a bug, below |
+| `checkup_answered`, `quit_status_reported` | not yet (day 7+ only) |
+| `update_prompt_*` | never received — expected: 1.0.28 has no prompt and 1.0.36 is current |
+| `help_link_opened`, `signed_out` | not seen among real users (read through the real-user ID list; see §58.8) |
+
+**What's New opens for brand-new installs.** `UpdatePromptPolicy.whatsNewDue` is true whenever the stored version differs from the installed one, and a fresh install has none — the same state as an update from 1.0.28, which never stored one. So a person finishes onboarding and is shown "what changed" in an app they have just met. **Fixed in the working tree (§58.8):** `OnboardingViewModel.complete()` marks the installed version seen once the journey exists. Still open, deliberately: a fresh install that signs in to an *existing* account (no onboarding) still gets the sheet — they are not new to Cirrus, and a reinstall may well have skipped versions.
+
+### 58.5 What to add to analytics — ranked by what the 100x brief needs
+
+1. **Install attribution (blocking for step b/c) — not built, needs the founder.** No install source reaches Amplitude or RevenueCat: no Apple AdServices token, no Play Install Referrer, so the cost and earnings of a paid install cannot be tied to anything. RevenueCat's AdServices attribution collection and the Play referrer, both mirrored onto the Amplitude user.
+2. **User properties — built (§58.8), method and notification permission only.** There were none (`setUserProperties` was never called). Method, plan day, notification permission (re-read each launch, so a later refusal in iOS Settings shows), install version, quit status — every split in §58.3 had to be rebuilt by hand from events.
+3. **`reminder_scheduled{kind}`** (what was armed for tomorrow), so `reminder_opened` becomes an open rate instead of a count. Not built: the coordinator re-arms on every sync, so as an event it would flood the funnel; if it comes, it comes as a count on the user.
+4. **`account_deleted` — built (§58.8), without the reason picker** (that is new UI and six locales of copy, a separate decision). ASC deletions are opt-in and cannot be joined to anyone; the in-app deletion is the only "why" there will ever be.
+5. Tag every external link with an App Store `ct` campaign token (ChatGPT cannot be tagged, which is fine — App Store names it).
+
+### 58.6 The site (cirrusquit.com) — audited, small fixes made, nothing deployed
+
+Fixed in the working tree (`cirrus-landing/`, uncommitted, `npm run build` + `verify` + `check` green): a generated **`/llms.txt`** (published posts only, untagged store links); **`/sitemap.xml` → `/sitemap-index.xml`** 301 (it was 404); **`/privacyr` → `/privacy` and `/termsr` → `/terms`** 301 (real visitors hit both typos; the typo is in neither the repo nor App Store Connect, so probably the Play listing).
+
+Checked and fine: robots.txt (identical to the build, Googlebot/Bingbot allowed), sitemap (28 URLs, all 200, canonicals match, reciprocal hreflang), no stray `noindex`, valid JSON-LD, ~16 KB pages, 75–130 ms TTFB. Cloudflare AI Crawl Control lists nothing blocked; its 404s are scanners probing `/.env`, `/jenkins/…`, `/etc/passwd`. **Unresolved:** spoofed GPTBot, ClaudeBot, CCBot, Bytespider and Amazonbot get **403 at the edge** (search and assistant bots — OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot, Googlebot, Bingbot — get 200). That fits robots.txt's `ai-train=no`, but `robots.txt.ts` says blocking is by verified signature only; Security → Events should show which rule does it.
+
+Needs the founder: Search Console (coverage, impressions by date, a live URL test), the `cirrus-landing.pages.dev` noindex header (snippet in the site agent's report, host-scoped so not testable locally), the double hop on `http://www.cirrusquit.com`, the Play listing's privacy URL, and `npm run deploy` when happy.
+
+### 58.7 Not checked
+
+Per-person timelines for the one-day leavers (the profile page's request shape could not be replayed); Google Play Console; App Store ratings and reviews; Search Console; Cloudflare security events.
+
+### 58.8 Built in the same session (uncommitted)
+
+- **What's New no longer opens on a first install.** `OnboardingViewModel.complete()` awaits `installedVersionProvider` after `startJourney` and calls `markWhatsNewSeen` with hydrated settings only. `test/data/onboarding_test.dart` "What's New is for an update, never a first install" (red before the change: `Expected '1.0.36', Actual null`); its null-version case is a guard, not proof — it passed before the fix too.
+- **`account_deleted{plan_day, past_freedom, premium}`**, the `signed_out` shape. `JourneyStore.deleteAccount` reads where the person was before the await and sends only after the backend confirms, before `analytics.reset()`. `test/data/retention_events_test.dart` pins the order and that a refused deletion sends nothing.
+- **User properties.** `AnalyticsSink.setUserProperties` on the port (Amplitude through `_guard` as an `Identify`, Firebase one `setUserProperty` per key, `FanOutAnalytics` guarded per sink, every test fake updated). Keys in `LpUserProps` (`quit_method`, `push_permission`, values are enum `.name` so they match `method_chosen`). `AnalyticsProfile` sends only a changed value and forgets on a change of account; `_ServerStateSync` feeds it from the journey (method, keyed with the alias) and the OS permission on launch and on every resume. `test/widgets/analytics_profile_test.dart` (6) — the two wiring cases go red with the wiring removed; `analytics_test` pins fan-out, the throwing sink, Noop, and that an early property waits for Amplitude's init.
+- **Device suites checked by reading, not run:** the only suite booting with a real installed version, `s_update_prompt_test.dart`, reaches Home by email sign-in, never onboarding, so it still meets What's New as before.
+- **Reading these in December:** count `signed_out` and `account_deleted` **without** the real-user ID segment first. Both fire just before `analytics.reset()`; if a native SDK ever stamps one after the reset, it lands under a fresh anonymous id the allow-list does not contain. GA4 shows `quit_method`/`push_permission` only once each is registered as a user-scoped custom dimension.
+- **Not proven:** none of it on a device, and nothing has reached Amplitude — analytics reports from a release build only (or `LP_ANALYTICS=on`). The first 1.0.37 cohort is where `quit_method`/`push_permission` should appear on users and `account_deleted` in the event list.
+
+### 58.9 Store search: a draft for the founder (nothing changed in App Store Connect)
+
+§58.2 found the ceiling is how often the listing is SEEN (~200 search impressions a week, page conversion already top quartile). The listing as live on 1.0.36, read from App Store Connect on Nov 21:
+
+| Locale | Name | Subtitle | Keywords (chars) |
+|---|---|---|---|
+| en-US | Quit Vaping Tracker - Cirrus | Puff counter with AI coach | 98 — `puff counter,last puff,quit,vaping,vape tracker,nicotine,craving,stop,taper,cessation,habit,streak` |
+| es-ES, fr-FR, de-DE, it | localized | localized | 96–99 each |
+| **pt-BR, es-MX, en-GB** | **none** | | |
+
+What is wrong with it:
+
+1. **38 of en-US's 98 keyword characters repeat the name and subtitle** (`puff` twice, `counter`, `quit`, `vaping`, `tracker`). Apple already indexes those words from the name and subtitle and combines words across all three fields, so the repeats buy nothing.
+2. **No Brazil listing although the app speaks Portuguese.** Brazil's storefront shows the English page. Also, ASO vendors report (inferred by them, not documented by Apple) that the **US** storefront indexes Spanish (Mexico) and Portuguese (Brazil) metadata besides English, but **not** Spanish (Spain), so `es-ES` reaches no US Spanish speaker. AppTweak's table also lists French as indexed in the US; if that means `fr-FR`, its `vape,puff,cigarette,nicotine` already count there.
+3. Subtitle: `with` takes four characters that index nothing useful.
+
+The draft (lengths checked: name ≤ 30, subtitle ≤ 30, keywords ≤ 100):
+
+| Locale | Name | Subtitle | Keywords |
+|---|---|---|---|
+| en-US | unchanged | `Puff counter, AI coach & plan` (29; docs/06 §4's own formula) | `vape,stop,nicotine,craving,taper,smoke,free,cessation,habit,streak,last,addiction,withdrawal,ecig` (97) |
+| es-MX (new) | `Dejar de Vapear - Cirrus` (24) | `Contador de caladas y coach IA` (30) | `vapeador,vaper,cigarro,electrónico,desechable,nicotina,antojo,fumada,ansiedad,hábito,racha,dejar` (96) |
+| pt-BR (new) | `Parar de Usar Vape - Cirrus` (27) | `Contador de tragadas, coach IA` (30) | `vape,pod,cigarro,eletrônico,descartável,nicotina,fissura,vício,abstinência,parar,largar,hábito,plano` (100) |
+
+- Vocabulary is the site's (`cirrus-landing/src/i18n/{es,pt}.ts`: "dejar de vapear", "calada", "parar de usar vape", "tragada", "fissura"), per the translation-register rule. `pod` is the everyday Brazilian word for a vape. No brand names (Juul, Elf Bar, Zyn): Apple rejects trademarks in keywords.
+- **Judgement calls for the founder:** `smoke` and `free` (pull in "quit smoking"/"smoke free" searches — relevant to the former smokers the quiz now asks about, broader than the product); each new locale also needs its description, promotional text and screenshots (es-ES and the pt site copy are the source).
+- **The app's own Portuguese is European, the site's is Brazilian.** `app_pt.arb` says `REGISTAR PASSA` (pt-PT spelling and word); the site and this draft say `tragada`. A Brazilian who installs from a pt-BR page meets pt-PT inside. Not changed here; it is a translation decision.
+- **Timing:** January is the quit-resolution month. Keyword changes ride a version submission, so they need to go out with 1.0.37 before about Dec 20 to be indexed for it.
+- **How to judge it** (ASC analytics recipe in memory): weekly `impressionsTotal` from App Store search and `units` by `source`, four weeks before (Oct 26 – Nov 22: impressions 209, 249, 209, 163; search downloads 12, 10, 5, 5) against the four weeks after the new listing goes live. January will lift everything, so compare search's share of downloads, not only its count.
+
+Sources for the storefront-indexing claim: [AppTweak, cross-localization](https://www.apptweak.com/en/aso-blog/how-to-benefit-from-cross-localization-on-the-app-store), [Sensor Tower, iOS keyword localization](https://sensortower.com/blog/ios-keyword-localization-guide), [MobileAction, cross-localization](https://www.mobileaction.co/blog/app-store-cross-localization/).

@@ -26,3 +26,18 @@
 # only an improvement — and it means no 301 was ever served, so there are no
 # permanently-cached redirects in anyone's browser to work around. The
 # destination is whatever we deploy next.
+
+# /sitemap.xml is the name tools probe when they do not read robots.txt, and
+# the name people type into Search Console by habit. It answered 404 (checked
+# Nov 21 2026): @astrojs/sitemap writes sitemap-index.xml, which robots.txt
+# names. A 301 so a guess, or a sitemap submitted under the default name,
+# still reaches the real index.
+/sitemap.xml  /sitemap-index.xml  301
+
+# Real visitors arrive at /privacyr and /termsr (Cloudflare Web Analytics,
+# Nov 21 2026) and got a 404. The typo is in none of our sources and not in
+# App Store Connect, which names /privacy — so it is printed somewhere we do not
+# control (most likely a store listing). Catch it here rather than lose them;
+# fix the listing when it is found, and keep these anyway.
+/privacyr  /privacy  301
+/termsr  /terms  301

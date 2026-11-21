@@ -2,6 +2,25 @@ import '../logic/games/game_id.dart';
 import '../logic/widget_prompt_policy.dart';
 import 'analytics.dart';
 
+/// The user properties (`AnalyticsSink.setUserProperties`): facts about the
+/// person, not about one moment, so a retention chart can be split by them.
+///
+/// The two splits the Nov 21 2026 read found between who came back and who
+/// did not (docs/10 §58.3), each of which had to be rebuilt by hand from
+/// onboarding events. Values are enum `.name`s — the same spelling
+/// `method_chosen` already puts in the dashboard, so the two line up.
+abstract final class LpUserProps {
+  /// `QuitMethod.name`: `taper` or `coldTurkey`. Follows a new plan.
+  static const quitMethod = 'quit_method';
+
+  /// `PushPermission.name`: `granted`, `denied` or `notAsked`. Re-read on
+  /// launch and on every resume, because a change in system settings is
+  /// never announced to the app.
+  static const pushPermission = 'push_permission';
+
+  static const all = [quitMethod, pushPermission];
+}
+
 /// The server-enforced allowances a person can run out of.
 ///
 /// Only limits the BACKEND refuses belong here. A client-side gate reports
@@ -541,6 +560,26 @@ extension LpEvents on AnalyticsSink {
     required bool premium,
   }) => track(
     AnalyticsEvent('signed_out', {
+      'plan_day': planDay,
+      'past_freedom': pastFreedom.toString(),
+      'premium': premium.toString(),
+    }),
+  );
+
+  /// Somebody deleted their account, and where they were when they did.
+  ///
+  /// App Store Connect counts deletions of the APP only for people who share
+  /// analytics with developers, and can never say who they were — 43 of them
+  /// against 63 installs in the 90 days to Nov 21 2026 (docs/10 §58.5). This
+  /// is the one leaving that can be joined to a person's funnel. Fired only
+  /// once the backend has confirmed the erasure, and before the identity is
+  /// reset, so it lands under the account that left.
+  void accountDeleted({
+    required int planDay,
+    required bool pastFreedom,
+    required bool premium,
+  }) => track(
+    AnalyticsEvent('account_deleted', {
       'plan_day': planDay,
       'past_freedom': pastFreedom.toString(),
       'premium': premium.toString(),

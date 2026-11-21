@@ -330,5 +330,8 @@ class _Recording implements AnalyticsSink {
   void identify(String userId) {}
 
   @override
+  void setUserProperties(Map<String, Object> properties) {}
+
+  @override
   void reset() {}
 }

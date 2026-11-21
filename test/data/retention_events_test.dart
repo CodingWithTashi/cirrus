@@ -159,6 +159,47 @@ void main() {
       });
     });
   });
+
+  group('account_deleted', () {
+    // App Store Connect counts deletions of the app only for people who share
+    // analytics, and can never say who they were (docs/10 §58.5). Deleting the
+    // account in the app is the one leaving that can be joined to a person.
+    test('is reported with where the person was, before the identity goes', () async {
+      final order = _Ordered();
+      final (c, _) = boot(sink: order, premium: false);
+      await c.read(quitStoreProvider.notifier).deleteAccount();
+
+      final at = order.log.indexOf('account_deleted');
+      expect(at, isNonNegative);
+      expect(at, lessThan(order.log.indexOf('<reset>')));
+      expect(order.props['account_deleted'], {
+        'plan_day': 5,
+        'past_freedom': 'false',
+        'premium': 'false',
+      });
+    });
+
+    test('is not reported when the deletion fails', () async {
+      final order = _Ordered();
+      final c = ProviderContainer(
+        overrides: fastBackendOverrides(
+          now: now,
+          analytics: order,
+          online: false,
+        ),
+      );
+      addTearDown(c.dispose);
+      c
+          .read(quitStoreProvider.notifier)
+          .replaceForTest(journeyOnDay(5, now: now));
+
+      await expectLater(
+        c.read(quitStoreProvider.notifier).deleteAccount(),
+        throwsA(anything),
+      );
+      expect(order.log, isNot(contains('account_deleted')));
+    });
+  });
 }
 
 /// Records events and resets in one list, so "before the reset" is checkable.
@@ -177,6 +218,9 @@ class _Ordered implements AnalyticsSink {
 
   @override
   void identify(String userId) {}
+
+  @override
+  void setUserProperties(Map<String, Object> properties) {}
 
   @override
   void reset() => log.add('<reset>');

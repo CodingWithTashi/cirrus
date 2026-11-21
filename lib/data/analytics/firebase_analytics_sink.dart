@@ -41,6 +41,16 @@ final class FirebaseAnalyticsSink implements AnalyticsSink {
   void identify(String userId) =>
       _guard('identify', () => _analytics.setUserId(id: userId));
 
+  // Firebase takes one string per call; `setUserProperty` throws on a bad
+  // name, which `_guard` keeps from reaching the caller.
+  @override
+  void setUserProperties(Map<String, Object> properties) =>
+      _guard('user_properties', () async {
+        for (final MapEntry(:key, :value) in properties.entries) {
+          await _analytics.setUserProperty(name: key, value: '$value');
+        }
+      });
+
   @override
   void reset() => _guard('reset', () async {
     await _analytics.setUserId(id: null);

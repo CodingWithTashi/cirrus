@@ -347,12 +347,16 @@ void main() {
         ..puffLogged()
         ..screenViewed('/home')
         ..identify('uid-1')
+        ..setUserProperties({'quit_method': 'taper'})
         ..reset();
 
       for (final sink in [a, b]) {
         expect(sink.names, ['puff_logged']);
         expect(sink.screens, ['/home']);
         expect(sink.identified, ['uid-1']);
+        expect(sink.userProperties, [
+          {'quit_method': 'taper'},
+        ]);
         expect(sink.resets, 1);
       }
     });
@@ -366,11 +370,18 @@ void main() {
       expect(() => fanOut.puffLogged(), returnsNormally);
       expect(() => fanOut.screenViewed('/home'), returnsNormally);
       expect(() => fanOut.identify('uid-1'), returnsNormally);
+      expect(
+        () => fanOut.setUserProperties({'quit_method': 'taper'}),
+        returnsNormally,
+      );
       expect(() => fanOut.reset(), returnsNormally);
 
       expect(healthy.names, ['puff_logged']);
       expect(healthy.screens, ['/home']);
       expect(healthy.identified, ['uid-1']);
+      expect(healthy.userProperties, [
+        {'quit_method': 'taper'},
+      ]);
       expect(healthy.resets, 1);
     });
   });
@@ -382,6 +393,7 @@ void main() {
         ..puffLogged()
         ..screenViewed('/home')
         ..identify('uid-1')
+        ..setUserProperties({'quit_method': 'taper'})
         ..reset();
     }, returnsNormally);
   });
@@ -436,14 +448,16 @@ void main() {
 
     AmplitudeAnalytics(Amplitude(Configuration(apiKey: 'k'), channel))
       ..puffLogged()
-      ..screenViewed('/home');
+      ..screenViewed('/home')
+      // A user property set on the first frame is exactly as early.
+      ..setUserProperties({'quit_method': 'taper'});
     await pumpEventQueue();
     expect(calls, isEmpty, reason: 'nothing may be sent before init lands');
 
     initReleased.complete();
     await pumpEventQueue();
-    // Both survived, in the order they were fired.
-    expect(calls, ['init', 'track', 'track']);
+    // All three survived, in the order they were fired.
+    expect(calls, ['init', 'track', 'track', 'identify']);
   });
 
   // The whole reason the event is emitted from the view model rather than
@@ -507,6 +521,10 @@ class _ThrowingAnalytics implements AnalyticsSink {
 
   @override
   void identify(String userId) => throw StateError('down');
+
+  @override
+  void setUserProperties(Map<String, Object> properties) =>
+      throw StateError('down');
 
   @override
   void reset() => throw StateError('down');

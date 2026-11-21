@@ -649,7 +649,21 @@ class JourneyStore extends Notifier<JourneyState?> {
   /// this and surfaces the failure — local state only clears once the backend
   /// confirms.
   Future<void> deleteAccount() async {
+    // Where they were, read before the await and sent only after it: a
+    // refused deletion left nobody (docs/10 §58.5).
+    final leaving = state;
+    final premium = ref.read(isPremiumProvider);
     await _auth.deleteAccount();
+    if (leaving != null) {
+      final day = leaving.plan.dayNumber(_now);
+      ref
+          .read(analyticsProvider)
+          .accountDeleted(
+            planDay: day,
+            pastFreedom: day > leaving.plan.totalDays,
+            premium: premium,
+          );
+    }
     ref.read(analyticsProvider).reset();
     ref.read(entitlementProvider.notifier).unbind().ignore();
     // As in `signOut`: erasing the account must erase the device's record of

@@ -498,12 +498,49 @@ class _ServerStateSyncState extends ConsumerState<_ServerStateSync> {
         // process Android froze overnight comes back on yesterday's date, and
         // its timers may never have fired.
         ref.read(dayClockProvider.notifier).refresh();
+        // Turning notifications off in system settings is never announced
+        // to the app; a resume is the first moment it can be noticed.
+        _reportPushPermission();
       },
       // A visit ends when the app leaves the screen: the next one may open a
       // modal again (one a visit — update prompt, What's New, the
       // notification ask, the rating ask; docs/10 §55).
       onHide: () => ref.read(visitModalsProvider.notifier).newVisit(),
     );
+    // Who the person is, for the dashboard (docs/10 §58.5). Keyed on the
+    // alias as well as the method so a change of account forgets what the
+    // last one was sent, even on the rare switch that never passes through
+    // signed-out — a value the old account had is news to the new one.
+    ref.listenManual(
+      quitStoreProvider.select(
+        (j) => j == null ? null : (j.plan.method, j.profile.alias),
+      ),
+      (previous, next) {
+        final profile = ref.read(analyticsProfileProvider);
+        if (next == null || previous?.$2 != next.$2) profile.forget();
+        if (next == null) return;
+        profile.report({LpUserProps.quitMethod: next.$1.name});
+        _reportPushPermission();
+      },
+      fireImmediately: true,
+    );
+  }
+
+  /// Only with a journey, and only where the OS can be asked (null on the
+  /// fake backend). Never throws: analytics must not break a resume.
+  Future<void> _reportPushPermission() async {
+    final permissions = ref.read(pushPermissionsProvider);
+    if (permissions == null || ref.read(quitStoreProvider) == null) return;
+    final PushPermission status;
+    try {
+      status = await permissions.status();
+    } on Object {
+      return;
+    }
+    if (!mounted || ref.read(quitStoreProvider) == null) return;
+    ref.read(analyticsProfileProvider).report({
+      LpUserProps.pushPermission: status.name,
+    });
   }
 
   @override
