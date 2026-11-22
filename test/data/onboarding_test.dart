@@ -374,4 +374,38 @@ void main() {
       expect(c.read(onboardingProvider).gender, isNull);
     });
   });
+
+  group("What's New is for an update, never a first install", () {
+    // A fresh install stores no seen version, which is exactly what an update
+    // from 1.0.28 (a build before What's New existed) looks like, so the
+    // sheet opened over Home for every brand-new person: all six new 1.0.36
+    // users in the Nov 21 read (docs/10 §58.4) were told "what changed" in an
+    // app they had met minutes before. Somebody who has just finished
+    // onboarding has seen this version, so the sheet is spent for it.
+    test('finishing onboarding marks the installed version as seen', () async {
+      final c = ProviderContainer(
+        overrides: fastBackendOverrides(
+          premium: false,
+          installedVersion: '1.0.36',
+        ),
+      );
+      addTearDown(c.dispose);
+      filled(c);
+
+      await c.read(onboardingProvider.notifier).complete();
+
+      expect(c.read(settingsStoreProvider).whatsNewSeenVersion, '1.0.36');
+    });
+
+    test('an unknown installed version marks nothing', () async {
+      // Where the platform cannot say (and in every other suite), the seen
+      // version stays untouched rather than being set to something invented.
+      final c = container();
+      filled(c);
+
+      await c.read(onboardingProvider.notifier).complete();
+
+      expect(c.read(settingsStoreProvider).whatsNewSeenVersion, isNull);
+    });
+  });
 }

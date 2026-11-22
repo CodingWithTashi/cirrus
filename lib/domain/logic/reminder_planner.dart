@@ -2,6 +2,7 @@ import '../models/journey_state.dart';
 import '../models/models.dart';
 import 'danger_hours.dart';
 import 'quit_program.dart';
+import 'reminder_tap.dart';
 
 /// One scheduled nudge: the local hour and minute it fires at.
 class ReminderSlot {
@@ -352,7 +353,8 @@ abstract final class MilestoneReminderPlanner {
 }
 
 /// One evening check-in — or, on a day the daily program has a message for, one
-/// program message — with when it fires and the plan day and limit it names.
+/// program message, or a plain morning on plan days 2 and 3 — with when it
+/// fires and the plan day and limit it names.
 class CheckinReminder {
   const CheckinReminder({
     required this.reminder,
@@ -360,9 +362,14 @@ class CheckinReminder {
     required this.totalDays,
     required this.limit,
     this.message,
+    this.slot = ProgramSlot.evening,
   });
 
   final OneShotReminder reminder;
+
+  /// Which half of the day it was armed for. A plain morning has no [message],
+  /// so this is the only thing that tells it from an evening check-in.
+  final ProgramSlot slot;
 
   /// The program message this carries, or null for a plain evening check-in.
   /// The copy for it is resolved by the caller (the scheduler has no
@@ -372,6 +379,10 @@ class CheckinReminder {
   /// What a tap on it reports and routes on.
   ReminderKind get kind =>
       message == null ? ReminderKind.checkin : ReminderKind.program;
+
+  /// The payload the notification carries, so a tap can say which one it was.
+  ReminderTap get tap =>
+      ReminderTap(kind, slot: slot, planDay: planDay, message: message);
 
   /// 1-based, as Home counts it; above [totalDays] means past Freedom Day.
   final int planDay;
@@ -383,7 +394,8 @@ class CheckinReminder {
   @override
   String toString() =>
       'CheckinReminder(${reminder.id}, ${reminder.at.toIso8601String()}, '
-      'day $planDay, limit $limit, ${message?.name ?? 'check-in'})';
+      'day $planDay, limit $limit, ${slot.name}, '
+      '${message?.name ?? 'check-in'})';
 }
 
 /// Decides when the evening check-in fires (docs/10 §51), and — from docs/15
@@ -427,6 +439,23 @@ class CheckinReminder {
 ///     once the day is confirmed.** A cold-turkey day is confirmed by morning,
 ///     and that rule would silence the quit day's evening message — the one the
 ///     program exists to send. On a day with no message the old rule stands
+///
+/// **A plain morning on plan days 2 and 3** (docs/10 §59) covers the gap the
+/// program leaves for a taper: cold turkey already gets its program mornings
+/// there, and a taper got nothing until the evening of day 2 — the day the
+/// first-week drop-off happens. For each of those two days, at the same
+/// morning hour the program uses, with id [planMorningFirstId] + the plan day:
+///   * only when the program has no morning that day, so it is never two
+///   * only inside the plan (`planDay <= totalDays`) — redundant while the
+///     program holds every morning of a plan that short, and kept so the rule
+///     stays true if its window ever moves — and only while still ahead of
+///     now: a morning already past arms none
+///   * dropped when any instant in `busy` (the coordinator's danger-hour
+///     nudges) falls within [busyMargin] of it, inclusive: two buzzes inside
+///     the hour read as spam, and the nudge is the one with a reason. Only
+///     this morning gives way — an evening check-in never does, as above
+///   * the plan day is counted from `plan.startDate`, so a plan started again
+///     arms its own day 2 and 3 and never the old plan's
 abstract final class CheckinReminderPlanner {
   /// Ids [firstId] … [firstId] + [window] − 1, clear of the danger-hour slots
   /// (1000–1023), the trial reminder (2000) and the milestones (3000+).
@@ -443,6 +472,19 @@ abstract final class CheckinReminderPlanner {
   static List<int> get morningIds => [
     for (var d = 0; d < morningCount; d++) morningFirstId + d,
   ];
+
+  /// The plain mornings, by plan day: 5100 + 2 and 5100 + 3. A hundred clear of
+  /// the program's 5000–5002 so neither range can reach the other.
+  static const int planMorningFirstId = 5100;
+  static const Set<int> planMorningDays = {2, 3};
+
+  static List<int> get planMorningIds => [
+    for (final d in planMorningDays) planMorningFirstId + d,
+  ];
+
+  /// How close a busy instant may sit to a plain morning before the morning
+  /// gives way.
+  static const Duration busyMargin = Duration(minutes: 60);
 
   /// Nine, or the first hour before noon that quiet hours leave open; null when
   /// there is none (the evening message still goes).
@@ -462,6 +504,7 @@ abstract final class CheckinReminderPlanner {
     required int quietStartHour,
     required int quietEndHour,
     required bool enabled,
+    Iterable<DateTime> busy = const [],
   }) {
     if (!enabled) return const [];
     if (ReminderPlanner.isQuiet(hour, quietStartHour, quietEndHour)) {
@@ -487,6 +530,27 @@ abstract final class CheckinReminderPlanner {
               totalDays: journey.plan.totalDays,
               limit: journey.limitOn(at),
               message: am,
+              slot: ProgramSlot.morning,
+            ),
+          );
+        }
+      } else if (amHour != null) {
+        final at = DateTime(day.year, day.month, day.day, amHour);
+        final planDay = journey.plan.dayNumber(at);
+        if (planMorningDays.contains(planDay) &&
+            planDay <= journey.plan.totalDays &&
+            at.isAfter(now) &&
+            !busy.any((b) => b.difference(at).abs() <= busyMargin)) {
+          out.add(
+            CheckinReminder(
+              reminder: OneShotReminder(
+                id: planMorningFirstId + planDay,
+                at: at,
+              ),
+              planDay: planDay,
+              totalDays: journey.plan.totalDays,
+              limit: journey.limitOn(at),
+              slot: ProgramSlot.morning,
             ),
           );
         }

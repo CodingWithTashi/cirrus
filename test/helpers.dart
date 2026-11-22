@@ -240,6 +240,13 @@ class RecordingAnalytics implements AnalyticsSink {
   @override
   void identify(String userId) => identified.add(userId);
 
+  /// Every `setUserProperties` call, in order.
+  final List<Map<String, Object>> userProperties = [];
+
+  @override
+  void setUserProperties(Map<String, Object> properties) =>
+      userProperties.add(properties);
+
   @override
   void reset() => resets++;
 }

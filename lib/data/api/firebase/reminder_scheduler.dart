@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../domain/logic/reminder_planner.dart';
+import '../../../domain/logic/reminder_tap.dart';
 
 /// What the coordinator needs from a scheduler. Exists so the scheduling
 /// DECISIONS can be tested without a platform channel — the decisions are the
@@ -22,19 +23,25 @@ abstract interface class ReminderSink {
   /// One notification at one instant — the trial-ending reminder and the
   /// milestone celebration. Replaces any earlier one with the same id.
   ///
-  /// [kind] becomes the payload, which is the only thing that tells a tap
+  /// [tap] becomes the payload, which is the only thing that tells a tap
   /// where to land. It was hardcoded to `trial` while that was the only
   /// one-shot; a second kind through the same door had to make it a parameter
-  /// or every milestone tap would have opened the trial-ending screen.
+  /// or every milestone tap would have opened the trial-ending screen. It is a
+  /// [ReminderTap] rather than a bare kind since the daily program's mornings:
+  /// the slot, the plan day and the message ride in the payload too, so the
+  /// tap can say which of them brought somebody back.
   ///
   /// Answers whether the notification is now on the device clock. A refusal
-  /// (plugin not initialised, permission revoked, the platform rejecting the
-  /// instant) is swallowed rather than thrown — reminders are never worth a
-  /// crash — but the caller has to know: a milestone marked "celebrated" on
-  /// the strength of a schedule that never armed is silenced for ever.
+  /// (plugin not initialised, the platform rejecting the instant) is swallowed
+  /// rather than thrown — reminders are never worth a crash — but the caller
+  /// has to know: a milestone marked "celebrated" on the strength of a
+  /// schedule that never armed is silenced for ever. A `true` is NOT an answer
+  /// about the OS notification permission: Android arms the alarm without
+  /// asking for it and iOS's plugin swallows the unauthorized add, so a phone
+  /// that refused notifications still answers true.
   Future<bool> scheduleOnce(
     OneShotReminder reminder, {
-    required ReminderKind kind,
+    required ReminderTap tap,
     required String title,
     required String body,
   });
@@ -47,7 +54,7 @@ abstract interface class ReminderSink {
   /// Taps on this app's reminders — while it runs, when it is resumed, and
   /// the tap that cold-started it (reported once the scheduler initialises).
   /// The sink only reports; routing is the app's decision.
-  Stream<ReminderKind> get opened;
+  Stream<ReminderTap> get opened;
 }
 
 /// Puts [ReminderSlot]s on the device clock.
@@ -74,29 +81,59 @@ class ReminderScheduler implements ReminderSink {
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
-  final _opened = StreamController<ReminderKind>.broadcast();
+  final _opened = StreamController<ReminderTap>.broadcast();
 
   @override
-  Stream<ReminderKind> get opened => _opened.stream;
+  Stream<ReminderTap> get opened => _opened.stream;
 
   /// A payload is text the OS hands back; anything not a known kind (an old
-  /// build's notification, a foreign one) is dropped rather than routed.
+  /// build's notification, a foreign one) is dropped rather than routed. A bare
+  /// kind name — every payload an older build armed — still decodes.
   void _report(String? payload) {
-    for (final kind in ReminderKind.values) {
-      if (kind.name == payload) {
-        _opened.add(kind);
-        return;
-      }
-    }
+    final tap = ReminderTap.decode(payload);
+    if (tap != null) _opened.add(tap);
   }
 
   static const _channelId = 'danger_hours';
   static const _trialChannelId = 'trial_reminders';
   static const _milestoneChannelId = 'milestone_celebrations';
-  static const _checkinChannelId = 'evening_checkins';
 
+  /// The check-in channel, defined ONCE: [_ensureAndroidChannels] creates it
+  /// and [oneShotDetails] names it from the same fields, so what Android holds
+  /// and what a notification claims cannot drift. The id is permanent and its
+  /// importance is immutable once the OS has it; see [oneShotDetails].
+  @visibleForTesting
+  static const checkinChannel = AndroidNotificationChannel(
+    'evening_checkins',
+    'Check-ins',
+    description: 'A morning or evening note about your plan.',
+    importance: Importance.defaultImportance,
+  );
+
+  /// The start in flight, so callers that arrive while it runs wait for it
+  /// instead of starting their own. The app fires `ReminderCoordinator.sync` on
+  /// every journey, settings and entitlement change without awaiting or
+  /// serializing it, so at a cold start two of them can be inside their first
+  /// call at once. Each used to initialize the plugin and read the tap that
+  /// launched the app, so a cold-start tap was reported twice as
+  /// `reminder_opened`.
+  Future<void>? _starting;
+
+  /// Starts the scheduler once; later and concurrent callers share that start.
+  /// A start that fails is forgotten, so the next call tries again, as it did
+  /// when the guard was only a flag set after the awaits.
   Future<void> _ensureReady() async {
     if (_ready) return;
+    final start = _starting ??= _start();
+    try {
+      await start;
+    } on Object {
+      if (identical(_starting, start)) _starting = null;
+      rethrow;
+    }
+  }
+
+  Future<void> _start() async {
     // A repeating daily alarm must be anchored in a real zone, not in UTC and
     // not in a fixed offset: without the database, a user who crosses DST gets
     // their 9pm nudge at 8pm for half the year.
@@ -126,6 +163,7 @@ class ReminderScheduler implements ReminderSink {
       ),
       onDidReceiveNotificationResponse: (response) => _report(response.payload),
     );
+    await _ensureAndroidChannels();
     _ready = true;
     // The tap that launched the app arrives here, not through the callback:
     // the process did not exist when it happened.
@@ -136,6 +174,36 @@ class ReminderScheduler implements ReminderSink {
       }
     } on Object catch (error) {
       debugPrint('reminders: launch details failed — $error');
+    }
+  }
+
+  /// Creates [checkinChannel] explicitly, on Android only.
+  ///
+  /// Naming a channel in a notification's details does not do this job: the
+  /// plugin creates a channel from details only when the id is missing, and its
+  /// default `channelAction` never updates one (flutter_local_notifications
+  /// 23.0.2, `FlutterLocalNotificationsPlugin.java`,
+  /// `canCreateNotificationChannel`). An install that already holds the old
+  /// words would keep them for ever. `channelAction: update` is no answer
+  /// either: it skips a channel that does not exist, so a fresh install would
+  /// lose the notification. `createNotificationChannel` through the Android
+  /// plugin always runs, whatever the channel's state, and Android then
+  /// updates only the name and description of an existing id. Same call
+  /// `PushService.ensureAndroidChannels` makes for the push channels.
+  ///
+  /// A failure is logged and swallowed, like every other reminder step: the
+  /// notification still posts, and the channel is created from its details if
+  /// this did not.
+  Future<void> _ensureAndroidChannels() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(checkinChannel);
+    } on Object catch (error) {
+      debugPrint('reminders: channel create failed — $error');
     }
   }
 
@@ -168,7 +236,7 @@ class ReminderScheduler implements ReminderSink {
           matchDateTimeComponents: DateTimeComponents.time,
           notificationDetails: _details(),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: ReminderKind.danger.name,
+          payload: const ReminderTap(ReminderKind.danger).encode(),
         );
       }
     } on Object catch (error) {
@@ -214,7 +282,7 @@ class ReminderScheduler implements ReminderSink {
   @override
   Future<bool> scheduleOnce(
     OneShotReminder reminder, {
-    required ReminderKind kind,
+    required ReminderTap tap,
     required String title,
     required String body,
   }) async {
@@ -228,9 +296,9 @@ class ReminderScheduler implements ReminderSink {
         // An absolute instant in the device's zone; the planner guarantees it
         // is in the future, which `zonedSchedule` insists on.
         scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
-        notificationDetails: oneShotDetails(kind, body),
+        notificationDetails: oneShotDetails(tap.kind, body),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        payload: kind.name,
+        payload: tap.encode(),
       );
       return true;
     } on Object catch (error) {
@@ -281,28 +349,38 @@ class ReminderScheduler implements ReminderSink {
   /// silenced by silencing something else.
   ///
   /// A program message (docs/15 stage B) takes over the evening check-in's slot,
-  /// so it shares that channel. [body] goes into a `BigTextStyleInformation`:
-  /// Android collapses a plain body to one line, and a message is a sentence or
-  /// two.
+  /// and the plain morning on plan days 2 and 3 rides the check-in kind, so all
+  /// three share one channel ([checkinChannel], id `evening_checkins`). **The
+  /// id is permanent** (it is the user's own switch in system settings, and
+  /// importance is immutable once created), but its words are not: they were
+  /// widened from "Evening check-ins" to "Check-ins" when the mornings arrived,
+  /// since the id says evening and the words do not.
+  ///
+  /// **The words reach an existing install through [_ensureAndroidChannels],
+  /// not through these details.** A channel named only here is created if it is
+  /// missing and never updated, so an upgraded install would keep the old name;
+  /// the scheduler therefore creates [checkinChannel] explicitly when it
+  /// initializes, and these details read the same constant so the two cannot
+  /// drift. That the upgraded install ends up with the new words rests on
+  /// Android's documented `createNotificationChannel` behaviour (an existing
+  /// id has only its name and description updated). A unit test
+  /// (`reminder_channel_test.dart`) proves the call is made, and the device
+  /// suite `integration_test/t_channel_rename_test.dart` is what shows the OS
+  /// honouring it, on a phone made to hold the old name first. Whether that
+  /// suite has run, and what it showed, is recorded in docs/10 §59.7.
+  ///
+  /// [body] goes into a `BigTextStyleInformation` for both: Android collapses a
+  /// plain body to one line, and a message, or the morning's "line is N puffs,
+  /// log each one" sentence, is longer.
   @visibleForTesting
   static NotificationDetails oneShotDetails(ReminderKind kind, String body) =>
       switch (kind) {
-        ReminderKind.checkin => const NotificationDetails(
+        ReminderKind.checkin || ReminderKind.program => NotificationDetails(
           android: AndroidNotificationDetails(
-            _checkinChannelId,
-            'Evening check-ins',
-            channelDescription: 'One nudge an evening to log how the day went.',
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-          ),
-          iOS: DarwinNotificationDetails(),
-        ),
-        ReminderKind.program => NotificationDetails(
-          android: AndroidNotificationDetails(
-            _checkinChannelId,
-            'Evening check-ins',
-            channelDescription: 'One nudge an evening to log how the day went.',
-            importance: Importance.defaultImportance,
+            checkinChannel.id,
+            checkinChannel.name,
+            channelDescription: checkinChannel.description,
+            importance: checkinChannel.importance,
             priority: Priority.defaultPriority,
             styleInformation: BigTextStyleInformation(body),
           ),

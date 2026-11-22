@@ -2,6 +2,7 @@ import 'package:amplitude_flutter/amplitude.dart';
 import 'package:amplitude_flutter/autocapture/autocapture.dart';
 import 'package:amplitude_flutter/configuration.dart';
 import 'package:amplitude_flutter/events/base_event.dart';
+import 'package:amplitude_flutter/events/identify.dart';
 import 'package:amplitude_flutter/observers/amplitude_navigator_observer.dart';
 import 'package:amplitude_flutter/tracking_options.dart';
 import 'package:flutter/foundation.dart';
@@ -104,6 +105,16 @@ final class AmplitudeAnalytics implements AnalyticsSink {
   @override
   void identify(String userId) =>
       _guard('identify', () => _amplitude.setUserId(userId));
+
+  // Chained onto init like everything else: the first value is set on the
+  // same frame that builds this object.
+  @override
+  void setUserProperties(Map<String, Object> properties) =>
+      _guard('user_properties', () {
+        final identify = Identify();
+        properties.forEach(identify.set);
+        return _amplitude.identify(identify);
+      });
 
   @override
   void reset() => _guard('reset', () => _amplitude.reset());

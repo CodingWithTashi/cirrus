@@ -2,6 +2,34 @@ import '../logic/games/game_id.dart';
 import '../logic/widget_prompt_policy.dart';
 import 'analytics.dart';
 
+/// The user properties (`AnalyticsSink.setUserProperties`): facts about the
+/// person, not about one moment, so a retention chart can be split by them.
+///
+/// The two splits the Nov 21 2026 read found between who came back and who
+/// did not (docs/10 §58.3), each of which had to be rebuilt by hand from
+/// onboarding events. Values are enum `.name`s — the same spelling
+/// `method_chosen` already puts in the dashboard, so the two line up.
+abstract final class LpUserProps {
+  /// `QuitMethod.name`: `taper` or `coldTurkey`. Follows a new plan.
+  static const quitMethod = 'quit_method';
+
+  /// `PushPermission.name`: `granted`, `denied` or `notAsked`. Re-read on
+  /// launch and on every resume, because a change in system settings is
+  /// never announced to the app.
+  static const pushPermission = 'push_permission';
+
+  /// `armed`, once the plan-day-2 morning reminder is on the device's clock
+  /// for this person. A reminder nobody was ever sent cannot show in
+  /// `reminder_opened`, so this is what separates "did not open it" from "was
+  /// never offered it" when the day-2 return is read. It says nothing about
+  /// the OS notification permission (Android arms an alarm without asking for
+  /// it, iOS's plugin swallows the unauthorized add), so read it with
+  /// [pushPermission] `granted`: armed and granted is who could have seen it.
+  static const day2Morning = 'day2_morning';
+
+  static const all = [quitMethod, pushPermission, day2Morning];
+}
+
 /// The server-enforced allowances a person can run out of.
 ///
 /// Only limits the BACKEND refuses belong here. A client-side gate reports
@@ -171,12 +199,32 @@ extension LpEvents on AnalyticsSink {
   /// trial heads-up, a milestone, the evening check-in. [kind] is the
   /// `ReminderKind` name.
   ///
+  /// The other three say which one, and are tracked only when the notification
+  /// carried them (`ReminderTap`, read off its payload): [slot] is the
+  /// `ProgramSlot` name (`morning` or `evening`), [planDay] the plan day it was
+  /// armed for, and [message] the `ProgramMessage` id of a program message.
+  /// They ride in the payload and not in anything recomputed at tap time, so
+  /// they are what the phone promised and not what the day has since become;
+  /// a notification armed by an older build has none of them and reports its
+  /// [kind] alone, as it always did.
+  ///
   /// `push_opened` covers what the server sends and nothing here did: until
   /// Oct 16 2026 a reminder tap reported nothing at all, so whether any of
   /// them ever brought somebody back was unknowable — the very question the
   /// evening check-in was added to answer.
-  void reminderOpened(String kind) =>
-      track(AnalyticsEvent('reminder_opened', {'kind': kind}));
+  void reminderOpened(
+    String kind, {
+    String? slot,
+    int? planDay,
+    String? message,
+  }) => track(
+    AnalyticsEvent('reminder_opened', {
+      'kind': kind,
+      'slot': ?slot,
+      'plan_day': ?planDay,
+      'message': ?message,
+    }),
+  );
 
   /// A push was tapped, and where it went.
   ///
@@ -541,6 +589,26 @@ extension LpEvents on AnalyticsSink {
     required bool premium,
   }) => track(
     AnalyticsEvent('signed_out', {
+      'plan_day': planDay,
+      'past_freedom': pastFreedom.toString(),
+      'premium': premium.toString(),
+    }),
+  );
+
+  /// Somebody deleted their account, and where they were when they did.
+  ///
+  /// App Store Connect counts deletions of the APP only for people who share
+  /// analytics with developers, and can never say who they were — 43 of them
+  /// against 63 installs in the 90 days to Nov 21 2026 (docs/10 §58.5). This
+  /// is the one leaving that can be joined to a person's funnel. Fired only
+  /// once the backend has confirmed the erasure, and before the identity is
+  /// reset, so it lands under the account that left.
+  void accountDeleted({
+    required int planDay,
+    required bool pastFreedom,
+    required bool premium,
+  }) => track(
+    AnalyticsEvent('account_deleted', {
       'plan_day': planDay,
       'past_freedom': pastFreedom.toString(),
       'premium': premium.toString(),

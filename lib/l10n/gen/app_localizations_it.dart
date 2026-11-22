@@ -1368,7 +1368,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get obNotifBullet3 =>
-      'Le prime tre mattine dalla tua data. Nient\'altro — zero marketing, mai';
+      'Un messaggio la mattina nei primi giorni del tuo piano e le prime tre mattine dalla tua data. Nient\'altro — zero marketing, mai';
 
   @override
   String get obNotifCta => 'Attiva i rinforzi';
@@ -3871,7 +3871,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsCheckinBody =>
-      'Un messaggio ogni sera sul tuo piano, più le prime tre mattine dalla tua data. Si ferma da solo dopo una settimana senza aprire Cirrus.';
+      'Un messaggio ogni sera sul tuo piano, uno la mattina nei suoi primi giorni e le prime tre mattine dalla tua data. Si ferma da solo dopo una settimana senza aprire Cirrus.';
 
   @override
   String get settingsCheckinToggle => 'Mandami il messaggio del giorno';
@@ -4144,6 +4144,31 @@ class AppLocalizationsIt extends AppLocalizations {
       'Oggi si punta a zero. Tocca per confermare il giorno senza svapo.';
 
   @override
+  String morningNotifTitle(int day) {
+    return 'Giorno $day';
+  }
+
+  @override
+  String get morningNotifTitlePast => 'Buongiorno';
+
+  @override
+  String morningNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'Il limite di oggi è $limit tiri. Segna ogni tiro appena lo fai, anche il primo.',
+      one:
+          'Il limite di oggi è 1 tiro. Segna ogni tiro appena lo fai, anche il primo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get morningNotifBodyZero =>
+      'Oggi si punta a zero. Se arriva la voglia, apri Cirrus e dalle sessanta secondi.';
+
+  @override
   String get communityLoading => 'Sto caricando il feed…';
 
   @override
@@ -4327,7 +4352,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get pushAskDayOneBody =>
-      'Il punto della sera con il tuo limite, un avviso prima dei tuoi orari a rischio e due parole quando raggiungi un traguardo.';
+      'Il punto del mattino e della sera con il tuo limite, un avviso prima dei tuoi orari a rischio e due parole quando raggiungi un traguardo.';
 
   @override
   String get pushAskSurvivedTitle => 'Rinforzi per la prossima volta?';

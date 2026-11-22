@@ -2395,7 +2395,7 @@ abstract class AppLocalizations {
   /// No description provided for @obNotifBullet3.
   ///
   /// In en, this message translates to:
-  /// **'The first three mornings from your date. Nothing else — no marketing, ever'**
+  /// **'A morning on your plan\'s first days, and the first three mornings from your date. Nothing else — no marketing, ever'**
   String get obNotifBullet3;
 
   /// No description provided for @obNotifCta.
@@ -6192,7 +6192,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCheckinBody.
   ///
   /// In en, this message translates to:
-  /// **'One message an evening about your plan, plus the first three mornings from your date. It stops by itself after a week without you opening Cirrus.'**
+  /// **'One message an evening about your plan, a morning on its first days, and the first three mornings from your date. It stops by itself after a week without you opening Cirrus.'**
   String get settingsCheckinBody;
 
   /// No description provided for @settingsCheckinToggle.
@@ -6633,6 +6633,30 @@ abstract class AppLocalizations {
   /// **'A zero day. Tap to confirm it stayed vape-free.'**
   String get checkinNotifBodyZero;
 
+  /// No description provided for @morningNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day}'**
+  String morningNotifTitle(int day);
+
+  /// No description provided for @morningNotifTitlePast.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get morningNotifTitlePast;
+
+  /// No description provided for @morningNotifBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{limit, plural, =1{Today\'s line is 1 puff. Log each one as it happens, the first one too.} other{Today\'s line is {limit} puffs. Log each one as it happens, the first one too.}}'**
+  String morningNotifBody(int limit);
+
+  /// No description provided for @morningNotifBodyZero.
+  ///
+  /// In en, this message translates to:
+  /// **'A zero line today. If a craving hits, open Cirrus and give it sixty seconds.'**
+  String get morningNotifBodyZero;
+
   /// No description provided for @communityLoading.
   ///
   /// In en, this message translates to:
@@ -6954,7 +6978,7 @@ abstract class AppLocalizations {
   /// No description provided for @pushAskDayOneBody.
   ///
   /// In en, this message translates to:
-  /// **'An evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.'**
+  /// **'A morning and an evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.'**
   String get pushAskDayOneBody;
 
   /// No description provided for @pushAskSurvivedTitle.

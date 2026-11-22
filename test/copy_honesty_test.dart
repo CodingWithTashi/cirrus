@@ -322,10 +322,11 @@ void main() {
 
   /// docs/15 QP-B6. The permission screen is where somebody decides to allow
   /// notifications, once. Now that the daily program exists it must say so —
-  /// and say that the extra mornings are the first three from the date, which
-  /// is all the program ever adds — rather than keep promising "nothing else".
+  /// and say that the extra mornings are the first three from the date and one
+  /// on each of the plan's first days, which is all that is ever added —
+  /// rather than keep promising "nothing else".
   test('the notification permission screen names the daily message and the '
-      'three mornings', () {
+      'mornings', () {
     const dailyMessage = {
       'en': 'daily message',
       'es': 'mensaje diario',
@@ -342,6 +343,29 @@ void main() {
       'it': 'prime tre mattine',
       'pt': 'primeiras três manhãs',
     };
+    // The plain morning on plan days 2 and 3 (docs/superpowers/specs/
+    // 2026-11-21-day2-morning-design.md §4.3). For a taper "your date" is
+    // Freedom Day, so a promise of only the three mornings from it would be
+    // broken on the plan's second day by a morning the person agreed to
+    // without being told of it.
+    const firstDays = {
+      'en': 'first days',
+      'es': 'primeros días',
+      'fr': 'premiers jours',
+      'de': 'ersten tagen',
+      'it': 'primi giorni',
+      'pt': 'primeiros dias',
+    };
+    // The Day-1 ask is the first the phone asks for anybody who skipped the
+    // onboarding one, right before that morning, so it names the morning too.
+    const morning = {
+      'en': 'morning',
+      'es': 'mañana',
+      'fr': 'matin',
+      'de': 'morgen',
+      'it': 'mattin',
+      'pt': 'manhã',
+    };
     expect(ReminderKind.values, contains(ReminderKind.program));
     for (final locale in locales) {
       final strings = arb(locale);
@@ -355,15 +379,15 @@ void main() {
         contains(dailyMessage[locale]),
         reason: '$locale/obNotifSubtitle',
       );
+      for (final key in ['obNotifBullet3', 'settingsCheckinBody']) {
+        final value = (strings[key] as String).toLowerCase();
+        expect(value, contains(threeMornings[locale]), reason: '$locale/$key');
+        expect(value, contains(firstDays[locale]), reason: '$locale/$key');
+      }
       expect(
-        (strings['obNotifBullet3'] as String).toLowerCase(),
-        contains(threeMornings[locale]),
-        reason: '$locale/obNotifBullet3',
-      );
-      expect(
-        (strings['settingsCheckinBody'] as String).toLowerCase(),
-        contains(threeMornings[locale]),
-        reason: '$locale/settingsCheckinBody',
+        (strings['pushAskDayOneBody'] as String).toLowerCase(),
+        contains(morning[locale]),
+        reason: '$locale/pushAskDayOneBody',
       );
     }
   });

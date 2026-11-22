@@ -3,18 +3,25 @@ import 'package:last_puff/data/api/firebase/reminder_scheduler.dart';
 import 'package:last_puff/data/stores/reminder_coordinator.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:last_puff/domain/logic/reminder_planner.dart';
+import 'package:last_puff/domain/logic/reminder_tap.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
 import 'package:last_puff/domain/models/models.dart';
+
+import '../helpers.dart' show journeyOnDay;
 
 /// Records what it was asked to schedule, so the coordinator's decisions can
 /// be asserted without touching the platform.
 class _FakeSink implements ReminderSink {
   @override
-  Stream<ReminderKind> get opened => const Stream.empty();
+  Stream<ReminderTap> get opened => const Stream.empty();
 
   final List<List<ReminderSlot>> applied = [];
   final List<OneShotReminder> scheduledOnce = [];
+
+  /// The whole payload of each one-shot, parallel to [scheduledOnce]: the
+  /// kind, and for a check-in the slot and plan day a tap will report.
+  final List<ReminderTap> taps = [];
   final List<ReminderKind> kinds = [];
   final List<String> bodies = [];
   final List<int> cancelled = [];
@@ -35,7 +42,7 @@ class _FakeSink implements ReminderSink {
   @override
   Future<bool> scheduleOnce(
     OneShotReminder reminder, {
-    required ReminderKind kind,
+    required ReminderTap tap,
     required String title,
     required String body,
   }) async {
@@ -43,7 +50,8 @@ class _FakeSink implements ReminderSink {
     scheduledOnce.add(reminder);
     // The payload is the only thing that tells a tap where to land, so which
     // kind went through this door is worth recording.
-    kinds.add(kind);
+    taps.add(tap);
+    kinds.add(tap.kind);
     bodies.add(body);
     return true;
   }
@@ -676,11 +684,12 @@ void main() {
         coordinator,
         settings: const SettingsState(checkinReminderOn: false),
       );
-      // Its evening slots and the program's three mornings: both are this
-      // schedule's, and both go when it does.
+      // Its evening slots, the program's three mornings and the plain
+      // mornings: all are this schedule's, and all go when it does.
       expect(sink.cancelled, [
         ...CheckinReminderPlanner.ids,
         ...CheckinReminderPlanner.morningIds,
+        ...CheckinReminderPlanner.planMorningIds,
       ]);
       expect(sink.scheduledOnce.length, armed);
       expect(sink.cancels, 0);
@@ -898,6 +907,249 @@ void main() {
       );
       expect(sink.scheduledOnce, isEmpty);
       expect(sink.cancelled, isEmpty);
+    });
+  });
+
+  // The plain morning on plan days 2 and 3 (docs/15): armed with the
+  // evenings, on its own ids, and out of the way of anything else this phone
+  // already says around nine.
+  group('the day-2 morning', () {
+    ({String title, String body}) copy(CheckinReminder c) =>
+        (title: 'Day ${c.planDay}', body: 'limit ${c.limit}');
+
+    // Plan day 1 is Sep 14 2026, so the mornings are Sep 15 and Sep 16.
+    final eve = DateTime(2026, 9, 14, 19);
+
+    Future<void> sync(
+      ReminderCoordinator coordinator, {
+      JourneyState? journey,
+      SettingsState settings = const SettingsState(hydrated: true),
+      void Function()? onDay2MorningArmed,
+    }) => coordinator.sync(
+      journey: journey ?? journeyOnDay(1, now: eve),
+      settings: settings,
+      title: title,
+      body: body,
+      checkinCopy: copy,
+      onDay2MorningArmed: onDay2MorningArmed,
+      now: () => eve,
+    );
+
+    /// The encoded tap of each armed one-shot, by id.
+    Map<int, String> tapsById(_FakeSink sink) => {
+      for (final (i, r) in sink.scheduledOnce.indexed)
+        r.id: sink.taps[i].encode(),
+    };
+
+    Set<int> morningIds(_FakeSink sink) => {
+      for (final r in sink.scheduledOnce)
+        if (CheckinReminderPlanner.planMorningIds.contains(r.id)) r.id,
+    };
+
+    test('a day-1 taper is armed 5102 and 5103 with morning taps', () async {
+      final sink = _FakeSink();
+      await sync(ReminderCoordinator(sink));
+
+      final taps = tapsById(sink);
+      expect(taps[5102], 'checkin|morning|2|');
+      expect(taps[5103], 'checkin|morning|3|');
+      // And the evenings say which half of the day they are, too.
+      expect(taps[4000], 'checkin|evening|1|');
+      expect(sink.scheduledOnce.singleWhere((r) => r.id == 5102).at,
+          DateTime(2026, 9, 15, 9));
+    });
+
+    test('every sync cancels the plain-morning ids too', () async {
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+      await sync(coordinator);
+      sink.cancelled.clear();
+
+      // A different limit changes every reminder's words, so it re-arms.
+      await sync(coordinator, journey: journeyOnDay(1, now: eve, baseline: 80));
+
+      expect(sink.cancelled, containsAll([5102, 5103]));
+      expect(sink.cancels, 0, reason: 'never cancelAll');
+    });
+
+    test('the 08:50 first-puff fallback drops the plain morning', () async {
+      final sink = _FakeSink();
+      final journey = journeyOnDay(1, now: eve);
+      await sync(
+        ReminderCoordinator(sink),
+        journey: journey.copyWith(
+          // `copyWith` cannot set the first-puff answer: build the profile.
+          profile: UserProfile(
+            alias: journey.profile.alias,
+            avatarEmoji: journey.profile.avatarEmoji,
+            smoking: SmokingHistory.never,
+            firstPuff: FirstPuffWindow.hourPlus,
+          ),
+        ),
+      );
+
+      final slot = sink.applied.single.single;
+      expect((slot.hour, slot.minute), (8, 50));
+      expect(
+        morningIds(sink),
+        isEmpty,
+        reason: '08:50 is ten minutes from 09:00',
+      );
+    });
+
+    test('a celebration armed for 09:00 drops that morning', () async {
+      final sink = _FakeSink();
+      await sync(
+        ReminderCoordinator(sink),
+        settings: SettingsState(
+          hydrated: true,
+          armedMilestoneAt: DateTime(2026, 9, 15, 9),
+        ),
+      );
+
+      expect(morningIds(sink), {5103});
+    });
+
+    test('a celebration armed in this very sync drops that morning', () async {
+      // `armedMilestoneAt` is only written once the coordinator reports the
+      // badge, so the instant armed in THIS sync has to come back to the
+      // check-in plan by hand — and stay dropped when the settings hold it.
+      final sink = _FakeSink();
+      final coordinator = ReminderCoordinator(sink);
+      final journey = journeyOnDay(
+        1,
+        now: eve,
+      ).copyWith(earnedBadges: {'spark'});
+      DateTime? armedAt;
+      Future<void> run(SettingsState settings) => coordinator.sync(
+        journey: journey,
+        settings: settings,
+        title: title,
+        body: body,
+        milestoneTitle: 'Come see your flame',
+        milestoneBody: (badgeId) => 'you earned $badgeId',
+        onMilestoneScheduled: (_, _, at) => armedAt = at,
+        checkinCopy: copy,
+        now: () => eve,
+      );
+
+      await run(const SettingsState(hydrated: true, milestonesAdopted: true));
+      expect(armedAt, DateTime(2026, 9, 15, 8));
+      expect(
+        morningIds(sink),
+        {5103},
+        reason: '08:00 is within an hour of 09:00',
+      );
+
+      // The next sync: the milestone is unchanged and returns nothing, and the
+      // settings now carry the instant. The morning must not come back.
+      final before = sink.scheduledOnce.length;
+      await run(
+        SettingsState(
+          hydrated: true,
+          milestonesAdopted: true,
+          armedMilestoneAt: armedAt,
+        ),
+      );
+      expect(sink.scheduledOnce.length, before);
+    });
+
+    test('a plan started again with morning history drops the plain morning',
+        () async {
+      // Three confirmed days of puffs at 09:00 before this plan's day one:
+      // the detected danger hour is 9, nudged at 08:50, daily.
+      final sink = _FakeSink();
+      final base = journeyOnDay(1, now: eve);
+      final earlier = {
+        for (final d in [11, 12, 13])
+          DateTime(2026, 9, d): DayLog(
+            date: DateTime(2026, 9, d),
+            puffs: 20,
+            limit: 100,
+            hourBuckets: const {9: 20},
+          ),
+      };
+      await sync(
+        ReminderCoordinator(sink),
+        journey: base.copyWith(
+          plan: base.plan.copyWith(planNumber: 2),
+          days: {...base.days, ...earlier},
+        ),
+      );
+
+      final slot = sink.applied.single.single;
+      expect((slot.hour, slot.minute), (8, 50));
+      expect(morningIds(sink), isEmpty);
+    });
+
+    group('reports itself', () {
+      test('day2 armed is reported once per sync that arms it', () async {
+        final sink = _FakeSink();
+        final coordinator = ReminderCoordinator(sink);
+        var armed = 0;
+
+        await sync(coordinator, onDay2MorningArmed: () => armed++);
+        expect(armed, 1);
+
+        // Nothing changed, nothing re-armed, nothing reported.
+        await sync(coordinator, onDay2MorningArmed: () => armed++);
+        expect(armed, 1);
+      });
+
+      test('not when the device refused it, and once it accepts', () async {
+        final sink = _FakeSink()..arms = false;
+        final coordinator = ReminderCoordinator(sink);
+        var armed = 0;
+
+        await sync(coordinator, onDay2MorningArmed: () => armed++);
+        expect(armed, 0);
+
+        sink.arms = true;
+        await sync(coordinator, onDay2MorningArmed: () => armed++);
+        expect(armed, 1);
+      });
+
+      test('a program morning on plan day 2 counts too', () async {
+        // Cold turkey on plan day 1: program day one's morning (5001) is the
+        // next day's, which is plan day 2, so it reports the same property.
+        // The condition is the slot and the plan day, not the plain morning.
+        final base = journeyOnDay(1, now: eve);
+        final cold = base.copyWith(
+          plan: base.plan.copyWith(method: QuitMethod.coldTurkey),
+        );
+        final sink = _FakeSink();
+        var armed = 0;
+        await ReminderCoordinator(sink).sync(
+          journey: cold,
+          settings: const SettingsState(hydrated: true),
+          title: title,
+          body: body,
+          checkinCopy: copy,
+          programCopy: (c) => (title: 'Day', body: 'program ${c.message!.name}'),
+          onDay2MorningArmed: () => armed++,
+          now: () => eve,
+        );
+        expect(tapsById(sink)[5001], startsWith('program|morning|2|'));
+        expect(morningIds(sink), isEmpty, reason: 'no plain morning here');
+        expect(armed, 1);
+      });
+
+      test('not for the day-3 morning alone', () async {
+        // Day 2's morning is already past: Sep 15 09:00 is behind it.
+        final sink = _FakeSink();
+        var armed = 0;
+        await ReminderCoordinator(sink).sync(
+          journey: journeyOnDay(1, now: eve),
+          settings: const SettingsState(hydrated: true),
+          title: title,
+          body: body,
+          checkinCopy: copy,
+          onDay2MorningArmed: () => armed++,
+          now: () => DateTime(2026, 9, 15, 10),
+        );
+        expect(morningIds(sink), {5103});
+        expect(armed, 0);
+      });
     });
   });
 }

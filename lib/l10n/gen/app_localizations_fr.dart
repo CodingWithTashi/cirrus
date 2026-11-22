@@ -1367,7 +1367,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get obNotifBullet3 =>
-      'Les trois premiers matins dès ta date. Rien d\'autre — jamais de marketing';
+      'Un mot le matin pendant les premiers jours de ton plan et les trois premiers matins dès ta date. Rien d\'autre — jamais de marketing';
 
   @override
   String get obNotifCta => 'Activer le renfort';
@@ -3862,7 +3862,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsCheckinBody =>
-      'Un message chaque soir sur ton plan, plus les trois premiers matins dès ta date. Il s\'arrête tout seul après une semaine sans ouvrir Cirrus.';
+      'Un message chaque soir sur ton plan, un autre le matin pendant ses premiers jours et les trois premiers matins dès ta date. Il s\'arrête tout seul après une semaine sans ouvrir Cirrus.';
 
   @override
   String get settingsCheckinToggle => 'M\'envoyer le message du jour';
@@ -4137,6 +4137,31 @@ class AppLocalizationsFr extends AppLocalizations {
       'Journée à zéro. Touche pour confirmer ton jour sans vape.';
 
   @override
+  String morningNotifTitle(int day) {
+    return 'Jour $day';
+  }
+
+  @override
+  String get morningNotifTitlePast => 'Bonjour';
+
+  @override
+  String morningNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'Ta ligne du jour : $limit taffes. Enregistre chacune sur le moment, même la première.',
+      one:
+          'Ta ligne du jour : 1 taffe. Enregistre chacune sur le moment, même la première.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get morningNotifBodyZero =>
+      'Journée à zéro. Si l\'envie monte, ouvre Cirrus et donne-lui soixante secondes.';
+
+  @override
   String get communityLoading => 'On charge le fil…';
 
   @override
@@ -4319,7 +4344,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pushAskDayOneBody =>
-      'Le point du soir avec ta limite, une alerte avant tes heures à risque et un mot quand tu atteins une étape.';
+      'Le point du matin et du soir avec ta limite, une alerte avant tes heures à risque et un mot quand tu atteins une étape.';
 
   @override
   String get pushAskSurvivedTitle => 'Du renfort pour la prochaine fois ?';

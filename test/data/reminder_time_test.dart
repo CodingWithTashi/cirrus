@@ -3,6 +3,7 @@ import 'package:last_puff/data/api/firebase/reminder_scheduler.dart';
 import 'package:last_puff/data/stores/reminder_coordinator.dart';
 import 'package:last_puff/data/stores/settings_store.dart';
 import 'package:last_puff/domain/logic/reminder_planner.dart';
+import 'package:last_puff/domain/logic/reminder_tap.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -171,7 +172,7 @@ void main() {
 
 class _RecordingSink implements ReminderSink {
   @override
-  Stream<ReminderKind> get opened => const Stream.empty();
+  Stream<ReminderTap> get opened => const Stream.empty();
 
   List<ReminderSlot> last = const [];
 
@@ -185,7 +186,7 @@ class _RecordingSink implements ReminderSink {
   @override
   Future<bool> scheduleOnce(
     OneShotReminder reminder, {
-    required ReminderKind kind,
+    required ReminderTap tap,
     required String title,
     required String body,
   }) async => true;

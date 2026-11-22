@@ -8,7 +8,9 @@ import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/api/firebase/reminder_scheduler.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/data/stores/reminder_coordinator.dart';
+import 'package:last_puff/domain/logic/quit_program.dart';
 import 'package:last_puff/domain/logic/reminder_planner.dart';
+import 'package:last_puff/domain/logic/reminder_tap.dart';
 
 import '../helpers.dart';
 
@@ -75,7 +77,7 @@ void main() {
 
   testWidgets('a trial reminder opens the trial-ending screen', (tester) async {
     final (container, sink) = await open(tester, entitlement: trial());
-    sink.taps.add(ReminderKind.trial);
+    sink.taps.add(const ReminderTap(ReminderKind.trial));
     await tester.pumpAndSettle();
     expect(path(container), Routes.trialEnding);
   });
@@ -89,7 +91,7 @@ void main() {
       tester,
       entitlement: FakeServer.demoEntitlementJson(DateTime.now()),
     );
-    sink.taps.add(ReminderKind.trial);
+    sink.taps.add(const ReminderTap(ReminderKind.trial));
     await tester.pumpAndSettle();
     expect(path(container), Routes.settings);
   });
@@ -100,7 +102,7 @@ void main() {
     final (container, sink) = await open(tester);
     container.read(routerProvider).go(Routes.stats);
     await tester.pumpAndSettle();
-    sink.taps.add(ReminderKind.danger);
+    sink.taps.add(const ReminderTap(ReminderKind.danger));
     await tester.pumpAndSettle();
     expect(path(container), Routes.home);
   });
@@ -115,7 +117,7 @@ void main() {
     final (container, sink) = await open(tester, analytics: analytics);
     container.read(routerProvider).go(Routes.stats);
     await tester.pumpAndSettle();
-    sink.taps.add(ReminderKind.checkin);
+    sink.taps.add(const ReminderTap(ReminderKind.checkin));
     await tester.pumpAndSettle();
     expect(path(container), Routes.home);
     expect(analytics.propsOfAll('reminder_opened'), [
@@ -133,7 +135,7 @@ void main() {
     final (container, sink) = await open(tester, analytics: analytics);
     container.read(routerProvider).go(Routes.stats);
     await tester.pumpAndSettle();
-    sink.taps.add(ReminderKind.program);
+    sink.taps.add(const ReminderTap(ReminderKind.program));
     await tester.pumpAndSettle();
     expect(path(container), Routes.home);
     expect(analytics.propsOfAll('reminder_opened'), [
@@ -141,9 +143,74 @@ void main() {
     ]);
   });
 
+  testWidgets('a morning tap lands on Home and says which morning it was', (
+    tester,
+  ) async {
+    // The day-2 morning (docs/15) is a check-in kind with a slot and a plan
+    // day on the payload, so the funnel can tell the morning from the evening
+    // and day 2 from day 3.
+    final analytics = RecordingAnalytics();
+    final (container, sink) = await open(tester, analytics: analytics);
+    container.read(routerProvider).go(Routes.stats);
+    await tester.pumpAndSettle();
+    sink.taps.add(
+      const ReminderTap(
+        ReminderKind.checkin,
+        slot: ProgramSlot.morning,
+        planDay: 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+    expect(analytics.propsOfAll('reminder_opened'), [
+      {'kind': 'checkin', 'slot': 'morning', 'plan_day': 2},
+    ]);
+  });
+
+  testWidgets('a program morning reports its message', (tester) async {
+    final analytics = RecordingAnalytics();
+    final (container, sink) = await open(tester, analytics: analytics);
+    container.read(routerProvider).go(Routes.stats);
+    await tester.pumpAndSettle();
+    sink.taps.add(
+      const ReminderTap(
+        ReminderKind.program,
+        slot: ProgramSlot.morning,
+        planDay: 2,
+        message: ProgramMessage.d1am,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+    expect(analytics.propsOfAll('reminder_opened'), [
+      {
+        'kind': 'program',
+        'slot': 'morning',
+        'plan_day': 2,
+        'message': 'd1am',
+      },
+    ]);
+  });
+
+  testWidgets('a bare check-in from before the upgrade still lands and '
+      'reports its kind', (tester) async {
+    // A notification armed by the previous build carries the bare kind name as
+    // its payload; it must decode to a tap and report no invented extras.
+    final analytics = RecordingAnalytics();
+    final (container, sink) = await open(tester, analytics: analytics);
+    container.read(routerProvider).go(Routes.stats);
+    await tester.pumpAndSettle();
+    sink.taps.add(ReminderTap.decode('checkin')!);
+    await tester.pumpAndSettle();
+    expect(path(container), Routes.home);
+    expect(analytics.propsOfAll('reminder_opened'), [
+      {'kind': 'checkin'},
+    ]);
+  });
+
   testWidgets('a milestone celebration opens the badge grid', (tester) async {
     final (container, sink) = await open(tester);
-    sink.taps.add(ReminderKind.milestone);
+    sink.taps.add(const ReminderTap(ReminderKind.milestone));
     await tester.pumpAndSettle();
     expect(path(container), Routes.milestones);
   });
@@ -154,7 +221,7 @@ void main() {
     // Milestones is a pushed detail screen with a back chevron. A `go` would
     // land there with nothing to go back to.
     final (container, sink) = await open(tester);
-    sink.taps.add(ReminderKind.milestone);
+    sink.taps.add(const ReminderTap(ReminderKind.milestone));
     await tester.pumpAndSettle();
     expect(path(container), Routes.milestones);
 
@@ -172,7 +239,7 @@ void main() {
       viaSplash: true,
     );
     expect(path(container), Routes.splash);
-    sink.taps.add(ReminderKind.trial);
+    sink.taps.add(const ReminderTap(ReminderKind.trial));
     await tester.pump();
     // Nothing pushed over the splash; the tap is held.
     expect(path(container), Routes.splash);
@@ -188,10 +255,10 @@ void main() {
 }
 
 class _TapSink implements ReminderSink {
-  final taps = StreamController<ReminderKind>.broadcast();
+  final taps = StreamController<ReminderTap>.broadcast();
 
   @override
-  Stream<ReminderKind> get opened => taps.stream;
+  Stream<ReminderTap> get opened => taps.stream;
 
   @override
   Future<void> apply(
@@ -203,7 +270,7 @@ class _TapSink implements ReminderSink {
   @override
   Future<bool> scheduleOnce(
     OneShotReminder reminder, {
-    required ReminderKind kind,
+    required ReminderTap tap,
     required String title,
     required String body,
   }) async => true;

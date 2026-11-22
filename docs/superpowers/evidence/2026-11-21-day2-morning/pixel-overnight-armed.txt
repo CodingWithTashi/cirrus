@@ -1,0 +1,10 @@
+# Pixel 8 overnight acceptance — what was armed at 2026-11-21 21:42 EST (adb shell dumpsys alarm, Cirrus entries only)
+# Build: fake backend + production ReminderCoordinator wired in (scratch build; providers.dart restored byte-identical after the build). Account: fresh taper, onboarded via a scratch copy of .maestro/flows/03_onboarding.yaml with notifications allowed.
+type=RTC_WAKEUP origWhen=2026-11-22 09:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-22 20:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-23 09:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-23 20:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-24 20:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-25 20:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-26 20:00:00.000 window=+1h0m0s0ms
+type=RTC_WAKEUP origWhen=2026-11-27 20:00:00.000 window=+1h0m0s0ms

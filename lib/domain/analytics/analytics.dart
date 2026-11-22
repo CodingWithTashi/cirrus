@@ -47,6 +47,17 @@ abstract interface class AnalyticsSink {
   /// session is established, never from a view.
   void identify(String userId);
 
+  /// Facts about the person rather than about one moment: the method they
+  /// are quitting with, whether notifications can reach them. Both vendors
+  /// keep the last value and attach it to every later event, which is what
+  /// lets a retention chart be split by them without rebuilding each split
+  /// by hand from the events (docs/10 §58.5).
+  ///
+  /// Same rules as event props: enum names and numbers only, never free
+  /// text. Keys are snake_case and at most 24 characters (Firebase's limit
+  /// for a user property name); values at most 36 characters.
+  void setUserProperties(Map<String, Object> properties);
+
   /// Unbinds the identity on sign-out and deletion. Without it, the next
   /// person to use the phone inherits the last one's user id.
   void reset();
