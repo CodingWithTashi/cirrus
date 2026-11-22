@@ -1363,7 +1363,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get obNotifBullet3 =>
-      'Las tres primeras mañanas desde tu fecha. Nada más: cero marketing, nunca';
+      'Un mensaje por la mañana los primeros días de tu plan y las tres primeras mañanas desde tu fecha. Nada más: cero marketing, nunca';
 
   @override
   String get obNotifCta => 'Activar refuerzos';
@@ -3849,7 +3849,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsCheckinBody =>
-      'Un mensaje cada noche sobre tu plan, más las tres primeras mañanas desde tu fecha. Se detiene solo tras una semana sin abrir Cirrus.';
+      'Un mensaje cada noche sobre tu plan, otro por la mañana en sus primeros días y las tres primeras mañanas desde tu fecha. Se detiene solo tras una semana sin abrir Cirrus.';
 
   @override
   String get settingsCheckinToggle => 'Enviarme el mensaje diario';
@@ -4122,6 +4122,31 @@ class AppLocalizationsEs extends AppLocalizations {
       'Hoy toca cero. Toca para confirmar tu día sin vapear.';
 
   @override
+  String morningNotifTitle(int day) {
+    return 'Día $day';
+  }
+
+  @override
+  String get morningNotifTitlePast => 'Buenos días';
+
+  @override
+  String morningNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'La línea de hoy: $limit caladas. Registra cada una en el momento, también la primera.',
+      one:
+          'La línea de hoy: 1 calada. Registra cada una en el momento, también la primera.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get morningNotifBodyZero =>
+      'Hoy toca cero. Si aprieta el antojo, abre Cirrus y dale sesenta segundos.';
+
+  @override
   String get communityLoading => 'Cargando el feed…';
 
   @override
@@ -4304,7 +4329,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pushAskDayOneBody =>
-      'Un repaso cada noche con tu límite, un aviso antes de tus horas críticas y unas palabras cuando llegues a un hito.';
+      'Un repaso por la mañana y otro por la noche con tu límite, un aviso antes de tus horas críticas y unas palabras cuando llegues a un hito.';
 
   @override
   String get pushAskSurvivedTitle => '¿Refuerzos para la próxima?';

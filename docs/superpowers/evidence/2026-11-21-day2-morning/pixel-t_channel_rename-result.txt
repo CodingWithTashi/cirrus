@@ -1,0 +1,24 @@
+# t_channel_rename_test.dart, Pixel 8 (Android 17), fake backend, Nov 21 2026 (second run; the first, at 21:15, passed the same way)
+# flutter test integration_test/t_channel_rename_test.dart -d adb-41311FDJH002AM-CFqheC._adb-tls-connect._tcp --dart-define=LP_BACKEND=fake
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/t_channel_rename_test.dart
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...          12.8s
+00:00 +0: an existing "Evening check-ins" channel is renamed in place when the scheduler starts
+E2E-MARKER: channel-renamed name=Check-ins
+00:00 +1: (tearDownAll)
+00:01 +1: All tests passed!
+FLUTTER EXIT 0
+
+# first run, same command
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/t_channel_rename_test.dart
+00:00 +0: an existing "Evening check-ins" channel is renamed in place when the scheduler starts
+E2E-MARKER: channel-renamed name=Check-ins
+00:00 +1: (tearDownAll)
+00:01 +1: All tests passed!
+FLUTTER EXIT 0
+
+# driver log (second run)
+21:29:51 driver up: log=/private/tmp/claude-501/-Users-kunchoktashi-dev-flutter-last-puff/610dcac5-9a42-446e-a4c5-e41713f59721/scratchpad/device/t_channel_rename2.log
+21:30:24 marker: channel-renamed name=Check-ins
+21:30:25 saved /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-channel-rename-dumpsys-channels.txt
+21:30:25 done flag seen; driver exits

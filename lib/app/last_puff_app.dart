@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/widgets/lp_error.dart';
 import '../core/utils/l10n_ext.dart';
-import '../core/utils/program_copy.dart';
 import '../core/widgets/lp_misc.dart';
 import '../data/api/firebase/push_service.dart';
 import '../data/stores/providers.dart';
@@ -15,8 +14,10 @@ import '../data/stores/update_check_store.dart';
 import '../data/stores/widget_mirror.dart';
 import '../domain/analytics/lp_events.dart';
 import '../domain/logic/reminder_planner.dart';
+import '../domain/logic/reminder_tap.dart';
 import '../domain/models/journey_state.dart';
 import '../domain/models/models.dart';
+import 'reminder_copy.dart';
 import 'router/app_router.dart';
 import 'theme/lp_palette.dart';
 import 'theme/lp_theme.dart';
@@ -102,37 +103,44 @@ class _ReminderSync extends ConsumerStatefulWidget {
 }
 
 class _ReminderSyncState extends ConsumerState<_ReminderSync> {
-  StreamSubscription<ReminderKind>? _taps;
+  StreamSubscription<ReminderTap>? _taps;
   late final GoRouter _router;
 
   /// A tap that arrived while the splash still owned the first screen. The
   /// splash ends with a `go` that replaces the stack, so anything pushed
   /// before it is gone; the tap waits for the splash to decide, then lands.
-  ReminderKind? _pending;
+  ReminderTap? _pending;
 
   @override
   void initState() {
     super.initState();
     _router = ref.read(routerProvider)..routerDelegate.addListener(_flush);
-    _taps = ref.read(reminderCoordinatorProvider)?.opened.listen((kind) {
+    _taps = ref.read(reminderCoordinatorProvider)?.opened.listen((tap) {
       // Counted on arrival, before any routing decision: a tap that lands on
       // a signed-out phone still says the reminder brought somebody back.
-      ref.read(analyticsProvider).reminderOpened(kind.name);
-      _pending = kind;
+      ref
+          .read(analyticsProvider)
+          .reminderOpened(
+            tap.kind.name,
+            slot: tap.slot?.name,
+            planDay: tap.planDay,
+            message: tap.message?.name,
+          );
+      _pending = tap;
       _flush();
     });
   }
 
   void _flush() {
-    final kind = _pending;
-    if (kind == null) return;
+    final tap = _pending;
+    if (tap == null) return;
     final path = _router.state.uri.path;
     if (path == Routes.splash) return;
     _pending = null;
     // A signed-out phone (the splash landed on sign-in): nothing to land on,
     // and a push here would stack a second sign-in under the redirect.
     if (ref.read(quitStoreProvider) == null) return;
-    switch (kind) {
+    switch (tap.kind) {
       case ReminderKind.trial:
         // The reminder is about the trial: land where it says when the trial
         // ends and where to manage it. Already converted or lapsed by the
@@ -147,8 +155,12 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
         // redirect still sends a signed-out phone to sign-in.
         _router.go(Routes.home);
       case ReminderKind.checkin:
-        // At the check-in hour Home is already showing the cards it asks
-        // about: "No puffs today?" and the evening mood.
+        // The evening check-in lands where Home is already showing the cards
+        // it asks about: "No puffs today?" and the evening mood. The plain
+        // morning on plan days 2 and 3 (`slot: morning`) lands there too, for
+        // its own reason: the morning's line is Home's ring, and its button
+        // is where the first puff is logged. Routing reads the kind alone;
+        // the slot only reaches the `reminder_opened` event.
         _router.go(Routes.home);
       case ReminderKind.program:
         // The daily program's card sits on Home, under the ring, with the
@@ -180,6 +192,12 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
       // moment a trial starts, withdrawn the moment it converts or ends.
       final entitlement = ref.watch(entitlementProvider);
       final now = ref.read(nowProvider);
+      // Resolved here, before the sync starts, and not when the morning is
+      // armed: that is after the sync's awaits, and a `ref` read there is a
+      // read against whatever the tree is by then. The settings notifier's
+      // callbacks below are read the same way, as the arguments of the sync
+      // call, before any of its awaits.
+      final profile = ref.read(analyticsProfileProvider);
       final l10n = AppLocalizations.of(context);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         coordinator
@@ -207,8 +225,17 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
               onMilestonesAdopted: ref
                   .read(settingsStoreProvider.notifier)
                   .adoptMilestones,
-              checkinCopy: (checkin) => _checkinCopy(l10n, checkin),
-              programCopy: (checkin) => _programCopy(l10n, checkin),
+              // The words live in reminder_copy.dart, where the tests and the
+              // device suite read the same ones.
+              checkinCopy: (checkin) => checkinCopy(l10n, checkin),
+              programCopy: (checkin) => programCopy(l10n, checkin),
+              // Reported when the morning was armed on the device's clock, so
+              // a reminder that never existed is not counted as one that was
+              // offered. It is not "delivered": a phone that refused the OS
+              // notification permission still arms it, which is why the
+              // readout divides by `day2_morning` AND `push_permission`.
+              onDay2MorningArmed: () =>
+                  profile.report({LpUserProps.day2Morning: 'armed'}),
               now: now,
             )
             .ignore();
@@ -217,36 +244,6 @@ class _ReminderSyncState extends ConsumerState<_ReminderSync> {
     return child;
   }
 }
-
-/// The evening check-in's words for one day. Past Freedom Day the title drops
-/// the number: Home stops counting "Day N" there and says how far past the day
-/// it is instead, and a notification that disagreed with it would be a second
-/// count of the same thing.
-({String title, String body}) _checkinCopy(
-  AppLocalizations l10n,
-  CheckinReminder checkin,
-) => (
-  title: _dayTitle(l10n, checkin),
-  body: checkin.limit == 0
-      ? l10n.checkinNotifBodyZero
-      : l10n.checkinNotifBody(checkin.limit),
-);
-
-/// The title both the check-in and a program message carry: the plan day, or
-/// — past Freedom Day, where Home stops counting — none.
-String _dayTitle(AppLocalizations l10n, CheckinReminder checkin) =>
-    checkin.planDay <= checkin.totalDays
-    ? l10n.checkinNotifTitle(checkin.planDay)
-    : l10n.checkinNotifTitlePast;
-
-/// The daily program's words for one message (docs/15 stage B): the same title
-/// as the check-in it replaces in the slot, and the message itself as the body.
-/// Resolved here for the same reason as the rest — the scheduler has no
-/// `BuildContext`, and a notification in the wrong language is worse than none.
-({String title, String body}) _programCopy(
-  AppLocalizations l10n,
-  CheckinReminder checkin,
-) => (title: _dayTitle(l10n, checkin), body: checkin.message!.text(l10n));
 
 /// The celebration copy for one badge.
 ///

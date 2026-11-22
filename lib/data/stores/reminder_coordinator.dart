@@ -1,4 +1,6 @@
+import '../../domain/logic/quit_program.dart';
 import '../../domain/logic/reminder_planner.dart';
+import '../../domain/logic/reminder_tap.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
 import '../api/firebase/reminder_scheduler.dart';
@@ -16,9 +18,10 @@ import 'settings_store.dart';
 /// repeating danger-hour nudges (ids 1000–1023), the one-shot trial-ending
 /// reminder (id 2000), the milestone celebration (3000+) and the evening
 /// check-ins (4000–4006) — which carry the daily program's messages
-/// (docs/15 stage B), plus its three mornings (5000–5002), all on the one
-/// switch. Independent on purpose — a puff tap must never wipe
-/// the trial reminder, which is exactly what a shared cancel-all used to do.
+/// (docs/15 stage B), plus its three mornings (5000–5002) and the plain
+/// mornings of plan days 2 and 3 (5102, 5103), all on the one switch.
+/// Independent on purpose — a puff tap must never wipe the trial reminder,
+/// which is exactly what a shared cancel-all used to do.
 class ReminderCoordinator {
   ReminderCoordinator(this._sink);
 
@@ -38,8 +41,13 @@ class ReminderCoordinator {
   /// Fingerprint of the last applied check-in window.
   String? _checkinApplied;
 
+  /// The danger-hour slots as of the latest sync, whether or not they changed
+  /// the device's schedule. The check-in plan reads them to keep a plain
+  /// morning out of a danger nudge's way.
+  List<ReminderSlot> _dangerSlots = const [];
+
   /// Reminder taps, for the app to route on. See [ReminderSink.opened].
-  Stream<ReminderKind> get opened => _sink.opened;
+  Stream<ReminderTap> get opened => _sink.opened;
 
   Future<void> sync({
     required JourneyState? journey,
@@ -59,6 +67,7 @@ class ReminderCoordinator {
         checkinCopy,
     ({String title, String body}) Function(CheckinReminder checkin)?
         programCopy,
+    void Function()? onDay2MorningArmed,
     DateTime Function() now = DateTime.now,
   }) async {
     // Not until the stored settings have been read. Before that [settings] is
@@ -99,8 +108,9 @@ class ReminderCoordinator {
       title: trialTitle,
       body: trialBody,
     );
+    DateTime? milestoneAt;
     if (milestoneBody != null) {
-      await _syncMilestone(
+      milestoneAt = await _syncMilestone(
         journey,
         settings,
         now: now(),
@@ -111,21 +121,55 @@ class ReminderCoordinator {
       );
     }
     if (checkinCopy != null) {
+      final at = now();
       await _syncCheckins(
         journey,
         settings,
-        now: now(),
+        now: at,
         copy: checkinCopy,
         programCopy: programCopy,
+        busy: _busyInstants(at, settings, milestoneAt),
+        onDay2MorningArmed: onDay2MorningArmed,
       );
     }
+  }
+
+  /// When this phone is already saying something around the morning: every
+  /// danger-hour nudge across the check-in window, the celebration this sync
+  /// armed, and the one an earlier sync did.
+  ///
+  /// The celebration appears twice on purpose. The instant armed in THIS call
+  /// is not in [SettingsState.armedMilestoneAt] yet — the app writes it from
+  /// the callback, after this sync — and a later sync's milestone step answers
+  /// nothing at all (its fingerprint is unchanged), so by then only the
+  /// settings still hold it.
+  Iterable<DateTime> _busyInstants(
+    DateTime now,
+    SettingsState settings,
+    DateTime? milestoneAt,
+  ) sync* {
+    for (var i = 0; i < CheckinReminderPlanner.window; i++) {
+      for (final slot in _dangerSlots) {
+        yield DateTime(
+          now.year,
+          now.month,
+          now.day + i,
+          slot.hour,
+          slot.minute,
+        );
+      }
+    }
+    if (milestoneAt != null) yield milestoneAt;
+    final armed = settings.armedMilestoneAt;
+    if (armed != null) yield armed;
   }
 
   /// Re-arms the evening check-ins and the daily program: the next seven days
   /// from [now].
   ///
-  /// Cancel-then-schedule over its own ids — the seven evening slots and the
-  /// program's three mornings — like the danger-hour apply. The window slides
+  /// Cancel-then-schedule over its own ids — the seven evening slots, the
+  /// program's three mornings and the two plain mornings — like the
+  /// danger-hour apply. The window slides
   /// forward on every sync that changes it, which is what makes it stop by
   /// itself a week after the last one — see `CheckinReminderPlanner`. The
   /// fingerprint carries each reminder's copy inputs as well as its instant: a
@@ -136,12 +180,22 @@ class ReminderCoordinator {
   /// A program slot whose words were not supplied is left unarmed, never
   /// armed with the check-in's: a notification that says the wrong thing is
   /// worse than none.
+  ///
+  /// [onDay2MorningArmed] is called once, after the window is armed, when a
+  /// morning for plan day 2 was armed on the device's clock — never for one the
+  /// scheduler could not arm, which the next sync tries again. It says nothing
+  /// about the OS notification permission: Android sets the alarm without
+  /// asking for it and iOS's plugin swallows the unauthorized add, so a phone
+  /// that refused notifications still counts (and the switch defaults on).
+  /// Whoever reads the property reads it beside `push_permission`.
   Future<void> _syncCheckins(
     JourneyState journey,
     SettingsState settings, {
     required DateTime now,
     required ({String title, String body}) Function(CheckinReminder) copy,
     ({String title, String body}) Function(CheckinReminder)? programCopy,
+    required Iterable<DateTime> busy,
+    void Function()? onDay2MorningArmed,
   }) async {
     final checkins = CheckinReminderPlanner.plan(
       journey: journey,
@@ -150,6 +204,7 @@ class ReminderCoordinator {
       quietStartHour: settings.quietStartHour,
       quietEndHour: settings.quietEndHour,
       enabled: settings.checkinReminderOn,
+      busy: busy,
     );
     final fingerprint = checkins.isEmpty
         ? _cleared
@@ -157,7 +212,8 @@ class ReminderCoordinator {
               .map(
                 (c) =>
                     '${c.reminder.id}@${c.reminder.at.toIso8601String()}'
-                    '#${c.planDay}/${c.limit}:${c.kind.name}/${c.message?.name}',
+                    '#${c.planDay}/${c.limit}:${c.kind.name}/${c.slot.name}'
+                    '/${c.message?.name}',
               )
               .join(',');
     if (fingerprint == _checkinApplied) return;
@@ -166,23 +222,30 @@ class ReminderCoordinator {
     for (final id in [
       ...CheckinReminderPlanner.ids,
       ...CheckinReminderPlanner.morningIds,
+      ...CheckinReminderPlanner.planMorningIds,
     ]) {
       await _sink.cancel(id);
     }
+    var day2MorningArmed = false;
     for (final checkin in checkins) {
       final isProgram = checkin.message != null;
       if (isProgram && programCopy == null) continue;
       final text = isProgram ? programCopy!(checkin) : copy(checkin);
       final armed = await _sink.scheduleOnce(
         checkin.reminder,
-        kind: checkin.kind,
+        tap: checkin.tap,
         title: text.title,
         body: text.body,
       );
       // A refused schedule is not an applied one: forget the fingerprint so
       // the next sync tries the whole window again.
-      if (!armed) _checkinApplied = null;
+      if (!armed) {
+        _checkinApplied = null;
+      } else if (checkin.slot == ProgramSlot.morning && checkin.planDay == 2) {
+        day2MorningArmed = true;
+      }
     }
+    if (day2MorningArmed) onDay2MorningArmed?.call();
   }
 
   /// Takes down any milestone celebration already armed, for a person who
@@ -209,7 +272,12 @@ class ReminderCoordinator {
   /// cancel-on-null branch here would delete the very notification the previous
   /// sync had just armed. Only the top-level notifications-off `cancelAll`
   /// takes it down.
-  Future<void> _syncMilestone(
+  ///
+  /// Answers the instant it armed in THIS call, or null when it armed nothing
+  /// (nothing owed, nothing changed, or the device refused). The check-in plan
+  /// keeps a morning out of its way, and the settings only learn the instant
+  /// from the callback below, after this sync has finished.
+  Future<DateTime?> _syncMilestone(
     JourneyState journey,
     SettingsState settings, {
     required DateTime now,
@@ -230,7 +298,7 @@ class ReminderCoordinator {
     // sync (the next puff tap, at the latest) plans against the adopted one.
     if (!settings.milestonesAdopted) {
       onAdopted?.call(journey.earnedBadges);
-      return;
+      return null;
     }
 
     final celebration = MilestoneReminderPlanner.plan(
@@ -241,32 +309,33 @@ class ReminderCoordinator {
       quietEndHour: settings.quietEndHour,
       enabled: settings.notificationsOn,
     );
-    if (celebration == null) return;
+    if (celebration == null) return null;
 
     final fingerprint =
         '${celebration.reminder.id}@${celebration.badgeId}'
         '@${celebration.reminder.at.toIso8601String()}';
-    if (fingerprint == _milestoneApplied) return;
+    if (fingerprint == _milestoneApplied) return null;
     _milestoneApplied = fingerprint;
 
     final armed = await _sink.scheduleOnce(
       celebration.reminder,
-      kind: ReminderKind.milestone,
+      tap: const ReminderTap(ReminderKind.milestone),
       title: title,
       body: body(celebration.badgeId),
     );
     if (!armed) {
-      // The device refused (plugin not ready, permission revoked). Marking
-      // the badge settled now would silence its celebration for ever; leave
-      // it owed and let the next sync try again.
+      // The device refused (plugin not ready, the platform rejecting the
+      // instant). Marking the badge settled now would silence its celebration
+      // for ever; leave it owed and let the next sync try again.
       _milestoneApplied = null;
-      return;
+      return null;
     }
     onScheduled?.call(
       celebration.badgeId,
       celebration.covers,
       celebration.reminder.at,
     );
+    return celebration.reminder.at;
   }
 
   Future<void> _syncDangerHours(
@@ -288,6 +357,10 @@ class ReminderCoordinator {
           ? [settings.dangerStartHour % 24]
           : null,
     );
+
+    // Kept even when nothing changed on the device: the check-in plan asks
+    // for the current slots on every sync.
+    _dangerSlots = slots;
 
     final fingerprint = slots
         .map((s) => '${s.id}@${s.hour}:${s.minute}')
@@ -325,7 +398,7 @@ class ReminderCoordinator {
     } else {
       final armed = await _sink.scheduleOnce(
         reminder,
-        kind: ReminderKind.trial,
+        tap: const ReminderTap(ReminderKind.trial),
         title: title,
         body: body,
       );

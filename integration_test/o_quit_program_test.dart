@@ -13,6 +13,7 @@ import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/logic/quit_program.dart';
 import 'package:last_puff/domain/logic/reminder_planner.dart';
+import 'package:last_puff/domain/logic/reminder_tap.dart';
 import 'package:last_puff/domain/logic/taper_engine.dart';
 import 'package:last_puff/domain/models/journey_state.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -187,7 +188,11 @@ void main() {
     await e2e.waitFor(const Duration(seconds: 2));
 
     final all = await pending();
-    final program = all.where((r) => r.payload == 'program').toList();
+    final program = all
+        .where(
+          (r) => ReminderTap.decode(r.payload)?.kind == ReminderKind.program,
+        )
+        .toList();
     expect(program, isNotEmpty, reason: 'pending: ${all.map((r) => r.id)}');
     // ignore: avoid_print
     print('E2E-MARKER: pending program ids ${program.map((r) => r.id).toList()}');
@@ -196,7 +201,9 @@ void main() {
     final d1am = program.where((r) => r.id == 5001).toList();
     expect(d1am, hasLength(1), reason: 'ids: ${program.map((r) => r.id)}');
     expect(d1am.single.body, ProgramMessage.d1am.text(l10n));
-    expect(d1am.single.title, l10n.checkinNotifTitle(2));
+    // A morning wears the morning title: `checkinNotifTitle` says "evening"
+    // in fr, de and it.
+    expect(d1am.single.title, l10n.morningNotifTitle(2));
 
     // Day two's morning too, and each evening with its own message.
     final d2am = program.where((r) => r.id == 5002).single;
@@ -228,7 +235,7 @@ void main() {
     expect(
       await scheduler.scheduleOnce(
         other,
-        kind: ReminderKind.trial,
+        tap: const ReminderTap(ReminderKind.trial),
         title: 'trial',
         body: 'a trial reminder',
       ),
@@ -264,7 +271,9 @@ void main() {
     e2e.container.read(settingsStoreProvider.notifier).setCheckinReminder(true);
     await e2e.waitFor(const Duration(seconds: 3));
     expect(
-      (await pending()).where((r) => r.payload == 'program'),
+      (await pending()).where(
+        (r) => ReminderTap.decode(r.payload)?.kind == ReminderKind.program,
+      ),
       isNotEmpty,
     );
   });
