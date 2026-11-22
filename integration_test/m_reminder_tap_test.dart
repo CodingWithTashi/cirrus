@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:last_puff/data/api/firebase/reminder_scheduler.dart';
 import 'package:last_puff/domain/logic/reminder_planner.dart';
+import 'package:last_puff/domain/logic/reminder_tap.dart';
 
 /// A tapped reminder reaches Dart — on the platform's own notification, with
 /// the app's own app delegate.
@@ -38,9 +39,9 @@ void main() {
     );
 
     final scheduler = ReminderScheduler();
-    final opened = Completer<ReminderKind>();
-    final taps = scheduler.opened.listen((kind) {
-      if (!opened.isCompleted) opened.complete(kind);
+    final opened = Completer<ReminderTap>();
+    final taps = scheduler.opened.listen((tap) {
+      if (!opened.isCompleted) opened.complete(tap);
     });
     addTearDown(taps.cancel);
 
@@ -65,18 +66,18 @@ void main() {
         id: 4999,
         at: DateTime.now().add(const Duration(seconds: 8)),
       ),
-      kind: ReminderKind.checkin,
+      tap: const ReminderTap(ReminderKind.checkin),
       title: 'Cirrus tap probe',
       body: 'Tap this banner',
     );
     expect(armed, isTrue);
     debugPrint('E2E-MARKER: scheduled');
 
-    final kind = await opened.future.timeout(
+    final tap = await opened.future.timeout(
       const Duration(seconds: 150),
       onTimeout: () => fail('no tap reached Dart within 150 s'),
     );
-    debugPrint('E2E-MARKER: opened ${kind.name}');
-    expect(kind, ReminderKind.checkin);
+    debugPrint('E2E-MARKER: opened ${tap.kind.name}');
+    expect(tap, const ReminderTap(ReminderKind.checkin));
   });
 }

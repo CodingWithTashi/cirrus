@@ -1368,7 +1368,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get obNotifBullet3 =>
-      'Die ersten drei Morgen ab deinem Datum. Sonst nichts – nie Marketing';
+      'Eine Nachricht am Morgen in den ersten Tagen deines Plans und die ersten drei Morgen ab deinem Datum. Sonst nichts – nie Marketing';
 
   @override
   String get obNotifCta => 'Rückendeckung aktivieren';
@@ -3863,7 +3863,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsCheckinBody =>
-      'Eine Nachricht pro Abend zu deinem Plan, dazu die ersten drei Morgen ab deinem Datum. Sie hört von selbst auf, wenn du eine Woche lang Cirrus nicht öffnest.';
+      'Eine Nachricht pro Abend zu deinem Plan, eine am Morgen in seinen ersten Tagen und die ersten drei Morgen ab deinem Datum. Sie hört von selbst auf, wenn du eine Woche lang Cirrus nicht öffnest.';
 
   @override
   String get settingsCheckinToggle => 'Tägliche Nachricht senden';
@@ -4137,6 +4137,30 @@ class AppLocalizationsDe extends AppLocalizations {
       'Heute ist ein Null-Tag. Tipp hier, um deinen vape-freien Tag zu bestätigen.';
 
   @override
+  String morningNotifTitle(int day) {
+    return 'Tag $day';
+  }
+
+  @override
+  String get morningNotifTitlePast => 'Guten Morgen';
+
+  @override
+  String morningNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'Deine Linie heute: $limit Züge. Logg jeden sofort, auch den ersten.',
+      one: 'Deine Linie heute: 1 Zug. Logg jeden sofort, auch den ersten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get morningNotifBodyZero =>
+      'Heute ist ein Null-Tag. Wenn ein Craving kommt, öffne Cirrus und gib ihm sechzig Sekunden.';
+
+  @override
   String get communityLoading => 'Feed wird geladen…';
 
   @override
@@ -4321,7 +4345,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pushAskDayOneBody =>
-      'Ein Check-in am Abend mit deinem Limit, ein Hinweis vor deinen Gefahrenstunden und ein Wort bei jedem Meilenstein.';
+      'Ein Check-in am Morgen und am Abend mit deinem Limit, ein Hinweis vor deinen Gefahrenstunden und ein Wort bei jedem Meilenstein.';
 
   @override
   String get pushAskSurvivedTitle => 'Rückendeckung fürs nächste Mal?';

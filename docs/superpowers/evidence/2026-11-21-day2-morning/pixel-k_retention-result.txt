@@ -1,0 +1,51 @@
+# k_retention_test.dart, whole file, Pixel 8 (Android 17), fake backend, Nov 21 2026
+# flutter test integration_test/k_retention_test.dart -d adb-41311FDJH002AM-CFqheC._adb-tls-connect._tcp --dart-define=LP_BACKEND=fake
+# (runner lines only; build noise and the 'reminders:' diagnostics are left out)
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/k_retention_test.dart
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...          69.8s
+00:00 +0: (setUpAll)
+00:00 +0: the second notification ask reads the OS, and its yes reaches the OS
+E2E-MARKER: ask-sheet
+E2E-MARKER: os-dialog
+00:57 +1: a week of evening check-ins sits on the device clock, and its switch takes down only its own
+E2E-INFO: pending check-ins [4001|Day 13 check-in|Today's limit is 85 puffs. Tap to log how it's going.|checkin|evening|13|, 4002|Day 14 check-in|Today's limit is 78 puffs. Tap to log how it's going.|checkin|evening|14|, 4003|Day 15 check-in|Today's limit is 71 puffs. Tap to log how it's going.|checkin|evening|15|, 4004|Day 16 check-in|Today's limit is 64 puffs. Tap to log how it's going.|checkin|evening|16|, 4005|Day 17 check-in|Today's limit is 57 puffs. Tap to log how it's going.|checkin|evening|17|, 4006|Day 18 check-in|Today's limit is 51 puffs. Tap to log how it's going.|checkin|evening|18|]
+E2E-MARKER: checkin-sheet
+01:52 +2: a check-in that fires is a real notification, and its tap lands on Home
+E2E-MARKER: checkin-armed 2026-11-21T21:20:54.501609
+E2E-MARKER: checkin-tapped
+08:06 +3: a plan-day-2 morning that fires is a real notification, and its tap lands on Home with its slot
+E2E-MARKER: morning-armed 2026-11-21T21:27:08.477350 title=Day 2
+E2E-MARKER: morning-tapped
+11:05 +4: on an offer day a free account gets a card on Home, never a paywall over it — and the paywall it opens closes
+E2E-MARKER: offer-card
+E2E-MARKER: paywall
+12:08 +5: (tearDownAll)
+12:09 +5: All tests passed!
+FLUTTER EXIT 0
+
+# driver log (what the adb driver did)
+21:15:46 driver up: log=/private/tmp/claude-501/-Users-kunchoktashi-dev-flutter-last-puff/610dcac5-9a42-446e-a4c5-e41713f59721/scratchpad/device/k_retention.log
+21:17:57 marker: ask-sheet
+21:18:06 marker: os-dialog
+21:18:10 Allow at 540,1339
+21:19:04 marker: checkin-sheet
+21:19:42 marker: checkin-armed 2026-11-21T21:20:54.501609
+21:21:46 record 4099 is posted
+21:22:25 title 'Day 12' not found in the shade
+21:25:24 marker: checkin-tapped
+21:25:57 marker: morning-armed 2026-11-21T21:27:08.477350 title=Day 2
+21:27:59 record 5199 is posted
+21:27:59 saved /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-dumpsys-record.txt
+21:27:59 saved /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-dumpsys-channels.txt
+21:28:05 row 'Day 2' at 281,1710
+21:28:06 screenshot /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-shade-first.png (567351 bytes)
+21:28:06 saved /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-shade-first.xml
+21:28:06 expand buttons: [(962, 702), (962, 1288), (962, 1500), (962, 1736), (955, 1902), (949, 2170)]
+21:28:08 screenshot /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-shade-toggled.png (561732 bytes)
+21:28:11 saved /Users/kunchoktashi/dev/flutter/last_puff/docs/superpowers/evidence/2026-11-21-day2-morning/pixel-morning-shade-toggled.xml
+21:28:17 tapping 'Day 2' at 613,1767
+21:28:23 marker: morning-tapped
+21:29:03 marker: offer-card
+21:29:15 marker: paywall
+21:29:26 done flag seen; driver exits

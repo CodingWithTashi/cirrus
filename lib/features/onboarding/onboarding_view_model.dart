@@ -417,6 +417,16 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
         .read(quitStoreProvider.notifier)
         .startJourney(profile: profile, plan: plan);
     analytics.onboardingCompleted();
+    // What's New is for an update. A fresh install stores no seen version —
+    // the same state as an update from a build before What's New existed —
+    // so without this the sheet opened over Home for every brand-new person
+    // (docs/10 §58.4). Somebody who has just finished onboarding has seen
+    // this version. Only with hydrated settings, like every automatic writer.
+    final installed = await ref.read(installedVersionProvider.future);
+    final settings = ref.read(settingsStoreProvider.notifier);
+    if (installed != null && ref.read(settingsStoreProvider).hydrated) {
+      settings.markWhatsNewSeen(installed);
+    }
     // Ember's first memory, from the one thing they wrote in their own words.
     // After `startJourney` because the server reads the sentence out of the
     // journey document this just created — and fire-and-forget because a

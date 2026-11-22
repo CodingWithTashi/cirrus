@@ -18,6 +18,9 @@ final class NoopAnalytics implements AnalyticsSink {
   void identify(String userId) {}
 
   @override
+  void setUserProperties(Map<String, Object> properties) {}
+
+  @override
   void reset() {}
 }
 
@@ -55,6 +58,10 @@ final class FanOutAnalytics implements AnalyticsSink {
 
   @override
   void identify(String userId) => _each('identify', (s) => s.identify(userId));
+
+  @override
+  void setUserProperties(Map<String, Object> properties) =>
+      _each('user_properties', (s) => s.setUserProperties(properties));
 
   @override
   void reset() => _each('reset', (s) => s.reset());

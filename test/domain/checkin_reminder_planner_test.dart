@@ -19,6 +19,7 @@ void main() {
     int quietStart = 23,
     int quietEnd = 8,
     bool enabled = true,
+    Iterable<DateTime> busy = const [],
   }) => CheckinReminderPlanner.plan(
     journey: journey,
     now: now,
@@ -26,6 +27,7 @@ void main() {
     quietStartHour: quietStart,
     quietEndHour: quietEnd,
     enabled: enabled,
+    busy: busy,
   );
 
   final morning = DateTime(2026, 9, 14, 9, 30);
@@ -88,6 +90,42 @@ void main() {
           LpDate.dayKey(c.reminder.at),
           LpDate.dayKey(LpDate.addDays(before, i)),
         );
+      }
+    },
+  );
+
+  test(
+    'a plain morning is 09:00 on its own calendar day, across a DST change',
+    () {
+      // Plan day one is the evening before a clock change, so plan days two
+      // and three straddle it: North America leaves DST on Nov 1 2026 and
+      // Europe on Oct 25, and both enter it on Mar 8 and Mar 29. Whatever zone
+      // the suite runs in, a `Duration(days: 1)` step would land on 08:00 or
+      // 10:00 after the change; calendar arithmetic never does.
+      for (final start in [
+        DateTime(2026, 3, 7, 21),
+        DateTime(2026, 3, 28, 21),
+        DateTime(2026, 10, 24, 21),
+        DateTime(2026, 10, 31, 21),
+      ]) {
+        final m = plan(journeyOnDay(1, now: start), now: start)
+            .where((c) => c.slot == ProgramSlot.morning)
+            .toList();
+        expect(m.map((c) => c.reminder.id), [5102, 5103]);
+        for (final (i, c) in m.indexed) {
+          final want = DateTime(start.year, start.month, start.day + i + 1);
+          expect(c.reminder.at.hour, 9, reason: '$start -> ${c.reminder.at}');
+          expect(c.reminder.at.minute, 0);
+          expect(
+            DateTime(
+              c.reminder.at.year,
+              c.reminder.at.month,
+              c.reminder.at.day,
+            ),
+            want,
+            reason: '$start -> ${c.reminder.at}',
+          );
+        }
       }
     },
   );
@@ -393,6 +431,211 @@ void main() {
         expect(out.map((c) => c.reminder.id).toSet(), hasLength(out.length));
         at = DateTime(at.year, at.month, at.day + 7, 7);
       }
+    });
+  });
+
+  // docs/10 §59: a taper has no program message on plan days 2 and 3, and the
+  // second day is where the first-week drop-off is — so those two mornings
+  // get a plain one, which a cold-turkey plan already has from the program.
+  group('a plain morning on plan days 2 and 3', () {
+    // Plan day 1, after the evening, so everything armed is still to come.
+    final eve = DateTime(2026, 9, 14, 21);
+
+    List<CheckinReminder> mornings(List<CheckinReminder> all) =>
+        all.where((c) => c.slot == ProgramSlot.morning).toList();
+
+    test('a taper gets 09:00 on plan days 2 and 3, and no other morning', () {
+      final m = mornings(plan(journeyOnDay(1, now: eve), now: eve));
+      expect(m.map((c) => (c.reminder.id, c.reminder.at, c.planDay)), [
+        (5102, DateTime(2026, 9, 15, 9), 2),
+        (5103, DateTime(2026, 9, 16, 9), 3),
+      ]);
+      expect(
+        m.every((c) => c.message == null && c.kind == ReminderKind.checkin),
+        isTrue,
+      );
+    });
+
+    test('cold turkey keeps only its program mornings — exactly one each '
+        'day', () {
+      final j = journeyOnDay(1, now: eve);
+      final ct = j.copyWith(
+        plan: j.plan.copyWith(method: QuitMethod.coldTurkey),
+      );
+      final m = mornings(plan(ct, now: eve));
+      expect(m.map((c) => c.reminder.id), [5001, 5002]);
+      expect(m.map((c) => c.message), [
+        ProgramMessage.d1am,
+        ProgramMessage.d2am,
+      ]);
+    });
+
+    test('the limit is the journey\'s own answer', () {
+      final j = journeyOnDay(1, now: eve);
+      final m = mornings(plan(j, now: eve));
+      expect(m, hasLength(2));
+      for (final c in m) {
+        expect(c.limit, j.limitOn(c.reminder.at));
+      }
+    });
+
+    test('quiet hours ending at 10 move it to 10:00', () {
+      final m = mornings(
+        plan(journeyOnDay(1, now: eve), now: eve, quietStart: 23, quietEnd: 10),
+      );
+      expect(m, hasLength(2));
+      expect(m.every((c) => c.reminder.at.hour == 10), isTrue);
+    });
+
+    test('quiet hours covering 9-11 mean no plain morning, evenings still '
+        'go', () {
+      final out = plan(
+        journeyOnDay(1, now: eve),
+        now: eve,
+        hour: 20,
+        quietStart: 8,
+        quietEnd: 12,
+      );
+      expect(mornings(out), isEmpty);
+      expect(out.where((c) => c.slot == ProgramSlot.evening), isNotEmpty);
+    });
+
+    test('switched off means none', () {
+      expect(
+        plan(journeyOnDay(1, now: eve), now: eve, enabled: false),
+        isEmpty,
+      );
+    });
+
+    test('a nudge within the hour drops that morning only', () {
+      final m = mornings(
+        plan(
+          journeyOnDay(1, now: eve),
+          now: eve,
+          busy: [DateTime(2026, 9, 15, 8, 50)],
+        ),
+      );
+      expect(m.map((c) => c.reminder.id), [5103]);
+    });
+
+    test('a busy instant exactly an hour away still drops it, and one just '
+        'over the hour does not', () {
+      final j = journeyOnDay(1, now: eve);
+      expect(
+        mornings(plan(j, now: eve, busy: [DateTime(2026, 9, 15, 8)]))
+            .map((c) => c.reminder.id),
+        [5103],
+      );
+      expect(
+        mornings(plan(j, now: eve, busy: [DateTime(2026, 9, 15, 7, 59)]))
+            .map((c) => c.reminder.id),
+        [5102, 5103],
+      );
+      // The margin is both ways: ten o'clock, an hour after the 09:00 morning,
+      // is as close as eight o'clock, an hour before it.
+      expect(
+        mornings(plan(j, now: eve, busy: [DateTime(2026, 9, 16, 10, 0)]))
+            .map((c) => c.reminder.id),
+        [5102],
+      );
+    });
+
+    test('a busy instant never touches an evening', () {
+      final out = plan(
+        journeyOnDay(1, now: eve),
+        now: eve,
+        busy: [DateTime(2026, 9, 15, 20)],
+      );
+      expect(
+        out.map((c) => c.reminder.id),
+        contains(CheckinReminderPlanner.firstId + 1),
+      );
+    });
+
+    test('day 2 already under way: only day 3 is left', () {
+      final am = DateTime(2026, 9, 15, 9, 30); // plan day 2, past 09:00
+      expect(
+        mornings(plan(journeyOnDay(2, now: am), now: am))
+            .map((c) => c.reminder.id),
+        [5103],
+      );
+    });
+
+    test('a two-day plan gets no plain morning past its end — Freedom Day\'s '
+        'own program morning holds those days', () {
+      // The brief expected [5102] here, but Freedom Day is plan day 2 of a
+      // two-day taper, so the program already has a morning on days 2, 3 and
+      // 4 (5000–5002) and the "no program morning that day" rule leaves
+      // nothing for the plain one to take.
+      final m = mornings(
+        plan(journeyOnDay(1, now: eve, totalDays: 2), now: eve),
+      );
+      expect(m.map((c) => c.reminder.id), [5000, 5001, 5002]);
+      expect(
+        m.any(
+          (c) => CheckinReminderPlanner.planMorningIds.contains(c.reminder.id),
+        ),
+        isFalse,
+      );
+    });
+
+    test('the shortest plan with a plain morning gets exactly days 2 and 3, '
+        'and the program takes over from Freedom Day on day 4', () {
+      final m = mornings(
+        plan(journeyOnDay(1, now: eve, totalDays: 4), now: eve),
+      );
+      expect(m.map((c) => (c.reminder.id, c.planDay)), [
+        (5102, 2),
+        (5103, 3),
+        (5000, 4),
+        (5001, 5),
+        (5002, 6),
+      ]);
+      expect(m.take(2).every((c) => c.message == null), isTrue);
+    });
+
+    test('a plan started again gets them on its own day 2 and 3', () {
+      final j = journeyOnDay(1, now: eve);
+      final again = j.copyWith(plan: j.plan.copyWith(planNumber: 2));
+      expect(
+        mornings(plan(again, now: eve)).map((c) => c.reminder.id),
+        [5102, 5103],
+      );
+    });
+
+    test('the tap says which morning it was', () {
+      final c = mornings(plan(journeyOnDay(1, now: eve), now: eve)).first;
+      expect(c.tap.encode(), 'checkin|morning|2|');
+    });
+
+    test('a program morning\'s tap carries its message', () {
+      final j = journeyOnDay(1, now: eve);
+      final ct = j.copyWith(
+        plan: j.plan.copyWith(method: QuitMethod.coldTurkey),
+      );
+      final c = mornings(plan(ct, now: eve)).first;
+      expect(c.slot, ProgramSlot.morning);
+      expect(c.tap.encode(), 'program|morning|2|d1am');
+    });
+
+    test('a mid-plan day arms no plain morning', () {
+      expect(mornings(plan(journeyOnDay(5, now: eve), now: eve)), isEmpty);
+    });
+
+    test('its ids sit clear of every other schedule', () {
+      expect(CheckinReminderPlanner.planMorningIds, [5102, 5103]);
+      final others = {
+        for (var i = 1000; i < 1024; i++) i,
+        TrialReminderPlanner.id,
+        for (var i = 0; i < MilestoneReminderPlanner.celebrated.length; i++)
+          MilestoneReminderPlanner.idBase + i,
+        ...CheckinReminderPlanner.ids,
+        ...CheckinReminderPlanner.morningIds,
+      };
+      expect(
+        CheckinReminderPlanner.planMorningIds.where(others.contains),
+        isEmpty,
+      );
     });
   });
 }

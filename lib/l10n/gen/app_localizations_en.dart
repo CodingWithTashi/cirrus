@@ -1358,7 +1358,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get obNotifBullet3 =>
-      'The first three mornings from your date. Nothing else — no marketing, ever';
+      'A morning on your plan\'s first days, and the first three mornings from your date. Nothing else — no marketing, ever';
 
   @override
   String get obNotifCta => 'Turn on backup';
@@ -3830,7 +3830,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsCheckinBody =>
-      'One message an evening about your plan, plus the first three mornings from your date. It stops by itself after a week without you opening Cirrus.';
+      'One message an evening about your plan, a morning on its first days, and the first three mornings from your date. It stops by itself after a week without you opening Cirrus.';
 
   @override
   String get settingsCheckinToggle => 'Send me the daily message';
@@ -4102,6 +4102,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'A zero day. Tap to confirm it stayed vape-free.';
 
   @override
+  String morningNotifTitle(int day) {
+    return 'Day $day';
+  }
+
+  @override
+  String get morningNotifTitlePast => 'Good morning';
+
+  @override
+  String morningNotifBody(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'Today\'s line is $limit puffs. Log each one as it happens, the first one too.',
+      one:
+          'Today\'s line is 1 puff. Log each one as it happens, the first one too.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get morningNotifBodyZero =>
+      'A zero line today. If a craving hits, open Cirrus and give it sixty seconds.';
+
+  @override
   String get communityLoading => 'Pulling in the feed…';
 
   @override
@@ -4284,7 +4309,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pushAskDayOneBody =>
-      'An evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.';
+      'A morning and an evening check-in with your limit, a heads-up before your danger hours, and a word when you hit a milestone.';
 
   @override
   String get pushAskSurvivedTitle => 'Want backup next time?';

@@ -42,6 +42,7 @@ import '../api/firebase/push_messages.dart';
 import '../api/firebase/push_service.dart';
 import '../repositories/fake_notifications_repository.dart';
 import '../repositories/firebase_notifications_repository.dart';
+import 'analytics_profile.dart';
 import 'notifications_store.dart';
 import 'push_token_registrar.dart';
 import '../api/firebase/reminder_scheduler.dart';
@@ -143,6 +144,12 @@ final analyticsProvider = Provider<AnalyticsSink>((ref) {
     if (backend == BackendMode.firebase) FirebaseAnalyticsSink(),
   ]);
 });
+
+/// The user properties, sent only when one changes. Fed from the app root
+/// (`_ServerStateSync`), never from a view.
+final analyticsProfileProvider = Provider<AnalyticsProfile>(
+  (ref) => AnalyticsProfile(ref.watch(analyticsProvider)),
+);
 
 final authApiProvider = Provider<AuthApi>(
   (ref) => FakeAuthApi(ref.watch(fakeServerProvider)),

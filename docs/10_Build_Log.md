@@ -6111,3 +6111,219 @@ Rendered with the real fonts at 393×852 dp for review, in English dark and ligh
 - **Production (Pixel 8, `alastpuff`, Nov 17):** `f_firebase_backend_test` **18/19**, twice, each on a throwaway account the suite deletes, with a debug token the founder registered for the run (the one pinned in `.appcheck_token` is not registered). The new case passed against the deployed callable, after the coach, panic and community cases had filled the account. The second run separated the cache from the fix: after the bare callable the transcript was **still in the device's offline cache** (the review's finding was real), and after the app's own erase it was gone, read cache-only before any online read in the case. Then: the transcript, memories, cravings and insights are gone on the server, `coachSummary` and `planAdvice` are gone, the coach repository lists no memories, and the account, `coachName`, `aiUsage` and the posts mirror are unchanged; the journey the app wrote after it holds one day, `planNumber` 2 and the original baseline. `deleteUserData` then erased the account. The one failure is not this change: `setCoachName` accepted `sh1t` ("the denylist did not ship with the deploy"). `functions/data/name-denylist.json` is gitignored and is not on the Mac, and `setCoachName` was last deployed Nov 13 18:13 UTC, so the live guard has run on impersonation checks alone since then.
 - **Not proven:** a scratch start through the UI against production (the device case drives the screen on the fake backend, the production case drives the store), and a second signed-in device (below).
 - **Known limit, not fixed here:** a second signed-in device (an iPhone, or an older build) still holds the old journey in memory, and its next mutation `set()`s the whole document back, returning the erased days. The same last-writer-wins limit the check-up answers already carry (§53); it matters more here because the dialog says "permanently". Not verified here: what the other device does on resume rather than a cold start.
+
+## 58. THE 1.0.36 READ (Nov 21) — where people go, what changed, and what has to be measured before buying installs
+
+**Asked for:** review App Store Connect and Amplitude against 1.0.36 (live on iOS Nov 17, Android ~Nov 15), confirm how people drop and what to add, aimed at a founder brief: fix early churn, then test paid installs, then scale only if a user earns more than an install costs. The goal set in the same session: 100x users. Read-only except the site fixes in §58.6.
+
+### 58.1 How the numbers were read (and two traps)
+
+- **People, not IDs.** Amplitude held 361 IDs in 90 days; 155 are people after the Nov 11 real-user rules (§51.4 lineage; one row per `amplitude_id`): 118 had no device type on any event, 43 were the founder (Toronto/Oshawa), 19 App Review/Play cities, 15 no-city US or Android, 5 Android pre-launch builds, 4 iPads, 2 iOS before Sep 13. Dev builds 1.0.32/1.0.34 were also dropped. The cohort below is the 123 people first seen from Oct 17 (v1.0.28 onward).
+- **Amplitude truncates grouped results without saying so**: 100 rows with one group-by, 500 with two. A per-person pull on `onboarding_start` came back with 100 of 228 users and made it look as if half the sign-ups never started onboarding. Restrict the query to the real-user ID list (`amplitude_id is …`) and group by two properties so it stays under 500. The base `_active` pulls were checked: the largest returned 450 rows, and 361 IDs match Amplitude's own unique count.
+- **ASC installs and deletions are opt-in only** (people who share analytics with developers), and a deletion is credited to the version someone was on when they deleted, so it is not a per-version deletion rate. ASC's D1 (29%, UTC days, opt-in) and Amplitude's (43%, Eastern days, every real person) measure different things; neither is wrong.
+- **Cloudflare Web Analytics is sampled in tens** and split across two site tags; it does not see most of the European visits that App Store attributes to the site. Useful for paths, not for trends.
+
+### 58.2 Acquisition — every channel came down off one bump
+
+App Store Connect, iOS, 90 days: **143 first-time downloads**, 7 redownloads, 1.88K impressions, 205 product-page views, **63 opt-in installs against 43 opt-in deletions**, proceeds $71, 2 paid plans active (MRR $4). Benchmarks (Lifestyle, week of Oct 19): product-page conversion **17.2%, above the 75th percentile (3.7%)**; D1 **29.2%, between the median (23.4%) and the 75th (34.6%)**.
+
+Downloads by source, weeks starting Oct 12 → Nov 16 (the last one 4 days):
+
+| Source | Oct 12 | Oct 19 | Oct 26 | Nov 2 | Nov 9 | Nov 16 |
+|---|---|---|---|---|---|---|
+| Web referrer | 3 | 21 | 12 | 15 | 4 | 0 |
+| App Store search | 1 | 5 | 12 | 10 | 5 | 5 |
+| App referrer | 3 | 2 | 3 | 7 | 3 | 1 |
+| *Search impressions* | 127 | 195 | 209 | 249 | 209 | 163 |
+
+- Named referrers: **cirrusquit.com 34 of the 60 web downloads** (weekly from Oct 5: 1, 0, 16, 8, 7, 2, 0; campaigns `download-page` 12, `fr-hero` 8). **The ChatGPT app sent 21** (2, 3, 2, 3, 7, 3, 1) — an assistant recommending the app is a real channel.
+- **This is not a site outage or a search penalty.** Organic search to the site was close to zero all along (about 10 Google visits in 90 days in Cloudflare's bot-excluded data), and the site agent found the live site identical to the Oct 16 deploy apart from two new posts. Search downloads halved too while impressions held. Every channel came off the Oct 19 – Nov 8 bump; what drove that bump (free-first release, a post, the `fr-hero` link) is the founder's to name, and it is the thing to repeat.
+- Store visibility, not the store page, is the ceiling: ~200 search impressions a week, and the page already converts in the top quartile.
+
+### 58.3 Where people drop (123 people, first seen Oct 17 – Nov 20)
+
+**Onboarding is not the leak.** 120 start → 118 past the birth year → 110 reach the reveal → 102 reach the commit → **100 make an account and land on Home** (81%). Of the 23 who did not: 7 stopped at the age gate, 5 held the commit and never made the account, the rest left within the first screens.
+
+- **The age gate is hit by 19% of new people** (23 of 123). 16 of them then typed an older year and continued (the block is not remembered, §52); 7 left. A founder call, not fixed here.
+- Notifications: 102 asked, **68 granted (67%)**.
+
+**The loss is the day after.** D1 **43%** (52/122) · back at all on days 1–7 **50%** (56/113) · D7 exact **9%** (10/113) · back at all on days 8–14 **15%** (14/92) · **46% are seen on one day only.** Of the 93 who finished onboarding at least a week ago, **37 (40%) never opened it again that week.**
+
+**Day 0 does not tell them apart.** Counting day-0 screens only, leavers and returners visit the same places (Home 86% vs 95%, Stats 84/91, Coach 86/91, Community 51/50, Panic 46/46, Paywall 16/11, Slip 14/7); leavers open the app a median 3 times that day, returners 5. They found the features; nothing brought them back the next day.
+
+What does separate them (suggestive only — groups of 30–50, and this is the 1.0.28 experience that 1.0.30/1.0.36 changed):
+
+| Group (finished onboarding) | D1 | Back days 8–14 |
+|---|---|---|
+| Taper (50) | 60% | 23% (10/43) |
+| Cold turkey (44) | 41% | 14% (5/35) |
+| Notifications granted (63) | 56% | 19% |
+| Notifications refused (30) | 40% | 16% |
+
+Android: 15 people, D1 10/15 — too few to read (two Austrian accounts may be testers; without them 10/13).
+
+Monetization: 2 purchases in the 123; ASC proceeds work out to roughly **$0.50 per download** over 90 days (not a cohort LTV). That is the brief's own break-even install cost, so paid installs cannot pay back yet.
+
+### 58.4 What 1.0.36 changed — confirmed in the data, and what cannot be judged yet
+
+17 real people have run 1.0.36: **6 new** (4 iOS, 2 Android; D1 2 of the 3 old enough) and **11 who updated** — 9 of them already active the week before, 2 back after 10–14 days away. ASC sessions went from 1–12 a day the week before to 15, 24, 9, 19 on Nov 17–20. **No retention verdict is possible**: re-read the first 1.0.36 cohorts around Dec 15, four weeks after release (docs/15 §8), with the real-user list.
+
+| Event | On 1.0.36 (real people) |
+|---|---|
+| `program_shown` (morning and evening), `program_reply`, `reminder_opened{program}` | arriving (`reminder_opened{program}`: 1) |
+| `reminder_opened{danger}` on iOS | arriving since 1.0.30 (9 people in its 4 days) — the iOS delegate fix (§52.1) works |
+| `day_confirmed`, `mood_checked_in`, `slip_resolved`, `plan_restarted`, `help_viewed` | arriving |
+| `puff_logged{source: widget}` | 4 updaters log from the widget |
+| `widget_prompt_shown` | 3 shown, 0 accepted on 1.0.36; `widget_installed` never received |
+| `whats_new_shown` | **all 6 new installs got it** — a bug, below |
+| `checkup_answered`, `quit_status_reported` | not yet (day 7+ only) |
+| `update_prompt_*` | never received — expected: 1.0.28 has no prompt and 1.0.36 is current |
+| `help_link_opened`, `signed_out` | not seen among real users (read through the real-user ID list; see §58.8) |
+
+**What's New opens for brand-new installs.** `UpdatePromptPolicy.whatsNewDue` is true whenever the stored version differs from the installed one, and a fresh install has none — the same state as an update from 1.0.28, which never stored one. So a person finishes onboarding and is shown "what changed" in an app they have just met. **Fixed in the working tree (§58.8):** `OnboardingViewModel.complete()` marks the installed version seen once the journey exists. Still open, deliberately: a fresh install that signs in to an *existing* account (no onboarding) still gets the sheet — they are not new to Cirrus, and a reinstall may well have skipped versions.
+
+### 58.5 What to add to analytics — ranked by what the 100x brief needs
+
+1. **Install attribution (blocking for step b/c) — not built, needs the founder.** No install source reaches Amplitude or RevenueCat: no Apple AdServices token, no Play Install Referrer, so the cost and earnings of a paid install cannot be tied to anything. RevenueCat's AdServices attribution collection and the Play referrer, both mirrored onto the Amplitude user.
+2. **User properties — built (§58.8), method and notification permission only.** There were none (`setUserProperties` was never called). Method, plan day, notification permission (re-read each launch, so a later refusal in iOS Settings shows), install version, quit status — every split in §58.3 had to be rebuilt by hand from events.
+3. **`reminder_scheduled{kind}`** (what was armed for tomorrow), so `reminder_opened` becomes an open rate instead of a count. Not built: the coordinator re-arms on every sync, so as an event it would flood the funnel; if it comes, it comes as a count on the user.
+4. **`account_deleted` — built (§58.8), without the reason picker** (that is new UI and six locales of copy, a separate decision). ASC deletions are opt-in and cannot be joined to anyone; the in-app deletion is the only "why" there will ever be.
+5. Tag every external link with an App Store `ct` campaign token (ChatGPT cannot be tagged, which is fine — App Store names it).
+
+### 58.6 The site (cirrusquit.com) — audited, small fixes made, nothing deployed
+
+Fixed in the working tree (`cirrus-landing/`, uncommitted, `npm run build` + `verify` + `check` green): a generated **`/llms.txt`** (published posts only, untagged store links); **`/sitemap.xml` → `/sitemap-index.xml`** 301 (it was 404); **`/privacyr` → `/privacy` and `/termsr` → `/terms`** 301 (real visitors hit both typos; the typo is in neither the repo nor App Store Connect, so probably the Play listing).
+
+Checked and fine: robots.txt (identical to the build, Googlebot/Bingbot allowed), sitemap (28 URLs, all 200, canonicals match, reciprocal hreflang), no stray `noindex`, valid JSON-LD, ~16 KB pages, 75–130 ms TTFB. Cloudflare AI Crawl Control lists nothing blocked; its 404s are scanners probing `/.env`, `/jenkins/…`, `/etc/passwd`. **Unresolved:** spoofed GPTBot, ClaudeBot, CCBot, Bytespider and Amazonbot get **403 at the edge** (search and assistant bots — OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot, Googlebot, Bingbot — get 200). That fits robots.txt's `ai-train=no`, but `robots.txt.ts` says blocking is by verified signature only; Security → Events should show which rule does it.
+
+Needs the founder: Search Console (coverage, impressions by date, a live URL test), the `cirrus-landing.pages.dev` noindex header (snippet in the site agent's report, host-scoped so not testable locally), the double hop on `http://www.cirrusquit.com`, the Play listing's privacy URL, and `npm run deploy` when happy.
+
+### 58.7 Not checked
+
+Per-person timelines for the one-day leavers (the profile page's request shape could not be replayed); Google Play Console; App Store ratings and reviews; Search Console; Cloudflare security events.
+
+### 58.8 Built in the same session (uncommitted)
+
+- **What's New no longer opens on a first install.** `OnboardingViewModel.complete()` awaits `installedVersionProvider` after `startJourney` and calls `markWhatsNewSeen` with hydrated settings only. `test/data/onboarding_test.dart` "What's New is for an update, never a first install" (red before the change: `Expected '1.0.36', Actual null`); its null-version case is a guard, not proof — it passed before the fix too.
+- **`account_deleted{plan_day, past_freedom, premium}`**, the `signed_out` shape. `JourneyStore.deleteAccount` reads where the person was before the await and sends only after the backend confirms, before `analytics.reset()`. `test/data/retention_events_test.dart` pins the order and that a refused deletion sends nothing.
+- **User properties.** `AnalyticsSink.setUserProperties` on the port (Amplitude through `_guard` as an `Identify`, Firebase one `setUserProperty` per key, `FanOutAnalytics` guarded per sink, every test fake updated). Keys in `LpUserProps` (`quit_method`, `push_permission`, values are enum `.name` so they match `method_chosen`). `AnalyticsProfile` sends only a changed value and forgets on a change of account; `_ServerStateSync` feeds it from the journey (method, keyed with the alias) and the OS permission on launch and on every resume. `test/widgets/analytics_profile_test.dart` (6) — the two wiring cases go red with the wiring removed; `analytics_test` pins fan-out, the throwing sink, Noop, and that an early property waits for Amplitude's init.
+- **Device suites checked by reading, not run:** the only suite booting with a real installed version, `s_update_prompt_test.dart`, reaches Home by email sign-in, never onboarding, so it still meets What's New as before.
+- **Reading these in December:** count `signed_out` and `account_deleted` **without** the real-user ID segment first. Both fire just before `analytics.reset()`; if a native SDK ever stamps one after the reset, it lands under a fresh anonymous id the allow-list does not contain. GA4 shows `quit_method`/`push_permission` only once each is registered as a user-scoped custom dimension.
+- **Not proven:** none of it on a device, and nothing has reached Amplitude — analytics reports from a release build only (or `LP_ANALYTICS=on`). The first 1.0.37 cohort is where `quit_method`/`push_permission` should appear on users and `account_deleted` in the event list.
+
+### 58.9 Store search: a draft for the founder (nothing changed in App Store Connect)
+
+§58.2 found the ceiling is how often the listing is SEEN (~200 search impressions a week, page conversion already top quartile). The listing as live on 1.0.36, read from App Store Connect on Nov 21:
+
+| Locale | Name | Subtitle | Keywords (chars) |
+|---|---|---|---|
+| en-US | Quit Vaping Tracker - Cirrus | Puff counter with AI coach | 98 — `puff counter,last puff,quit,vaping,vape tracker,nicotine,craving,stop,taper,cessation,habit,streak` |
+| es-ES, fr-FR, de-DE, it | localized | localized | 96–99 each |
+| **pt-BR, es-MX, en-GB** | **none** | | |
+
+What is wrong with it:
+
+1. **38 of en-US's 98 keyword characters repeat the name and subtitle** (`puff` twice, `counter`, `quit`, `vaping`, `tracker`). Apple already indexes those words from the name and subtitle and combines words across all three fields, so the repeats buy nothing.
+2. **No Brazil listing although the app speaks Portuguese.** Brazil's storefront shows the English page. Also, ASO vendors report (inferred by them, not documented by Apple) that the **US** storefront indexes Spanish (Mexico) and Portuguese (Brazil) metadata besides English, but **not** Spanish (Spain), so `es-ES` reaches no US Spanish speaker. AppTweak's table also lists French as indexed in the US; if that means `fr-FR`, its `vape,puff,cigarette,nicotine` already count there.
+3. Subtitle: `with` takes four characters that index nothing useful.
+
+The draft (lengths checked: name ≤ 30, subtitle ≤ 30, keywords ≤ 100):
+
+| Locale | Name | Subtitle | Keywords |
+|---|---|---|---|
+| en-US | unchanged | `Puff counter, AI coach & plan` (29; docs/06 §4's own formula) | `vape,stop,nicotine,craving,taper,smoke,free,cessation,habit,streak,last,addiction,withdrawal,ecig` (97) |
+| es-MX (new) | `Dejar de Vapear - Cirrus` (24) | `Contador de caladas y coach IA` (30) | `vapeador,vaper,cigarro,electrónico,desechable,nicotina,antojo,fumada,ansiedad,hábito,racha,dejar` (96) |
+| pt-BR (new) | `Parar de Usar Vape - Cirrus` (27) | `Contador de tragadas, coach IA` (30) | `vape,pod,cigarro,eletrônico,descartável,nicotina,fissura,vício,abstinência,parar,largar,hábito,plano` (100) |
+
+- Vocabulary is the site's (`cirrus-landing/src/i18n/{es,pt}.ts`: "dejar de vapear", "calada", "parar de usar vape", "tragada", "fissura"), per the translation-register rule. `pod` is the everyday Brazilian word for a vape. No brand names (Juul, Elf Bar, Zyn): Apple rejects trademarks in keywords.
+- **Judgement calls for the founder:** `smoke` and `free` (pull in "quit smoking"/"smoke free" searches — relevant to the former smokers the quiz now asks about, broader than the product); each new locale also needs its description, promotional text and screenshots (es-ES and the pt site copy are the source).
+- **The app's own Portuguese is European, the site's is Brazilian.** `app_pt.arb` says `REGISTAR PASSA` (pt-PT spelling and word); the site and this draft say `tragada`. A Brazilian who installs from a pt-BR page meets pt-PT inside. Not changed here; it is a translation decision.
+- **Timing:** January is the quit-resolution month. Keyword changes ride a version submission, so they need to go out with 1.0.37 before about Dec 20 to be indexed for it.
+- **How to judge it** (ASC analytics recipe in memory): weekly `impressionsTotal` from App Store search and `units` by `source`, four weeks before (Oct 26 – Nov 22: impressions 209, 249, 209, 163; search downloads 12, 10, 5, 5) against the four weeks after the new listing goes live. January will lift everything, so compare search's share of downloads, not only its count.
+
+Sources for the storefront-indexing claim: [AppTweak, cross-localization](https://www.apptweak.com/en/aso-blog/how-to-benefit-from-cross-localization-on-the-app-store), [Sensor Tower, iOS keyword localization](https://sensortower.com/blog/ios-keyword-localization-guide), [MobileAction, cross-localization](https://www.mobileaction.co/blog/app-store-cross-localization/).
+
+## 59. THE FIRST MORNINGS (Nov 21) — a morning on plan days 2 and 3 for every plan, and a tap that says which one it was
+
+**Asked for:** close the drop between day 1 and day 2 "properly, not nominally": grounded in the research and in Cirrus's own data, keeping only changes that mean something, and proven on a real device. Option B of §58's investigation, approved as "go with B". The design is `docs/superpowers/specs/2026-11-21-day2-morning-design.md`, the plan `docs/superpowers/plans/2026-11-21-day2-morning.md`. Built test-first in six tasks; tasks 1–5 were each reviewed independently, and the sixth (the device case) has been run on a Pixel 8 only (§59.7). **Uncommitted, nothing deployed, nothing released; run on the Pixel, not yet on an iPhone or overnight** (§59.7).
+
+### 59.1 The finding
+
+Amplitude, Nov 21, through the real-user list (§58.1): 99 people who finished onboarding since Oct 17 and are at least 48 h old. "Came back" is *active 16–48 h after their first active hour* — timezone-free, because most of the cohort is in Europe. §58.3 reads D1 by calendar day on a different cut, so its split differs from this one; the readout (`S7-39`) is held to **this** window, so its baseline is the same measure.
+
+| | Result | Meaningful? |
+|---|---|---|
+| Came back | 54% (53/99) | — |
+| Taper vs cold turkey | **67% (36/54) vs 36% (16/44)** | **yes** (z ≈ 3.0) |
+| Never opened a second time | 29/99; cold turkey 41% vs taper 20% | **yes** (z ≈ 2.3) |
+| Notifications granted vs refused | 54% vs 45% | **no** (z ≈ 0.8) |
+| When returners come back | 55 of 70 within 19 h | yes |
+| Granted, got up to 7 evening check-ins, never came back | 16 of the 29 | yes |
+
+**92 of the 99 started on 1.0.28**, before the cold-turkey day-one fix (1.0.30, §52) and the daily program (1.0.36, docs/15 stage B). Only 7 people have started since, so **neither fix has been measured yet.**
+
+### 59.2 What the code said, and what the research says
+
+- **Cold turkey** gets a 09:00 program message on plan days 1, 2 and 3 (program days 0–2: `q0am`, `d1am`, `d2am`) and an evening message every day to plan day 14.
+- **A taper gets nothing on the mornings of plan days 2 and 3.** The program does not start until 7 days before Freedom Day. The danger-hour nudge needs 3 confirmed days, and its onboarding fallback (first-puff hour − 10 minutes) is 06:50, 06:50 or 07:50 for three of the four answers: inside the default 23→8 quiet hours, and dropped on purpose (`ReminderPlanner.plan`: moving a craving nudge hours later is worse than none). Only the "more than an hour" answer gets one, at 08:50. So a taper user's first contact after install is the 20:00 check-in.
+- **The research**, as the design spec summarises it: a plain daily notification made opening the app in the next hour about **3.5×** more likely, and new wording did no better than the plain reminder (Bell 2023, micro-randomised, N=350, an alcohol app; strong). Texts that link to one specific feature, and texts tailored to engagement, raised engagement; message intensity and personalisation alone did not (Graham 2020, factorial RCT, N=864, smoking cessation; moderate to strong). Day 2 is the most common first return in a cessation programme and not returning in week 1 predicts never returning (EX, N=70,265; observational, strong). **No study measured return by quit method**, and early lifts fade, so the judgement is on D7 and D14, not D1.
+
+### 59.3 The honest framing
+
+This fills a real gap in the code, a taper getting no morning touch on plan days 2–3 while cold turkey does, with the one mechanism that has strong evidence: a notification raising next-hour opens. **It is a hypothesis, not an explanation of the gap we measured.** Taper users already come back at 67%, and the group that never came back is mostly cold turkey, measured on the 1.0.28 bug. The measurement half of this change is what will show whether the 1.0.30/1.0.36 cold-turkey fixes and this morning do anything. Of the three options, A (measure only) was cheapest but a verdict takes 6–8 weeks at ~7 new people a week, and C (cold turkey starts tomorrow, the install day becoming a preparation day) changes the plan, the streak, the money, the widget and the server maths, so it waits for A's data.
+
+### 59.4 What was built
+
+- **The rule** (`CheckinReminderPlanner.plan`, `lib/domain/logic/reminder_planner.dart`). For each day of the seven-day window a plain morning is armed at `morningHour(quietStart, quietEnd)` (nine, or the first hour before noon quiet hours leave open) when **all** of these hold: the daily-message switch is on (one switch for evening, program and mornings); the evening hour itself (`checkinHour`, 20:00 by default) is outside quiet hours, because `plan()` returns nothing at all otherwise and takes the program's mornings down with the evenings (pinned by "an evening that falls in quiet hours silences the whole schedule"); `plan.dayNumber(day)` is 2 or 3 and no more than `plan.totalDays`; **the program has no morning that day**, so cold turkey never gets two; the hour exists and the fire time is after now; and no danger-hour nudge or milestone celebration sits within `busyMargin` (60 minutes, inclusive) either side (the trial-ending reminder and the server's pushes are not checked). Ids are `5100 + planDay`, **5102 and 5103**, clear of danger (1000–1023), trial (2000), milestones (3000+), evenings (4000–4006) and the program's mornings (5000–5002). It applies to any plan, a plan started again included: the plan day counts from `plan.startDate`, so day 2 of a new plan is the same moment.
+- **The busy guard** (`ReminderCoordinator`). The coordinator plans its other reminders first and hands the planner two kinds of instant (the trial-ending reminder is not among them): every danger-hour slot on each day of the window, the celebration armed **in the same sync**, and `settings.armedMilestoneAt` (the one an earlier sync armed). The milestone is listed twice on purpose: the instant armed in this call is not in the settings until the app's callback writes it, and a later sync's milestone step answers nothing, so by then only the settings hold it. The plain morning is the one that yields. An 08:50 danger slot drops a 09:00 morning, and so does a celebration owed at **either** 08:00 or 09:00: the default celebration at 08:00 is exactly 60 minutes before, and the check is inclusive, so it drops a 09:00 morning too (a celebration is owed at 08:00, or when quiet hours end, which is 09:00 when they end at 9). An evening never gives way.
+- **The words** (`lib/app/reminder_copy.dart`, moved out of `last_puff_app.dart` so the tests and the device suite read the production words). A new title on **every** morning slot, plain and program: `morningNotifTitle(day)` ("Day {day}"), and `morningNotifTitlePast` ("Good morning") past Freedom Day, where Home stops counting. The old `checkinNotifTitle` reads as an *evening* in fr ("le point du soir"), de ("Check-in am Abend") and it ("il punto della sera"), and `_dayTitle` was already putting it on cold turkey's 09:00 program mornings: production said "evening" at nine o'clock in three languages. The new title changes cold turkey's mornings by title only, never time or body. The body is `morningNotifBody(limit)`, en "Today's line is {limit} puffs. Log each one as it happens, the first one too." (the action, and a number taken from `limitOn`), or on a zero line `morningNotifBodyZero`, "A zero line today. If a craving hits, open Cirrus and give it sixty seconds." (the craving flow, and never "log" where there is nothing to log). Neither claims a status; both are armed before the day happens. Each locale uses its own Home word for "line", and es/fr use the app's own log verb (*registrar*, *enregistrer*), because the tap lands on Home where that button is. All six locales went in through a JSON round-trip.
+- **The promise.** `obNotifBullet3` read "The first three mornings from your date. Nothing else"; for a taper "your date" is Freedom Day, so a plan-day-2 morning broke a promise they had agreed to. `obNotifBullet3` and `settingsCheckinBody` now name the plan's first mornings as well as the three from the date (en bullet: "A morning on your plan's first days, and the first three mornings from your date. Nothing else — no marketing, ever"), and `pushAskDayOneBody`, the ask after the Day-1 checklist (the first the phone asks of anyone who skipped the onboarding one, right before the first morning), names the morning. The rule: **the copy never promises fewer mornings than are sent.** `copy_honesty_test` requires the first-days phrase in the first two and the locale's morning word in the third, in all six locales.
+- **The measurement.** The payload is `ReminderTap.encode()`: `kind|slot|planDay|message`, an empty field meaning absent, or the bare `kind` when nothing else is known, which is every notification an earlier build armed and still decodes exactly as it did. `ReminderSink.opened` carries a `ReminderTap`; routing still switches on `kind` alone. **`reminder_opened` gains `slot` (`morning` | `evening`), `plan_day` and `message` (the `ProgramMessage` name)**, each only when the payload carried it, and they are registered in `lp_events.dart`. Danger, trial and milestone keep the bare payload. **`day2_morning = armed`** is a one-way user property, set through `AnalyticsProfile` the first time the plan-day-2 morning, plain or program, is armed on the device's clock (`ReminderSink.scheduleOnce` answered true). It is the denominator for a tap rate: `quit_method` + `push_permission` alone would count people who were never sent a morning (the 08:50 answerers, quiet hours covering 9–11, the switch off) and make the rate read low. It counts people armed, not people delivered to: a later change (the switch, a new danger hour, quiet hours) can withdraw the morning and they still count. **It also says nothing about the OS notification permission.** Android sets the alarm without asking for it and iOS's plugin swallows the unauthorized add, so `scheduleOnce` answers true on a phone that refused notifications, and the daily-message switch defaults on. The callback is deliberately not gated on it (a decision, not an oversight): `push_permission` is already reported on launch and on every resume, so the two properties are read together at readout time, and the readout divides by `day2_morning = armed` **and** `push_permission = granted` (S7-39). `forget()` on sign-out clears it for the next account. There is deliberately **no "scheduled" event**: sync runs on every change and it would fire constantly (§58.5 item 3).
+- **Cancelling.** `_syncCheckins` cancels the two plain-morning ids through `CheckinReminderPlanner.planMorningIds`, never `cancelAll()`, and its fingerprint carries each reminder's slot, so a change re-arms.
+
+### 59.5 The two narrowings, and why
+
+Both were in the option-B pitch and both came out on reading the code.
+
+- **"Move the dropped morning nudge out of quiet hours" became "reuse the program's morning slot".** The danger-hour drop is deliberate and documented. The program's `morningHour` (09:00, or the first open hour before noon) already exists and is what cold turkey gets.
+- **"Make the evening differ by whether they opened that day" was dropped.** The version that says it ("you haven't been in today") is armed days ahead and becomes false the moment somebody logs from the widget or the wrist, which never open the app. That breaks the rule that an armed message never claims a status. The version that does not say it is mostly shipped already (a non-program evening is skipped once the day is confirmed), and what is left is a copy change with no mechanism behind it.
+
+### 59.6 Known, and left alone
+
+- **Cold turkey's 08:50 / 09:00 double.** A cold-turkey person who answered "more than an hour" already gets the 08:50 danger nudge and the 09:00 program morning on plan days 1–3. The busy guard governs only the new plain morning, so it does not touch this. Changing it would muddy the cold-turkey measurement that 1.0.30 and 1.0.36 are waiting on and that this change exists to read. Recorded, not fixed.
+- **A two-day taper gets program mornings, not plain ones.** Its Freedom Day is plan day 2, so the program's mornings (5000–5002) cover plan days 2–4 and "the program has no morning that day" holds the plain one back. The plan's first draft expected 5102 there; that expectation was the defect, not the planner.
+- **`pushAskBody` is wider than true. For the founder.** The ask shown after a first community post says "We'll only ping you about your own posts. Never anyone else's." That sentence is about community pings, and it was already broader than the truth because the evening check-in and the danger-hour nudge exist. It predates this change and **is not changed here**: it is community copy in six locales and wants the founder's wording.
+- **Existing consenters.** Two groups meet the morning under the old "Nothing else" wording: people who start a new plan (their plan day 2 or 3 comes round again), and people who consented on 1.0.36 and update to this build before their own plan-day-2 or 3 morning, which is the first days of any account and so closes by itself within days of the release reaching them. Settings already describes the switch, so both simply get the morning. Decided, stated, not asked.
+- **A Premium taper's morning can name the raw curve's line.** `taperRecalc`'s verdict for plan day N is written after local midnight of day N and applied when the app next starts or resumes (`JourneyStore.applyPlanAdvice`, which `limitOn` then reads), while the morning for day N was armed the evening before from a `limitOn` that had no advice yet. Somebody who opens the app before 09:00 re-arms it with the advised line (the fingerprint carries the limit); somebody who does not, which is exactly who this morning is for, is told the curve's number while Home shows the advised one. Only Premium, and only when the verdict moves the line; the evening check-in has the same shape for a person who does not open the app that day. Recorded, not fixed.
+- **Two small copy points, deferred from review.** At a limit of exactly 1 the en body reads "Today's line is 1 puff. Log each one as it happens…" (a plural "each one" after a singular count), and `pushAskDayOneTitle` still reads "Want a nudge tonight?" above a body that now names a morning.
+
+### 59.7 Device proof — the Pixel passed; the iPhone and the overnight run are pending
+
+**The two Pixel rows ran on Nov 21 and passed; the iPhone and the overnight acceptance have not run.** Evidence is filed in `docs/superpowers/evidence/2026-11-21-day2-morning/` (its README lists each file), and a row is marked only from what is there. The case is `integration_test/k_retention_test.dart`, "a plan-day-2 morning that fires is a real notification, and its tap lands on Home with its slot": it builds the morning with the **real planner** from a day-1 taper (id 5102, payload `checkin|morning|2|`), arms it through the real `ReminderScheduler` as id 5199 at now + 70 seconds (so no re-sync cancels it), prints `E2E-MARKER: morning-armed …`, and then asserts Home and `reminder_opened{kind: checkin, slot: morning, plan_day: 2}`. A second suite, `integration_test/t_channel_rename_test.dart` (the fourth row), covers the one thing that case cannot: a phone that already holds the old "Evening check-ins" channel, which a fresh install never does. It ran on a Pixel 8 on Nov 21 as part of the whole file and passed (first row). **Precondition:** the case needs the OS notification permission already granted, and it asserts that first (`PushService.permissionStatus()` is `granted`, with a `reason:` saying what to do). The file's first case is the one that asks the OS, and a grant does not survive into a later `--plain-name` run (`flutter test integration_test` uninstalls the app when it finishes, and iOS shows no Notifications switch for an app that never asked), so the morning is run in ONE invocation with the asking case, by the recipe below, or with the whole file; run alone on a never-asked install it used to fail late and misleadingly (a `StateError: No element` on iOS, a six-minute wait on Android).
+
+The iPhone's recipe, on a never-asked install (`--name` is a regex; the first case's name has nothing in it to escape; it is a block and not part of a table row because a `|` splits a table cell):
+
+```
+flutter test integration_test/k_retention_test.dart \
+  --name 'the second notification ask reads the OS, and its yes reaches the OS|plan-day-2 morning' \
+  -d <device> --dart-define=LP_BACKEND=fake
+```
+
+| Proof | What it must show, and for a finished row what it showed | Status |
+|---|---|---|
+| **Pixel 8**, `k_retention_test` on the fake backend, **the whole file** (the `--name` recipe is the iPhone's) | **Passed, 5 of 5 cases (Nov 21, 21:15 to 21:30).** The 5199 record from `dumpsys notification --noredact` shows channel `evening_checkins` (named "Check-ins"), title "Day 2", `BigTextStyle`, and text and bigText "Today's line is 180 puffs. Log each one as it happens, the first one too." The collapsed shade row reads "Day 2 · now" and "Today's line is 180 puffs. Log each one as i…", cut off mid-word, so what a person sees first is the number and half of the action sentence; the expanded row (the chevron) shows the whole body. The adb driver's tap on the "Day 2" row landed on Home, and exactly one new `reminder_opened` was reported, `{kind: checkin, slot: morning, plan_day: 2}`. One hand step, not the morning's: the driver searched for the title "Day 12" but the check-in case's notification is "Day 12 check-in", so that row was tapped by hand over adb. On power, Do Not Disturb off for the run. Evidence: the folder above (README, `pixel-morning-dumpsys-record.txt`, `pixel-morning-collapsed.png`, `pixel-morning-expanded.png`, `pixel-k_retention-result.txt`); the screenshots are cropped to the Cirrus row because the shade also held the owner's other notifications. | **passed** |
+| **iPhone**, the same case, run with the recipe above | The real notification through the real app delegate (the `m_reminder_tap` pattern). The banner tap is one hand step, announced on the `morning-armed` marker. Notifications must already be granted (the case asserts it), so the recipe runs the file's asking first case and the morning in ONE invocation (the whole file also works): `flutter test integration_test` uninstalls the app when it finishes, so a grant does not survive into a later `--plain-name` run, and iOS shows no Notifications switch in Settings for an app that never asked. The first case's Allow is a hand step on that run, announced on the `ask-sheet` and `os-dialog` markers. | **pending** |
+| **Real-time acceptance, Pixel, overnight** | A fresh taper account made the evening before on a debug build and left overnight. At 09:00–10:00 `dumpsys notification` shows the plan-day-2 morning with that account's line. The only proof that the timing rules hold on a real clock. **A plain fake-backend build cannot run this:** `reminderCoordinatorProvider` is `null` on `BackendMode.fake` (`lib/data/stores/providers.dart`), so it arms nothing at all. That was confirmed on the Pixel on Nov 21: onboarding finished with `POST_NOTIFICATIONS` granted and zero alarms for the package. The run therefore uses a **scratch build**: the fake backend with that one provider line wired to the production `ReminderCoordinator(ReminderScheduler())`. The file was restored byte-identical right after the build and is not in the tree. The fake backend is kept because it needs no App Check token and creates no production account (the pinned debug token is not registered for the Android app, and a Firebase-backend run writes to production). **Armed, Nov 21 21:42 EST:** a fresh taper (200 puffs/day over 30 days) onboarded by a scratch copy of `.maestro/flows/03_onboarding.yaml` with notifications allowed. `dumpsys alarm` shows eight Cirrus alarms: Nov 22 09:00 and Nov 23 09:00 (the two plain mornings, plan days 2 and 3), and 20:00 on Nov 22–27 (the six evening check-ins left in the week, since day 1's 20:00 had already passed). Each is inexact with a one-hour window, in `pixel-overnight-armed.txt`. The fake backend forgets the account on a cold start, so a 09:00 tap reaches Home only if the process survived the night; Home landing is the first row's job. | **pending**: armed; the 09:00 result is not in yet |
+| **Pixel 8**, `t_channel_rename_test` (`flutter test integration_test/t_channel_rename_test.dart -d <pixel> --dart-define=LP_BACKEND=fake`) | **Passed, twice (Nov 21, 21:15 and 21:30).** The test created `evening_checkins` as "Evening check-ins" and read that back from the OS, started a fresh `ReminderScheduler` through its public `cancel`, and read the channel again as "Check-ins" with the new description and the importance (3) unchanged; marker `E2E-MARKER: channel-renamed name=Check-ins`. It needs no hand, no sign-in and no notification permission: in the second run's dump the app-level setting reads `importance=NONE` and the channel was created regardless. **What it does not show:** both runs were on a fresh install (the app is uninstalled when a run ends), so the "old" channel is the one the test creates, not one left by a real 1.0.36 install. It shows the OS rewriting an existing id's name and description when the scheduler creates it again, which is the mechanism an upgrade relies on. Evidence: `pixel-t_channel_rename-result.txt`, `pixel-channel-rename-dumpsys-channels.txt`. | **passed** |
+
+### 59.8 Gates
+
+- `flutter analyze`: clean (Nov 21), re-run after the final review's fixes.
+- `flutter test`: **2,764 passed**, none failing (Nov 21, 20:10, after the review fix rounds); `flutter analyze` clean.
+- Pinned by unit and widget tests: `test/domain/reminder_tap_test.dart` (the wire: round-trip, a plain morning's missing message, a bare 1.0.36 payload, an unreadable field, an unknown kind), `test/domain/checkin_reminder_planner_test.dart` (the rule: taper 09:00 on plan days 2 and 3, cold turkey one morning each, quiet-hours shifts, the switch, the margin exactly an hour away, a plan started again, a plan that is too short, and a plain morning that is 09:00 on its own calendar day across a DST change: spring-forward on Mar 8 and Mar 29, fall-back on Oct 25 and Nov 1), `test/data/reminder_coordinator_test.dart` (the busy guard against the 08:50 fallback and against a celebration armed earlier or in the same sync, cancelling 5102/5103, the day-2 callback), `test/widgets/reminder_tap_test.dart` and `analytics_profile_test.dart` (the props reach `reminder_opened`, the user property reaches the profile), `test/reminder_copy_test.dart` (every morning wears the morning title, the zero body never says log, no morning claims a status), `test/copy_honesty_test.dart` and `l10n_parity_test.dart`.
+- Device suites: `k_retention_test.dart` (the whole file, 5 of 5) and `t_channel_rename_test.dart` passed on a Pixel 8 on Nov 21 (§59.7); the iPhone run and the overnight acceptance are pending. `m_reminder_tap_test.dart` and `o_quit_program_test.dart` were updated for the new signature and the morning title and have not been run.
+- Not touched: `functions/`, so no `npm run verify`; nothing deployed.
+
+### 59.9 Reading it, and where it is written down
+
+The build and its open device proofs (the iPhone run and the overnight acceptance) are `S7-38` in docs/08 and the readout is `S7-39`, dated 2 and 4 weeks after the build carrying this section is live. **It will speak to the mechanism within weeks and to retention only much later; nobody should call it a win sooner.** The rule and its consent wording are in CLAUDE.md (the daily-message and tap-routing entries), the feature in docs/13 row 107c (rows 21 and 108 updated), and the device suite's row in `integration_test/README.md`.

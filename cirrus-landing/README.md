@@ -517,3 +517,11 @@ The generated file says `ai-train=no` and disallows the bulk training crawlers
 block the AI *search* and assistant crawlers (OAI-SearchBot, ChatGPT-User,
 PerplexityBot, Applebot) or Google-Extended: being cited in an answer is
 distribution, and it is how a new app gets found.
+
+`src/pages/llms.txt.ts` is the map those answer engines can read: the app's
+one-line description, `/download`, both store listings (untagged, like the
+JSON-LD `sameAs`) and every published post with its own description. Generated
+from `getPublishedPosts()` and copy the pages already publish, so it cannot list
+a draft. The one new sentence names the two store listings, checked against both
+live listings on Nov 21 2026; rename a listing and change it too. It grants
+nothing robots.txt does not.
