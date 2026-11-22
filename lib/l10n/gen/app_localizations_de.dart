@@ -4434,4 +4434,12 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get whatsNew1036Item3 =>
       'Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget';
+
+  @override
+  String get whatsNew1038Item1 =>
+      'Eine Nachricht am Morgen in den ersten Tagen deines Plans';
+
+  @override
+  String get whatsNew1038Item2 =>
+      'Klarere Titel für Benachrichtigungen am Morgen';
 }

@@ -2969,5 +2969,13 @@
   "whatsNew1036Item3": "Log a puff from your home screen with the widget",
   "@whatsNew1036Item3": {
     "description": "What's New 1.0.36, bullet 3 of 3. The home-screen widget."
+  },
+  "whatsNew1038Item1": "A morning message on your plan's first days",
+  "@whatsNew1038Item1": {
+    "description": "What's New 1.0.38, bullet 1 of 2. The plain morning message on plan days 2 and 3 (docs/10 §59). At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1038Item2": "Morning notifications now have a clearer title",
+  "@whatsNew1038Item2": {
+    "description": "What's New 1.0.38, bullet 2 of 2. Every morning notification now wears a morning title (the old one read as an evening in fr/de/it). At most 80 characters, plain language, no health or quitting claims."
   }
 }

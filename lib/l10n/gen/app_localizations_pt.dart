@@ -4418,4 +4418,12 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get whatsNew1036Item3 =>
       'Regista uma passa a partir do ecrã principal com o widget';
+
+  @override
+  String get whatsNew1038Item1 =>
+      'Uma mensagem de manhã nos primeiros dias do teu plano';
+
+  @override
+  String get whatsNew1038Item2 =>
+      'As notificações da manhã têm um título mais claro';
 }

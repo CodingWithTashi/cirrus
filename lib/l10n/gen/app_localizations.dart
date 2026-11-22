@@ -7124,6 +7124,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Log a puff from your home screen with the widget'**
   String get whatsNew1036Item3;
+
+  /// What's New 1.0.38, bullet 1 of 2. The plain morning message on plan days 2 and 3 (docs/10 §59). At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'A morning message on your plan\'s first days'**
+  String get whatsNew1038Item1;
+
+  /// What's New 1.0.38, bullet 2 of 2. Every morning notification now wears a morning title (the old one read as an evening in fr/de/it). At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning notifications now have a clearer title'**
+  String get whatsNew1038Item2;
 }
 
 class _AppLocalizationsDelegate

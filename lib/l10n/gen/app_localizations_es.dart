@@ -4418,4 +4418,12 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatsNew1036Item3 =>
       'Registra una calada desde la pantalla de inicio con el widget';
+
+  @override
+  String get whatsNew1038Item1 =>
+      'Un mensaje por la mañana los primeros días de tu plan';
+
+  @override
+  String get whatsNew1038Item2 =>
+      'Las notificaciones de la mañana tienen un título más claro';
 }

@@ -4398,4 +4398,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get whatsNew1036Item3 =>
       'Log a puff from your home screen with the widget';
+
+  @override
+  String get whatsNew1038Item1 =>
+      'A morning message on your plan\'s first days';
+
+  @override
+  String get whatsNew1038Item2 =>
+      'Morning notifications now have a clearer title';
 }

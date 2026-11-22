@@ -37,6 +37,14 @@ abstract final class WhatsNewCatalog {
       l10n.whatsNew1036Item2,
       l10n.whatsNew1036Item3,
     ],
+    // 1.0.36 IS in both stores (Android ~Nov 15, iOS Nov 17 2026 — docs/10
+    // §58.4), so the copying stops here: somebody updating to 1.0.38 has
+    // already seen the three bullets above. These are only what changed
+    // since — the plan's first mornings and the morning titles (docs/10 §59).
+    '1.0.38': (l10n) => [
+      l10n.whatsNew1038Item1,
+      l10n.whatsNew1038Item2,
+    ],
   };
 
   /// The versions with notes, for the catalog test.
