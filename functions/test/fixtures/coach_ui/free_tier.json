@@ -1,0 +1,20 @@
+{
+  "input": {
+    "audience": "premium",
+    "tier": "free",
+    "chip": "craving",
+    "panicIntensity": null,
+    "caps": {
+      "exercises": [
+        "breathing",
+        "orbs",
+        "tiles",
+        "blocks",
+        "sos"
+      ],
+      "craving": false
+    },
+    "recentTools": []
+  },
+  "blocks": []
+}

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/logic/coach_history.dart';
+import '../../domain/models/coach_ui.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/firebase/functions_client.dart';
@@ -27,6 +28,7 @@ class FirebaseCoachRepository implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     // `capped` is the client's own mirror of the allowance, used to grey the
     // composer. It is deliberately NOT used to skip the call: the server owns
@@ -36,6 +38,10 @@ class FirebaseCoachRepository implements CoachRepository {
       'text': ?text,
       'chip': ?chip?.name,
       'panicIntensity': ?panicIntensity,
+      // What this build can draw, and what they just did. Only the keys
+      // that are set: a turn with nothing to add is byte for byte the
+      // request an older build makes, and an older server ignores the rest.
+      ...?extras?.toJson(),
     };
     final events = _functions.stream('aiCoachChat', payload);
 

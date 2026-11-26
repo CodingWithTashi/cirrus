@@ -1,3 +1,4 @@
+import '../logic/exercises/exercise.dart';
 import '../logic/games/game_id.dart';
 import '../logic/widget_prompt_policy.dart';
 import 'analytics.dart';
@@ -655,12 +656,19 @@ extension LpEvents on AnalyticsSink {
 
   /// A panic session ended, with the game on screen (`none` when unplayed),
   /// its rounds, and their 1–10 before and (optionally) after.
+  ///
+  /// [exercise] is what they had open when it ended and [source] where that
+  /// was opened from (the `ExerciseId` and `ExerciseSource` names). Both are
+  /// absent, never a placeholder, for a craving that ended on the flow's own
+  /// buttons — and [intensity] is absent when nobody gave one.
   void cravingSurvived({
     required bool survived,
     GameId? game,
     int rounds = 0,
     int? intensity,
     int? intensityAfter,
+    ExerciseId? exercise,
+    ExerciseSource? source,
   }) => track(
     AnalyticsEvent('craving_outcome', {
       'survived': survived.toString(),
@@ -668,6 +676,8 @@ extension LpEvents on AnalyticsSink {
       'rounds': rounds,
       'intensity': ?intensity,
       'intensity_after': ?intensityAfter,
+      'exercise': ?exercise?.name,
+      'source': ?source?.name,
     }),
   );
 
@@ -724,5 +734,56 @@ extension LpEvents on AnalyticsSink {
   /// SOS — the loop docs/03 §7 calls someone else pulling you out.
   void communityReplyCreated({required bool toSos}) => track(
     AnalyticsEvent('community_reply_created', {'sos': toSos.toString()}),
+  );
+
+  // --- coach cards and exercises -------------------------------------------
+  // A reply may carry cards that open an exercise in one tap (Nov 25 2026).
+  // Ids only: an exercise and a source are enum names, and nothing a person
+  // typed or scored a rating on leaves through these.
+
+  /// The newest reply drew its cards. [launchers] is how many, [panic]
+  /// whether the turn was sent from inside a craving (one next step rather
+  /// than a menu), [planDay] the plan day it happened on.
+  ///
+  /// Once per reply, on the draw: a reply whose cards were never on screen
+  /// offered nobody anything.
+  void coachUiShown({
+    required int launchers,
+    required bool panic,
+    required int planDay,
+  }) => track(
+    AnalyticsEvent('coach_ui_shown', {
+      'launchers': launchers,
+      'panic': panic.toString(),
+      'plan_day': planDay,
+    }),
+  );
+
+  /// The renderer refused or threw on a reply's cards, so none were drawn
+  /// and the words stood alone. No props: the person saw an ordinary reply,
+  /// and the count is the whole signal.
+  void coachUiDropped() => track(const AnalyticsEvent('coach_ui_dropped'));
+
+  /// An exercise was opened, from wherever it was offered. [exercise] is the
+  /// one that actually OPENED — a locked one resolves to a free one of its
+  /// kind before this fires — so the value is always something they got.
+  void exerciseOpened(ExerciseId exercise, ExerciseSource source) => track(
+    AnalyticsEvent('exercise_opened', {
+      'exercise': exercise.name,
+      'source': source.name,
+    }),
+  );
+
+  /// An exercise was left, however it ended: `completed` is whether it ran
+  /// long enough to count, `passed` whether it ended on "It passed". The
+  /// score stays on the device; `game_finished` already carries a round's.
+  void exerciseFinished(ExerciseRun run) => track(
+    AnalyticsEvent('exercise_finished', {
+      'exercise': run.id.name,
+      'source': run.source.name,
+      'completed': run.completed.toString(),
+      'passed': run.passed.toString(),
+      'seconds': run.seconds,
+    }),
   );
 }

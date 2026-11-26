@@ -1,0 +1,28 @@
+E2E-MARKER: card breathing at 185,380 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: card orbs at 185,484 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: card sos at 185,594 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: shot 01_menu_three_cards
+E2E-MARKER: shot 02_breathing_from_chat
+E2E-MARKER: press-back
+E2E-MARKER: lifecycle after Back: 
+E2E-MARKER: shot 03_back_in_chat
+E2E-MARKER: shot 04_orbs_from_chat
+E2E-MARKER: shot 05_survived_back_to_chat
+E2E-MARKER: shot 06_chat_after_game
+E2E-MARKER: shot 07_loop_before_handover
+E2E-MARKER: handover card: keyboard=344 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: shot 08_chat_one_card
+E2E-MARKER: shot 09_breathing_same_craving
+E2E-MARKER: shot 10_survived_after_handover
+E2E-MARKER: free account: cards=0
+E2E-MARKER: shot 11_free_account_no_cards
+05:15 +4: saying it passed in the chat counts the craving
+E2E-MARKER: lead chips: itPassed=1 stillStrong=1
+E2E-MARKER: shot 12_back_with_lead_chips
+E2E-MARKER: shot 13_it_passed_in_chat
+E2E-MARKER: fold device: view=411x914 keyboard=0 thread=110..669 (559) reply=224..308 (84) hiddenAbove=0 cards=3 334..645 (311) scrolled=144/144 centre=true firstLine=true lastLine=true
+E2E-MARKER: shot 14_reply_above_cards
+E2E-MARKER: fold view-360x640: view=360x640 keyboard=0 thread=84..405 (321) reply=99..204 (105) hiddenAbove=0 cards=3 230..541 (311) scrolled=264/424 centre=true firstLine=true lastLine=true
+E2E-MARKER: view-360x640 cards reachable: [true, true, false]
+E2E-MARKER: file /data/user/0/com.quitvape.last_puff/code_cache/15_small_view_reply_above_cards.png
+07:56 +6 -1: Some tests failed.

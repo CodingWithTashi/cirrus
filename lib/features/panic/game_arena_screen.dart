@@ -14,11 +14,14 @@ import '../../core/utils/l10n_ext.dart';
 import '../../core/utils/lp_haptics.dart';
 import '../../core/widgets/lp_buttons.dart';
 import '../../core/widgets/lp_misc.dart';
+import '../../data/stores/exercise_runs.dart';
 import '../../data/stores/journey_store.dart';
 import '../../data/stores/providers.dart';
 import '../../domain/analytics/analytics.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../domain/logic/exercises/exercise.dart';
 import '../../domain/logic/games/games.dart';
+import '../exercises/exercise_run_filing.dart';
 import 'games/frame_clock.dart';
 import 'games/game_catalog.dart';
 import 'games/game_outcome.dart';
@@ -38,10 +41,20 @@ import 'panic_screens.dart';
 /// never on a claim the person did not make. The best stays quiet until a
 /// round passes one that already existed.
 class GameArenaScreen extends ConsumerStatefulWidget {
-  const GameArenaScreen({super.key, this.initial, this.random});
+  const GameArenaScreen({
+    super.key,
+    this.initial,
+    this.random,
+    this.source = ExerciseSource.panic,
+  });
 
   /// The game to open on; null means the last one played, then Tiles.
   final GameId? initial;
+
+  /// Where the arena was opened from: the takeover's own option unless a
+  /// link says otherwise (`?src=`). It rides on the craving report and the
+  /// filed run, and tells the Survived screen where to lead back to.
+  final ExerciseSource source;
 
   /// Seeded by tests for a reproducible deal.
   final math.Random? random;
@@ -60,6 +73,10 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   late final JourneyStore _store = ref.read(quitStoreProvider.notifier);
   late final PanicViewModel _session = ref.read(panicProvider.notifier);
   late final AnalyticsSink _analytics = ref.read(analyticsProvider);
+  late final ExerciseRuns _runs = ref.read(exerciseRunsProvider.notifier);
+  late final void Function(ExerciseRun run) _fileLater = ref.read(
+    fileRunLaterProvider,
+  );
 
   /// Where this reader is in their own quit, read once in [initState]:
   /// Riverpod forbids `ref` on the way out, and the gate events fire from
@@ -98,12 +115,24 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
   /// interrupted by an offer while a round is running.
   GameEntry? _locked;
 
+  /// Whether this arena is the craving's owner (`PanicViewModel`): it opened
+  /// the craving, or joined one that was parked. An owner parks the craving
+  /// when it is left; an arena reached from the takeover owns nothing, and
+  /// the takeover closes its own craving.
+  bool _owns = false;
+
+  /// True once this visit's run has been filed, so the arena "it passed"
+  /// replaces does not file a second one from its dispose.
+  bool _filed = false;
+
   @override
   void initState() {
     super.initState();
     _store; // resolve them now, while ref is still usable
     _session;
     _analytics;
+    _runs;
+    _fileLater;
     _planDay;
     _lifecycle = AppLifecycleListener(onInactive: _pause, onPause: _pause);
     // Tier-aware, so a locked game is never the LANDING spot: a lapsed
@@ -119,9 +148,14 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
     // commit while a route settles is the "navigate before you mutate" bug.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // From the flow this is a no-op; from a `?g=` link with no flow
-      // beneath, it is what starts the craving's clock and tells the server.
-      _session.ensureStarted();
+      // From the flow this is a no-op. From a coach card it joins the craving
+      // the flow parked on its way to the chat. From a `?g=` link with no
+      // craving before it, it is what starts the clock and tells the server.
+      _owns = _session.ensureStarted();
+      // A craving opened just now starts with a clean slate, which wiped the
+      // game `_startSession` noted a frame ago. Say it again, so a craving
+      // left before its first round ends still names what was on screen.
+      _session.noteGame(_entry.id, rounds: _run.roundsDone);
       _store.setLastGame(_entry.id);
     });
   }
@@ -152,6 +186,15 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
 
   @override
   void dispose() {
+    // Left without "it passed": the craving is not over, so it is parked for
+    // the next exercise to join, never reported. After "it passed" there is
+    // nothing open and this does nothing. `park` touches plain fields only —
+    // a provider write from `dispose` throws.
+    if (_owns) _session.park();
+    // And the visit still happened: filed after this frame, because a
+    // provider write from `dispose` throws.
+    final run = _filed ? null : _visit(passed: false);
+    if (run != null) _fileLater(run);
     _lifecycle.dispose();
     _ticker.dispose();
     _frame.dispose();
@@ -277,7 +320,9 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
         score: score,
         newBest: newBest,
         rounds: _run.roundsDone,
-        intensityBefore: ref.read(panicProvider).intensity,
+        // Null for a craving that never showed the why step's slider: the
+        // Survived screen then has no "you said" to print.
+        intensityBefore: _session.ratedIntensity,
       );
     });
   }
@@ -353,6 +398,24 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
     setState(() => _paused = false);
   }
 
+  /// This visit as a run, for whoever asks what they just did (the chat
+  /// that offered the game tells Ember). It is the game on screen now: time
+  /// on a game they switched away from is not carried over. Null for a game
+  /// the exercise registry has no row for.
+  ExerciseRun? _visit({required bool passed}) {
+    final id = Exercises.forGame(_entry.id);
+    if (id == null) return null;
+    return ExerciseRun(
+      id: id,
+      source: widget.source,
+      seconds: _run.sessionSeconds.round(),
+      // A round that ran to its end, the same bar a best is recorded at.
+      completed: _run.roundsDone >= 1,
+      passed: passed,
+      score: _outcome?.score ?? _run.roundScore,
+    );
+  }
+
   /// "It passed" — from the panel with the finished round, or from the
   /// paused veil with the partial one (recorded nowhere).
   void _itPassed() {
@@ -363,12 +426,21 @@ class _GameArenaScreenState extends ConsumerState<GameArenaScreen>
           score: _run.roundScore,
           newBest: false,
           rounds: _run.roundsDone,
-          intensityBefore: ref.read(panicProvider).intensity,
+          intensityBefore: _session.ratedIntensity,
         );
+    final run = _visit(passed: true);
+    _filed = true;
     // Leave first, then mutate: a router refresh delivered after an
     // imperative navigation undoes it.
-    context.pushReplacement('${Routes.survived}?${outcome.toQuery()}');
-    _session.survive(intensityAfter: outcome.intensityAfter);
+    context.pushReplacement(
+      '${Routes.survived}?${outcome.toQuery()}&src=${widget.source.name}',
+    );
+    _session.survive(
+      intensityAfter: outcome.intensityAfter,
+      exercise: run?.id,
+      source: widget.source,
+    );
+    if (run != null) _runs.report(run);
   }
 
   @override

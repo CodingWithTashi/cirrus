@@ -22,6 +22,7 @@ import {reportPost} from '../../src/handlers/reportPost';
 import {reportReply} from '../../src/handlers/reportReply';
 import {matchedTestimonials} from '../../src/handlers/testimonials';
 import {
+  cravingsCol,
   db,
   devicesCol,
   myPostsCol,
@@ -325,6 +326,46 @@ describe('panicSession', () => {
   it('ignores an outcome it does not recognise', async () => {
     await panicSession.run(caller({outcome: 'exploded'}));
     expect((await userDoc('alice').collection('cravings').get()).size).toBe(0);
+  });
+
+  it('records what they used and where they opened it from', async () => {
+    // A craving met from a coach card. Nobody asked how strong it was, so the
+    // app sends no strength at all.
+    await panicSession.run(
+      caller({outcome: 'survived', exercise: 'breathing', source: 'coach'}),
+    );
+
+    const cravings = await cravingsCol('alice').get();
+    expect(cravings.size).toBe(1);
+    const craving = cravings.docs[0]!;
+    expect(craving.get('outcome')).toBe('survived');
+    expect(craving.get('exercise')).toBe('breathing');
+    expect(craving.get('source')).toBe('coach');
+    // Stored as null: not left out, and never the slider's default. A
+    // strength nobody gave is one Ember must never be able to quote back.
+    expect(craving.data()).toHaveProperty('intensity', null);
+    expect(craving.data()).toHaveProperty('intensityAfter', null);
+    expect(craving.data()).toHaveProperty('game', null);
+  });
+
+  it('stores null for an exercise or a source it does not know', async () => {
+    // A newer app, or a payload nobody's app sent. The craving still counts;
+    // the two values it cannot vouch for do not reach the document.
+    await panicSession.run(
+      caller({
+        outcome: 'survived',
+        intensity: 8,
+        game: 'orbs',
+        exercise: 'teleport',
+        source: 'email',
+      }),
+    );
+
+    const craving = (await cravingsCol('alice').get()).docs[0]!;
+    expect(craving.get('intensity')).toBe(8);
+    expect(craving.get('game')).toBe('orbs');
+    expect(craving.data()).toHaveProperty('exercise', null);
+    expect(craving.data()).toHaveProperty('source', null);
   });
 });
 

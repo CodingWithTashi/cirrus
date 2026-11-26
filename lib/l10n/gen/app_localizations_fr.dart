@@ -2432,7 +2432,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get survivedBack => 'Retour à aujourd\'hui';
 
   @override
+  String get survivedBackChat => 'Retour à la discussion';
+
+  @override
   String get survivedShareCopied => 'Carte copiée — colle-la où tu veux.';
+
+  @override
+  String get exerciseBreathingTitle => 'Respire avec moi';
+
+  @override
+  String exerciseGameSub(int seconds) {
+    return '$seconds secondes · pouces occupés, cerveau occupé';
+  }
 
   @override
   String get coachName => 'Ember';
@@ -2453,6 +2464,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get coachChipProgress => 'Montre mes progrès';
+
+  @override
+  String get coachAfterStill => 'C\'est encore fort';
 
   @override
   String get coachInputHint => 'Écris à ton coach…';

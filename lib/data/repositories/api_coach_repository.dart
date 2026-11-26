@@ -1,3 +1,4 @@
+import '../../domain/models/coach_ui.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
 import '../api/coach_api.dart';
@@ -19,12 +20,17 @@ class ApiCoachRepository implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     final reply = CoachReplyCodec.decode(
       await _api.requestReply({
         'text': ?text,
         'chip': ?chip?.name,
         'capped': capped,
+        // The same keys `aiCoachChat` reads, so the demo backend can answer
+        // a craving the way the real one does.
+        'panicIntensity': ?panicIntensity,
+        ...?extras?.toJson(),
       }),
     );
     final words = reply.text;

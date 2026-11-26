@@ -1,3 +1,4 @@
+import '../../domain/logic/exercises/exercise.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
@@ -28,15 +29,27 @@ class FirebasePanicRepository implements PanicRepository {
 
   @override
   Future<void> survived({
-    required int intensity,
+    int? intensity,
     int? intensityAfter,
     GameId? game,
+    ExerciseId? exercise,
+    ExerciseSource? source,
   }) async {
     await _functions.call('panicSession', {
       'outcome': 'survived',
-      'intensity': intensity,
+      // Absent, never null and never a default: a craving that did not come
+      // through the why step has no strength, and the craving document must
+      // not carry one the person never gave.
+      'intensity': ?intensity,
       'intensityAfter': ?intensityAfter,
       'game': ?game?.name,
+      // What was on screen when they said it passed, and where that screen
+      // was opened from. Wire values are the enums' names, the same list
+      // `functions/src/domain/exercises.ts` holds. A craving that ended on
+      // one of the takeover's own steps, with nothing open, names its source
+      // (`panic`) and no exercise.
+      'exercise': ?exercise?.name,
+      'source': ?source?.name,
     });
   }
 }
@@ -55,8 +68,10 @@ class NoopPanicRepository implements PanicRepository {
 
   @override
   Future<void> survived({
-    required int intensity,
+    int? intensity,
     int? intensityAfter,
     GameId? game,
+    ExerciseId? exercise,
+    ExerciseSource? source,
   }) async {}
 }

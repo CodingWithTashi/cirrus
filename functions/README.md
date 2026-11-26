@@ -36,8 +36,8 @@ lives in `users/{uid}`, which `firestore.rules` makes read-only to clients.
 
 | Function | Trigger | Job |
 |---|---|---|
-| `aiCoachChat` | callable (streaming) | Tier → quota → memory card → Gemini → persist both turns |
-| `panicSession` | callable | Counts the session, reports AI availability. Never blocks. |
+| `aiCoachChat` | callable (streaming) | Tier → quota → memory card → Gemini → persist both turns. Attaches the coach cards (below), chosen by code |
+| `panicSession` | callable | Counts the session, reports AI availability. Never blocks. Records a reported craving in `users/{uid}/cravings`: its two ratings, the `game`, the `exercise` used and the `source` it was opened from |
 | `syncUserContext` | callable | The app's only write path into `users/{uid}` (tz, locale, device registry) |
 | `setCoachName` | callable | Validates the coach's name and stores the server-owned copy — the only one `aiCoachChat` is ever told |
 | `coachMemories` / `forgetCoachMemory` | callable | List and delete Ember's remembered facts (`users/{uid}/memories`) for their owner |
@@ -161,6 +161,61 @@ Only `src/ai/gemini.ts` imports a vendor SDK. Everything else depends on the
 Claude, or GPT means one new implementation of that interface, no handler
 changes and no app release.
 
+## Coach cards
+
+A coach reply may carry `ui: {v: 1, blocks: [{t: 'launcher', exercise}]}`:
+tappable cards that open a craving exercise. A block is an id and nothing
+else; the app draws the rest. They are chosen by `planBlocks`
+(`src/ai/coachUi.ts`), plain code with no model call, from the chip, whether
+the turn is mid-craving, the server's own read of the tier, the list of
+exercises the app says it can draw, and what the person has used before. A
+request that sends no `ui` (an older app) gets a reply without it.
+
+`COACH_UI_AUDIENCE` in `.env.alastpuff` decides who gets them:
+
+| Value | Who |
+|---|---|
+| `premium` | Subscribers and trials only. The launch value. |
+| `all` | Everybody; a free account is offered free exercises only. |
+| `off` | Nobody. The kill switch. |
+
+It is read through `coachUiAudience`: anything that is not exactly `off` or
+`all`, an unset param included, is `premium`.
+
+On a turn that can show cards (the app sent `ui`, and the audience admits the
+tier) `aiCoachChat` also reads the last 12 documents of
+`users/{uid}/cravings`, beside the journey read. They are the "used most
+recently" input to `planBlocks`, so what somebody used last leads their
+cards. A read that fails is logged as `coach.cravings_failed` and the turn
+answers without it.
+
+`COACH_CONTEXT_LINES` in `.env.alastpuff` decides whether the same facts also
+reach the PROMPT, as six context lines at the end of the user card: the
+craving log (up to three lines, `src/ai/cravingDigest.ts`), "right now is one
+of their danger hours", "last puff: …", and what they just did in the app.
+
+| Value | What the user card carries |
+|---|---|
+| `off` (the default, and the deployed value) | Exactly what it carried before the lines existed. |
+| `on` | The six lines, on every turn that is not a panic turn. |
+
+**It is off until the coach eval's bar for those lines is met.** The bar was
+missed twice on Nov 25 2026; it and both readings are in
+`docs/superpowers/evidence/2026-11-25-coach-cards/eval/`. Do not turn it on
+from this README: read `pass-bar.md` there first.
+
+It is read through `coachContextLines`, and **the opposite way round from
+every other switch here**: only the exact word `on` turns the lines on, and
+an unset param, a typo and `true` all leave them off. The others
+(`COACH_FOLLOWUPS`, `COMMUNITY_PUSH`, `ENFORCE_APP_CHECK`) fail toward on
+because on is their safe state; this one fails toward off because off is
+its. The cards do not depend on it either way.
+
+The exercises themselves are one registry, `src/domain/exercises.ts`, mirrored
+row for row by `lib/domain/logic/exercises/exercise.dart`. The card policy is
+pinned to `test/fixtures/coach_ui/*.json`, which the app's own suite reads
+too.
+
 ## Parity with the Dart engines
 
 `src/domain/` ports `TaperEngine` and the streak rules to TypeScript because
@@ -171,6 +226,10 @@ changes and no app release.
 `test/domain/taper_engine_test.dart`. If those two files ever disagree, the app
 and the server are quoting different limits to the same user on the same day.
 Change one engine, change both.
+
+The exercise registry is held the other way round: the Dart suite
+`test/domain/exercises_test.dart` reads `src/domain/exercises.ts` and fails
+when the two lists differ.
 
 ## Descoped
 

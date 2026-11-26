@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/analytics/lp_events.dart';
 import '../../domain/date_key.dart';
 import '../../domain/logic/allowances.dart';
+import '../../domain/logic/exercises/exercise.dart';
+import '../../domain/models/coach_ui.dart';
 import '../../domain/models/models.dart';
 import '../../domain/repositories/repositories.dart';
+import 'day1_tour_store.dart';
+import 'exercise_runs.dart';
 import 'providers.dart';
 
 class CoachState {
@@ -69,11 +73,22 @@ class CoachStore extends Notifier<CoachState> {
   int _idCounter = 0;
   bool Function() _alive = () => false;
 
+  /// Whether the last message sent was sent from inside a craving, kept so
+  /// that "run it back" asks the same way the first attempt did.
+  bool _lastCraving = false;
+
+  /// The filed run whose craving was counted from the chat after it was
+  /// filed, or null. See [markRunPassed].
+  ExerciseRun? _passedInChat;
+
   @override
   CoachState build() {
     var alive = true;
     ref.onDispose(() => alive = false);
     _alive = () => alive;
+    // A rebuild runs on the SAME instance, so the fields are reset by hand.
+    _lastCraving = false;
+    _passedInChat = null;
     return const CoachState();
   }
 
@@ -162,11 +177,49 @@ class CoachStore extends Notifier<CoachState> {
     seedGreetingIfEmpty();
   }
 
-  Future<void> send(String text, {int? panicIntensity}) =>
-      _handle(userText: text, panicIntensity: panicIntensity);
+  /// [craving] says the message is sent from inside a craving (the screen's
+  /// call: it came from the panic flow, or follows the craving chip). The
+  /// server then offers one next step, never the menu again.
+  /// The craving behind [run] has been counted from the chat: they came back
+  /// from the exercise without saying it passed, and said so here.
+  ///
+  /// The run itself stays as it was filed. Filing it again to flip one field
+  /// would report a second `exercise_finished` for one exercise. What
+  /// changes is what Ember is told with the next message: `passed`, because
+  /// the craving is already in the person's total and the server says so
+  /// beside it only when it knows. A total quoted without that note is how
+  /// the model came to say one more craving than the card showed.
+  void markRunPassed(ExerciseRun run) => _passedInChat = run;
 
-  Future<void> sendChip(CoachChip chip, {int? panicIntensity}) =>
-      _handle(chip: chip, panicIntensity: panicIntensity);
+  /// Whether the craving behind [run] is counted: on the exercise's own
+  /// screen, or from the chat since. Either way there is nothing left to ask
+  /// about it.
+  bool runHasPassed(ExerciseRun run) =>
+      run.passed || identical(run, _passedInChat);
+
+  /// Whether [reply] answered what was said. The cap and an outage the
+  /// server reports arrive as ordinary envelopes, and neither says a word
+  /// about anything: a turn that ends on one has told Ember nothing.
+  static bool _answered(CoachReply reply) =>
+      reply.template != CoachTemplate.capReached &&
+      reply.template != CoachTemplate.connectionLost &&
+      reply.template != CoachTemplate.backendRejected;
+
+  Future<void> send(
+    String text, {
+    int? panicIntensity,
+    bool craving = false,
+  }) => _handle(
+    userText: text,
+    panicIntensity: panicIntensity,
+    craving: craving,
+  );
+
+  Future<void> sendChip(
+    CoachChip chip, {
+    int? panicIntensity,
+    bool craving = false,
+  }) => _handle(chip: chip, panicIntensity: panicIntensity, craving: craving);
 
   /// One of the two lines the client writes for a reply that never came.
   static bool isFailure(CoachMessage m) =>
@@ -194,6 +247,9 @@ class CoachStore extends Notifier<CoachState> {
     await _handle(
       userText: chip == null ? asked.text : null,
       chip: chip == null ? null : CoachChip.values[chip],
+      // The same message, so the same craving: a retried craving chip still
+      // gets its menu, and a retried follow-up still gets one next step.
+      craving: _lastCraving,
       retry: true,
     );
   }
@@ -202,9 +258,52 @@ class CoachStore extends Notifier<CoachState> {
     String? userText,
     CoachChip? chip,
     int? panicIntensity,
+    bool craving = false,
     bool retry = false,
   }) async {
     if (userText != null && userText.trim().isEmpty) return;
+    _lastCraving = craving;
+    // The Day-1 walkthrough's coach step leaves for the checklist 2.5 s after
+    // the reply: a card under it would be on screen for exactly as long as it
+    // takes to start reading it. So that turn says nothing about what this
+    // build can draw (which is how an older build looks to the server, and
+    // gets it no cards) and keeps none that arrive anyway. Read once, here,
+    // so the request and the reply cannot disagree about which turn it was.
+    final touring = ref.read(day1TourStepProvider) != null;
+    // The exercise they finished just before this message, when the chat
+    // offered it and it is still the same craving. Looked at here and taken
+    // only once Ember has answered: a send that fails, or that the cap or an
+    // outage answers instead, has told Ember nothing, so the next attempt
+    // (the retry, or whatever they type instead) carries it again.
+    final runs = ref.read(exerciseRunsProvider.notifier);
+    final filed = runs.peekRecent(
+      source: ExerciseSource.coach,
+      now: ref.read(nowProvider)(),
+    );
+    // What Ember is told about it: the run as it was filed, or this store's
+    // own copy marked passed when the craving was counted from the chat
+    // afterwards ([markRunPassed]).
+    final justDid = filed == null || filed.passed || !runHasPassed(filed)
+        ? filed
+        : ExerciseRun(
+            id: filed.id,
+            source: filed.source,
+            seconds: filed.seconds,
+            completed: filed.completed,
+            passed: true,
+            score: filed.score,
+          );
+    final extras = CoachTurnExtras(
+      ui: touring
+          ? null
+          : CoachUiCaps(
+              // Every exercise this build knows how to open, in registry
+              // order. The server offers only what is on this list.
+              exercises: [for (final spec in Exercises.all) spec.id.name],
+              craving: craving,
+            ),
+      justDid: justDid,
+    );
     // One event per thing said. A retry re-asks the message a failure line
     // answered, and that message was already counted when it was first sent.
     if (!retry) {
@@ -239,6 +338,7 @@ class CoachStore extends Notifier<CoachState> {
         chip: chip,
         capped: capped,
         panicIntensity: panicIntensity,
+        extras: extras,
       )) {
         if (!_alive()) return;
         switch (event) {
@@ -305,6 +405,20 @@ class CoachStore extends Notifier<CoachState> {
       return;
     }
 
+    // Ember has been told what they just did, so it is not told again. Only
+    // when this WAS an answer ([_answered]), and only if it is still the run
+    // that was sent: one filed while this reply was on its way has not been
+    // reported yet.
+    if (filed != null &&
+        _answered(done) &&
+        identical(ref.read(exerciseRunsProvider), filed)) {
+      runs.takeRecent(
+        source: ExerciseSource.coach,
+        now: ref.read(nowProvider)(),
+      );
+      _passedInChat = null;
+    }
+
     // The wall, reported where the user actually met it: the reply that says
     // so. Not from the pre-send `capped` guess — that reads a local counter
     // which resets on launch and never rolls over at midnight, so it fires on
@@ -351,6 +465,9 @@ class CoachStore extends Notifier<CoachState> {
           // reads the newest Ember bubble, so a suggestion can never outlive
           // the reply it was written for.
           followUps: done.followUps,
+          // The cards under this reply, the same way: on the message, so
+          // only the newest reply can ever show any.
+          blocks: touring ? const [] : done.blocks,
         ),
       ],
     );

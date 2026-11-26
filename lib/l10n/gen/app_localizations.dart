@@ -3945,11 +3945,29 @@ abstract class AppLocalizations {
   /// **'Back to today'**
   String get survivedBack;
 
+  /// No description provided for @survivedBackChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the chat'**
+  String get survivedBackChat;
+
   /// No description provided for @survivedShareCopied.
   ///
   /// In en, this message translates to:
   /// **'Stat card copied — paste it anywhere.'**
   String get survivedShareCopied;
+
+  /// No description provided for @exerciseBreathingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe with me'**
+  String get exerciseBreathingTitle;
+
+  /// No description provided for @exerciseGameSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} seconds · thumbs busy, brain busy'**
+  String exerciseGameSub(int seconds);
 
   /// No description provided for @coachName.
   ///
@@ -3986,6 +4004,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show my progress'**
   String get coachChipProgress;
+
+  /// No description provided for @coachAfterStill.
+  ///
+  /// In en, this message translates to:
+  /// **'Still strong'**
+  String get coachAfterStill;
 
   /// No description provided for @coachInputHint.
   ///

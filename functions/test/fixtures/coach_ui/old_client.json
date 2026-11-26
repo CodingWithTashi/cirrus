@@ -1,0 +1,11 @@
+{
+  "input": {
+    "audience": "premium",
+    "tier": "premium",
+    "chip": "craving",
+    "panicIntensity": null,
+    "caps": null,
+    "recentTools": []
+  },
+  "blocks": []
+}

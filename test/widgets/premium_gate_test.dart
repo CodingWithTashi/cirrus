@@ -15,6 +15,7 @@ import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/date_key.dart';
 import 'package:last_puff/domain/logic/allowances.dart';
 import 'package:last_puff/domain/logic/launch_paywall_policy.dart';
+import 'package:last_puff/domain/models/coach_ui.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
@@ -859,6 +860,7 @@ class _CappedCoach implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     yield const CoachDone(CoachReply(template: CoachTemplate.capReached));
   }

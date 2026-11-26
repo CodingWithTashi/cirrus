@@ -11,16 +11,28 @@
  * field existed ignores it and renders `template`, so this deploys safely
  * ahead of the app release. ALWAYS send a sensible `template` alongside
  * `text` for exactly that reason.
+ *
+ * The coach cards are additive the same way, in both directions: a request
+ * may carry `ui: {v, exercises, craving}` (what the app can draw) and a reply
+ * may carry `ui: {v, blocks}`. A request without the field gets a reply
+ * without it. A request may also carry `justDid: {exercise, seconds,
+ * completed, passed}`, the exercise they finished just before this message;
+ * it becomes one line of the user card and changes nothing in the envelope.
+ * That line, and the other context lines of the card, are added only while
+ * `COACH_CONTEXT_LINES` is `on`; it ships off (`config.ts` says why).
  */
 import {onCall} from 'firebase-functions/v2/https';
 import type {CallableRequest, CallableResponse} from 'firebase-functions/v2/https';
 import {
   AI_COST_PANIC,
+  COACH_CONTEXT_LINES,
   COACH_CONTEXT_TURNS,
   COACH_FOLLOWUPS,
   COACH_MIN_INSTANCES,
   COACH_SUMMARY_EVERY,
   COACH_SUMMARY_MAX_CHARS,
+  COACH_UI_AUDIENCE,
+  coachContextLines,
   enforceAppCheck,
   GEMINI_API_KEY,
   MAX_OUTPUT_TOKENS,
@@ -29,6 +41,19 @@ import {
   readAllowance,
   REGION,
 } from '../config';
+import {
+  audienceAdmits,
+  coachUiAudience,
+  parseUiCapabilities,
+  planBlocks,
+  uiEnvelope,
+  type Block,
+} from '../ai/coachUi';
+import {
+  digestCravings,
+  parseJustDid,
+  type CravingDoc,
+} from '../ai/cravingDigest';
 import {geminiModel} from '../ai/gemini';
 import {buildMemoryCard} from '../ai/memoryCard';
 import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
@@ -46,7 +71,14 @@ import {
   worthExtracting,
   type MemoryKind,
 } from '../lib/memories';
-import {coachMessages, FieldValue, journeyDoc, userDoc} from '../lib/firestore';
+import {
+  coachMessages,
+  cravingsCol,
+  FieldValue,
+  journeyDoc,
+  Timestamp,
+  userDoc,
+} from '../lib/firestore';
 import {asEnum, requireCaller, requireText} from '../lib/guards';
 import {log, safeMeta} from '../lib/logger';
 import {
@@ -91,6 +123,20 @@ interface CoachReplyEnvelope {
    * the model returns nothing useful.
    */
   followUps?: string[];
+  /**
+   * The cards under this reply: exercises one tap away (`ai/coachUi.ts`).
+   *
+   * Rides this envelope for the reason `followUps` does, and is absent rather
+   * than empty when there is nothing to show — so a request that says nothing
+   * about cards (an older app), a free account while the audience is
+   * `premium`, and an ordinary message all get the keys they get today and
+   * no others. A block is an id and nothing else; the app draws the rest.
+   *
+   * Unlike `followUps` it is on `capReached` and `connectionLost` too. Those
+   * are the two replies where Ember has nothing to say, and an exercise needs
+   * neither a message nor the model.
+   */
+  ui?: {v: 1; blocks: readonly Block[]};
 }
 
 export const aiCoachChat = onCall(
@@ -114,6 +160,9 @@ export const aiCoachChat = onCall(
     const text = chip === null ? requireText(data['text'], 'text', MAX_MESSAGE_CHARS) : null;
     const panicIntensity =
       typeof data['panicIntensity'] === 'number' ? data['panicIntensity'] : null;
+    // What the app says it can draw. Null for an older app and for anything
+    // malformed, and null means no cards; it never refuses the turn.
+    const caps = parseUiCapabilities(data['ui']);
 
     const tier = await tierFor(caller.uid);
     // The server-owned copy, written only by the validated `setCoachName`.
@@ -129,13 +178,72 @@ export const aiCoachChat = onCall(
     // `users/{uid}` and NOT in `coachMessages`, because the app renders every
     // non-user doc of that collection as a visible chat bubble.
     const summary = parseCoachSummary(userSnap.get('coachSummary'));
-    const journeySnap = await journeyDoc(caller.uid).get();
+    // Who the cards are for, read once. It also decides whether the craving
+    // log is read at all: that is one more Firestore query, made beside the
+    // journey read (so it adds no wait of its own) and only for a turn that
+    // can show a card — an app that said what it can draw, on a tier the
+    // audience admits. Everybody else costs exactly the reads they cost
+    // before.
+    const audience = coachUiAudience(COACH_UI_AUDIENCE.value());
+    const [journeySnap, cravingDocs] = await Promise.all([
+      journeyDoc(caller.uid).get(),
+      caps !== null && audienceAdmits(audience, tier)
+        ? readCravings(caller.uid)
+        : Promise.resolve(null),
+    ]);
     if (!journeySnap.exists) {
       // No journey yet = not onboarded. Greet rather than burn a model call.
       return {template: 'greeting', args: {}, showWeekCard: false};
     }
 
-    const card = buildMemoryCard(journeySnap.data(), new Date(), caller.timeZone);
+    // Null when no read was made or the read failed; never a reason to fail.
+    const cravings =
+      cravingDocs === null
+        ? null
+        : digestCravings(cravingDocs, caller.timeZone);
+
+    // The card's context lines (the craving log, the danger hour, the last
+    // puff, what they just did) are behind `COACH_CONTEXT_LINES`, which is
+    // OFF unless it says exactly `on`: the coach eval's bar for them has not
+    // been met, and with no extras the card is, character for character, the
+    // one production has always sent. This switches prompt text only. The
+    // digest above still chooses the cards below whichever way it is set.
+    //
+    // With the lines on they go to every turn EXCEPT a panic one, which
+    // passes no extras at all. Somebody at 8/10 gets breath and presence in
+    // thirty words; their history read back to them is the opposite of that.
+    const contextLines = coachContextLines(COACH_CONTEXT_LINES.value());
+    const card = buildMemoryCard(
+      journeySnap.data(),
+      new Date(),
+      caller.timeZone,
+      !contextLines || panicIntensity !== null
+        ? undefined
+        : {cravings, justDid: parseJustDid(data['justDid'])},
+    );
+
+    // Coach cards, decided ONCE and by code: no model call is added for
+    // them, so they cost nothing and are there on the turns the model is not
+    // (the cap, an outage). Planned after the greeting above on purpose —
+    // with no journey there is nothing to open — and before the quota, so
+    // every envelope below carries the same answer. `tier` is the server's
+    // own read; the app's list only ever narrows what may be offered.
+    const blocks = planBlocks({
+      audience,
+      tier,
+      chip,
+      panicIntensity,
+      caps,
+      // What they have opened during a craving, most recent first: the
+      // latest one leads the menu, and is the one card mid-craving.
+      recentTools: cravings?.tools ?? [],
+    });
+    const ui = uiEnvelope(blocks);
+    log.info('coach.ui', safeMeta({
+      uid: caller.uid,
+      blocks: blocks.length,
+      craving: panicIntensity !== null || caps?.craving === true,
+    }));
 
     // Through `readAllowance`, never the param's `.value()` directly: a param
     // that resolves to 0 — no `.env` for the active project, a typo'd key —
@@ -184,6 +292,7 @@ export const aiCoachChat = onCall(
         showWeekCard: false,
         messagesLeft: 0,
         tier,
+        ...ui,
       };
     }
     // A panic turn left the coach counter alone, so its remaining count comes
@@ -320,6 +429,7 @@ export const aiCoachChat = onCall(
           showWeekCard: false,
           messagesLeft: messagesLeft + 1,
           tier,
+          ...ui,
         };
       }
       throw error;
@@ -334,6 +444,7 @@ export const aiCoachChat = onCall(
         showWeekCard: false,
         messagesLeft: messagesLeft + 1,
         tier,
+        ...ui,
       };
     }
 
@@ -391,9 +502,59 @@ export const aiCoachChat = onCall(
       // chips), and not sending it keeps the payload honest about whether
       // anything was actually suggested.
       ...(followUps.length > 0 ? {followUps} : {}),
+      // One return for both paths, so a streamed turn and a plain call carry
+      // the same cards. `{}` when there are none: the key is absent.
+      ...ui,
     };
   },
 );
+
+/** How far back the craving log is read. Enough to list every tool they use. */
+const CRAVING_DOCS = 12;
+
+/**
+ * The cravings this person marked as passed, newest first, or null when the
+ * read failed. Never throws: the log is context for a reply, and losing it
+ * must cost the lines, not the turn somebody is waiting on mid-craving.
+ *
+ * `panicSession` also accepts a `slipped` outcome. The card calls this list
+ * "cravings they marked as passed", so only `survived` documents are read
+ * into it — filtered here rather than in the query, which would need a
+ * composite index for a field no shipped app writes any other value of.
+ */
+async function readCravings(uid: string): Promise<CravingDoc[] | null> {
+  try {
+    const snap = await cravingsCol(uid)
+      .orderBy('startedAt', 'desc')
+      .limit(CRAVING_DOCS)
+      .get();
+    const docs: CravingDoc[] = [];
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const startedAt: unknown = d['startedAt'];
+      if (d['outcome'] !== 'survived' || !(startedAt instanceof Timestamp)) {
+        continue;
+      }
+      docs.push({
+        startedAt: startedAt.toDate(),
+        intensity: numberOrNull(d['intensity']),
+        intensityAfter: numberOrNull(d['intensityAfter']),
+        exercise: stringOrNull(d['exercise']),
+        game: stringOrNull(d['game']),
+      });
+    }
+    return docs;
+  } catch (error) {
+    log.warn('coach.cravings_failed', safeMeta({uid, error: String(error)}));
+    return null;
+  }
+}
+
+const numberOrNull = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isFinite(v) ? v : null;
+
+const stringOrNull = (v: unknown): string | null =>
+  typeof v === 'string' ? v : null;
 
 /**
  * Three or four things the user might tap to say next. Never throws, never

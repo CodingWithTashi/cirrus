@@ -9,7 +9,7 @@
  *
  * Budget: ~1.5K input tokens (docs/04 §3). Keep additions cheap.
  */
-import {dayKeyIn} from '../domain/dateKey';
+import {addDays, dayKeyIn, hourIn, isDayKey} from '../domain/dateKey';
 import {decodeJourney} from '../domain/journeyCodec';
 import {
   currentStreak,
@@ -20,6 +20,12 @@ import {
 } from '../domain/streakEngine';
 import {dayNumber, limitFor} from '../domain/taperEngine';
 import {weekStats, type WeekStat} from '../domain/weekStats';
+import {
+  cravingLines,
+  justDidLine,
+  type CravingDigest,
+  type JustDid,
+} from './cravingDigest';
 import {
   totalDays,
   type DayLog,
@@ -36,10 +42,27 @@ export interface MemoryCard {
   readonly streak: number;
 }
 
+/**
+ * What a turn may add to the card beyond the journey: the craving digest and
+ * the exercise they just finished.
+ *
+ * **Passing this object at all is what turns the context lines on**, the two
+ * that come from the journey included ("right now is one of their danger
+ * hours", "last puff: …"). A caller that passes nothing gets the card exactly
+ * as it was, which is what the coach does on a panic turn: mid-craving the
+ * reply is breath and presence, and none of this is read back to them.
+ */
+export interface CardExtras {
+  /** Null when no craving read was made, or it failed. */
+  readonly cravings?: CravingDigest | null;
+  readonly justDid?: JustDid | null;
+}
+
 export function buildMemoryCard(
   raw: unknown,
   now: Date,
   timeZone: string,
+  extras?: CardExtras,
 ): MemoryCard {
   const journey = decodeJourney(raw);
   const todayKey = dayKeyIn(now, timeZone);
@@ -147,9 +170,108 @@ export function buildMemoryCard(
       : []),
     `recent events: ${recentEvents(journey, todayKey, streak).join('; ') || 'none'}`,
     `in their own words: ${ownWords(window14) || 'nothing written yet'}`,
+    // Last, so what just happened is the last thing read before the message.
+    ...(extras === undefined
+      ? []
+      : contextLines(extras, {
+          inDangerHour: hours.includes(hourIn(now, timeZone)),
+          lastPuffAt: journey.lastPuffAt,
+          now,
+          todayKey,
+          timeZone,
+        })),
   ];
 
   return {text: lines.join('\n'), journey, todayKey, day, streak};
+}
+
+/**
+ * The context lines, in the order they are read: the craving log (up to
+ * three lines, `cravingDigest.ts`), whether right now is a danger hour, when
+ * the last puff was, and what they just did in the app.
+ *
+ * Each is a stored fact stated in words, and each is absent rather than
+ * hedged when its fact is missing. None states a count, and none a rating.
+ */
+function contextLines(
+  extras: CardExtras,
+  at: {
+    readonly inDangerHour: boolean;
+    readonly lastPuffAt: string | null;
+    readonly now: Date;
+    readonly todayKey: string;
+    readonly timeZone: string;
+  },
+): string[] {
+  return [
+    ...(extras.cravings == null ? [] : cravingLines(extras.cravings)),
+    // The `danger hours:` line above lists them; this says the one thing the
+    // model would otherwise have to work out from the clock, and it is the
+    // difference between "evenings are hard for you" and "this is the hour".
+    ...(at.inDangerHour ? ['right now is one of their danger hours'] : []),
+    ...lastPuffLine(at.lastPuffAt, at.now, at.todayKey, at.timeZone),
+    ...(extras.justDid == null ? [] : [justDidLine(extras.justDid)]),
+  ];
+}
+
+/** `yyyy-MM-ddTHH:mm`, then optional seconds, fraction and zone. Nothing else. */
+const STAMP =
+  /^(\d{4}-\d{2}-\d{2})T(\d{2}):\d{2}(?::\d{2}(?:\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})?$/;
+
+/** The weekday of a `yyyy-MM-dd` key, by calendar and not by any zone. */
+function weekdayOf(dayKey: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    weekday: 'long',
+  }).format(new Date(`${dayKey}T12:00:00.000Z`));
+}
+
+/**
+ * `last puff: 2026-11-24 (Tuesday), about 21:00 their time`, or nothing.
+ *
+ * `lastPuffAt` lives on `journeys/{uid}`, which the app writes wholesale, so
+ * it is CLIENT TEXT and is never copied into the card: it must be a
+ * timestamp and nothing more, and the line is built from the date and the
+ * hour parsed out of it. Anything else says nothing at all.
+ *
+ * The app stamps it with the phone's own wall clock and no zone
+ * (`DateTime.toIso8601String()` on a local time), so the date and hour are
+ * read straight off the string: converting through the caller's timezone
+ * would move a 21:05 puff to another hour. A stamp that does carry a zone is
+ * an instant, and is read in their timezone.
+ *
+ * Anything later than their own clock right now says nothing: a day after
+ * today, or an hour still ahead of them today, is a device clock that was
+ * wrong or a flight west, not a puff that has happened. The card states
+ * their local time a few lines up, and "last puff about 22:00" beside
+ * "local time 21:40" is two facts that cannot both be true.
+ */
+function lastPuffLine(
+  lastPuffAt: string | null,
+  now: Date,
+  todayKey: string,
+  timeZone: string,
+): string[] {
+  if (lastPuffAt === null) return [];
+  const m = STAMP.exec(lastPuffAt);
+  if (m === null) return [];
+
+  let dayKey = m[1]!;
+  let hour = Number.parseInt(m[2]!, 10);
+  // Round-tripping the key is what refuses month 13 and day 45, which the
+  // shape alone lets through.
+  if (!isDayKey(dayKey) || addDays(dayKey, 0) !== dayKey || hour > 23) return [];
+  if (m[3] !== undefined) {
+    const instant = new Date(lastPuffAt);
+    if (Number.isNaN(instant.getTime()) || instant.getTime() > now.getTime()) {
+      return [];
+    }
+    dayKey = dayKeyIn(instant, timeZone);
+    hour = hourIn(instant, timeZone);
+  }
+  if (dayKey > todayKey) return [];
+  if (dayKey === todayKey && hour > hourIn(now, timeZone)) return [];
+  return [`last puff: ${dayKey} (${weekdayOf(dayKey)}), about ${hour}:00 their time`];
 }
 
 /**

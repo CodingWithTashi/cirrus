@@ -357,6 +357,71 @@ export const COACH_FOLLOWUPS = defineString('COACH_FOLLOWUPS', {
   description: "Set 'false' to stop suggesting follow-ups on coach turns.",
 });
 
+/**
+ * Who a coach reply may carry cards for (`ai/coachUi.ts`).
+ *
+ *   'premium' — subscribers and trials only. The launch value: a free account
+ *               gets today's text-only reply (founder decision, Nov 25 2026).
+ *   'all'     — everybody, and a free account is offered free exercises only.
+ *   'off'     — nobody. The kill switch.
+ *
+ * Never read with `.value()` and a comparison at the call site: it goes
+ * through `coachUiAudience(raw)`, which trims, lower-cases, and reads
+ * ANYTHING that is not exactly `off` or `all` as `premium`. That includes the
+ * empty string an unset deploy-time param resolves to, so a project whose
+ * `.env` never named this neither loses the feature nor gives a Premium one
+ * away. The cards are chosen by code and cost no model call, so widening the
+ * audience is a config change and nothing else.
+ */
+export const COACH_UI_AUDIENCE = defineString('COACH_UI_AUDIENCE', {
+  default: 'premium',
+  description:
+    "Who gets coach cards: 'premium' (subscribers), 'all', or 'off'.",
+});
+
+/**
+ * Whether the coach's user card carries the six context lines: the craving
+ * log (up to three lines), "right now is one of their danger hours", "last
+ * puff: …" and "just before this message, in the app: …" (`ai/memoryCard.ts`,
+ * `ai/cravingDigest.ts`).
+ *
+ * **OFF, and it stays off until the coach eval's bar is met.** Those lines
+ * change what the model says, and the bar written for them was missed twice
+ * on Nov 25 2026: the lite model dropped the person's own reason on the 2am
+ * craving, and both attempts produced a reply that added one to the
+ * "cravings survived" total. The bar and both readings are in
+ * `docs/superpowers/evidence/2026-11-25-coach-cards/eval/`. Without this
+ * switch `firebase deploy` would have shipped the lines on every ordinary
+ * turn with a green `verify`.
+ *
+ * It switches PROMPT TEXT ONLY. The coach cards do not depend on it: which
+ * card a reply carries is chosen by code (`planBlocks`), from the same
+ * craving log, and that keeps working with the lines off.
+ *
+ * **Read through `coachContextLines`, which is the opposite way round from
+ * every other switch in this file, on purpose.** The others are kill
+ * switches for things that should be on, so they read `!== 'false'` and an
+ * unset param (the empty string) leaves the feature running. Here the safe
+ * state is OFF, so only the exact word `on` turns the lines on, and an unset
+ * param, a typo and even `true` all leave them off. Do not "fix" it to match
+ * the others: that would turn the lines on for every project whose `.env`
+ * never named this param.
+ */
+export const COACH_CONTEXT_LINES = defineString('COACH_CONTEXT_LINES', {
+  default: 'off',
+  description:
+    "Set 'on' to add the craving-log context lines to the coach's user card. Anything else is off.",
+});
+
+/**
+ * The rule itself: trimmed and lower-cased, exactly `on` is on; anything
+ * else, the empty string included, is off. See [COACH_CONTEXT_LINES] for why
+ * this fails toward off when every other switch here fails toward on.
+ */
+export function coachContextLines(raw: string): boolean {
+  return raw.trim().toLowerCase() === 'on';
+}
+
 
 /**
  * Kill switch for community reply and mention push.

@@ -2431,7 +2431,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String get survivedBack => 'Torna a oggi';
 
   @override
+  String get survivedBackChat => 'Torna alla chat';
+
+  @override
   String get survivedShareCopied => 'Card copiata — incollala dove vuoi.';
+
+  @override
+  String get exerciseBreathingTitle => 'Respira con me';
+
+  @override
+  String exerciseGameSub(int seconds) {
+    return '$seconds secondi · pollici occupati, testa occupata';
+  }
 
   @override
   String get coachName => 'Ember';
@@ -2452,6 +2463,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get coachChipProgress => 'I miei progressi';
+
+  @override
+  String get coachAfterStill => 'È ancora forte';
 
   @override
   String get coachInputHint => 'Scrivi al tuo coach…';

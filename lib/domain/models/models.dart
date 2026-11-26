@@ -2,6 +2,7 @@
 library;
 
 import '../date_key.dart';
+import 'coach_ui.dart';
 import 'enums.dart';
 
 export 'billing.dart';
@@ -446,7 +447,8 @@ class CoachMessage {
        chipEcho = null,
        args = const {},
        showWeekCard = false,
-       followUps = const [];
+       followUps = const [],
+       blocks = const [];
 
   /// A quick-chip tap echoed into the thread as the user's message.
   const CoachMessage.chip({
@@ -458,7 +460,8 @@ class CoachMessage {
        text = null,
        args = const {},
        showWeekCard = false,
-       followUps = const [];
+       followUps = const [],
+       blocks = const [];
 
   const CoachMessage.ember({
     required this.id,
@@ -468,6 +471,7 @@ class CoachMessage {
     this.text,
     this.sentAt,
     this.followUps = const [],
+    this.blocks = const [],
   }) : role = CoachRole.ember,
        chipEcho = null;
 
@@ -502,6 +506,10 @@ class CoachMessage {
   /// the latest one without a second source of truth, and so a suggestion can
   /// never outlive the reply it belongs to.
   final List<String> followUps;
+
+  /// The cards under this reply — see [CoachReply.blocks]. Ember messages
+  /// only, and only the newest reply in a thread draws them.
+  final List<CoachBlock> blocks;
 }
 
 /// The coach backend's reply envelope: *what* Ember says (template + the
@@ -517,6 +525,7 @@ class CoachReply {
     this.messagesLeft,
     this.isFreeTier,
     this.followUps = const [],
+    this.blocks = const [],
   });
 
   final CoachTemplate template;
@@ -560,6 +569,15 @@ class CoachReply {
   /// not suggest for — mid-craving above all, where a menu of four things to
   /// say is the opposite of what breath-and-presence mode is for.
   final List<String> followUps;
+
+  /// The cards this reply carries, chosen by the server with deterministic
+  /// code (no model call) and already filtered to what this build said it
+  /// can draw.
+  ///
+  /// Empty is the normal answer and means today's text-only thread: a free
+  /// account, an older backend, a turn the policy gave nothing to. Never
+  /// persisted with the transcript, so a restored thread has none.
+  final List<CoachBlock> blocks;
 }
 
 /// One step of Ember answering.

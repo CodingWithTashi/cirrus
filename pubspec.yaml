@@ -74,6 +74,17 @@ dependencies:
   # Pinned to a major: `any` lets a later `pub upgrade` take a breaking one.
   material_ui: ^1.11.0
   cupertino_ui: ^1.1.6
+  # A2UI, the renderer under Ember's coach cards. Pinned EXACTLY, no caret:
+  # it is pre-1.0 and every a2ui_flutter minor from 0.1 to 0.5 was breaking,
+  # each one needing a new a2ui_core minor, so a version moves only when
+  # somebody changes it here on purpose. May be imported only under
+  # lib/features/coach/surface/ (a2ui_flutter is built on
+  # `package:flutter/material.dart`, not material_ui). a2ui_flutter also
+  # brings in the native `video_player` plugin, which nothing here plays.
+  # `test/app/a2ui_seam_test.dart` pins the three versions and the folder.
+  a2ui_flutter: 0.5.0
+  a2ui_core: 0.9.0
+  json_schema_builder: 0.1.7
 
 dev_dependencies:
   flutter_test:

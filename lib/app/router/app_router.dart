@@ -13,6 +13,7 @@ import '../update_prompt.dart';
 import 'analytics_observer.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/splash_screen.dart';
+import '../../domain/logic/exercises/exercise.dart';
 import '../../domain/logic/games/game_id.dart';
 import '../../domain/models/models.dart';
 import '../../features/coach/coach_screen.dart';
@@ -20,6 +21,8 @@ import '../../features/coach/memories_screen.dart';
 import '../../features/community/community_screens.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/day1/day1_screen.dart';
+import '../../features/exercises/exercise_catalog.dart';
+import '../../features/exercises/exercise_scaffold.dart';
 import '../../features/health/health_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/insight/insight_screen.dart';
@@ -83,8 +86,22 @@ abstract final class Routes {
   static const game = '/panic/game';
 
   /// The arena opened on a given game; a query like [paywallFrom], so the
-  /// recorded screen name stays `/panic/game`.
-  static String gameFor(GameId id) => '$game?g=${id.name}';
+  /// recorded screen name stays `/panic/game`. [source] is where it was
+  /// opened from when that is not the panic flow itself: it rides along as
+  /// `src`, so the craving report and the way back out can both name it.
+  static String gameFor(GameId id, {ExerciseSource? source}) =>
+      '$game?g=${id.name}${source == null ? '' : '&src=${source.name}'}';
+
+  /// An exercise that runs on a screen of its own rather than in the arena
+  /// (`ExerciseScaffold`). Under [panic] on purpose: the journey gate and the
+  /// forced-update deferral the redirect already applies there cover it.
+  static const exerciseBase = '/panic/exercise';
+
+  /// [exerciseBase] for one exercise. The id is a path segment, so the
+  /// recorded screen name is the pattern `/panic/exercise/:id` and never a
+  /// filled URL; where it was opened from is the `src` query, as on [gameFor].
+  static String exerciseFor(ExerciseId id, ExerciseSource source) =>
+      '$exerciseBase/${id.name}?src=${source.name}';
   static const survived = '/panic/survived';
   static const plan = '/plan';
 
@@ -424,7 +441,48 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CustomTransitionPage(
             key: state.pageKey,
             name: state.path,
-            child: GameArenaScreen(key: ValueKey(id), initial: id),
+            child: GameArenaScreen(
+              key: ValueKey(id),
+              initial: id,
+              // Absent on the takeover's own link, and on every link an
+              // older build or a notification wrote: the panic flow.
+              source:
+                  Exercises.parseSource(state.uri.queryParameters['src']) ??
+                  ExerciseSource.panic,
+            ),
+            transitionDuration: const Duration(milliseconds: 250),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+          );
+        },
+      ),
+      // An exercise with a screen of its own, inside the frame every such
+      // exercise shares. The id is a path segment, so the screen name is the
+      // pattern and one row covers every exercise the catalog gives a screen.
+      // An id this build does not know, or one that opens somewhere else (an
+      // arena game, the composer), is a dead link and says so.
+      //
+      // Every exercise with a screen is free today. The first Premium one
+      // needs `Exercises.resolveFor` here, as the arena clamps `?g=`: a link
+      // or a restored route reaches this builder without `launch`.
+      GoRoute(
+        path: '${Routes.exerciseBase}/:id',
+        pageBuilder: (_, state) {
+          final id = Exercises.parse(state.pathParameters['id']);
+          final source =
+              Exercises.parseSource(state.uri.queryParameters['src']) ??
+              ExerciseSource.panic;
+          final screen = id == null ? null : ExerciseCatalog.of(id).screen;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            name: state.path,
+            child: id == null || screen == null
+                ? const RouteNotFoundScreen()
+                : ExerciseScaffold(
+                    id: id,
+                    source: source,
+                    body: screen(source),
+                  ),
             transitionDuration: const Duration(milliseconds: 250),
             transitionsBuilder: (_, animation, _, child) =>
                 FadeTransition(opacity: animation, child: child),
@@ -434,12 +492,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.survived,
         // The game hands its result over in the query string
-        // (`GameOutcome.toQuery`); "it passed" arrives with none.
+        // (`GameOutcome.toQuery`); "it passed" arrives with none. `src` is
+        // where the craving's last screen was opened from, and so where this
+        // one leads back to.
         pageBuilder: (_, state) => CustomTransitionPage(
           key: state.pageKey,
           name: state.path,
           child: SurvivedScreen(
             game: GameOutcome.fromQuery(state.uri.queryParameters),
+            source:
+                Exercises.parseSource(state.uri.queryParameters['src']) ??
+                ExerciseSource.panic,
           ),
           transitionDuration: const Duration(milliseconds: 300),
           transitionsBuilder: (_, animation, _, child) =>

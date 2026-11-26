@@ -1451,7 +1451,17 @@
   },
   "survivedShare": "Share the W ↗",
   "survivedBack": "Back to today",
+  "survivedBackChat": "Back to the chat",
   "survivedShareCopied": "Stat card copied — paste it anywhere.",
+  "exerciseBreathingTitle": "Breathe with me",
+  "exerciseGameSub": "{seconds} seconds · thumbs busy, brain busy",
+  "@exerciseGameSub": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "coachName": "Ember",
   "coachStatus": "● knows your plan · day {day}",
   "@coachStatus": {
@@ -1465,6 +1475,7 @@
   "coachChipRoughDay": "Rough day",
   "coachChipSlipped": "I slipped",
   "coachChipProgress": "Show my progress",
+  "coachAfterStill": "Still strong",
   "coachInputHint": "Message your coach…",
   "coachSend": "Send",
   "coachTyping": "{name} is typing…",

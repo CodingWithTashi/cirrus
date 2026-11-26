@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/data/stores/coach_store.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/logic/allowances.dart';
+import 'package:last_puff/domain/models/coach_ui.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 
@@ -235,6 +236,7 @@ class _SilentCappedCoach implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     yield const CoachDone(CoachReply(template: CoachTemplate.capReached));
   }
