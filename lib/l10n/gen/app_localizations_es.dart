@@ -4440,4 +4440,12 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatsNew1038Item2 =>
       'Las notificaciones de la mañana tienen un título más claro';
+
+  @override
+  String get whatsNew1040Item1 =>
+      'Un mensaje por la mañana los primeros días de tu plan';
+
+  @override
+  String get whatsNew1040Item2 =>
+      'Las notificaciones de la mañana tienen un título más claro';
 }

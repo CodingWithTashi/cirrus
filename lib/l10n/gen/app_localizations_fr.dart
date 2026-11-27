@@ -4455,4 +4455,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get whatsNew1038Item2 =>
       'Les notifications du matin ont un titre plus clair';
+
+  @override
+  String get whatsNew1040Item1 =>
+      'Un mot le matin pendant les premiers jours de ton plan';
+
+  @override
+  String get whatsNew1040Item2 =>
+      'Les notifications du matin ont un titre plus clair';
 }
