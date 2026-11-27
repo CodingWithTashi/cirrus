@@ -2,9 +2,12 @@
  * `TextModel` over the Google GenAI SDK. The ONLY file that imports a vendor
  * SDK — see `model.ts` for why.
  */
-import {GoogleGenAI, ThinkingLevel} from '@google/genai';
+import {GoogleGenAI, JobState, ThinkingLevel} from '@google/genai';
+import type {GenerateContentResponse} from '@google/genai';
 import {ModelUnavailableError} from './model';
 import type {
+  BatchModel,
+  BatchOutcome,
   EmbeddingTask,
   GenerateRequest,
   GenerateResult,
@@ -51,24 +54,57 @@ const EMBEDDING_MODEL = 'gemini-embedding-001';
  */
 const wantsThinkingToggle = (model: string): boolean => !model.includes('-lite');
 
+// Module-level so the batch door below sends a request configured exactly
+// as the live one is. An eval that graded replies made under different
+// settings would be grading a different product.
+const buildConfig = (request: GenerateRequest) => ({
+  systemInstruction: request.systemInstruction,
+  maxOutputTokens: request.maxOutputTokens,
+  temperature: request.temperature ?? 0.8,
+  ...(wantsThinkingToggle(request.model)
+    ? {thinkingConfig: {thinkingLevel: ThinkingLevel.MINIMAL}}
+    : {}),
+  ...(request.json ? {responseMimeType: 'application/json'} : {}),
+});
+
+const buildContents = (request: GenerateRequest) =>
+  request.turns.map((turn) => ({
+    role: turn.role,
+    parts: [{text: turn.text}],
+  }));
+
+/**
+ * The reply's own words.
+ *
+ * A live response is a class instance whose `text` getter joins the first
+ * candidate's text parts. A row of a batch job is the SAME data as a plain
+ * object, with no getter: `response.text` is simply undefined there. The
+ * first real batch job (Nov 27 2026) came back with its token counts intact
+ * and every reply empty for exactly that reason. So when the getter has
+ * nothing, read the parts the way it would have: first candidate, text
+ * parts only, thinking left out.
+ */
+const textOf = (response: GenerateContentResponse): string => {
+  if (typeof response.text === 'string') return response.text;
+  let text = '';
+  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+    if (typeof part.text === 'string' && part.thought !== true) text += part.text;
+  }
+  return text;
+};
+
+export const toResult = (response: GenerateContentResponse): GenerateResult => {
+  const usage = response.usageMetadata;
+  return {
+    text: textOf(response),
+    inputTokens: usage?.promptTokenCount ?? 0,
+    outputTokens: usage?.candidatesTokenCount ?? 0,
+    thoughtTokens: usage?.thoughtsTokenCount ?? 0,
+  };
+};
+
 export function geminiModel(apiKey: string): TextModel {
   const ai = new GoogleGenAI({apiKey});
-
-  const buildConfig = (request: GenerateRequest) => ({
-    systemInstruction: request.systemInstruction,
-    maxOutputTokens: request.maxOutputTokens,
-    temperature: request.temperature ?? 0.8,
-    ...(wantsThinkingToggle(request.model)
-      ? {thinkingConfig: {thinkingLevel: ThinkingLevel.MINIMAL}}
-      : {}),
-    ...(request.json ? {responseMimeType: 'application/json'} : {}),
-  });
-
-  const buildContents = (request: GenerateRequest) =>
-    request.turns.map((turn) => ({
-      role: turn.role,
-      parts: [{text: turn.text}],
-    }));
 
   return {
     async embed(
@@ -120,12 +156,7 @@ export function geminiModel(apiKey: string): TextModel {
             config: buildConfig(request),
           }),
         );
-        const usage = response.usageMetadata;
-        return {
-          text: response.text ?? '',
-          inputTokens: usage?.promptTokenCount ?? 0,
-          outputTokens: usage?.candidatesTokenCount ?? 0,
-        };
+        return toResult(response);
       } catch (error) {
         throw new ModelUnavailableError(error);
       }
@@ -168,6 +199,65 @@ export function geminiModel(apiKey: string): TextModel {
         throw new ModelUnavailableError(error);
       }
       if (usage) yield {type: 'usage', ...usage};
+    },
+  };
+}
+
+/**
+ * `BatchModel` over the Gemini batch API, with the requests sent inline.
+ *
+ * For the eval tools only (see `model.ts`). Half the standard price, and a
+ * job is one model: the caller groups its requests before it gets here.
+ */
+export function geminiBatch(apiKey: string): BatchModel {
+  const ai = new GoogleGenAI({apiKey});
+
+  return {
+    async submit(requests: readonly GenerateRequest[], label: string): Promise<string> {
+      const model = requests[0]?.model;
+      if (model === undefined || requests.some((r) => r.model !== model)) {
+        throw new Error('a batch job is one model: group the requests first');
+      }
+      try {
+        const job = await ai.batches.create({
+          model,
+          src: requests.map((request) => ({
+            contents: buildContents(request),
+            config: buildConfig(request),
+          })),
+          config: {displayName: label},
+        });
+        if (!job.name) throw new Error('the batch job came back without a name');
+        return job.name;
+      } catch (error) {
+        throw new ModelUnavailableError(error);
+      }
+    },
+
+    async collect(name: string): Promise<readonly BatchOutcome[] | null> {
+      let job;
+      try {
+        job = await ai.batches.get({name});
+      } catch (error) {
+        throw new ModelUnavailableError(error);
+      }
+      switch (job.state) {
+        case JobState.JOB_STATE_SUCCEEDED:
+        case JobState.JOB_STATE_PARTIALLY_SUCCEEDED:
+          return (job.dest?.inlinedResponses ?? []).map((item): BatchOutcome =>
+            item.response !== undefined
+              ? {ok: true, result: toResult(item.response)}
+              : {ok: false, error: JSON.stringify(item.error ?? 'no response')},
+          );
+        case JobState.JOB_STATE_FAILED:
+        case JobState.JOB_STATE_CANCELLED:
+        case JobState.JOB_STATE_EXPIRED:
+          throw new ModelUnavailableError(
+            `batch job ${name} ended ${job.state}: ${JSON.stringify(job.error ?? null)}`,
+          );
+        default:
+          return null;
+      }
     },
   };
 }

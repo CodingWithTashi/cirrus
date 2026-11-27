@@ -6556,3 +6556,77 @@ The registry, the cards and their gotchas are in CLAUDE.md ("Architecture", "Dem
 `922a1a5` moved `pubspec.yaml` from 1.0.38+38 to 1.0.40+40 with no `WhatsNewCatalog` entry, so `flutter test` read `+2978 -2`: the two version-reading cases of `whats_new_catalog_test`, nothing else. **1.0.38 never shipped** (founder, Nov 26), and the sheet shows only the installed version's notes, so `whatsNew1040Item1..2` copy 1.0.38's two bullets in all six locales, as 1.0.34 and 1.0.36 copied theirs. **No cards bullet** (founder, Nov 26): cards reach subscribers and trials only, and only after the functions deploy, so a line about them would be false for every free reader. ARBs edited by JSON round-trip (a no-op round-trip was byte-identical first), `flutter gen-l10n` re-run.
 
 The same run printed a hit-test warning that was not a failure. `push_tap_test`'s "Refresh acts in place" tapped Refresh after `pump(); pump(300ms)`, and a ticker's first frame is its time zero, so the snack's entrance was still at 0 (collapsed on the bottom edge) and the tap landed on the reply field beneath it. Refresh never ran, and both of the case's route checks held anyway. A diagnostic run measured the snack's top edge at 600 → 586 → 539 → 537 over successive 100 ms frames, and the hit test reached `Refresh` only from the third. It is not an app bug: a person cannot tap a snack before it has appeared. The case now settles before tapping and asserts the snack closed, which a pressed `SnackBarAction` does and a missed tap does not. Run against the old timing, that assertion fails with "the tap missed Refresh". `flutter analyze` clean (plain and `--no-fatal-infos`); `flutter test` **2,980 passed**, no hit-test warnings (Nov 26). **Copy status:** the 1.0.40 bullets are 1.0.38's strings, which §59.10 left as draft copy awaiting the founder's read.
+
+## 61. WHAT AN EVAL COSTS (Nov 27) — "Signal dropped" was the prepaid balance, the balance was our own rolls, and every eval call is counted now
+
+**Asked for** (founder, Nov 27 2026): Ember answered "Signal dropped" on a good connection; find out why. Then: is the credit use people misusing the coach, and why do evals cost so much; make the next one cost under 50 cents.
+
+### 61.1 What it was
+
+Every Gemini call on the production key answered **402 "Your prepayment credits are depleted"**, chat and embeddings alike, from the first coach turn after Nov 26 00:42 UTC. `aiCoachChat` logs that as `coach.model_unavailable`, refunds the message and returns the `connectionLost` template, so the app said "Signal dropped mid-thought… once you're back online" about a billing wall. Five turns from one account were refused before the founder added CA$8.00 (balance CA$7.77; auto-reload is off). Both models answered again minutes later.
+
+A separate thing in the same logs: a build was refused by App Check on five callables between 03:39 and 03:56 UTC that night ("Decoding App Check token failed"), the sideloaded-release or unregistered-debug-token trap. It did not cause this.
+
+### 61.2 Who spent the money
+
+| | Cost (28 days, AI Studio) | Requests |
+|---|---|---|
+| Nov 13, eval rolls from this Mac | CA$5.04 | 5,280 |
+| Nov 25, eval rolls from this Mac | CA$2.11 | about 1,500 |
+| Every other day together | CA$0.13 | a few hundred |
+| **Total** | **CA$7.28** | **7,149** |
+
+Cloud Functions logged 214 coach turns from 66 accounts in thirty days (the busiest account sent 13, 28 sent exactly one, the largest prompt was 2,918 tokens). On Nov 13 the backend served four coach turns while Google counted 5,280 requests. So real use was about 2% of the bill and under a tenth of a cent a turn, there is no sign of misuse or of anyone else holding the key, and a depleted balance says nothing about demand. The rolls also took the coach down for people: 9 refused turns on Nov 13 and 3 on Nov 14 (the monthly spend cap), 5 on Nov 27 (the balance).
+
+### 61.3 Why a roll costs what it does
+
+One roll of `eval:coach` is **98 calls**: 50 replies (25 scenarios on two models, about 2,100 input tokens each, measured: 7,319 characters were 2,081 tokens) and 48 judge calls of about 950. At the Nov 27 price list that is about **US$0.12**, and four fifths of it is `gemini-3.6-flash`, which writes half the replies and judges all of them at $0.75 a million input tokens against the lite model's $0.30. The tool's header said "well under $0.25 per full run", which was true and hid the number that mattered: a prompt change is judged by five rolls of old and five of new, ten runs, and nothing was reused between attempts or counted anywhere.
+
+### 61.4 What changed (`functions/tools/`, plus the batch door on the model seam)
+
+Every eval call now goes through `evalExec.ts`:
+
+- **A daily cap**, US$0.33 by default, which is under 50 Canadian cents (`evalBudget.ts`). One append-only ledger for the machine, `~/.cirrus-eval/spend.jsonl`, shared by every working copy and by `eval:moderation`. A run is priced before it starts and refused if it will not fit; each call is checked again before it is sent, against what calls have really cost so far; `--budget <usd>` raises the day's limit on purpose. An unreadable ledger stops the run.
+- **A cache** keyed on the exact request and the roll number (`evalCache.ts`), so the unchanged side of a comparison is bought once. The judge is keyed without a roll: one reply is judged once.
+- **`--batch`**: the provider's half-price asynchronous API (`geminiBatch` in `src/ai/gemini.ts`, `BatchModel` in `model.ts`; the request builders moved to module level so a batch request is configured exactly as a live one). A job that is still running when the wait ends is collected by running the same command again, never sent twice.
+- **`--rolls N`, `--only`, `--models`, `--dry-run`**, a failures-per-case table across rolls, and a spend line at the end of every run.
+- **Exit code 2: not an answer.** A budget stop, the billing wall, a batch still running or a call that failed on its own makes the run incomplete, and it says so instead of printing those as FAILs. A run stops at the first billing refusal.
+- Unknown flags are refused, and so is a model id with no price row (`evalCost.ts`).
+
+Nothing about what is graded changed: the 25 cases, their checks, the judge prompt, the judge model and the request each reply is made with are the same, and the hashes in `coachEval.test.ts` still hold.
+
+### 61.5 What it costs now
+
+| Run | One call at a time | `--batch` |
+|---|---|---|
+| One roll, whole suite, both models | US$0.12 | US$0.06 |
+| Five rolls (one side of a comparison) | US$0.61, refused under the default cap | **US$0.30** |
+| Ten rolls (old and new, nothing cached) | US$1.21 | US$0.60, needs `--budget` once |
+
+After the first comparison the old side is in the cache, so a session is five new rolls. These are estimates the tool prints with `--dry-run`; input is priced at 3.5 characters a token, which the one measured call matched within half a percent.
+
+### 61.6 Verified, and how
+
+`npm run verify`: 36 files, 550 tests, with 74 new ones across `evalCost`, `evalBudget`, `evalCache`, `evalExec`, `coachEvalRun` and `geminiResult` (fake model, no network). On the real API, for US$0.003: one lite reply through the metered path was charged US$0.0007 and the same command again bought nothing; then a five-call batch run (`--only 15,20 --batch`: three replies in two jobs, one per model, then two judge calls) came back in about five minutes, at half price, with the ledger's reservations settled to what the jobs used.
+
+**The first batch run found a bug no fake could have.** Its jobs returned token counts and EMPTY replies: a live response is a class instance with a `text` getter, a batch row is the same data as a plain object without one, and `response.text ?? ''` read every reply as blank. The run printed FAILs and the cache had kept four blanks. `toResult` in `gemini.ts` now reads the parts when the getter has nothing (`geminiResult.test.ts`), a blank answer is graded but never cached, and the second run returned real replies and real verdicts (4 of 4 passed, read in the transcripts). After any change to the batch path, read a transcript before trusting a result.
+
+### 61.7 Left open
+
+1. **A key or project of the evals' own.** The cap bounds what a roll can take from the live coach's balance; it does not separate them. Recommended on Nov 25, still not created.
+2. **Auto-reload is off** on the billing account, so the coach goes dark at zero.
+3. **`gemini-3.6-flash` doubles on Jan 1 2027** ($1.50 in, $7.50 out per million). It is the premium coach model and the judge: five batch rolls stop fitting under the cap that day (pinned in `coachEvalRun.test.ts`), and docs/11 §4's premium turn, written at $0.30/$2.50, is about $0.002 today and $0.004 from January. Moving `MODEL_PREMIUM` is an eval pass of its own.
+4. **The app's copy for a billing wall is the offline copy.** A separate template for "our side is down" would stop Ember blaming the reader's connection.
+5. The six context lines (§60) are untouched and still off. Their third attempt can reuse the ten OLD rolls already on disk from Nov 25 for its baseline counts, and roll only the new side.
+
+### 61.8 Deployed (Nov 27, 15:01 UTC)
+
+The founder asked for the backend to be deployed, with the app release already out. `npm run test:rules` (57) and `npm run test:integration` (454) were run on the emulators first, then `firebase deploy --only firestore:rules,firestore:indexes` (the rules were already current) and `firebase deploy --only functions`, whose predeploy ran `verify` (550). All 26 functions updated and every Cloud Run service came up on a new ready revision (`aicoachchat-00043`). Read back off the live `aicoachchat` service: `COACH_UI_AUDIENCE=premium`, `COACH_CONTEXT_LINES=off`, `COACH_FOLLOWUPS=true`, `ENTITLEMENT_MODE=mirror`, `ENFORCE_APP_CHECK=true`, both model ids as pinned, `GEMINI_API_KEY` bound as a secret. No warning or error was logged by any function in the minutes after.
+
+Three things about it:
+
+- **This is the coach-cards server going live** (§60): the first deploy since Nov 25. The app release came first, the reverse of the planned order, so until this deploy the new app advertised cards to a backend that ignored them. Nothing about that gap needs repair.
+- **It was deployed from an uncommitted tree**: §61.4's changes to `src/ai/model.ts` and `src/ai/gemini.ts` (the batch door, `thoughtTokens`, the reply reader) are live and were not in git at the time.
+- **Hosting was not deployed.** It is the redirect page, unchanged since Aug 29.
+
+Still owed, and it is `S7-41` on the board: a subscriber's craving chip showing cards on a real device, a free account's showing none, and `coach.ui` in the `aiCoachChat` log with `blocks: 3` and `blocks: 0`.
