@@ -17,7 +17,7 @@
  * What did NOT change: every case's own `judge` criteria text, and the strict
  * stance ("only against the criteria").
  */
-import type {TextModel} from '../src/ai/model';
+import type {GenerateRequest} from '../src/ai/model';
 
 export interface JudgeCheck {
   readonly name: 'judge';
@@ -125,22 +125,29 @@ export function parseVerdict(text: string): JudgeCheck {
   return {name: 'judge', pass: false, detail: 'malformed judge verdict'};
 }
 
-export async function judgeReply(
-  model: TextModel,
+/**
+ * The judge's request, and nothing that sends it.
+ *
+ * This file used to call the model itself. Since Nov 27 2026 every eval call
+ * goes through `evalExec.ts`, which is where the cache and the spend cap
+ * live, so the judge only says what it wants asked. Same prompt, same input,
+ * same settings as the call it replaced.
+ */
+export function buildJudgeRequest(
   args: JudgeArgs,
   judgeModelId: string = resolveJudgeModel(process.env),
-): Promise<JudgeCheck> {
-  try {
-    const result = await model.generate({
-      model: judgeModelId,
-      systemInstruction: JUDGE_PROMPT,
-      turns: [{role: 'user', text: buildJudgeInput(args)}],
-      maxOutputTokens: 200,
-      temperature: 0,
-      json: true,
-    });
-    return parseVerdict(result.text);
-  } catch (error) {
-    return {name: 'judge', pass: false, detail: `judge failed: ${String(error)}`};
-  }
+): GenerateRequest {
+  return {
+    model: judgeModelId,
+    systemInstruction: JUDGE_PROMPT,
+    turns: [{role: 'user', text: buildJudgeInput(args)}],
+    maxOutputTokens: 200,
+    temperature: 0,
+    json: true,
+  };
+}
+
+/** The judge call did not come back: the gate errs loud, as it always has. */
+export function judgeFailed(why: string): JudgeCheck {
+  return {name: 'judge', pass: false, detail: `judge failed: ${why}`};
 }

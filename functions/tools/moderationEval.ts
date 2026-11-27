@@ -14,21 +14,36 @@
  *
  * Usage (from `functions/`):
  *
+ *   npm run eval:moderation -- --dry-run      # what it would cost; sends nothing
  *   GEMINI_API_KEY="$(firebase functions:secrets:access GEMINI_API_KEY)" npm run eval:moderation
  *   npm run eval:moderation -- --rolls 5      # more samples per case
  *
- * Exit code is non-zero unless EVERY case answers its expected action on
- * EVERY roll. Transcripts land in `functions/evals/moderation-<stamp>.json`
- * (gitignored) so a wandering verdict can be read rather than guessed at.
+ * Exit code is 0 only when EVERY case answers its expected action on EVERY
+ * roll, 1 when one did not, and 2 when the run did not finish (budget,
+ * billing wall, a failed call): that run is not an answer. Transcripts land
+ * in `functions/evals/moderation-<stamp>.json` (gitignored) so a wandering
+ * verdict can be read rather than guessed at.
  *
- * Cost: ~20 cases × 3 rolls × a few hundred tokens on flash-lite — cents.
+ * Cost: cents on flash-lite, and counted. Every call goes through
+ * `evalExec.ts`, so it shares the coach eval's daily spend cap and its
+ * cache (`--budget`, `--batch`, `--no-cache` mean the same here).
  */
 import {existsSync, mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {geminiModel} from '../src/ai/gemini';
 import {parseVerdict, type ModerationAction} from '../src/ai/moderation';
 import {prefilter} from '../src/ai/prefilter';
 import {MODERATION_PROMPT} from '../src/ai/prompts';
+import {BudgetExceededError, usd} from './evalBudget';
+import {
+  checkArgs,
+  commonFlags,
+  estimateCalls,
+  openDeps,
+  openLedger,
+  runCalls,
+  spendLine,
+  type EvalCall,
+} from './evalExec';
 
 // Env-overridable, defaulting to the id `.env.alastpuff` pins. Never
 // `defineString(...).value()` here — params only resolve inside the Functions
@@ -241,26 +256,59 @@ interface Roll {
   readonly viaPrefilter: boolean;
 }
 
-async function classifyLikeProduction(
-  text: string,
-  tag: string | undefined,
-  apiKey: string,
-): Promise<{action: ModerationAction; reason: string; viaPrefilter: boolean}> {
-  const pre = prefilter(text);
-  if (pre !== null) return {...pre, viaPrefilter: true};
-  const model = geminiModel(apiKey);
-  const result = await model.generate({
-    model: MODEL_ID,
-    systemInstruction: MODERATION_PROMPT,
-    turns: [{role: 'user', text: tag === undefined ? text : `Tag: ${tag}\nPost: ${text}`}],
-    maxOutputTokens: 200,
-    temperature: 0,
-    json: true,
-  });
-  return {...parseVerdict(result.text), viaPrefilter: false};
+/** The call production makes for [c], or null when the prefilter answers first. */
+function callFor(c: Case, roll: number): EvalCall | null {
+  if (prefilter(c.text) !== null) return null;
+  return {
+    request: {
+      model: MODEL_ID,
+      systemInstruction: MODERATION_PROMPT,
+      turns: [{role: 'user', text: c.tag === undefined ? c.text : `Tag: ${c.tag}\nPost: ${c.text}`}],
+      maxOutputTokens: 200,
+      temperature: 0,
+      json: true,
+    },
+    // Keyed by roll although the temperature is 0: the verdict on a
+    // borderline case wanders run to run, and each roll must be its own ask.
+    sample: roll,
+    expectOutputTokens: 40,
+  };
 }
 
 async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  checkArgs(argv, ['--rolls'], []);
+  const flags = commonFlags(argv, process.env);
+  const rollsArg = argv.indexOf('--rolls');
+  const rolls = rollsArg === -1 ? 3 : Number.parseInt(argv[rollsArg + 1] ?? '3', 10);
+  if (!Number.isInteger(rolls) || rolls < 1 || rolls > 20) {
+    throw new Error('--rolls takes a whole number from 1 to 20, for example --rolls 5');
+  }
+
+  const jobs = CASES.flatMap((c) =>
+    Array.from({length: rolls}, (_, i) => ({c, roll: i + 1, call: callFor(c, i + 1)})),
+  );
+  const calls = jobs.flatMap((job) => (job.call === null ? [] : [job.call]));
+
+  const {budget, cache} = openLedger(flags, process.env);
+  const estimate = estimateCalls(calls, cache, {batch: flags.batch, at: new Date()});
+  console.log(
+    `eval:moderation: ${CASES.length} cases × ${rolls} rolls, ${calls.length} model calls, ` +
+      `${estimate.cacheHits} already in the cache. To buy: ${estimate.paidCalls} calls, about ` +
+      `${usd(estimate.usd)}. Today so far: ${usd(budget.spentToday())} of ${usd(budget.limitUsd)}.`,
+  );
+  if (flags.dryRun) {
+    console.log('--dry-run: nothing was sent.');
+    return;
+  }
+  try {
+    budget.require(estimate.usd, 'this run');
+  } catch (error) {
+    if (!(error instanceof BudgetExceededError)) throw error;
+    console.error(error.message);
+    process.exit(2);
+  }
+
   const apiKey = process.env['GEMINI_API_KEY'];
   if (!apiKey) {
     console.error(
@@ -269,49 +317,75 @@ async function main(): Promise<void> {
     );
     process.exit(2);
   }
-  const rollsArg = process.argv.indexOf('--rolls');
-  const rolls = rollsArg === -1 ? 3 : Number.parseInt(process.argv[rollsArg + 1] ?? '3', 10);
+
+  const report = await runCalls(
+    calls,
+    openDeps({apiKey, flags, env: process.env, tool: 'moderation', log: (line) => console.log(line)}),
+  );
 
   const results: Roll[] = [];
-  for (const c of CASES) {
-    for (let roll = 1; roll <= rolls; roll++) {
-      const verdict = await classifyLikeProduction(c.text, c.tag, apiKey);
-      const pass = verdict.action === c.expect;
-      results.push({
-        case: c.id,
-        roll,
-        expected: c.expect,
-        action: verdict.action,
-        reason: verdict.reason,
-        pass,
-        viaPrefilter: verdict.viaPrefilter,
-      });
-      const mark = pass ? 'PASS' : 'FAIL';
-      console.log(
-        `${mark}  ${c.id.padEnd(18)} roll ${roll}  expected ${c.expect.padEnd(5)} got ${verdict.action.padEnd(5)}${
-          verdict.viaPrefilter ? '  (prefilter)' : ''
-        }${pass ? '' : `  — ${verdict.reason}`}`,
-      );
+  let unanswered = 0;
+  let next = 0;
+  for (const job of jobs) {
+    const {c, roll} = job;
+    let verdict: {action: ModerationAction; reason: string; viaPrefilter: boolean};
+    if (job.call === null) {
+      const pre = prefilter(c.text);
+      if (pre === null) throw new Error('unreachable: the prefilter answered a moment ago');
+      verdict = {...pre, viaPrefilter: true};
+    } else {
+      const outcome = report.outcomes[next++];
+      if (outcome === undefined || !outcome.ok) {
+        unanswered++;
+        console.log(`----  ${c.id.padEnd(18)} roll ${roll}  no answer: ${outcome?.error ?? 'no outcome'}`);
+        continue;
+      }
+      verdict = {...parseVerdict(outcome.text), viaPrefilter: false};
     }
+    const pass = verdict.action === c.expect;
+    results.push({
+      case: c.id,
+      roll,
+      expected: c.expect,
+      action: verdict.action,
+      reason: verdict.reason,
+      pass,
+      viaPrefilter: verdict.viaPrefilter,
+    });
+    const mark = pass ? 'PASS' : 'FAIL';
+    console.log(
+      `${mark}  ${c.id.padEnd(18)} roll ${roll}  expected ${c.expect.padEnd(5)} got ${verdict.action.padEnd(5)}${
+        verdict.viaPrefilter ? '  (prefilter)' : ''
+      }${pass ? '' : `  — ${verdict.reason}`}`,
+    );
   }
 
   const dir = join(__dirname, '..', '..', 'evals');
   if (!existsSync(dir)) mkdirSync(dir, {recursive: true});
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const file = join(dir, `moderation-${stamp}-${MODEL_ID}.json`);
-  writeFileSync(file, JSON.stringify({model: MODEL_ID, rolls, results}, null, 2));
+  const complete = unanswered === 0 && report.stoppedBy === null;
+  writeFileSync(file, JSON.stringify({model: MODEL_ID, rolls, complete, results}, null, 2));
 
   const failures = results.filter((r) => !r.pass);
   const total = results.length;
   console.log(
     `\n${total - failures.length}/${total} rolls passed on ${MODEL_ID} (${CASES.length} cases × ${rolls}). Transcript: ${file}`,
   );
+  console.log(spendLine([report], budget));
   if (failures.length > 0) {
     const byCase = new Map<string, number>();
     for (const f of failures) byCase.set(f.case, (byCase.get(f.case) ?? 0) + 1);
     console.log('Failing cases: ' + [...byCase.entries()].map(([id, n]) => `${id} (${n}/${rolls})`).join(', '));
-    process.exit(1);
   }
+  if (!complete) {
+    console.log(
+      `INCOMPLETE: ${unanswered} roll(s) got no answer. ${report.note}\n` +
+        'This run is not an answer: do not read it as a pass or as a fail.',
+    );
+    process.exit(2);
+  }
+  if (failures.length > 0) process.exit(1);
 }
 
 main().catch((error: unknown) => {

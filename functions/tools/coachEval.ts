@@ -21,26 +21,47 @@
  *
  * Usage (from `functions/`):
  *
+ *   npm run eval:coach -- --dry-run      # what a run would cost; sends nothing, needs no key
  *   GEMINI_API_KEY="$(firebase functions:secrets:access GEMINI_API_KEY)" npm run eval:coach
+ *   npm run eval:coach -- --rolls 5 --batch   # five rolls, at half price
+ *   npm run eval:coach -- --only 23,24 --models free   # a few cases while iterating
  *   npm run eval:coach -- --firestore    # also log transcripts to the `evals` collection
  *
  * Transcripts always land in `functions/evals/<stamp>-<model>.json`
- * (gitignored). Exit code is non-zero unless EVERY scenario passes on BOTH
- * models — docs/04's "15/15 on both" gate, extended to 25/25 (docs/15 added
- * the two cigarette scenarios, the coach-cards plan the last three).
+ * (`<stamp>-r<roll>-<model>.json` with `--rolls`; gitignored). Exit code is
+ * 0 only when EVERY scenario passes on BOTH models — docs/04's "15/15 on
+ * both" gate, extended to 25/25 (docs/15 added the two cigarette scenarios,
+ * the coach-cards plan the last three). 1 means a scenario failed. 2 means
+ * the run did not finish (budget, billing wall, a batch still running, a
+ * 503): it is not an answer and must not be counted as a roll.
  *
  * One run is ONE roll of a noisy judge. A prompt or card change is judged
  * by five rolls of old and new side by side against a bar written first
  * (CLAUDE.md, "`npm run eval:coach` is one roll").
  *
- * Cost: ~25 scenarios × 2 models × (~2.5K in / ≤500 out) plus ~40 judge
- * calls ≈ well under $0.25 per full run.
+ * COST, measured Nov 27 2026 (docs/10 §61). One roll of the suite is 98
+ * calls: 50 replies of about 2,100 input tokens each and 48 judge calls of
+ * about 950. At list price that is about US$0.12, and four fifths of it is
+ * the premium model, which writes half the replies and judges all of them
+ * at 2.5 times the lite model's input price. The old line here said "well
+ * under $0.25 per full run", which was true and hid the real number: a
+ * five-against-five comparison is ten runs, about US$1.20, and Nov 13 and
+ * Nov 25 spent CA$7.15 between them on the production key.
+ *
+ * So every call now goes through `evalExec.ts`:
+ *  - a DAILY SPEND CAP, US$0.33 by default, which is under 50 Canadian
+ *    cents (`evalBudget.ts`). A run that will not fit does not start;
+ *    `--budget <usd>` raises it on purpose.
+ *  - a CACHE keyed on the exact request and the roll (`evalCache.ts`), so
+ *    the side of a comparison that did not change is bought once, ever.
+ *  - `--batch`, the provider's half-price asynchronous API. Five rolls of
+ *    the suite on both models are about US$0.30 that way; they do not fit
+ *    under the default cap at list price, and the run says so before it
+ *    spends anything.
  */
 import {existsSync, mkdirSync, readdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {digestCravings} from '../src/ai/cravingDigest';
-import {geminiModel} from '../src/ai/gemini';
-import {ModelUnavailableError, type TextModel, type Turn} from '../src/ai/model';
 import {buildMemoryCard, type MemoryCard} from '../src/ai/memoryCard';
 import {buildCoachInstruction} from '../src/ai/prompts';
 import {dayKeyIn} from '../src/domain/dateKey';
@@ -56,7 +77,23 @@ import {
   evalJourney,
   evalJustDid,
 } from './evalFixtures';
-import {judgeReply} from './evalJudge';
+import {BudgetExceededError, usd} from './evalBudget';
+import type {EvalCache} from './evalCache';
+import {
+  checkArgs,
+  commonFlags,
+  estimateCalls,
+  openDeps,
+  openLedger,
+  runCalls,
+  spendLine,
+  type CommonFlags,
+  type EvalCall,
+  type EvalOutcome,
+  type ExecDeps,
+  type RunReport,
+} from './evalExec';
+import {buildJudgeRequest, judgeFailed, parseVerdict, resolveJudgeModel} from './evalJudge';
 
 // Env-overridable, defaulting to the ids `.env.alastpuff` pins. Never
 // `defineString(...).value()` here — params only resolve inside the Functions
@@ -64,7 +101,7 @@ import {judgeReply} from './evalJudge';
 const MODEL_FREE_ID = process.env['MODEL_FREE'] ?? 'gemini-3.5-flash-lite';
 const MODEL_PREMIUM_ID = process.env['MODEL_PREMIUM'] ?? 'gemini-3.6-flash';
 
-interface Check {
+export interface Check {
   readonly name: string;
   readonly pass: boolean;
   readonly detail: string;
@@ -533,8 +570,7 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter((w) => w.length > 0).length;
 }
 
-/** The first balanced JSON object in [text], string-aware, or null. */
-interface ScenarioResult {
+export interface ScenarioResult {
   readonly id: string;
   readonly input: string;
   readonly reply: string;
@@ -542,47 +578,96 @@ interface ScenarioResult {
   readonly pass: boolean;
 }
 
-async function runScenario(
-  model: TextModel,
-  modelId: string,
-  card: MemoryCard,
-  s: Scenario,
-): Promise<ScenarioResult> {
-  const systemInstruction = buildCoachInstruction({
-    locale: 'en',
-    coachName: null,
-    panicIntensity: s.panicIntensity ?? null,
-    cardText: card.text,
-    day: card.day,
-    todayKey: card.todayKey,
-    summary: s.summary ?? '',
-    memories: [],
-  });
-  const turns: Turn[] = [{role: 'user', text: s.input}];
+const REPLY_MAX_TOKENS = 500;
+// For pricing a run before it starts, never for grading one: a reply runs to
+// about ninety words and a verdict to one sentence.
+const REPLY_EXPECT_TOKENS = 130;
+const JUDGE_EXPECT_TOKENS = 60;
+/** Stands in for a reply that has not been written yet when a run is priced. */
+const PLACEHOLDER_REPLY = 'x'.repeat(450);
 
-  let reply: string;
-  try {
-    const result = await model.generate({
-      model: modelId,
-      systemInstruction,
-      turns,
-      maxOutputTokens: 500,
-    });
-    reply = result.text.trim();
-  } catch (error) {
-    const detail =
-      error instanceof ModelUnavailableError
-        ? `model unavailable: ${String(error.cause)}`
-        : String(error);
-    return {
-      id: s.id,
-      input: s.input,
-      reply: '',
-      checks: [{name: 'model', pass: false, detail}],
-      pass: false,
-    };
+/** One reply the run needs: this scenario, on this model, for this roll. */
+export interface ReplyJob {
+  readonly roll: number;
+  readonly modelId: string;
+  readonly scenario: Scenario;
+  readonly card: MemoryCard;
+  readonly call: EvalCall;
+}
+
+/**
+ * Every reply a run will ask for, in the order it reports them: roll by
+ * roll, model by model, scenario by scenario.
+ *
+ * Each is the exact production request: the real card for that turn, the
+ * real instruction. The roll number is what keeps five rolls five separate
+ * draws in the cache (`evalCache.ts`).
+ */
+export function planReplies(
+  suite: readonly Scenario[],
+  modelIds: readonly string[],
+  rolls: number,
+): ReplyJob[] {
+  const jobs: ReplyJob[] = [];
+  for (let roll = 1; roll <= rolls; roll++) {
+    for (const modelId of modelIds) {
+      for (const scenario of suite) {
+        // Per scenario, not once for the suite: a panic turn and an ordinary
+        // one do not get the same card in production.
+        const card = cardFor(scenario);
+        jobs.push({
+          roll,
+          modelId,
+          scenario,
+          card,
+          call: {
+            request: {
+              model: modelId,
+              systemInstruction: buildCoachInstruction({
+                locale: 'en',
+                coachName: null,
+                panicIntensity: scenario.panicIntensity ?? null,
+                cardText: card.text,
+                day: card.day,
+                todayKey: card.todayKey,
+                summary: scenario.summary ?? '',
+                memories: [],
+              }),
+              turns: [{role: 'user', text: scenario.input}],
+              maxOutputTokens: REPLY_MAX_TOKENS,
+            },
+            sample: roll,
+            expectOutputTokens: REPLY_EXPECT_TOKENS,
+          },
+        });
+      }
+    }
   }
+  return jobs;
+}
 
+/** The judge's call for [reply], or null for a scenario graded mechanically only. */
+export function judgeCallFor(job: ReplyJob, reply: string, judgeModelId: string): EvalCall | null {
+  if (job.scenario.judge === undefined) return null;
+  return {
+    request: buildJudgeRequest(
+      {
+        criteria: job.scenario.judge,
+        userMessage: job.scenario.input,
+        cardText: job.card.text,
+        summary: job.scenario.summary,
+        reply,
+      },
+      judgeModelId,
+    ),
+    // Not a draw: one reply is judged once, however many runs see it.
+    sample: null,
+    expectOutputTokens: JUDGE_EXPECT_TOKENS,
+  };
+}
+
+/** The checks that need no model: length, plain text, must and must-not. */
+export function mechanicalChecks(s: Scenario, reply: string): Check[] {
   const checks: Check[] = [];
   const maxWords = s.maxWords ?? 90;
   const words = countWords(reply);
@@ -610,25 +695,233 @@ async function runScenario(
       detail: String(m.re),
     });
   }
-  if (s.judge !== undefined) {
-    checks.push(
-      await judgeReply(model, {
-        criteria: s.judge,
-        userMessage: s.input,
-        cardText: card.text,
-        summary: s.summary,
-        reply,
-      }),
-    );
+  return checks;
+}
+
+export interface RunEstimate {
+  readonly calls: number;
+  readonly paidCalls: number;
+  readonly cacheHits: number;
+  readonly usd: number;
+}
+
+/**
+ * What [jobs] would cost to run now, replies and judging together.
+ *
+ * A reply the cache already holds is free and its judge call is known
+ * exactly; a reply still to be written is priced with a stand-in of typical
+ * length, since its judge call cannot exist yet.
+ */
+export function estimateRun(
+  jobs: readonly ReplyJob[],
+  cache: EvalCache,
+  opts: {readonly batch: boolean; readonly at: Date; readonly judgeModelId: string},
+): RunEstimate {
+  const replies = estimateCalls(
+    jobs.map((job) => job.call),
+    cache,
+    opts,
+  );
+  const judgeCalls: EvalCall[] = [];
+  for (const job of jobs) {
+    const held = cache.get(cache.key(job.call.request, job.call.sample));
+    const call = judgeCallFor(job, held?.text.trim() ?? PLACEHOLDER_REPLY, opts.judgeModelId);
+    if (call !== null) judgeCalls.push(call);
   }
+  const judges = estimateCalls(judgeCalls, cache, opts);
+  return {
+    calls: jobs.length + judgeCalls.length,
+    paidCalls: replies.paidCalls + judges.paidCalls,
+    cacheHits: replies.cacheHits + judges.cacheHits,
+    usd: replies.usd + judges.usd,
+  };
+}
+
+export interface RollResult {
+  readonly roll: number;
+  readonly modelId: string;
+  readonly results: readonly ScenarioResult[];
+  readonly passed: number;
+}
+
+export interface CoachEvalReport {
+  readonly rolls: readonly RollResult[];
+  /** The reply pass and the judge pass, for the spend line. */
+  readonly reports: readonly RunReport[];
+  /**
+   * False when any call was not sent or failed on its own (a budget stop, the
+   * billing wall, a batch still running, a 503). Such a run is NOT an answer:
+   * its failures are not the model's, and it must not be counted as a roll.
+   */
+  readonly complete: boolean;
+  readonly note: string;
+}
+
+/**
+ * Runs [jobs] and grades them. Two passes through the one door
+ * (`evalExec.ts`): every reply, then every judge call for the replies that
+ * came back.
+ */
+export async function runCoachEval(
+  jobs: readonly ReplyJob[],
+  judgeModelId: string,
+  deps: ExecDeps,
+): Promise<CoachEvalReport> {
+  const replies = await runCalls(
+    jobs.map((job) => job.call),
+    deps,
+  );
+
+  // Judging a run that did not finish would only buy verdicts for a run that
+  // has to be thrown away.
+  const judgedJobs: number[] = [];
+  const judgeCalls: EvalCall[] = [];
+  if (replies.stoppedBy === null) {
+    jobs.forEach((job, i) => {
+      const outcome = replies.outcomes[i];
+      if (outcome === undefined || !outcome.ok) return;
+      const call = judgeCallFor(job, outcome.text.trim(), judgeModelId);
+      if (call === null) return;
+      judgedJobs.push(i);
+      judgeCalls.push(call);
+    });
+  }
+  const judges = await runCalls(judgeCalls, deps);
+  const verdicts = new Map<number, EvalOutcome>();
+  judgedJobs.forEach((jobIndex, k) => {
+    const verdict = judges.outcomes[k];
+    if (verdict !== undefined) verdicts.set(jobIndex, verdict);
+  });
+
+  const note = replies.note || judges.note;
+  const byRoll = new Map<string, {roll: number; modelId: string; results: ScenarioResult[]}>();
+  jobs.forEach((job, i) => {
+    const s = job.scenario;
+    const outcome = replies.outcomes[i];
+    let result: ScenarioResult;
+    if (outcome === undefined || !outcome.ok) {
+      result = {
+        id: s.id,
+        input: s.input,
+        reply: '',
+        checks: [{name: 'model', pass: false, detail: outcome?.error ?? 'no outcome'}],
+        pass: false,
+      };
+    } else {
+      const reply = outcome.text.trim();
+      const checks = mechanicalChecks(s, reply);
+      if (s.judge !== undefined) {
+        const verdict = verdicts.get(i);
+        if (verdict === undefined) checks.push(judgeFailed(`not run: ${note || 'the run stopped'}`));
+        else if (verdict.ok) checks.push(parseVerdict(verdict.text));
+        else checks.push(judgeFailed(verdict.error));
+      }
+      result = {id: s.id, input: s.input, reply, checks, pass: checks.every((c) => c.pass)};
+    }
+    const key = `${job.roll}|${job.modelId}`;
+    const group = byRoll.get(key);
+    if (group === undefined) byRoll.set(key, {roll: job.roll, modelId: job.modelId, results: [result]});
+    else group.results.push(result);
+  });
 
   return {
-    id: s.id,
-    input: s.input,
-    reply,
-    checks,
-    pass: checks.every((c) => c.pass),
+    rolls: [...byRoll.values()].map((group) => ({
+      ...group,
+      passed: group.results.filter((r) => r.pass).length,
+    })),
+    reports: [replies, judges],
+    complete:
+      replies.stoppedBy === null &&
+      judges.stoppedBy === null &&
+      replies.errors === 0 &&
+      judges.errors === 0,
+    note,
   };
+}
+
+export interface EvalOptions extends CommonFlags {
+  readonly rolls: number;
+  /** Scenario ids or their numbers ("15", "23-what-helps"); null runs the suite. */
+  readonly only: readonly string[] | null;
+  readonly modelIds: readonly string[];
+  readonly firestore: boolean;
+}
+
+function valueAfter(argv: readonly string[], flag: string): string | undefined {
+  const at = argv.indexOf(flag);
+  return at === -1 ? undefined : (argv[at + 1] ?? '');
+}
+
+export function parseOptions(
+  argv: readonly string[],
+  env: Readonly<Record<string, string | undefined>>,
+): EvalOptions {
+  checkArgs(argv, ['--rolls', '--only', '--models'], ['--firestore']);
+  const rollsRaw = valueAfter(argv, '--rolls');
+  const rolls = rollsRaw === undefined ? 1 : Number(rollsRaw);
+  if (!Number.isInteger(rolls) || rolls < 1 || rolls > 20) {
+    throw new Error('--rolls takes a whole number from 1 to 20, for example --rolls 5');
+  }
+
+  const onlyRaw = valueAfter(argv, '--only');
+  const only =
+    onlyRaw === undefined
+      ? null
+      : onlyRaw
+          .split(',')
+          .map((part) => part.trim())
+          .filter((part) => part.length > 0);
+  if (only !== null && only.length === 0) {
+    throw new Error('--only takes scenario ids or numbers, for example --only 15,23');
+  }
+
+  const byName: Readonly<Record<string, string>> = {
+    free: env['MODEL_FREE'] ?? MODEL_FREE_ID,
+    premium: env['MODEL_PREMIUM'] ?? MODEL_PREMIUM_ID,
+  };
+  const modelsRaw = valueAfter(argv, '--models');
+  const names = modelsRaw === undefined ? ['free', 'premium'] : modelsRaw.split(',').map((n) => n.trim());
+  const modelIds = names.map((name) => {
+    const id = byName[name];
+    if (id === undefined) throw new Error('--models takes free, premium or free,premium');
+    return id;
+  });
+
+  return {
+    ...commonFlags(argv, env),
+    rolls,
+    only,
+    modelIds: [...new Set(modelIds)],
+    firestore: argv.includes('--firestore'),
+  };
+}
+
+/** The scenarios [only] names; throws on one that matches nothing. */
+export function pickScenarios(suite: readonly Scenario[], only: readonly string[] | null): Scenario[] {
+  if (only === null) return [...suite];
+  const picked = new Set<Scenario>();
+  for (const want of only) {
+    const matches = suite.filter((s) => s.id === want || s.id.startsWith(`${want}-`));
+    if (matches.length === 0) throw new Error(`--only: no scenario "${want}"`);
+    for (const s of matches) picked.add(s);
+  }
+  return suite.filter((s) => picked.has(s));
+}
+
+/** Failures per case and model across the rolls: what a comparison is read from. */
+export function failureCounts(
+  rolls: readonly RollResult[],
+): Map<string, Map<string, number>> {
+  const counts = new Map<string, Map<string, number>>();
+  for (const roll of rolls) {
+    for (const result of roll.results) {
+      if (result.pass) continue;
+      const byModel = counts.get(result.id) ?? new Map<string, number>();
+      byModel.set(roll.modelId, (byModel.get(roll.modelId) ?? 0) + 1);
+      counts.set(result.id, byModel);
+    }
+  }
+  return counts;
 }
 
 /** Same resolution order as `seedTestimonials.ts`, for the --firestore flag. */
@@ -648,7 +941,43 @@ function resolveCredentials(root: string): boolean {
   return existsSync(adc);
 }
 
+/** Exit codes: 0 green, 1 a scenario failed, 2 the run did not finish and is not an answer. */
 async function main(): Promise<void> {
+  const out = (line: string) => process.stdout.write(`${line}\n`);
+  const options = parseOptions(process.argv.slice(2), process.env);
+  const all = scenarios();
+  const suite = pickScenarios(all, options.only);
+  const judgeModelId = resolveJudgeModel(process.env);
+  const jobs = planReplies(suite, options.modelIds, options.rolls);
+  const whole = suite.length === all.length && options.modelIds.length === 2;
+
+  const {budget, cache} = openLedger(options, process.env);
+  const estimate = estimateRun(jobs, cache, {
+    batch: options.batch,
+    at: new Date(),
+    judgeModelId,
+  });
+  out(
+    `eval:coach — ${suite.length} scenarios × ${options.modelIds.length} model(s) × ` +
+      `${options.rolls} roll(s): ${estimate.calls} calls, ${estimate.cacheHits} already in the cache.`,
+  );
+  out(
+    `  to buy: ${estimate.paidCalls} calls, about ${usd(estimate.usd)}` +
+      `${options.batch ? ' at batch price' : ''}. ` +
+      `Today so far: ${usd(budget.spentToday())} of ${usd(budget.limitUsd)}.`,
+  );
+  if (options.dryRun) {
+    out('  --dry-run: nothing was sent.');
+    return;
+  }
+  try {
+    budget.require(estimate.usd, 'this run');
+  } catch (error) {
+    if (!(error instanceof BudgetExceededError)) throw error;
+    process.stderr.write(`\n${error.message}\n`);
+    process.exit(2);
+  }
+
   const apiKey = process.env['GEMINI_API_KEY'];
   if (apiKey === undefined || apiKey.trim().length === 0) {
     process.stderr.write(
@@ -657,40 +986,49 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
-  const toFirestore = process.argv.includes('--firestore');
 
-  const model = geminiModel(apiKey);
-  const suite = scenarios();
+  const deps = openDeps({apiKey, flags: options, env: process.env, tool: 'coach', log: out});
+  const report = await runCoachEval(jobs, judgeModelId, deps);
+
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const outDir = join(process.cwd(), 'evals');
   mkdirSync(outDir, {recursive: true});
 
   let allPass = true;
-  for (const modelId of [MODEL_FREE_ID, MODEL_PREMIUM_ID]) {
-    process.stdout.write(`\n=== ${modelId} ===\n`);
-    const results: ScenarioResult[] = [];
-    for (const s of suite) {
-      // Per scenario, not once for the suite: a panic turn and an ordinary
-      // one do not get the same card in production.
-      const result = await runScenario(model, modelId, cardFor(s), s);
-      results.push(result);
+  for (const roll of report.rolls) {
+    out(
+      options.rolls === 1
+        ? `\n=== ${roll.modelId} ===`
+        : `\n=== ${roll.modelId} · roll ${roll.roll}/${options.rolls} ===`,
+    );
+    for (const result of roll.results) {
       const failed = result.checks.filter((c) => !c.pass);
-      process.stdout.write(
+      out(
         result.pass
-          ? `  PASS ${result.id}\n`
-          : `  FAIL ${result.id} — ${failed.map((c) => `${c.name} (${c.detail})`).join('; ')}\n`,
+          ? `  PASS ${result.id}`
+          : `  FAIL ${result.id} — ${failed.map((c) => `${c.name} (${c.detail})`).join('; ')}`,
       );
     }
-    const passed = results.filter((r) => r.pass).length;
-    allPass = allPass && passed === results.length;
-    process.stdout.write(`  ${passed}/${results.length} on ${modelId}\n`);
+    allPass = allPass && roll.passed === roll.results.length;
+    out(`  ${roll.passed}/${roll.results.length} on ${roll.modelId}`);
 
-    const transcript = {model: modelId, at: stamp, passed, total: results.length, results};
-    const file = join(outDir, `${stamp}-${modelId}.json`);
+    const name =
+      options.rolls === 1 ? `${stamp}-${roll.modelId}` : `${stamp}-r${roll.roll}-${roll.modelId}`;
+    const transcript = {
+      model: roll.modelId,
+      at: stamp,
+      roll: roll.roll,
+      rolls: options.rolls,
+      complete: report.complete,
+      passed: roll.passed,
+      total: roll.results.length,
+      results: roll.results,
+    };
+    const file = join(outDir, `${name}.json`);
     writeFileSync(file, JSON.stringify(transcript, null, 2));
-    process.stdout.write(`  transcript: ${file}\n`);
+    out(`  transcript: ${file}`);
 
-    if (toFirestore) {
+    if (options.firestore) {
       if (!resolveCredentials(process.cwd())) {
         process.stderr.write(
           '  --firestore skipped: no credentials (gcloud ADC or an *adminsdk*.json in functions/)\n',
@@ -698,16 +1036,42 @@ async function main(): Promise<void> {
       } else {
         // Dynamic import so a local-only run never touches credential discovery.
         const {db} = await import('../src/lib/firestore');
-        await db.collection('evals').doc(`${stamp}-${modelId}`).set(transcript);
-        process.stdout.write('  logged to the evals collection\n');
+        await db.collection('evals').doc(name).set(transcript);
+        out('  logged to the evals collection');
       }
     }
   }
 
-  process.stdout.write(
+  if (options.rolls > 1) {
+    const counts = failureCounts(report.rolls);
+    out(`\nfailures per case, of ${options.rolls} rolls (${options.modelIds.join(' / ')}):`);
+    if (counts.size === 0) out('  none');
+    for (const [id, byModel] of [...counts.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+      out(`  ${id.padEnd(30)} ${options.modelIds.map((m) => String(byModel.get(m) ?? 0)).join(' / ')}`);
+    }
+  }
+
+  out(`\n${spendLine(report.reports, budget)}`);
+
+  if (!report.complete) {
+    out(
+      `\neval:coach — INCOMPLETE. ${report.note || 'Some calls failed on their own (see the "model" and "judge failed" lines above).'}\n` +
+        'This run is not an answer: do not count it as a roll, and do not read its failures as the model\'s.',
+    );
+    process.exit(2);
+  }
+  if (!whole) {
+    out(
+      `\neval:coach — partial run (${suite.length} of ${all.length} scenarios, ` +
+        `${options.modelIds.length} of 2 models): ${allPass ? 'all passed' : 'failures above'}. ` +
+        'This is not the gate; the gate is the whole suite on both models.',
+    );
+    process.exit(allPass ? 0 : 1);
+  }
+  out(
     allPass
-      ? '\neval:coach — ALL GREEN on both models. Safe to deploy the prompt.\n'
-      : `\neval:coach — FAILURES above. Do not deploy the prompt until ${suite.length}/${suite.length} on both.\n`,
+      ? '\neval:coach — ALL GREEN on both models. Safe to deploy the prompt.'
+      : `\neval:coach — FAILURES above. Do not deploy the prompt until ${suite.length}/${suite.length} on both.`,
   );
   process.exit(allPass ? 0 : 1);
 }

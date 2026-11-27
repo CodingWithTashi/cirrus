@@ -39,6 +39,36 @@ export interface GenerateResult {
   readonly text: string;
   readonly inputTokens: number;
   readonly outputTokens: number;
+  /**
+   * Tokens the model spent thinking, when it reports any. They are billed as
+   * output but are NOT in `outputTokens` (the reply's own size), so anything
+   * that counts money adds the two. Zero on both pinned coach models today.
+   */
+  readonly thoughtTokens?: number;
+}
+
+/** One request's fate inside a batch job: its answer, or why that one failed. */
+export type BatchOutcome =
+  | {readonly ok: true; readonly result: GenerateResult}
+  | {readonly ok: false; readonly error: string};
+
+/**
+ * The provider's asynchronous, half-price door.
+ *
+ * Nothing a person is waiting on may use it: a job is answered in minutes at
+ * best and has a day to finish. It is on the seam for the eval tools, which
+ * send hundreds of calls nobody is waiting on. Submitting and collecting are
+ * separate calls so the caller owns the waiting, and a job outlives the
+ * process that sent it.
+ */
+export interface BatchModel {
+  /** Sends [requests], which must all name one model. Answers the job's name. */
+  submit(requests: readonly GenerateRequest[], label: string): Promise<string>;
+  /**
+   * Null while the job is still running; once it is done, one outcome per
+   * request, in the order they were sent. Throws when the whole job failed.
+   */
+  collect(job: string): Promise<readonly BatchOutcome[] | null>;
 }
 
 /**
