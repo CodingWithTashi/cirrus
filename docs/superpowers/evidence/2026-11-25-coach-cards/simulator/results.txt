@@ -1,0 +1,93 @@
+# Result lines, iPhone 17 simulator (iOS 27.2), LP_BACKEND=fake, Nov 25 2026
+# Copied from the logs under .superpowers/sdd/2026-11-25-coach-cards/ (laneP-*.log).
+
+## laneP-u-coach-cards-run1.log
+START 2026-11-25 20:33:05 free=6520MB test=integration_test/u_coach_cards_test.dart
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/u_coach_cards_test.dart
+00:00 +0: a card opens breathing and back returns to the chat
+E2E-MARKER: card breathing at 181,316 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: card orbs at 181,420 reaches=true top=TextSpan(debugLabel: ((englishLike bodyMedium 2021).merge((((blackCupertino bodyMedium).apply).apply).apply)).merge(unknown), inherit: false, color: Color(alpha: 1.0000, red: 0.4078, green: 0.4471, blue: 0.4941, colorSpace: ColorSpace.sRGB), family: Inter, size: 12.0, weight: 400
+E2E-MARKER: card sos at 181,530 reaches=true top=TextSpan(debugLabel: ((englishLike bodyMedium 2021).merge((((blackCupertino bodyMedium).apply).apply).apply)).merge(unknown), inherit: false, color: Color(alpha: 1.0000, red: 0.4078, green: 0.4471, blue: 0.4941, colorSpace: ColorSpace.sRGB), family: Inter, size: 12.0, weight: 400,
+01:00 +1: a game from the chat ends back in the chat
+03:06 +2: a craving handed over continues
+E2E-MARKER: handover card: keyboard=328 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+04:22 +3: a free account sees none
+E2E-MARKER: free account: cards=0
+05:10 +4: saying it passed in the chat counts the craving
+E2E-MARKER: lead chips: itPassed=1 stillStrong=1
+06:14 +5: the reply stays readable above three cards
+E2E-MARKER: fold device: view=402x874 thread=122..605 (483) reply=160..244 (84) cards=3 270..581 needed=422 hiddenAbove=0 scrolled=220/220 centre=true firstLine=true lastLine=true
+06:59 +6: the same, laid out in a 360 by 640 view
+07:44 +6 -1: the same, laid out in a 360 by 640 view [E]
+07:44 +6 -1: (tearDownAll)
+07:45 +6 -1: Some tests failed.
+END 2026-11-25 20:42:47 EXIT 1 free=6214MB
+
+## laneP-u-coach-cards-run2.log
+START 2026-11-25 20:51:18 free=6137MB test=integration_test/u_coach_cards_test.dart
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/u_coach_cards_test.dart
+00:00 +0: a card opens breathing and back returns to the chat
+E2E-MARKER: card breathing at 181,316 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: card orbs at 181,420 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+E2E-MARKER: card sos at 181,530 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+01:00 +1: a game from the chat ends back in the chat
+03:06 +2: a craving handed over continues
+E2E-MARKER: handover card: keyboard=328 reaches=true top=RenderParagraph of RichText ← Text ← Column ← Expanded ← Row ← Padding ← DecoratedBox ← Container ← LpCard ← Transform ← ScaleTransition ← AnimatedScale ← ⋯
+04:23 +3: a free account sees none
+E2E-MARKER: free account: cards=0
+05:11 +4: saying it passed in the chat counts the craving
+E2E-MARKER: lead chips: itPassed=1 stillStrong=1
+06:14 +5: the reply stays readable above three cards
+E2E-MARKER: fold device: view=402x874 keyboard=0 thread=122..605 (483) reply=160..244 (84) hiddenAbove=0 cards=3 270..581 (311) scrolled=220/220 centre=true firstLine=true lastLine=true
+06:59 +6: the same, laid out in a 360 by 640 view
+E2E-MARKER: fold view-360x640: view=360x640 keyboard=0 thread=84..405 (321) reply=-62..44 (105) hiddenAbove=105 cards=3 70..381 (311) scrolled=424/424 centre=false firstLine=false lastLine=false
+E2E-MARKER: view-360x640 cards reachable: [true, true, true]
+07:47 +6 -1: the same, laid out in a 360 by 640 view [E]
+07:47 +6 -1: (tearDownAll)
+07:47 +6 -1: Some tests failed.
+END 2026-11-25 21:00:05 EXIT 1 free=6150MB
+
+## laneP-h-panic-games.log
+START 2026-11-25 21:00:18 free=6058MB test=integration_test/h_panic_games_test.dart
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/h_panic_games_test.dart
+00:00 +0: a real round, sixty more, and "it passed" counted once
+03:03 +1: the pills swap games mid-round; drags and flicks are real
+04:11 +2: (tearDownAll)
+04:12 +2: All tests passed!
+END 2026-11-25 21:05:41 EXIT 0 free=6239MB
+
+## laneP-j-craving-quiet-hours.log
+START 2026-11-25 21:05:51 free=6224MB test=integration_test/j_craving_and_quiet_hours_test.dart
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/j_craving_and_quiet_hours_test.dart
+00:00 +0: a craving closed with back does not leak into the next one
+00:52 +1: the quiet-hours rail drags inside the real sheet, re-answers the chips, and saves both
+01:48 +2: (tearDownAll)
+01:49 +2: All tests passed!
+END 2026-11-25 21:08:48 EXIT 0 free=6218MB
+
+## laneP-i-monetisation-refused-2109.log
+STOP: only 5760 MB free, no build started
+
+## laneP-i-monetisation-refused-2110.log
+STOP: only 5974 MB free, no build started
+
+## laneP-i-monetisation.log
+START 2026-11-25 21:18:36 free=12542MB test=integration_test/i_monetisation_test.dart
+00:00 +0: loading /Users/kunchoktashi/dev/flutter/last_puff/integration_test/i_monetisation_test.dart
+00:00 +0: Home offers the free account a door where it used to offer nothing, and closes back onto Home
+00:45 +1: Stats tells a free account its real window and sells the month
+01:28 +2: the community gives a free account its post, then the door
+02:18 +3: an SOS is still open with the ordinary allowance spent
+03:07 +4: the panic flow never reaches a paywall
+03:49 +5: the arena opens playable for a free account, and the lock is something they have to go and tap
+04:42 +6: a subscriber plays all three
+05:22 +7: the SOS composer refuses a one-tap non-post, with a real keyboard
+06:15 +8: a reply too thin to publish never leaves the composer
+07:14 +9: the Free screen shows both columns and Pro is the button
+07:59 +10: buying from Settings lands on "You're in", and Let's go returns to Settings
+08:51 +11: (tearDownAll)
+08:53 +11: All tests passed!
+END 2026-11-25 21:31:46 EXIT 0 free=4065MB
+
+## d_social_test.dart, g_day1_tour_test.dart
+not run (free disk under 6 GB; see the README)

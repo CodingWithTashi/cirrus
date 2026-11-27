@@ -699,13 +699,17 @@
   "survivedIntensityDrop": "Tu disais {before}/10 — maintenant {after}/10.",
   "survivedShare": "Partager la win ↗",
   "survivedBack": "Retour à aujourd'hui",
+  "survivedBackChat": "Retour à la discussion",
   "survivedShareCopied": "Carte copiée — colle-la où tu veux.",
+  "exerciseBreathingTitle": "Respire avec moi",
+  "exerciseGameSub": "{seconds} secondes · pouces occupés, cerveau occupé",
   "coachName": "Ember",
   "coachStatus": "● connaît ton plan · jour {day}",
   "coachChipCraving": "J'ai un craving",
   "coachChipRoughDay": "Journée dure",
   "coachChipSlipped": "J'ai craqué",
   "coachChipProgress": "Montre mes progrès",
+  "coachAfterStill": "C'est encore fort",
   "coachInputHint": "Écris à ton coach…",
   "coachSend": "Envoyer",
   "coachTyping": "{name} écrit…",
@@ -1251,5 +1255,7 @@
   "whatsNew1036Item2": "Un petit message par jour autour de ta date d'arrêt",
   "whatsNew1036Item3": "Enregistre une taffe depuis ton écran d'accueil avec le widget",
   "whatsNew1038Item1": "Un mot le matin pendant les premiers jours de ton plan",
-  "whatsNew1038Item2": "Les notifications du matin ont un titre plus clair"
+  "whatsNew1038Item2": "Les notifications du matin ont un titre plus clair",
+  "whatsNew1040Item1": "Un mot le matin pendant les premiers jours de ton plan",
+  "whatsNew1040Item2": "Les notifications du matin ont un titre plus clair"
 }

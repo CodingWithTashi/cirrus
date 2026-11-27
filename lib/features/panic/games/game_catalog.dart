@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../../../domain/logic/exercises/exercise.dart';
 import '../../../domain/logic/games/games.dart';
 import 'blocks_field.dart';
 import 'game_particles.dart';
@@ -47,7 +48,6 @@ class GameEntry {
     required this.field,
     this.sparkOnHit = false,
     this.showsHint = true,
-    this.premium = false,
   });
 
   final GameId id;
@@ -56,7 +56,16 @@ class GameEntry {
   /// 2026, docs/12 §5c). Orbs is free forever and is [entries]`.first`, so a
   /// free account's default game is always a playable one — the lock is only
   /// ever met by deliberately tapping a locked pill, never on arrival.
-  final bool premium;
+  ///
+  /// Read off the exercise registry, which is the one place that says what
+  /// is Premium: the coach's cards and the server's card policy read the
+  /// same row, so the arena cannot lock a game a card just offered as free.
+  /// A game with no row is free rather than a crash mid-craving;
+  /// `test/domain/exercises_test.dart` pins that every game has one.
+  bool get premium {
+    final exercise = Exercises.forGame(id);
+    return exercise != null && Exercises.of(exercise).premium;
+  }
 
   /// The combo the ghost number appears at.
   final int ghostFrom;
@@ -97,7 +106,6 @@ abstract final class GameCatalog {
       ghostFrom: 3,
       create: _tiles,
       field: _tileField,
-      premium: true,
     ),
     // A clear is a rarer beat than a tile hit: the ghost shows from two.
     GameEntry(
@@ -105,7 +113,6 @@ abstract final class GameCatalog {
       ghostFrom: 2,
       create: _blocks,
       field: _blocksField,
-      premium: true,
     ),
   ];
 

@@ -1451,7 +1451,17 @@
   },
   "survivedShare": "Share the W ↗",
   "survivedBack": "Back to today",
+  "survivedBackChat": "Back to the chat",
   "survivedShareCopied": "Stat card copied — paste it anywhere.",
+  "exerciseBreathingTitle": "Breathe with me",
+  "exerciseGameSub": "{seconds} seconds · thumbs busy, brain busy",
+  "@exerciseGameSub": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "coachName": "Ember",
   "coachStatus": "● knows your plan · day {day}",
   "@coachStatus": {
@@ -1465,6 +1475,7 @@
   "coachChipRoughDay": "Rough day",
   "coachChipSlipped": "I slipped",
   "coachChipProgress": "Show my progress",
+  "coachAfterStill": "Still strong",
   "coachInputHint": "Message your coach…",
   "coachSend": "Send",
   "coachTyping": "{name} is typing…",
@@ -2977,5 +2988,13 @@
   "whatsNew1038Item2": "Morning notifications now have a clearer title",
   "@whatsNew1038Item2": {
     "description": "What's New 1.0.38, bullet 2 of 2. Every morning notification now wears a morning title (the old one read as an evening in fr/de/it). At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1040Item1": "A morning message on your plan's first days",
+  "@whatsNew1040Item1": {
+    "description": "What's New 1.0.40, bullet 1 of 2. A copy of whatsNew1038Item1: 1.0.38 never shipped, so this sheet is the first an updating person meets (docs/10 §60.13). At most 80 characters, plain language, no health or quitting claims."
+  },
+  "whatsNew1040Item2": "Morning notifications now have a clearer title",
+  "@whatsNew1040Item2": {
+    "description": "What's New 1.0.40, bullet 2 of 2. A copy of whatsNew1038Item2, for the same reason as whatsNew1040Item1. At most 80 characters, plain language, no health or quitting claims."
   }
 }

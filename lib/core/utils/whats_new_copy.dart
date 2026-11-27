@@ -45,6 +45,16 @@ abstract final class WhatsNewCatalog {
       l10n.whatsNew1038Item1,
       l10n.whatsNew1038Item2,
     ],
+    // 1.0.38 was never released (founder, Nov 26 2026), so an update from
+    // 1.0.36 meets only THIS sheet, and the two changes it has not seen are
+    // the two above. Copied for the same reason as 1.0.34. Coach cards are
+    // left out on purpose: they reach subscribers and trials only, and only
+    // once the functions are deployed, so a bullet would be false for every
+    // free reader (docs/10 §60.13).
+    '1.0.40': (l10n) => [
+      l10n.whatsNew1040Item1,
+      l10n.whatsNew1040Item2,
+    ],
   };
 
   /// The versions with notes, for the catalog test.

@@ -699,13 +699,17 @@
   "survivedIntensityDrop": "Dijiste {before}/10 — ahora {after}/10.",
   "survivedShare": "Compartir la victoria ↗",
   "survivedBack": "Volver a hoy",
+  "survivedBackChat": "Volver al chat",
   "survivedShareCopied": "Tarjeta copiada — pégala donde quieras.",
+  "exerciseBreathingTitle": "Respira conmigo",
+  "exerciseGameSub": "{seconds} segundos · pulgares ocupados, mente ocupada",
   "coachName": "Ember",
   "coachStatus": "● conoce tu plan · día {day}",
   "coachChipCraving": "Tengo un antojo",
   "coachChipRoughDay": "Día duro",
   "coachChipSlipped": "Recaí",
   "coachChipProgress": "Muéstrame mi progreso",
+  "coachAfterStill": "Sigue fuerte",
   "coachInputHint": "Escribe a tu coach…",
   "coachSend": "Enviar",
   "coachTyping": "{name} está escribiendo…",
@@ -1251,5 +1255,7 @@
   "whatsNew1036Item2": "Un mensaje corto al día alrededor de tu fecha para dejarlo",
   "whatsNew1036Item3": "Registra una calada desde la pantalla de inicio con el widget",
   "whatsNew1038Item1": "Un mensaje por la mañana los primeros días de tu plan",
-  "whatsNew1038Item2": "Las notificaciones de la mañana tienen un título más claro"
+  "whatsNew1038Item2": "Las notificaciones de la mañana tienen un título más claro",
+  "whatsNew1040Item1": "Un mensaje por la mañana los primeros días de tu plan",
+  "whatsNew1040Item2": "Las notificaciones de la mañana tienen un título más claro"
 }

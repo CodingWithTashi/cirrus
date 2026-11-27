@@ -7,7 +7,9 @@ import 'package:last_puff/data/dto/community_codec.dart';
 import 'package:last_puff/data/dto/entitlement_codec.dart';
 import 'package:last_puff/data/dto/journey_codec.dart';
 import 'package:last_puff/data/seed/seed_data.dart';
+import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
+import 'package:last_puff/domain/models/coach_ui.dart';
 import 'package:last_puff/domain/models/models.dart';
 
 /// Every model field must survive encode → real JSON string → decode →
@@ -595,6 +597,112 @@ void main() {
       });
 
       expect(decoded.followUps, ['keep going', 'and again']);
+    });
+
+    // Coach cards (docs/superpowers/plans/2026-11-25-coach-cards.md, K3). A
+    // card is a typed block carrying an exercise id and nothing else; the
+    // labels, colours and routes are the app's own.
+    test("a reply's cards survive the round trip", () {
+      const reply = CoachReply(
+        template: CoachTemplate.generic1,
+        blocks: [
+          CoachLauncherBlock(ExerciseId.orbs),
+          CoachLauncherBlock(ExerciseId.sos),
+        ],
+      );
+
+      final encoded = CoachReplyCodec.encode(reply);
+      expect(encoded['ui'], {
+        'v': 1,
+        'blocks': [
+          {'t': 'launcher', 'exercise': 'orbs'},
+          {'t': 'launcher', 'exercise': 'sos'},
+        ],
+      });
+
+      final decoded = CoachReplyCodec.decode(
+        jsonDecode(jsonEncode(encoded)) as Map<String, dynamic>,
+      );
+      expect(decoded.blocks, reply.blocks);
+    });
+
+    test('a backend that sends no cards decodes to none', () {
+      // Empty, never null, and no `ui` key written back: an older backend, a
+      // free account and every reply the policy gave nothing to all look the
+      // same, which is today's thread.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'args': const <String, Object>{},
+        'showWeekCard': false,
+        'text': 'hello',
+      });
+
+      expect(decoded.blocks, isEmpty);
+      expect(CoachReplyCodec.encode(decoded).containsKey('ui'), isFalse);
+    });
+
+    test('a card this build cannot draw is skipped, the rest kept', () {
+      // A newer server may know block types and exercises this build does
+      // not. One unknown card costs that card, never the reply and never the
+      // cards beside it — and a newer `v` is still read.
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'ui': {
+          'v': 9,
+          'blocks': [
+            {'t': 'hologram'},
+            {'t': 'launcher', 'exercise': 'teleport'},
+            7,
+            null,
+            {'t': 'launcher', 'exercise': 'orbs'},
+          ],
+        },
+      });
+
+      expect(decoded.blocks, const [CoachLauncherBlock(ExerciseId.orbs)]);
+    });
+
+    test('a malformed ui is no cards, never an error', () {
+      for (final Object? ui in [
+        'x',
+        <Object?>[],
+        {'blocks': 'x'},
+      ]) {
+        final decoded = CoachReplyCodec.decode({
+          'template': 'generic1',
+          'text': 'hello',
+          'ui': ui,
+        });
+        expect(decoded.blocks, isEmpty, reason: 'ui: $ui');
+        expect(decoded.text, 'hello', reason: 'ui: $ui');
+      }
+    });
+
+    test('at most four cards', () {
+      final decoded = CoachReplyCodec.decode({
+        'template': 'generic1',
+        'ui': {
+          'v': 1,
+          'blocks': [
+            for (final name in [
+              'breathing',
+              'orbs',
+              'tiles',
+              'blocks',
+              'sos',
+              'orbs',
+            ])
+              {'t': 'launcher', 'exercise': name},
+          ],
+        },
+      });
+
+      expect(decoded.blocks, const [
+        CoachLauncherBlock(ExerciseId.breathing),
+        CoachLauncherBlock(ExerciseId.orbs),
+        CoachLauncherBlock(ExerciseId.tiles),
+        CoachLauncherBlock(ExerciseId.blocks),
+      ]);
     });
   });
   group('EntitlementCodec', () {

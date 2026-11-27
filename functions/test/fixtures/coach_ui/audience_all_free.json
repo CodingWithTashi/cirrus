@@ -1,0 +1,35 @@
+{
+  "input": {
+    "audience": "all",
+    "tier": "free",
+    "chip": "craving",
+    "panicIntensity": null,
+    "caps": {
+      "exercises": [
+        "breathing",
+        "orbs",
+        "tiles",
+        "blocks",
+        "sos"
+      ],
+      "craving": false
+    },
+    "recentTools": [
+      "tiles"
+    ]
+  },
+  "blocks": [
+    {
+      "t": "launcher",
+      "exercise": "breathing"
+    },
+    {
+      "t": "launcher",
+      "exercise": "orbs"
+    },
+    {
+      "t": "launcher",
+      "exercise": "sos"
+    }
+  ]
+}

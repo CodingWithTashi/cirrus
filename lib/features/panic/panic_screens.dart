@@ -26,6 +26,7 @@ import '../../core/widgets/rolling_number.dart';
 import '../../data/stores/providers.dart';
 import '../../data/stores/update_check_store.dart';
 import '../../domain/analytics/lp_events.dart';
+import '../../domain/logic/exercises/exercise.dart';
 import '../../domain/logic/games/games.dart';
 import '../../domain/logic/review_ask_policy.dart';
 import '../../domain/logic/update_prompt_policy.dart';
@@ -82,9 +83,33 @@ class PanicSession {
 /// a phantom second server session per survived craving and reset
 /// `_resolved`, so the flow's dispose then reported the same craving
 /// abandoned as well.
+///
+/// **A craving has one owner at a time, and only the owner may end it.** The
+/// takeover owns the one it opened ([start]). Anything else that can be a
+/// craving's screen (the arena, an exercise's own screen) asks
+/// [ensureStarted], which answers whether the caller is now the owner. An
+/// owner that leaves without an outcome [park]s the craving instead of
+/// ending it: changing screens is not giving up. The takeover's coach option
+/// used to end it — `context.go` disposed the flow, whose dispose reported
+/// the craving abandoned at the moment the person asked for more help with
+/// it — and a card tapped in that chat then opened a second craving with a
+/// new clock and the strength forgotten. A parked craving is joined by the
+/// next exercise opened inside [CravingWindow], and is reported not survived
+/// only when the next craving starts.
 class PanicViewModel extends Notifier<PanicSession> {
   @override
   PanicSession build() {
+    // The shared-phone rule. A parked craving outlives its screen, and the
+    // next exercise opened inside the window JOINS it, clock and strength and
+    // all. So without this, somebody who signs in within twenty minutes of
+    // the last person parking a craving would inherit it: that person's time
+    // on the pill, and their 8/10 reported as this person's own. Watching
+    // whether there is a journey at all rebuilds the notifier on sign-out,
+    // on account deletion and on the next sign-in, and a rebuild starts idle.
+    // Nothing is reported for the craving that is dropped: nobody is signed
+    // in to report it for. (A takeover is never mounted across that flip:
+    // the router sends every `/panic` path to sign-in without a journey.)
+    ref.watch(quitStoreProvider.select((journey) => journey == null));
     // Riverpod re-runs `build` on the SAME instance after an invalidation,
     // so every per-session field starts over here.
     _reset();
@@ -105,6 +130,15 @@ class PanicViewModel extends Notifier<PanicSession> {
   /// writing `state` after the container is gone throws.
   bool _disposed = false;
 
+  /// The takeover opened this craving and is still the one to end it. False
+  /// once it has been parked, and for a craving an exercise opened.
+  bool _flowOwned = false;
+
+  /// When the open craving was parked, or null while somebody owns it.
+  /// [CravingWindow] is measured from here: it is the moment the person
+  /// last had the craving's screen in front of them.
+  DateTime? _parkedAt;
+
   /// The game on screen when the session ends and its rounds run to the end.
   /// Plain fields: nothing rebuilds, and `abandon()` can read them late.
   GameId? _lastGame;
@@ -113,6 +147,8 @@ class PanicViewModel extends Notifier<PanicSession> {
   void _reset() {
     _resolved = false;
     _active = false;
+    _flowOwned = false;
+    _parkedAt = null;
     _lastGame = null;
     _rounds = 0;
   }
@@ -126,18 +162,79 @@ class PanicViewModel extends Notifier<PanicSession> {
   /// build" assertion only because nothing else in the tree watches this
   /// provider when the takeover mounts: the flow's own `ref.watch` runs in
   /// its first build, after this, and the arena only reads. Keep it that way.
+  ///
+  /// This is the FLOW's entry and always a new craving, owned by the flow:
+  /// pressing SOS again is saying "another one", so it never joins a parked
+  /// craving. It closes one first.
   void start() {
+    _closeParked();
+    _open(flowOwned: true);
+  }
+
+  /// The entry for every other screen a craving can be on: the arena or an
+  /// exercise's own screen, reached from the flow, from a coach card, from a
+  /// `?g=` link or a restored route.
+  ///
+  /// Answers whether the caller now OWNS the craving, and so must [park] it
+  /// when it leaves:
+  /// - a mounted takeover owns the open craving: false, nothing changes;
+  /// - a craving parked inside [CravingWindow] is joined: true, with its
+  ///   clock, its strength and its server session exactly as they were;
+  /// - one parked longer ago than that is closed and a new one opened: true;
+  /// - nothing open: a new craving, true.
+  bool ensureStarted() {
+    if (_active) {
+      final parkedAt = _parkedAt;
+      // Open and in somebody's hands. The takeover keeps its own; one with
+      // no takeover over it is adopted, so it always has somebody to park it.
+      if (parkedAt == null) return !_flowOwned;
+      if (CravingWindow.covers(parkedAt, _now())) {
+        _parkedAt = null;
+        return true;
+      }
+      _closeParked();
+    }
+    _open(flowOwned: false);
+    return true;
+  }
+
+  void _open({required bool flowOwned}) {
     _reset();
     _active = true;
+    _flowOwned = flowOwned;
     state = PanicSession(startedAt: _now());
     _openSession();
   }
 
-  /// The arena can be the first screen of a craving (a `?g=` link, or a
-  /// restored route) with no flow beneath it; it needs a session too, and
-  /// must not open a second one when it arrived from the flow.
-  void ensureStarted() {
-    if (!_active) start();
+  /// The owner is leaving and the craving is not over: the takeover handing
+  /// it to the coach, an exercise closed with back. Nothing is reported —
+  /// leaving a screen is not an outcome — and the craving waits to be joined
+  /// ([ensureStarted]) or closed by the next one ([start]). A no-op when no
+  /// craving is open.
+  ///
+  /// Plain fields only, never `state`: this runs from a widget's `dispose`,
+  /// where a provider write throws.
+  void park() {
+    if (!_active || _parkedAt != null || _disposed) return;
+    _parkedAt = _now();
+    _flowOwned = false;
+  }
+
+  /// A parked craving nobody came back to in time is over without "it
+  /// passed": reported not survived, once, with what was known about it.
+  void _closeParked() {
+    if (!_active || _parkedAt == null) return;
+    _resolved = true;
+    _active = false;
+    _parkedAt = null;
+    ref
+        .read(analyticsProvider)
+        .cravingSurvived(
+          survived: false,
+          game: _lastGame,
+          rounds: _rounds,
+          intensity: ratedIntensity,
+        );
   }
 
   DateTime _now() => ref.read(nowProvider)();
@@ -191,6 +288,18 @@ class PanicViewModel extends Notifier<PanicSession> {
 
   void setIntensity(int value) => state = state.copyWith(intensity: value);
 
+  /// The strength the person gave, or null when they were never asked.
+  ///
+  /// The slider lives on the why step and starts at 7. Until that step has
+  /// been on screen, `state.intensity` is that untouched default and nobody's
+  /// answer: a craving opened by a coach card or a `?g=` link, or ended on
+  /// the breathing ring, has no strength at all. Reporting the 7 anyway put
+  /// a rating in the analytics, in the craving document and eventually in
+  /// Ember's mouth ("you rated it 7") that the person never entered. Once
+  /// the step has been reached the value counts even if it was left where it
+  /// stood: they were shown it and let it stand.
+  int? get ratedIntensity => state.step >= 1 ? state.intensity : null;
+
   /// How long this craving has been open. Zero while none is.
   Duration get elapsed {
     final startedAt = state.startedAt;
@@ -198,25 +307,37 @@ class PanicViewModel extends Notifier<PanicSession> {
   }
 
   /// Craving survived → celebrate, then reset for the next session.
-  /// [intensityAfter] is the optional re-rating on the arena's round panel.
-  void survive({int? intensityAfter}) {
+  /// [intensityAfter] is the optional re-rating on the arena's round panel
+  /// or an exercise's own screen. [exercise] is what was on screen when they
+  /// said it passed, when that was an exercise, and [source] where the
+  /// craving's last screen was opened from.
+  void survive({
+    int? intensityAfter,
+    ExerciseId? exercise,
+    ExerciseSource? source,
+  }) {
     _resolved = true;
     _active = false;
+    _parkedAt = null;
     ref
         .read(analyticsProvider)
         .cravingSurvived(
           survived: true,
           game: _lastGame,
           rounds: _rounds,
-          intensity: state.intensity,
+          intensity: ratedIntensity,
           intensityAfter: intensityAfter,
+          exercise: exercise,
+          source: source,
         );
     ref
         .read(panicRepositoryProvider)
         .survived(
-          intensity: state.intensity,
+          intensity: ratedIntensity,
           intensityAfter: intensityAfter,
           game: _lastGame,
+          exercise: exercise,
+          source: source,
         )
         .ignore();
     ref.read(quitStoreProvider.notifier).recordCravingSurvived();
@@ -225,14 +346,48 @@ class PanicViewModel extends Notifier<PanicSession> {
     // the survived screen — see the class comment for what that cost.
   }
 
+  /// "It passed", said from outside an exercise: the chat's chip, after the
+  /// person has come back from one.
+  ///
+  /// It is the same statement as the button on an exercise's screen. Without
+  /// this it would count for nothing: the craving would stay parked, and the
+  /// next one would close it as NOT survived, the opposite of what they said.
+  ///
+  /// Counts a PARKED craving and answers true; it is [survive] with no
+  /// after-rating, so the two cannot drift: one `craving_outcome`, one
+  /// server report, the person's count up by one, and the craving over (a
+  /// second call answers false, and the next craving has nothing to close).
+  ///
+  /// Otherwise it does nothing at all and answers false: nothing open, one
+  /// already over, or one that is open and in somebody's hands. A mounted
+  /// takeover or exercise has its own "It passed", and a caller that is not
+  /// the owner may not end a craving out from under it.
+  ///
+  /// No window check. The chip is only offered inside the craving window,
+  /// and "it passed" is true whenever it is said.
+  ///
+  /// Call it from a gesture handler: it commits a journey change, like
+  /// [survive]. A caller that also navigates leaves first.
+  bool surviveParked({ExerciseId? exercise, ExerciseSource? source}) {
+    if (!_active || _parkedAt == null) return false;
+    survive(exercise: exercise, source: source);
+    return true;
+  }
+
   /// The takeover closed without "it passed" being tapped.
   ///
   /// Reported to analytics only, never to the server: leaving the flow is not
   /// the same claim as slipping, and `panicSession` records outcomes people
   /// actually stated. The guardrail rate (docs/06 §1, craving-survived ≥ 70%)
   /// reads sessions-opened as its denominator either way.
+  ///
+  /// The takeover's exit, and only for a craving it still owns: a no-op once
+  /// the craving is parked (the coach option parks it and THEN leaves, so
+  /// this runs from the flow's dispose a moment later) or in somebody else's
+  /// hands. Like [park], plain fields only.
   void abandon() {
     if (_resolved) return;
+    if (_parkedAt != null || !_flowOwned) return;
     _resolved = true;
     _active = false;
     // A notifier whose container is already gone (a test tearing the whole
@@ -245,7 +400,7 @@ class PanicViewModel extends Notifier<PanicSession> {
           survived: false,
           game: _lastGame,
           rounds: _rounds,
-          intensity: state.intensity,
+          intensity: ratedIntensity,
         );
   }
 }
@@ -299,7 +454,9 @@ class _PanicFlowState extends ConsumerState<PanicFlow> {
     // `survive()` marks the session resolved before this runs, so a survived
     // craving is never double-counted as an abandoned one. A takeover torn
     // down before its first frame never opened one, so there is nothing to
-    // report either.
+    // report either. And one that parked its craving on the way to the coach
+    // has handed it on: `abandon()` does nothing for a craving the flow no
+    // longer owns.
     if (_started) _session.abandon();
     super.dispose();
   }
@@ -659,7 +816,7 @@ class _WhyStep extends ConsumerWidget {
               // change, and a router refresh delivered after an imperative
               // navigation undoes it (the arena does the same).
               context.pushReplacement(Routes.survived);
-              vm.survive();
+              vm.survive(source: ExerciseSource.panic);
             },
           ),
         ],
@@ -822,9 +979,14 @@ class _BreakLoopStep extends ConsumerWidget {
                     // directive PANIC MODE voice when it is present, and until now no
                     // client ever sent it — so Ember answered a 9/10 craving in the
                     // same open-question register it uses for a quiet Tuesday.
-                    onTap: () => context.go(
-                      '${Routes.coach}?panic=${session.intensity}',
-                    ),
+                    //
+                    // Parked, not abandoned: `go` disposes this flow, and the
+                    // craving is going to the chat with them, where a card
+                    // can pick it up with its clock and its strength intact.
+                    onTap: () {
+                      ref.read(panicProvider.notifier).park();
+                      context.go('${Routes.coach}?panic=${session.intensity}');
+                    },
                   ),
                 ],
               ),
@@ -839,7 +1001,7 @@ class _BreakLoopStep extends ConsumerWidget {
               // Leave first, then mutate — same rule as step 2.
               final vm = ref.read(panicProvider.notifier);
               context.pushReplacement(Routes.survived);
-              vm.survive();
+              vm.survive(source: ExerciseSource.panic);
             },
           ),
         ],
@@ -850,10 +1012,19 @@ class _BreakLoopStep extends ConsumerWidget {
 
 /// Frame 35 — craving survived. Confetti, rolling counter, share the W.
 class SurvivedScreen extends ConsumerStatefulWidget {
-  const SurvivedScreen({super.key, this.game});
+  const SurvivedScreen({
+    super.key,
+    this.game,
+    this.source = ExerciseSource.panic,
+  });
 
   /// The game's result when the craving was beaten by playing it through.
   final GameOutcome? game;
+
+  /// Where the craving's last screen was opened from, which is where this
+  /// screen leads back to: the chat for a craving that began there, Home for
+  /// everything else.
+  final ExerciseSource source;
 
   @override
   ConsumerState<SurvivedScreen> createState() => _SurvivedScreenState();
@@ -897,7 +1068,12 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
         );
   }
 
-  /// Home — after docs/03 §8's re-ask for anyone who said "Maybe later" at D4.
+  /// A craving that began in the chat ends back in the chat: Ember offered
+  /// the exercise, and the thread is where the person was. Every other
+  /// craving ends on Home, as it always has.
+  bool get _backToChat => widget.source == ExerciseSource.coach;
+
+  /// Out — after docs/03 §8's re-ask for anyone who said "Maybe later" at D4.
   /// They have just beaten a craving, which is when "a heads-up before the
   /// next one" means the most. Asked before leaving, while this screen and
   /// its `ref` are still mounted to show the sheet.
@@ -919,7 +1095,7 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
         reason: PushAskReason.survived,
       );
     }
-    if (mounted) context.go(Routes.home);
+    if (mounted) context.go(_backToChat ? Routes.coach : Routes.home);
   }
 
   @override
@@ -1086,7 +1262,12 @@ class _SurvivedScreenState extends ConsumerState<SurvivedScreen> {
                           ),
                           _ReviewAsk(visitAllows: _visitAllowsReview),
                           const Spacer(),
-                          LpButton(l10n.survivedBack, onTap: _leave),
+                          LpButton(
+                            _backToChat
+                                ? l10n.survivedBackChat
+                                : l10n.survivedBack,
+                            onTap: _leave,
+                          ),
                         ],
                       ),
                     ),

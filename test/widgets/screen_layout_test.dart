@@ -10,12 +10,15 @@ import 'package:last_puff/features/coach/memories_screen.dart';
 import 'package:last_puff/features/community/community_screens.dart';
 import 'package:last_puff/features/health/health_screen.dart';
 import 'package:last_puff/features/day1/day1_screen.dart';
+import 'package:last_puff/features/exercises/breathing_exercise.dart';
+import 'package:last_puff/features/exercises/exercise_scaffold.dart';
 import 'package:last_puff/features/home/home_screen.dart';
 import 'package:last_puff/features/insight/insight_screen.dart';
 import 'package:last_puff/features/milestones/milestones_screen.dart';
 import 'package:last_puff/features/moderation/moderation_screen.dart';
 import 'package:last_puff/features/money/money_screen.dart';
 import 'package:last_puff/features/onboarding/onboarding_flow.dart';
+import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/features/panic/game_arena_screen.dart';
 import 'package:last_puff/features/panic/panic_screens.dart';
@@ -67,6 +70,12 @@ void main() {
     'GameArenaBlocks': const GameArenaScreen(initial: GameId.blocks),
     'GameArenaOrbs': const GameArenaScreen(initial: GameId.orbs),
     'Survived': const SurvivedScreen(),
+    // An exercise on a screen of its own: the frame, with breathing in it.
+    'ExerciseScaffold': const ExerciseScaffold(
+      id: ExerciseId.breathing,
+      source: ExerciseSource.coach,
+      body: BreathingExercise(),
+    ),
     'Paywall': const PaywallScreen(),
     'FreePlan': const FreePlanScreen(),
     'Winback': const WinbackScreen(),

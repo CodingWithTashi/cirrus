@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,12 +20,17 @@ import '../../core/widgets/lp_states.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../data/stores/day1_tour_store.dart';
 import '../../data/stores/coach_store.dart';
+import '../../data/stores/exercise_runs.dart';
 import '../../data/stores/providers.dart';
+import '../../domain/analytics/lp_events.dart';
 import '../day1/day1_spotlight.dart';
 import '../../domain/logic/day_window.dart';
+import '../../domain/logic/exercises/exercise.dart';
 import '../../domain/logic/week_trend.dart';
 import '../../domain/models/journey_state.dart';
 import '../../domain/models/models.dart';
+import '../panic/panic_screens.dart';
+import 'surface/coach_surface.dart';
 
 /// Frame 36 — Ember's chat. Cites the user's own data, never generic advice.
 class CoachScreen extends ConsumerStatefulWidget {
@@ -42,7 +49,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _scroll = ScrollController();
 
   /// Rides on the next message only: the craving that opened this screen is
-  /// context for what the user is about to say, not a permanent mode.
+  /// context for what the user is about to say, not a permanent mode. And
+  /// not on any message once that craving has passed ([_cravingPassed]): a
+  /// strength still waiting here would send "thanks" in PANIC MODE.
   int? _panicIntensity;
 
   /// When the panic flow last sent this person here, or null.
@@ -63,14 +72,71 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   /// Distinct from [_panicIntensity], which is cleared by the first send.
   DateTime? _panicArrivedAt;
 
-  /// The window in which this screen will not sell anything.
-  static const _cravingWindow = Duration(minutes: 20);
-
+  /// Whether this screen is inside the window in which it will not sell
+  /// anything ([CravingWindow], the app's one model of a craving's length).
   /// [now] comes from the watched minute clock, so the CTA reappears on its
   /// own when the window closes.
-  bool _inCraving(DateTime now) {
-    final at = _panicArrivedAt;
-    return at != null && now.difference(at) < _cravingWindow;
+  bool _inCraving(DateTime now) => CravingWindow.covers(_panicArrivedAt, now);
+
+  /// When the craving this chat is about began, as far as the chat knows:
+  /// the panic flow sent them here, or they sent the craving chip (stamped
+  /// AFTER that send, so the chip's own turn is still asked from outside a
+  /// craving and gets the menu). Null when there is none, and again once it
+  /// has been survived ([_cravingPassed]).
+  ///
+  /// A second clock beside [_panicArrivedAt], and deliberately so. That one
+  /// only ever runs out: it keeps the cap from selling for twenty minutes
+  /// whatever happens. This one is what the SERVER is told, and it stops the
+  /// moment the craving does.
+  DateTime? _cravingSince;
+
+  /// Whether a message sent at [now] is sent from inside a craving. What the
+  /// server is told, and nothing else. [_inCraving] alone still decides the
+  /// cap's upgrade button: saying "I'm craving" in the chat does not hide it.
+  bool _cravingContext(DateTime now) =>
+      CravingWindow.covers(_cravingSince, now);
+
+  /// The craving has been counted as survived: "It passed" on an exercise's
+  /// own screen, the chat's chip, or the panic flow's own button. Whatever
+  /// they type next is an ordinary message: no strength on it, not from
+  /// inside a craving. Without this the chat went on treating the next
+  /// twenty minutes as the craving that had just ended: one more card under
+  /// "thanks", or a PANIC MODE reply to it, which is also told nothing about
+  /// what they just did.
+  ///
+  /// [_panicArrivedAt] is left running: the cap's no-selling window is not
+  /// reopened by surviving. A new arrival from the panic flow, or the
+  /// craving chip again, starts a craving of its own.
+  void _cravingPassed() {
+    _cravingSince = null;
+    _panicIntensity = null;
+  }
+
+  /// Whether the last message sent from here was sent from inside a craving.
+  /// The cards a reply carries answer the turn that asked for them, so this
+  /// is what `coach_ui_shown` reports, not the screen's state when the reply
+  /// lands (by then the chip has stamped its window).
+  bool _sentInCraving = false;
+
+  /// The cards under the newest reply. One for the life of the screen.
+  late final CoachSurfaceController _cards;
+
+  /// The view those cards are drawn in, so the screen can ask whether they
+  /// have been laid out. Only ever under the newest Ember reply.
+  final _cardsKey = GlobalKey();
+
+  /// The newest Ember reply's bubble, so its first line can be kept in view.
+  /// A key per reply, never one key moved from bubble to bubble: a moved
+  /// global key carries the old bubble's element along with it.
+  GlobalKey _replyKey = GlobalKey();
+  String? _replyKeyId;
+
+  GlobalKey _replyKeyFor(String messageId) {
+    if (_replyKeyId != messageId) {
+      _replyKeyId = messageId;
+      _replyKey = GlobalKey();
+    }
+    return _replyKey;
   }
 
   @override
@@ -79,13 +145,41 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     _inputFocus.addListener(_onInputFocus);
     _panicIntensity = widget.panicIntensity;
     if (widget.panicIntensity != null) {
-      _panicArrivedAt = ref.read(nowProvider)();
+      _panicArrivedAt = _cravingSince = ref.read(nowProvider)();
     }
+    _cards = CoachSurfaceController(
+      onShown: (launchers) {
+        if (!mounted) return;
+        ref
+            .read(analyticsProvider)
+            .coachUiShown(
+              launchers: launchers,
+              panic: _sentInCraving,
+              planDay: ref.read(todayProvider)?.dayNumber ?? 1,
+            );
+      },
+      onDropped: () {
+        if (!mounted) return;
+        ref.read(analyticsProvider).coachUiDropped();
+      },
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // Pull the stored transcript first; the greeting is what you get when
       // there is genuinely nothing to continue. Seeding unconditionally is why
       // reopening the app used to look like meeting Ember for the first time.
       ref.read(coachStoreProvider.notifier).restoreHistory();
+      // The thread outlives this screen. One that already ends on a reply
+      // with cards changes nothing when it is looked at again, so nothing
+      // would tell the listener in `build` to draw them.
+      _syncCards(ref.read(coachStoreProvider));
+      // Nor would anything move the thread, which opens at its top. With
+      // cards under the newest reply it opens on that reply instead; without
+      // them it opens where it always has.
+      if (_newestHasCards) {
+        _followThread(animate: false);
+        WidgetsBinding.instance.ensureVisualUpdate();
+      }
     });
   }
 
@@ -93,11 +187,27 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   void didUpdateWidget(CoachScreen old) {
     super.didUpdateWidget(old);
     final next = widget.panicIntensity;
-    if (next != old.panicIntensity) {
-      // Entering the coach WITHOUT an intensity is a normal visit again, so
-      // the suppression lifts immediately rather than waiting out the window.
-      _panicArrivedAt = next == null ? null : ref.read(nowProvider)();
-      if (next != null) _panicIntensity = next;
+    if (next != null && next != old.panicIntensity) {
+      _panicArrivedAt = _cravingSince = ref.read(nowProvider)();
+      _panicIntensity = next;
+    }
+    // Arriving WITHOUT an intensity leaves the window running. It used to
+    // clear it, on the reading that this was an ordinary visit again; but
+    // "Back to the chat" after an exercise lands here exactly that way, and
+    // lifting it then put the cap's upgrade button back in front of somebody
+    // whose craving had passed a minute ago. The window closes on its own
+    // ([CravingWindow]), which is what the timestamp was for.
+  }
+
+  /// Only the newest Ember reply shows its cards, like its follow-up chips:
+  /// nothing stale in the scrollback, and nothing while the next answer is
+  /// on its way.
+  void _syncCards(CoachState coach) {
+    final newest = coach.messages.lastOrNull;
+    if (newest != null && newest.role == CoachRole.ember) {
+      _cards.show(newest.id, newest.blocks);
+    } else {
+      _cards.clear();
     }
   }
 
@@ -121,19 +231,96 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       ..dispose();
     _input.dispose();
     _scroll.dispose();
+    _cards.dispose();
     super.dispose();
   }
 
-  void _scrollToEnd() {
+  /// Brings the thread to rest after it has changed: at its end, as a chat
+  /// does, or on the newest reply when that reply carries cards
+  /// ([_restingOffset]).
+  ///
+  /// Decided after the frame, from what that frame actually laid out. There
+  /// is no "cards arrived" event to listen for and none is needed: while the
+  /// words are streaming the surface view has no height and this is a plain
+  /// scroll to the end; in the frame the cards are first drawn it has one.
+  /// No timer anywhere, so nothing is left pending when the screen goes.
+  void _followThread({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (_newestHasCards && !_cardsLaidOut) {
+        _seekCards();
+        return;
+      }
+      final target = _restingOffset(_scroll.position);
+      if (animate) {
         _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
+          target,
           duration: LpMotion.normal,
           curve: LpMotion.ease,
         );
+      } else {
+        _scroll.jumpTo(target);
       }
     });
+  }
+
+  /// Where the thread rests.
+  ///
+  /// Its end, unless the newest reply has cards laid out under it. Cards
+  /// arrive all at once and are tall: three of them are taller than the
+  /// thread on a small phone, and scrolling to their end carried the words
+  /// they answer off the top of the screen. So with cards the thread goes as
+  /// far toward its end as it can while the reply's first line stays in
+  /// view. When the reply and its cards fit, that IS the end.
+  double _restingOffset(ScrollPosition position) {
+    final end = position.maxScrollExtent;
+    if (!_cardsLaidOut) return end;
+    final reply = _laidOut(_replyKey);
+    if (reply == null) return end;
+    final viewport = RenderAbstractViewport.maybeOf(reply);
+    if (viewport == null) return end;
+    // The offset that puts the top of the bubble at the top of the thread.
+    final top = viewport.getOffsetToReveal(reply, 0).offset;
+    return top < end ? math.max(position.minScrollExtent, top) : end;
+  }
+
+  /// The newest reply has cards and they are not laid out, so the thread is
+  /// somewhere else: a screen just built on an existing thread opens at its
+  /// top, and a lazy list builds only what is near. Go to the end, where
+  /// they are, and decide once that frame has been laid out.
+  ///
+  /// Bounded: the end of a lazy list is an estimate until it is reached, so
+  /// one jump can land short. After three it settles for wherever it is.
+  void _seekCards([int attempt = 0]) {
+    _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (!_cardsLaidOut && attempt < 2) {
+        _seekCards(attempt + 1);
+        return;
+      }
+      _scroll.jumpTo(_restingOffset(_scroll.position));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  /// Whether the newest message is a reply that carries cards.
+  bool get _newestHasCards {
+    final newest = ref.read(coachStoreProvider).messages.lastOrNull;
+    return newest != null &&
+        newest.role == CoachRole.ember &&
+        newest.blocks.isNotEmpty;
+  }
+
+  /// Whether the cards are on the thread as of the last frame. The view is
+  /// zero-height until a surface is drawn in it, so a height is the answer:
+  /// not while a reply streams, and not for cards that were refused.
+  bool get _cardsLaidOut => (_laidOut(_cardsKey)?.size.height ?? 0) > 0;
+
+  /// What [key] is on, if the last frame laid it out.
+  RenderBox? _laidOut(GlobalKey key) {
+    final box = key.currentContext?.findRenderObject();
+    return box is RenderBox && box.attached && box.hasSize ? box : null;
   }
 
   String _chipLabel(BuildContext context, int index) =>
@@ -332,13 +519,39 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final followUps = coach.messages.lastOrNull?.role == CoachRole.ember
         ? coach.messages.last.followUps
         : const <String>[];
+    // Back from an exercise the chat offered, without having said it passed
+    // there or here: the question is still open, so the two answers to it
+    // lead the row. Watched for the rebuild (a run is filed, or handed to
+    // Ember with the next message); the window is asked through the
+    // notifier, on the minute clock, so they go on their own once the
+    // craving has passed.
+    ref.watch(exerciseRunsProvider);
+    final justDid = ref
+        .read(exerciseRunsProvider.notifier)
+        .peekRecent(source: ExerciseSource.coach, now: now);
+    final askHowItWent = justDid != null && !store.runHasPassed(justDid);
+    // A craving was just counted, wherever "It passed" was said. Read off
+    // the person's own total rather than off any one screen's report, so the
+    // three places it can be said cannot disagree about whether this chat
+    // has heard.
+    ref.listen(
+      quitStoreProvider.select((journey) => journey?.cravingsSurvivedTotal),
+      (previous, next) {
+        if (previous != null && next != null && next > previous) {
+          _cravingPassed();
+        }
+      },
+    );
 
     // Day-1 step two used to complete from a listener here, which counted
     // the seeded greeting — an ember message that appears without a word
     // being typed — and ticked "Meet your coach" on arrival. Completion now
     // rides the send future in [_finishTourStepAfter], where "the user sent
     // something and Ember answered it" is a fact rather than an inference.
-    ref.listen(coachStoreProvider, (previous, next) => _scrollToEnd());
+    ref.listen(coachStoreProvider, (previous, next) {
+      _followThread();
+      _syncCards(next);
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -405,89 +618,128 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                       children: [
-                        for (final (i, m) in coach.messages.indexed) ...[
-                          // Day/time separators make the thread honest about
-                          // when things were said — restored history used to
-                          // render last night's messages indistinguishable
-                          // from this morning's.
-                          if (_needsSeparator(
-                            i == 0 ? null : coach.messages[i - 1].sentAt,
-                            m.sentAt,
-                          ))
-                            _TimeDivider(
-                              label: _timeLabel(context, m.sentAt!, now, locale),
-                            ),
-                          _Bubble(
-                            isUser: m.role == CoachRole.user,
-                            text: m.role == CoachRole.user
-                                ? (m.text ??
-                                      _chipLabel(context, m.chipEcho ?? 0))
-                                : _resolve(context, m, coachName),
-                          ),
-                          // The cap message names Premium; this is the door
-                          // it points at (docs/04 §7, `source=coach_cap`).
-                          // …and never to somebody who walked in from a
-                          // craving that has not passed yet: the other half of
-                          // deleting the panic paywall door.
-                          if (m.role != CoachRole.user &&
-                              m.template == CoachTemplate.capReached &&
-                              !_inCraving(now) &&
-                              !ref.watch(isPremiumProvider)) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: SizedBox(
-                                width: 180,
-                                child: LpButton(
-                                  l10n.premiumLockCta,
-                                  height: 40,
-                                  fontSize: 14,
-                                  glow: false,
-                                  onTap: () => context.push(
-                                    Routes.paywallFrom('coach_cap'),
+                        for (final (i, m) in coach.messages.indexed)
+                          // One list child per message, everything it
+                          // carries with it. A lazy list lays a child out
+                          // whole or not at all, so whenever the end of the
+                          // thread is in view the newest reply is measured
+                          // from its first line to its last card, however
+                          // tall it is. Where the thread rests is worked
+                          // out from exactly that ([_restingOffset]).
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Day/time separators make the thread honest
+                              // about when things were said — restored
+                              // history used to render last night's messages
+                              // indistinguishable from this morning's.
+                              if (_needsSeparator(
+                                i == 0 ? null : coach.messages[i - 1].sentAt,
+                                m.sentAt,
+                              ))
+                                _TimeDivider(
+                                  label: _timeLabel(
+                                    context,
+                                    m.sentAt!,
+                                    now,
+                                    locale,
                                   ),
                                 ),
+                              _Bubble(
+                                // Only the newest reply is ever measured.
+                                key:
+                                    m.role == CoachRole.ember &&
+                                        i == coach.messages.length - 1
+                                    ? _replyKeyFor(m.id)
+                                    : null,
+                                isUser: m.role == CoachRole.user,
+                                text: m.role == CoachRole.user
+                                    ? (m.text ??
+                                          _chipLabel(context, m.chipEcho ?? 0))
+                                    : _resolve(context, m, coachName),
                               ),
-                            ),
-                          ],
-                          if (m.showWeekCard && journey != null) ...[
-                            const SizedBox(height: 12),
-                            _WeekCard(
-                              journey: journey,
-                              now: ref.watch(nowProvider)(),
-                              locale: locale,
-                            ),
-                          ],
-                          // A dropped reply gets a button, not just an
-                          // apology. Retyping the message was the only way
-                          // to try again, and during the Day-1 walkthrough —
-                          // where this reply is the one thing the step waits
-                          // for — that read as a dead end. Only the last
-                          // line, and only the connection case: a refused
-                          // build fails the same way every time until the
-                          // build is fixed, and a retry there would promise
-                          // what it cannot deliver.
-                          if (m.template == CoachTemplate.connectionLost &&
-                              i == coach.messages.length - 1 &&
-                              !coach.isTyping) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: SizedBox(
-                                width: 160,
-                                child: LpButton(
-                                  l10n.errorRetry,
-                                  style: LpButtonStyle.surface,
-                                  height: 40,
-                                  fontSize: 15,
-                                  glow: false,
-                                  onTap: _retry,
+                              // The cap message names Premium; this is the
+                              // door it points at (docs/04 §7,
+                              // `source=coach_cap`). …and never to somebody
+                              // who walked in from a craving that has not
+                              // passed yet: the other half of deleting the
+                              // panic paywall door.
+                              if (m.role != CoachRole.user &&
+                                  m.template == CoachTemplate.capReached &&
+                                  !_inCraving(now) &&
+                                  !ref.watch(isPremiumProvider)) ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: SizedBox(
+                                    width: 180,
+                                    child: LpButton(
+                                      l10n.premiumLockCta,
+                                      height: 40,
+                                      fontSize: 14,
+                                      glow: false,
+                                      onTap: () => context.push(
+                                        Routes.paywallFrom('coach_cap'),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                        ],
+                              ],
+                              if (m.showWeekCard && journey != null) ...[
+                                const SizedBox(height: 12),
+                                _WeekCard(
+                                  journey: journey,
+                                  now: ref.watch(nowProvider)(),
+                                  locale: locale,
+                                ),
+                              ],
+                              // The cards this reply carried: one tap opens
+                              // the exercise, back returns here. Under the
+                              // newest Ember bubble only, and no room taken
+                              // when there are none. It draws no error of its
+                              // own: a surface that cannot be drawn is simply
+                              // not there, and the words above it stand.
+                              if (m.role == CoachRole.ember &&
+                                  i == coach.messages.length - 1)
+                                CoachSurfaceView(
+                                  key: _cardsKey,
+                                  controller: _cards,
+                                  source: ExerciseSource.coach,
+                                  padding: const EdgeInsets.only(top: 12),
+                                ),
+                              // A dropped reply gets a button, not just an
+                              // apology. Retyping the message was the only
+                              // way to try again, and during the Day-1
+                              // walkthrough — where this reply is the one
+                              // thing the step waits for — that read as a
+                              // dead end. Only the last line, and only the
+                              // connection case: a refused build fails the
+                              // same way every time until the build is fixed,
+                              // and a retry there would promise what it
+                              // cannot deliver.
+                              if (m.template == CoachTemplate.connectionLost &&
+                                  i == coach.messages.length - 1 &&
+                                  !coach.isTyping) ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: SizedBox(
+                                    width: 160,
+                                    child: LpButton(
+                                      l10n.errorRetry,
+                                      style: LpButtonStyle.surface,
+                                      height: 40,
+                                      fontSize: 15,
+                                      glow: false,
+                                      onTap: _retry,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                            ],
+                          ),
                         if (coach.isTyping) _TypingBubble(coachName: coachName),
                       ],
                     ),
@@ -500,6 +752,18 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
+                  if (askHowItWent) ...[
+                    _chip(
+                      label: l10n.panicItPassed,
+                      accent: false,
+                      onTap: () => _itPassed(justDid),
+                    ),
+                    _chip(
+                      label: l10n.coachAfterStill,
+                      accent: false,
+                      onTap: () => _prefill(l10n.coachAfterStill),
+                    ),
+                  ],
                   if (followUps.isEmpty)
                     for (final chip in CoachChip.values)
                       _chip(
@@ -600,6 +864,28 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     );
   }
 
+  /// "It passed", said here instead of on the exercise's own screen.
+  ///
+  /// It is the same statement, so it counts the same craving: the one the
+  /// exercise parked on its way out. Counted at most once, and silently: no
+  /// Survived screen, no rating card. Then the words go in the box like any
+  /// chip's; the user still sends them.
+  ///
+  /// When it did count one, the question the two chips asked is answered:
+  /// the store is told ([CoachStore.markRunPassed]), so the chips go and the
+  /// next message tells Ember the craving passed. When nothing was parked
+  /// (it was closed some other way) nothing is claimed and nothing changes.
+  ///
+  /// A gesture handler only. It commits a journey change, and it leaves
+  /// nothing: the chat is where they already are.
+  void _itPassed(ExerciseRun run) {
+    final counted = ref
+        .read(panicProvider.notifier)
+        .surviveParked(exercise: run.id, source: ExerciseSource.coach);
+    if (counted) ref.read(coachStoreProvider.notifier).markRunPassed(run);
+    _prefill(context.l10n.panicItPassed);
+  }
+
   void _send() {
     final text = _input.text.trim();
     if (text.isEmpty) return;
@@ -618,9 +904,14 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ? tapped
         : null;
     _tappedChip = null;
+    final now = ref.read(nowProvider)();
+    final craving = _cravingContext(now);
+    _sentInCraving = craving;
     final sent = chip == null
-        ? store.send(text, panicIntensity: panic)
-        : store.sendChip(chip, panicIntensity: panic);
+        ? store.send(text, panicIntensity: panic, craving: craving)
+        : store.sendChip(chip, panicIntensity: panic, craving: craving);
+    // After its own send, so that turn still got the menu.
+    if (chip == CoachChip.craving) _cravingSince = now;
     if (ref.read(day1TourStepProvider) == Day1TourStep.meetCoach) {
       // The lesson's tap happened; the highlight comes down so the reply is
       // watched on a normal screen, not through the barrier's 88% wash. The
@@ -697,7 +988,7 @@ class _TimeDivider extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.isUser, required this.text});
+  const _Bubble({super.key, required this.isUser, required this.text});
 
   final bool isUser;
   final String text;

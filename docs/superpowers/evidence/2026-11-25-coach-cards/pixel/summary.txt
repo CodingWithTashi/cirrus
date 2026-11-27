@@ -1,0 +1,9 @@
+START 2026-11-25 21:53:24
+u_coach_cards: exit 1 :: 07:56 +6 -1: Some tests failed.
+h_panic_games: exit 0 :: 04:14 +2: All tests passed!
+j_craving_and_quiet_hours: exit 3 :: STOP: only 4339 MB free, no build started
+stopping the loop: the runner refused to start (code 3)
+restore: adb install -r -> Success
+restore: installed now: versionName=1.0.36
+phone: battery 59%
+DONE 2026-11-25 22:09:25

@@ -12,6 +12,7 @@ import 'package:last_puff/data/backend_mode.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/analytics/analytics.dart';
 import 'package:last_puff/domain/analytics/lp_events.dart';
+import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
 import 'package:last_puff/domain/logic/widget_prompt_policy.dart';
 import 'package:last_puff/domain/models/models.dart';
@@ -98,7 +99,19 @@ void main() {
         ..updatePromptShown(forced: true)
         ..updatePromptUpdate()
         ..updatePromptLater()
-        ..whatsNewShown('1.0.32');
+        ..whatsNewShown('1.0.32')
+        ..coachUiShown(launchers: 3, panic: false, planDay: 12)
+        ..coachUiDropped()
+        ..exerciseOpened(ExerciseId.orbs, ExerciseSource.coach)
+        ..exerciseFinished(
+          const ExerciseRun(
+            id: ExerciseId.orbs,
+            source: ExerciseSource.coach,
+            seconds: 61,
+            completed: true,
+            passed: false,
+          ),
+        );
 
       expect(a.names, [
         'onboarding_start',
@@ -189,6 +202,13 @@ void main() {
         'update_prompt_update',
         'update_prompt_later',
         'whats_new_shown',
+        // Coach cards and the exercise registry (Nov 25 2026): whether a
+        // reply drew cards, whether the renderer refused them, and what
+        // was opened and finished — from the chat, the flow or anywhere.
+        'coach_ui_shown',
+        'coach_ui_dropped',
+        'exercise_opened',
+        'exercise_finished',
       ]);
       expect(a.propsOf('help_viewed'), {'source': 'settings'});
       expect(a.propsOf('help_link_opened'), {'kind': 'call'});
@@ -268,6 +288,43 @@ void main() {
         'game': 'none',
         'rounds': 0,
       });
+      expect(a.propsOf('coach_ui_shown'), {
+        'launchers': 3,
+        'panic': 'false',
+        'plan_day': 12,
+      });
+      expect(a.propsOf('coach_ui_dropped'), isEmpty);
+      expect(a.propsOf('exercise_opened'), {
+        'exercise': 'orbs',
+        'source': 'coach',
+      });
+      expect(a.propsOf('exercise_finished'), {
+        'exercise': 'orbs',
+        'source': 'coach',
+        'completed': 'true',
+        'passed': 'false',
+        'seconds': 61,
+      });
+    });
+
+    // Absent, never 'none': a craving that ended on the flow's own button
+    // had no exercise open, and a made-up value would chart as one.
+    test('a craving that ended inside an exercise says which and where', () {
+      final a = RecordingAnalytics()
+        ..cravingSurvived(
+          survived: true,
+          intensityAfter: 3,
+          exercise: ExerciseId.breathing,
+          source: ExerciseSource.coach,
+        );
+      expect(a.propsOf('craving_outcome'), {
+        'survived': 'true',
+        'game': 'none',
+        'rounds': 0,
+        'intensity_after': 3,
+        'exercise': 'breathing',
+        'source': 'coach',
+      });
     });
 
     // Firebase Analytics rejects anything else outright, and a rejected event
@@ -293,10 +350,27 @@ void main() {
         ..limitReached(LpLimit.communityCap, premium: true, used: 3)
         ..limitReached(LpLimit.panicAi, premium: false, used: 2)
         ..cravingSurvived(survived: false)
+        ..cravingSurvived(
+          survived: true,
+          exercise: ExerciseId.orbs,
+          source: ExerciseSource.coach,
+        )
         ..updatePromptShown(forced: false)
         ..updatePromptUpdate()
         ..updatePromptLater()
-        ..whatsNewShown('1.0.32');
+        ..whatsNewShown('1.0.32')
+        ..coachUiShown(launchers: 1, panic: true, planDay: 1)
+        ..coachUiDropped()
+        ..exerciseOpened(ExerciseId.sos, ExerciseSource.home)
+        ..exerciseFinished(
+          const ExerciseRun(
+            id: ExerciseId.breathing,
+            source: ExerciseSource.plan,
+            seconds: 1,
+            completed: false,
+            passed: false,
+          ),
+        );
 
       final snake = RegExp(r'^[a-z][a-z0-9_]*$');
       for (final event in a.events) {

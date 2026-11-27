@@ -1,15 +1,23 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:last_puff/app/last_puff_app.dart';
+import 'package:last_puff/app/router/app_router.dart';
 import 'package:last_puff/app/theme/lp_theme.dart';
+import 'package:last_puff/data/api/firebase/functions_client.dart';
+import 'package:last_puff/data/repositories/firebase_panic_repository.dart';
 import 'package:last_puff/data/stores/providers.dart';
 import 'package:last_puff/domain/logic/allowances.dart';
+import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/logic/games/game_id.dart';
+import 'package:last_puff/domain/models/coach_ui.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/features/coach/coach_screen.dart';
+import 'package:last_puff/features/panic/games/intensity_row.dart';
 import 'package:last_puff/features/panic/panic_screens.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
 
@@ -90,6 +98,8 @@ void main() {
     c.read(quitStoreProvider.notifier).seedDemoJourney();
 
     final vm = c.read(panicProvider.notifier);
+    // The why step is where the slider is; a strength exists from there on.
+    vm.previewStep(1);
     vm.setIntensity(8);
     vm.noteGame(GameId.blocks, rounds: 2);
     vm.survive(intensityAfter: 3);
@@ -99,13 +109,14 @@ void main() {
     expect(panic.survivedAfter, [3]);
     expect(panic.survivedGames, [GameId.blocks]);
 
-    // The next craving, with no game played and the re-ask skipped: nothing
-    // is sent in either's place, never a guess — and nothing is inherited
-    // from the craving before it.
+    // The next craving, ended on the breathing step with no game played and
+    // the re-ask skipped: nothing is sent in any of their places, never a
+    // guess — and nothing is inherited from the craving before it.
     c.read(panicProvider.notifier)
       ..start()
       ..survive();
     await tester.pumpAndSettle();
+    expect(panic.survivedIntensities, [8, null]);
     expect(panic.survivedAfter, [3, null]);
     expect(panic.survivedGames, [GameId.blocks, null]);
   });
@@ -117,8 +128,10 @@ void main() {
     c.read(quitStoreProvider.notifier).seedDemoJourney();
     final before = c.read(quitStoreProvider)!.cravingsSurvivedTotal;
 
-    c.read(panicProvider.notifier).setIntensity(9);
-    c.read(panicProvider.notifier).survive();
+    c.read(panicProvider.notifier)
+      ..previewStep(1)
+      ..setIntensity(9)
+      ..survive();
     await tester.pumpAndSettle();
 
     expect(panic.survivedIntensities, [9]);
@@ -502,13 +515,733 @@ void main() {
     await tester.pumpAndSettle();
     expect(panic.begins, 1);
   });
+
+  // Everything below runs the real app on the real router: the takeover,
+  // the chat and the arena handing one craving between them.
+  late AppLocalizations l10n;
+  setUpAll(() async {
+    l10n = await AppLocalizations.delegate.load(const Locale('en'));
+  });
+
+  /// The real app on the real router, with the server hop counted.
+  Future<ProviderContainer> bootApp(
+    WidgetTester tester, {
+    _MovableClock? clock,
+  }) async {
+    final c = ProviderContainer(
+      overrides: fastBackendOverrides(
+        analytics: analytics,
+        extra: [
+          panicRepositoryProvider.overrideWithValue(panic),
+          if (clock != null) nowProvider.overrideWithValue(clock.read),
+        ],
+      ),
+    );
+    addTearDown(c.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: c, child: const LastPuffApp()),
+    );
+    c.read(quitStoreProvider.notifier).seedDemoJourney();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    return c;
+  }
+
+  /// Fixed pumps, never `pumpAndSettle`: the takeover and the arena both
+  /// animate for as long as they are on screen.
+  Future<void> beat(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  /// The takeover on its third step with the slider at [strength].
+  Future<void> flowAtLoop(
+    WidgetTester tester,
+    ProviderContainer c, {
+    int strength = 8,
+  }) async {
+    unawaited(c.read(routerProvider).push(Routes.panic));
+    await beat(tester);
+    c.read(panicProvider.notifier)
+      ..previewStep(2)
+      ..setIntensity(strength);
+    await beat(tester);
+  }
+
+  /// The third option on the loop screen: "talk to the coach".
+  Future<void> takeCoachDoor(WidgetTester tester) async {
+    await tester.ensureVisible(find.text(l10n.panicLoopCoach));
+    await tester.pump();
+    await tester.tap(find.text(l10n.panicLoopCoach));
+    // Long enough for the takeover's route to finish leaving and dispose.
+    await beat(tester);
+    await beat(tester);
+  }
+
+  /// What a coach card does: the arena pushed over the chat.
+  Future<void> openArenaFromChat(
+    WidgetTester tester,
+    ProviderContainer c,
+  ) async {
+    unawaited(
+      c
+          .read(routerProvider)
+          .push(Routes.gameFor(GameId.orbs, source: ExerciseSource.coach)),
+    );
+    await beat(tester);
+  }
+
+  Future<void> popTop(WidgetTester tester, ProviderContainer c) async {
+    c.read(routerProvider).pop();
+    await beat(tester);
+    await beat(tester);
+  }
+
+  /// A whole 60-second round in 100 ms frames (one long pump would be a
+  /// single clamped step), then the panel's fade.
+  Future<void> playRound(WidgetTester tester) async {
+    for (var i = 0; i < 600; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  List<Map<String, Object>> outcomes() =>
+      analytics.propsOfAll('craving_outcome');
+
+  /// A craving does not end because the person changed screens.
+  ///
+  /// The panic flow's coach option used to `go` to the chat, which disposed
+  /// the flow, whose dispose reported the craving abandoned — at the exact
+  /// moment the person asked for more help with it. And a card tapped in
+  /// that chat opened a SECOND craving: a new clock, a new server session,
+  /// the strength they had just given forgotten. Now the flow parks its
+  /// craving on the way to the chat, an exercise opened inside the craving
+  /// window joins it, and whoever joined parks it again on the way out. A
+  /// parked craving is closed (not survived) only when the next one starts.
+  group('a craving handed on', () {
+    testWidgets('only an owner is told it owns the craving', (tester) async {
+      final c = await mount(tester);
+      final vm = c.read(panicProvider.notifier);
+
+      // Nothing open: the caller opens one, and must park it on the way out.
+      expect(vm.ensureStarted(), isTrue);
+      expect(panic.begins, 1);
+      vm.park();
+      // Parked a moment ago: joined, not reopened.
+      expect(vm.ensureStarted(), isTrue);
+      expect(panic.begins, 1);
+
+      // The takeover's own craving stays the takeover's.
+      vm
+        ..park()
+        ..start();
+      expect(panic.begins, 2);
+      expect(vm.ensureStarted(), isFalse);
+      expect(panic.begins, 2);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('parking nothing parks nothing', (tester) async {
+      final c = await mount(tester);
+      c.read(quitStoreProvider.notifier).seedDemoJourney();
+      final vm = c.read(panicProvider.notifier);
+
+      // Idle.
+      vm
+        ..park()
+        ..start();
+      expect(outcomes(), isEmpty);
+
+      // Over already: "it passed" leaves nothing behind to close.
+      vm
+        ..survive()
+        ..park()
+        ..start();
+      await tester.pumpAndSettle();
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'true'));
+    });
+
+    testWidgets('a parked craving does not outlive the session it was parked '
+        'in', (tester) async {
+      // The shared-phone rule. A parked craving outlives its screen and the
+      // next exercise inside the window joins it, so without this the next
+      // person to sign in on the phone would inherit the last one's craving:
+      // their clock on the timer, and their 8/10 reported as this person's.
+      final c = await mount(tester);
+      final store = c.read(quitStoreProvider.notifier)
+        ..replaceForTest(journeyOnDay(10, now: DateTime(2026, 9, 5, 14)));
+      c.read(panicProvider.notifier)
+        ..previewStep(2)
+        ..setIntensity(8)
+        ..park();
+      expect(panic.begins, 1);
+
+      // They sign out, and somebody else signs in.
+      store.signOut();
+      await tester.pumpAndSettle();
+      store.replaceForTest(journeyOnDay(1, now: DateTime(2026, 9, 5, 14)));
+      await tester.pumpAndSettle();
+
+      // Their first exercise is their own craving, with nothing in it yet.
+      final vm = c.read(panicProvider.notifier);
+      expect(vm.ensureStarted(), isTrue);
+      expect(panic.begins, 2, reason: 'a new craving, not the last one joined');
+      expect(vm.ratedIntensity, isNull);
+      expect(c.read(panicProvider).step, 0);
+      // And the craving that was dropped is not closed under their name.
+      expect(outcomes(), isEmpty);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('the coach door parks the craving, it does not abandon it', (
+      tester,
+    ) async {
+      final c = await bootApp(tester);
+      await flowAtLoop(tester, c);
+      final startedAt = c.read(panicProvider).startedAt;
+      expect(startedAt, isNotNull);
+
+      await takeCoachDoor(tester);
+
+      expect(c.read(routerProvider).state.uri.path, Routes.coach);
+      expect(find.byType(PanicFlow), findsNothing);
+      expect(
+        outcomes(),
+        isEmpty,
+        reason: 'asking Ember for help is not giving up on the craving',
+      );
+      expect(c.read(panicProvider).intensity, 8);
+      expect(c.read(panicProvider).startedAt, startedAt);
+    });
+
+    testWidgets('a card inside the window joins the same craving', (
+      tester,
+    ) async {
+      // Review Focus 1: arrives from the panic flow at 8/10 and taps the
+      // game card. Same clock, same strength, one server session.
+      final c = await bootApp(tester);
+      await flowAtLoop(tester, c);
+      final startedAt = c.read(panicProvider).startedAt;
+      await takeCoachDoor(tester);
+
+      await openArenaFromChat(tester, c);
+
+      expect(panic.begins, 1, reason: 'one craving, one server session');
+      expect(c.read(panicProvider).startedAt, startedAt);
+      expect(c.read(panicProvider).intensity, 8);
+
+      await playRound(tester);
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'true'));
+      expect(outcomes().single, containsPair('intensity', 8));
+      expect(panic.survivedIntensities, [8]);
+      expect(panic.begins, 1);
+    });
+
+    testWidgets('leaving the arena parks it again', (tester) async {
+      final clock = _MovableClock(DateTime(2026, 9, 5, 14));
+      final c = await bootApp(tester, clock: clock);
+      await flowAtLoop(tester, c);
+      final startedAt = c.read(panicProvider).startedAt;
+      await takeCoachDoor(tester);
+      clock.now = clock.now.add(const Duration(minutes: 15));
+      await openArenaFromChat(tester, c);
+
+      await popTop(tester, c);
+
+      expect(c.read(routerProvider).state.uri.path, Routes.coach);
+      expect(outcomes(), isEmpty, reason: 'back is not an outcome');
+
+      // And the next card is still the same craving. Fifteen more minutes is
+      // thirty since the door, but the window runs from when the craving's
+      // screen was last in front of them, which was the arena just now.
+      clock.now = clock.now.add(const Duration(minutes: 15));
+      await openArenaFromChat(tester, c);
+      expect(panic.begins, 1);
+      expect(c.read(panicProvider).startedAt, startedAt);
+      expect(c.read(panicProvider).intensity, 8);
+      expect(outcomes(), isEmpty);
+
+      // Parked for real, not merely left open: once nobody has come back
+      // for a whole window, the next card is a new craving and this one is
+      // closed.
+      await popTop(tester, c);
+      clock.now = clock.now.add(const Duration(minutes: 21));
+      await openArenaFromChat(tester, c);
+      expect(panic.begins, 2);
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'false'));
+    });
+
+    testWidgets(
+      'after the window, a card opens a new craving and the old one is closed',
+      (tester) async {
+        final clock = _MovableClock(DateTime(2026, 9, 5, 14));
+        final c = await bootApp(tester, clock: clock);
+        await flowAtLoop(tester, c);
+        await takeCoachDoor(tester);
+        expect(outcomes(), isEmpty);
+
+        // Past the app's own model of a craving (docs/03 §7).
+        clock.now = clock.now.add(const Duration(minutes: 21));
+        await openArenaFromChat(tester, c);
+
+        expect(panic.begins, 2, reason: 'a new craving is a new session');
+        expect(c.read(panicProvider).startedAt, clock.now);
+        // The one that was parked, closed with what was known about it.
+        expect(outcomes(), hasLength(1));
+        expect(outcomes().single, containsPair('survived', 'false'));
+        expect(outcomes().single, containsPair('intensity', 8));
+      },
+    );
+
+    testWidgets('a new SOS press is a new craving', (tester) async {
+      final clock = _MovableClock(DateTime(2026, 9, 5, 14));
+      final c = await bootApp(tester, clock: clock);
+      await flowAtLoop(tester, c);
+      await takeCoachDoor(tester);
+      // Parked, so nothing has been said about it yet: it is closed BY the
+      // next craving, not by the door.
+      expect(outcomes(), isEmpty);
+
+      // Two minutes later, well inside the window: the takeover never joins.
+      clock.now = clock.now.add(const Duration(minutes: 2));
+      unawaited(c.read(routerProvider).push(Routes.panic));
+      await beat(tester);
+
+      expect(panic.begins, 2);
+      final session = c.read(panicProvider);
+      expect(session.step, 0, reason: 'the breathing ring');
+      expect(session.intensity, 7);
+      expect(session.startedAt, clock.now);
+      expect(c.read(panicProvider.notifier).elapsed, Duration.zero);
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'false'));
+      expect(outcomes().single, containsPair('intensity', 8));
+    });
+
+    testWidgets(
+      'an arena opened with no flow beneath closes behind itself',
+      (tester) async {
+        // A `?g=` link, a restored route, a coach card with no craving
+        // before it: the arena is the craving's first screen and nothing
+        // else will ever end it. It used to leave the session open for
+        // ever, and the next craving overwrote it without a word.
+        final c = await bootApp(tester);
+        await openArenaFromChat(tester, c);
+        expect(panic.begins, 1);
+
+        await popTop(tester, c);
+
+        // Parked, not abandoned: nothing is reported, and the flow's own
+        // exit has nothing to say about a craving it does not own.
+        expect(outcomes(), isEmpty);
+        c.read(panicProvider.notifier).abandon();
+        expect(outcomes(), isEmpty);
+
+        // The next craving closes it, once.
+        unawaited(c.read(routerProvider).push(Routes.panic));
+        await beat(tester);
+        expect(panic.begins, 2);
+        expect(outcomes(), hasLength(1));
+        expect(outcomes().single, containsPair('survived', 'false'));
+        expect(outcomes().single, containsPair('game', 'orbs'));
+      },
+    );
+  });
+
+  /// Amendment A2. Back in the chat after an exercise, the person can say
+  /// "It passed" with a chip instead of a button on the exercise's screen.
+  /// That is the same statement. If the chip only filled the composer, the
+  /// craving would stay parked and the next craving would close it as NOT
+  /// survived — the opposite of what they said. `surviveParked` counts a
+  /// parked craving through the path every craving takes, and does nothing
+  /// at all when there is no parked craving to count.
+  group('"it passed", said in the chat', () {
+    int total(ProviderContainer c) =>
+        c.read(quitStoreProvider)!.cravingsSurvivedTotal;
+
+    /// What the chat's chip calls: the exercise they just did, from the chat.
+    bool sayItPassed(
+      ProviderContainer c, {
+      ExerciseId exercise = ExerciseId.breathing,
+    }) => c
+        .read(panicProvider.notifier)
+        .surviveParked(exercise: exercise, source: ExerciseSource.coach);
+
+    testWidgets('a parked craving the person says has passed is counted once', (
+      tester,
+    ) async {
+      final c = await bootApp(tester);
+      await flowAtLoop(tester, c);
+      await takeCoachDoor(tester);
+      final before = total(c);
+      expect(outcomes(), isEmpty);
+
+      expect(sayItPassed(c), isTrue);
+      await beat(tester);
+
+      // Counted exactly as `survive` counts one: the strength they gave on
+      // the slider rides along, and there is no after-rating to send.
+      expect(outcomes(), [
+        {
+          'survived': 'true',
+          'game': 'none',
+          'rounds': 0,
+          'intensity': 8,
+          'exercise': 'breathing',
+          'source': 'coach',
+        },
+      ]);
+      expect(panic.survivedExercises, [ExerciseId.breathing]);
+      expect(panic.survivedSources, [ExerciseSource.coach]);
+      expect(panic.survivedIntensities, [8]);
+      expect(panic.survivedAfter, [null]);
+      expect(total(c), before + 1);
+
+      // Said twice (the chip is still there): counted once.
+      expect(sayItPassed(c), isFalse);
+      await beat(tester);
+      expect(outcomes(), hasLength(1));
+      expect(panic.survivedExercises, hasLength(1));
+      expect(total(c), before + 1);
+    });
+
+    testWidgets('saying it passed with nothing parked counts nothing', (
+      tester,
+    ) async {
+      final c = await bootApp(tester);
+      final before = total(c);
+
+      // Nothing open at all.
+      expect(sayItPassed(c), isFalse);
+
+      // Open, and in the takeover's hands: it has its own "It passed".
+      await flowAtLoop(tester, c);
+      expect(sayItPassed(c), isFalse);
+      await beat(tester);
+
+      expect(outcomes(), isEmpty);
+      expect(panic.survivedExercises, isEmpty, reason: 'no repository call');
+      expect(total(c), before);
+      expect(find.byType(PanicFlow), findsOneWidget);
+      expect(panic.begins, 1);
+
+      // The refusal was about who holds the craving, not about the craving:
+      // once the takeover hands this same one to the chat, the same words
+      // count it.
+      await takeCoachDoor(tester);
+      expect(sayItPassed(c), isTrue);
+      await beat(tester);
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'true'));
+      expect(total(c), before + 1);
+    });
+
+    testWidgets("a craving an exercise still has open is the exercise's to "
+        'end', (tester) async {
+      final c = await bootApp(tester);
+      final before = total(c);
+      // A card's arena, opened cold: it owns the craving while it is up.
+      await openArenaFromChat(tester, c);
+
+      expect(sayItPassed(c, exercise: ExerciseId.orbs), isFalse);
+      await beat(tester);
+      expect(outcomes(), isEmpty);
+      expect(panic.survivedExercises, isEmpty);
+      expect(total(c), before);
+
+      // Left with back, it is parked, and then it is the chat's to count.
+      await popTop(tester, c);
+      expect(sayItPassed(c, exercise: ExerciseId.orbs), isTrue);
+      await beat(tester);
+      expect(outcomes(), hasLength(1));
+      expect(total(c), before + 1);
+    });
+
+    testWidgets('a craving counted from the chat is not reported again when '
+        'the next one starts', (tester) async {
+      final c = await bootApp(tester);
+      await flowAtLoop(tester, c);
+      await takeCoachDoor(tester);
+      sayItPassed(c);
+      await beat(tester);
+
+      // The next SOS press.
+      unawaited(c.read(routerProvider).push(Routes.panic));
+      await beat(tester);
+
+      expect(panic.begins, 2, reason: 'the new craving began');
+      expect(
+        outcomes().where((outcome) => outcome['survived'] == 'false'),
+        isEmpty,
+        reason: 'they said it passed; it must not also be closed as lost',
+      );
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'true'));
+    });
+
+    testWidgets('nor joined, nor closed, by the next exercise they open', (
+      tester,
+    ) async {
+      final clock = _MovableClock(DateTime(2026, 9, 5, 14));
+      final c = await bootApp(tester, clock: clock);
+      await flowAtLoop(tester, c);
+      final first = c.read(panicProvider).startedAt;
+      await takeCoachDoor(tester);
+      sayItPassed(c);
+      await beat(tester);
+
+      // Five minutes on, well inside the window a parked craving is joined
+      // in. But that craving is over, so this card opens a new one.
+      clock.now = clock.now.add(const Duration(minutes: 5));
+      await openArenaFromChat(tester, c);
+
+      expect(panic.begins, 2, reason: 'a new craving, not the old one joined');
+      expect(c.read(panicProvider).startedAt, clock.now);
+      expect(c.read(panicProvider).startedAt, isNot(first));
+      expect(c.read(panicProvider.notifier).ratedIntensity, isNull);
+      expect(
+        outcomes().where((outcome) => outcome['survived'] == 'false'),
+        isEmpty,
+      );
+      expect(outcomes(), hasLength(1));
+    });
+
+    testWidgets('a parked craving that never saw the slider is counted with '
+        'no strength', (tester) async {
+      // The X3 rule through this door too: a craving that began on a card
+      // never showed the why step, so there is no strength to send.
+      final c = await bootApp(tester);
+      await openArenaFromChat(tester, c);
+      await popTop(tester, c);
+
+      sayItPassed(c, exercise: ExerciseId.orbs);
+      await beat(tester);
+
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, {
+        'survived': 'true',
+        'game': 'orbs',
+        'rounds': 0,
+        'exercise': 'orbs',
+        'source': 'coach',
+      });
+      expect(panic.survivedIntensities, [null]);
+      expect(panic.survivedAfter, [null]);
+      expect(panic.survivedGames, [GameId.orbs]);
+    });
+  });
+
+  /// The strength slider lives on the takeover's why step, and its value
+  /// starts at 7. A craving that never showed that step (one opened by a
+  /// coach card, a `?g=` link, or closed on the breathing ring) used to
+  /// report that untouched 7 as if the person had given it: to analytics, to
+  /// the craving document, and from there to anything that later says "you
+  /// rated it 7". A number the person never entered is an invented number.
+  group('a strength nobody gave is never reported', () {
+    testWidgets('a craving that never saw the slider reports no strength', (
+      tester,
+    ) async {
+      final c = await bootApp(tester);
+      // Cold: no takeover before it, so no why step and no slider.
+      await openArenaFromChat(tester, c);
+      await playRound(tester);
+      // The panel's own question is theirs to answer, and they do.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(IntensityRow),
+          matching: find.text('3'),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(panic.survivedIntensities, [null]);
+      expect(panic.survivedAfter, [3]);
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single.containsKey('intensity'), isFalse);
+      expect(outcomes().single, containsPair('intensity_after', 3));
+      // No "You said 7/10 — now 3/10": they never said 7.
+      expect(find.textContaining('/10'), findsNothing);
+    });
+
+    testWidgets('a craving from the flow reports the strength on the slider', (
+      tester,
+    ) async {
+      // The other half: the slider was on screen at its default and they
+      // left it there. That is still a strength they were shown and let
+      // stand, and it is reported as before.
+      final c = await bootApp(tester);
+      unawaited(c.read(routerProvider).push(Routes.panic));
+      await beat(tester);
+      await tester.tap(find.text(l10n.panicSkipToWhy));
+      await beat(tester);
+      expect(find.text('7/10'), findsOneWidget);
+
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(panic.survivedIntensities, [7]);
+      expect(outcomes().single, containsPair('intensity', 7));
+    });
+
+    testWidgets('a takeover closed on the breathing ring reports no strength', (
+      tester,
+    ) async {
+      final c = await mountFlow(tester);
+      await unmountFlow(tester, c);
+
+      expect(outcomes(), hasLength(1));
+      expect(outcomes().single, containsPair('survived', 'false'));
+      expect(outcomes().single.containsKey('intensity'), isFalse);
+    });
+
+    test('the payload omits a strength nobody gave', () async {
+      final functions = _RecordingFunctions();
+      final repository = FirebasePanicRepository(functions: functions);
+
+      await repository.survived(intensityAfter: 3, game: GameId.orbs);
+      await repository.survived(intensity: 7);
+
+      expect([for (final call in functions.calls) call.$1], [
+        'panicSession',
+        'panicSession',
+      ]);
+      // A record compares its fields with `==`, which for a map is identity,
+      // so the payloads are compared on their own.
+      expect([for (final call in functions.calls) call.$2], [
+        {'outcome': 'survived', 'intensityAfter': 3, 'game': 'orbs'},
+        {'outcome': 'survived', 'intensity': 7},
+      ]);
+    });
+  });
+
+  /// `users/{uid}/cravings` is what Ember's craving lines are written from:
+  /// which tools the person has used, and where. Until now the report said
+  /// only which arena game was open, so breathing and the chat were
+  /// invisible to it.
+  group('the craving report says what was used and where it began', () {
+    testWidgets('the report names the exercise and where it began', (
+      tester,
+    ) async {
+      final c = await bootApp(tester);
+      c.read(routerProvider).go(Routes.coach);
+      await tester.pumpAndSettle();
+      await openArenaFromChat(tester, c);
+      await playRound(tester);
+
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(panic.survivedExercises, [ExerciseId.orbs]);
+      expect(panic.survivedSources, [ExerciseSource.coach]);
+      expect(panic.survivedGames, [GameId.orbs]);
+      expect(outcomes().single, containsPair('exercise', 'orbs'));
+      expect(outcomes().single, containsPair('source', 'coach'));
+    });
+
+    // Both of the flow's buttons: the why step's and the loop step's.
+    for (final (step, name) in [(1, 'why'), (2, 'loop')]) {
+      testWidgets("the takeover's own \"it passed\" on the $name step names "
+          'the flow and no exercise', (tester) async {
+        final c = await bootApp(tester);
+        unawaited(c.read(routerProvider).push(Routes.panic));
+        await beat(tester);
+        c.read(panicProvider.notifier).previewStep(step);
+        await beat(tester);
+
+        await tester.tap(find.text(l10n.panicItPassed));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(SurvivedScreen), findsOneWidget);
+        expect(panic.survivedExercises, [null]);
+        expect(panic.survivedSources, [ExerciseSource.panic]);
+        expect(outcomes().single, containsPair('source', 'panic'));
+        expect(outcomes().single.containsKey('exercise'), isFalse);
+      });
+    }
+
+    test('the payload carries both, and neither when there is none', () async {
+      final functions = _RecordingFunctions();
+      final repository = FirebasePanicRepository(functions: functions);
+
+      await repository.survived(
+        game: GameId.orbs,
+        exercise: ExerciseId.orbs,
+        source: ExerciseSource.coach,
+      );
+      await repository.survived(
+        intensity: 6,
+        exercise: ExerciseId.breathing,
+        source: ExerciseSource.panic,
+      );
+      // An older call site that knows nothing about either.
+      await repository.survived(intensity: 6);
+
+      expect([for (final call in functions.calls) call.$2], [
+        {
+          'outcome': 'survived',
+          'game': 'orbs',
+          'exercise': 'orbs',
+          'source': 'coach',
+        },
+        {
+          'outcome': 'survived',
+          'intensity': 6,
+          'exercise': 'breathing',
+          'source': 'panic',
+        },
+        {'outcome': 'survived', 'intensity': 6},
+      ]);
+    });
+  });
+}
+
+/// The app's own door to Cloud Functions, recording what it is handed. Not a
+/// Firebase mock: nothing below this seam is constructed.
+class _RecordingFunctions implements LpFunctions {
+  final calls = <(String, Map<String, Object?>)>[];
+
+  @override
+  Future<Map<String, dynamic>> call(
+    String name, [
+    Map<String, Object?> data = const {},
+    Duration? timeout,
+  ]) async {
+    calls.add((name, data));
+    return const {};
+  }
+
+  @override
+  Stream<({String? chunk, Map<String, dynamic>? result})> stream(
+    String name, [
+    Map<String, Object?> data = const {},
+  ]) => const Stream.empty();
 }
 
 class _StubPanic implements PanicRepository {
   int begins = 0;
-  final survivedIntensities = <int>[];
+  final survivedIntensities = <int?>[];
   final survivedAfter = <int?>[];
   final survivedGames = <GameId?>[];
+  final survivedExercises = <ExerciseId?>[];
+  final survivedSources = <ExerciseSource?>[];
   PanicAvailability result = PanicAvailability.unknown;
   Object? failure;
 
@@ -521,13 +1254,17 @@ class _StubPanic implements PanicRepository {
 
   @override
   Future<void> survived({
-    required int intensity,
+    int? intensity,
     int? intensityAfter,
     GameId? game,
+    ExerciseId? exercise,
+    ExerciseSource? source,
   }) async {
     survivedIntensities.add(intensity);
     survivedAfter.add(intensityAfter);
     survivedGames.add(game);
+    survivedExercises.add(exercise);
+    survivedSources.add(source);
     if (failure != null) throw failure!;
   }
 }
@@ -542,6 +1279,7 @@ class _CappedCoach implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     yield const CoachDone(CoachReply(template: CoachTemplate.capReached));
   }

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../../domain/logic/allowances.dart';
+import '../../../domain/models/coach_ui.dart';
 import '../../../domain/models/journey_state.dart';
 import '../../../domain/models/models.dart';
 import '../../../domain/repositories/repositories.dart';
@@ -8,6 +9,7 @@ import '../../dto/coach_codec.dart';
 import '../../dto/codec_helpers.dart';
 import '../../dto/journey_codec.dart';
 import '../coach_api.dart';
+import 'fake_coach_ui.dart';
 import 'fake_server.dart';
 
 /// Scripted, stat-aware Ember backend (docs/04). Picks a protocol from the
@@ -64,7 +66,23 @@ class FakeCoachApi implements CoachApi {
                 template == CoachTemplate.progress1 ||
                 template == CoachTemplate.progress2,
           );
-    return Future.delayed(thinking, () => CoachReplyCodec.encode(reply));
+    // The cards, decided now with the rest of the reply (every op mutates
+    // and reads synchronously; only the ack waits). From the server's own
+    // entitlement row, as `aiCoachChat` reads its mirror: the tier is never
+    // taken from the request.
+    final tier = _server.entitlementForSession()?['tier'];
+    final blocks = fakeBlocksFor(
+      request: request,
+      tier: tier is String ? tier : null,
+    );
+    final envelope = {
+      ...CoachReplyCodec.encode(reply),
+      // Omitted when empty, like the real envelope: a reply with no cards is
+      // byte for byte the reply an older backend sends.
+      if (blocks.isNotEmpty)
+        'ui': {'v': CoachUiCaps.version, 'blocks': blocks},
+    };
+    return Future.delayed(thinking, () => envelope);
   }
 
   CoachTemplate _forChip(CoachChip chip) => switch (chip) {

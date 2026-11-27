@@ -699,13 +699,17 @@
   "survivedIntensityDrop": "Du sagtest {before}/10 — jetzt {after}/10.",
   "survivedShare": "Den Win teilen ↗",
   "survivedBack": "Zurück zu heute",
+  "survivedBackChat": "Zurück zum Chat",
   "survivedShareCopied": "Statistik-Karte kopiert — füg sie ein, wo du willst.",
+  "exerciseBreathingTitle": "Atme mit mir",
+  "exerciseGameSub": "{seconds} Sekunden · Daumen beschäftigt, Kopf beschäftigt",
   "coachName": "Ember",
   "coachStatus": "● kennt deinen Plan · Tag {day}",
   "coachChipCraving": "Ich habe ein Craving",
   "coachChipRoughDay": "Harter Tag",
   "coachChipSlipped": "Bin ausgerutscht",
   "coachChipProgress": "Zeig meinen Fortschritt",
+  "coachAfterStill": "Immer noch stark",
   "coachInputHint": "Schreib deinem Coach…",
   "coachSend": "Senden",
   "coachTyping": "{name} tippt…",
@@ -1251,5 +1255,7 @@
   "whatsNew1036Item2": "Jeden Tag eine kurze Nachricht rund um deinen Aufhör-Tag",
   "whatsNew1036Item3": "Logg einen Zug direkt vom Home-Bildschirm – mit dem Widget",
   "whatsNew1038Item1": "Eine Nachricht am Morgen in den ersten Tagen deines Plans",
-  "whatsNew1038Item2": "Klarere Titel für Benachrichtigungen am Morgen"
+  "whatsNew1038Item2": "Klarere Titel für Benachrichtigungen am Morgen",
+  "whatsNew1040Item1": "Eine Nachricht am Morgen in den ersten Tagen deines Plans",
+  "whatsNew1040Item2": "Klarere Titel für Benachrichtigungen am Morgen"
 }

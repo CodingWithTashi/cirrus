@@ -1,0 +1,21 @@
+{
+  "input": {
+    "audience": "premium",
+    "tier": "premium",
+    "chip": "craving",
+    "panicIntensity": null,
+    "caps": {
+      "exercises": [
+        "orbs"
+      ],
+      "craving": false
+    },
+    "recentTools": []
+  },
+  "blocks": [
+    {
+      "t": "launcher",
+      "exercise": "orbs"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:last_puff/core/widgets/lp_error.dart';
 import 'package:last_puff/data/api/firebase/functions_client.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/models/coach_ui.dart';
 import 'package:last_puff/domain/models/models.dart';
 import 'package:last_puff/domain/repositories/repositories.dart';
 import 'package:last_puff/l10n/gen/app_localizations.dart';
@@ -32,6 +33,7 @@ class _RejectingCoach implements CoachRepository {
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   }) async* {
     throw const BackendRejectedException();
   }

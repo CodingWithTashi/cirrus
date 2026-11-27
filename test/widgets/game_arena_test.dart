@@ -9,6 +9,7 @@ import 'package:last_puff/core/widgets/lp_misc.dart';
 import 'package:last_puff/core/widgets/lp_selectables.dart';
 import 'package:last_puff/data/api/fake/fake_server.dart';
 import 'package:last_puff/data/stores/providers.dart';
+import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/logic/games/games.dart';
 import 'package:last_puff/features/panic/games/blocks_field.dart';
 import 'package:last_puff/features/panic/games/game_result_line.dart';
@@ -272,19 +273,63 @@ void main() {
       expect(find.textContaining(l10n.survivedGameNewBest), findsOneWidget);
       expect(find.textContaining(l10n.gameUnitTiles(1)), findsOneWidget);
       expect(survived(c), before + 1);
+      // Opened cold, so the why step and its slider were never on screen:
+      // there is no first number, and none is made up for them. A link with
+      // no `src` reads as the panic flow's own arena.
       expect(analytics.propsOf('craving_outcome'), {
         'survived': 'true',
         'game': 'tiles',
         'rounds': 1,
-        'intensity': 7,
+        'exercise': 'tiles',
+        'source': 'panic',
+      });
+    });
+
+    testWidgets('a re-rating with no first number is not shown as a drop', (
+      tester,
+    ) async {
+      // The arena as a craving's first screen (a coach card, a `?g=` link).
+      // The panel's question is answered; the why step's never was. So the
+      // run carries one number, and "You said 7/10 — now 3/10" would be the
+      // app putting a 7 in their mouth.
+      final (c, analytics) = await boot(tester);
+      await openGame(tester, c);
+      await hits(tester, tiles(tester), 1);
+      await playRound(tester);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(IntensityRow),
+          matching: find.text('3'),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      final query = c.read(routerProvider).state.uri.queryParameters;
+      expect(query.containsKey('ib'), isFalse);
+      expect(query['ia'], '3');
+      expect(find.textContaining('/10'), findsNothing);
+      expect(analytics.propsOf('craving_outcome'), {
+        'survived': 'true',
+        'game': 'tiles',
+        'rounds': 1,
+        'intensity_after': 3,
+        'exercise': 'tiles',
+        'source': 'panic',
       });
     });
 
     testWidgets('a re-rating on the panel travels to survived and analytics', (
       tester,
     ) async {
+      // From the takeover's loop step, so the slider was on screen (at its
+      // default 7) before the arena opened: both numbers are theirs.
       final (c, analytics) = await boot(tester);
-      await openGame(tester, c);
+      await openFromFlow(tester, c);
       await hits(tester, tiles(tester), 1);
       await playRound(tester);
 
@@ -307,6 +352,8 @@ void main() {
         'rounds': 1,
         'intensity': 7,
         'intensity_after': 3,
+        'exercise': 'tiles',
+        'source': 'panic',
       });
     });
 
@@ -538,6 +585,27 @@ void main() {
       });
     });
 
+    testWidgets('inside the flow the arena owns nothing', (tester) async {
+      // The arena parks a craving it opened or joined (a coach card, a `?g=`
+      // link). One it reached FROM the takeover is the takeover's: leaving
+      // the arena must leave it open and un-parked, or the flow's own exit
+      // would find nothing left to report.
+      final (c, analytics) = await boot(tester);
+      await openFromFlow(tester, c);
+      await tester.tap(find.byType(BackChevron));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PanicFlow), findsOneWidget);
+      expect(analytics.propsOfAll('craving_outcome'), isEmpty);
+
+      c.read(routerProvider).go(Routes.home);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(analytics.propsOfAll('craving_outcome'), [
+        {'survived': 'false', 'game': 'tiles', 'rounds': 0, 'intensity': 7},
+      ]);
+    });
+
     testWidgets('backgrounding freezes the clock; a tap picks it up', (
       tester,
     ) async {
@@ -587,6 +655,131 @@ void main() {
       await openGame(tester, c, path: '${Routes.survived}?g=hexes&score=3');
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(GameResultLine), findsNothing);
+    });
+  });
+
+  /// The arena as an exercise opened from somewhere: it says where the
+  /// craving goes back to, and it files what happened in it.
+  group('the arena opened from the chat', () {
+    /// What a coach card does: the arena pushed over the coach tab.
+    Future<void> openFromChat(WidgetTester tester, ProviderContainer c) async {
+      c.read(routerProvider).go(Routes.coach);
+      await tester.pumpAndSettle();
+      unawaited(
+        c
+            .read(routerProvider)
+            .push(Routes.gameFor(GameId.orbs, source: ExerciseSource.coach)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    Future<void> itPassed(WidgetTester tester) async {
+      await tester.tap(find.text(l10n.panicItPassed));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    /// The button is below the fold under the fallback test font.
+    Future<void> leaveSurvived(WidgetTester tester, String label) async {
+      await tester.ensureVisible(find.text(label, skipOffstage: false));
+      await tester.pump();
+      await tester.tap(find.text(label));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    List<Map<String, Object>> runs(RecordingAnalytics analytics) =>
+        analytics.propsOfAll('exercise_finished');
+
+    testWidgets('a craving that began in the chat ends back in the chat', (
+      tester,
+    ) async {
+      final (c, analytics) = await boot(tester);
+      await openFromChat(tester, c);
+      await playRound(tester);
+      await itPassed(tester);
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(find.text(l10n.survivedBackChat), findsOneWidget);
+      expect(find.text(l10n.survivedBack), findsNothing);
+
+      await leaveSurvived(tester, l10n.survivedBackChat);
+
+      expect(c.read(routerProvider).state.uri.path, Routes.coach);
+      expect(find.byType(SurvivedScreen), findsNothing);
+      // And the run was filed once, by "it passed", not again on the way out.
+      expect(runs(analytics), [
+        {
+          'exercise': 'orbs',
+          'source': 'coach',
+          'completed': 'true',
+          'passed': 'true',
+          'seconds': 60,
+        },
+      ]);
+    });
+
+    testWidgets('a craving from the flow still ends on Home', (tester) async {
+      final (c, _) = await boot(tester);
+      await openFromFlow(tester, c);
+      await playRound(tester);
+      await itPassed(tester);
+
+      expect(find.byType(SurvivedScreen), findsOneWidget);
+      expect(find.text(l10n.survivedBack), findsOneWidget);
+      expect(find.text(l10n.survivedBackChat), findsNothing);
+
+      await leaveSurvived(tester, l10n.survivedBack);
+
+      expect(c.read(routerProvider).state.uri.path, Routes.home);
+    });
+
+    testWidgets('the arena files its run', (tester) async {
+      final (c, analytics) = await boot(tester);
+      await openFromChat(tester, c);
+      await playRound(tester);
+      expect(runs(analytics), isEmpty, reason: 'still on the round panel');
+
+      await tester.tap(find.byType(BackChevron));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(c.read(routerProvider).state.uri.path, Routes.coach);
+      expect(runs(analytics), [
+        {
+          'exercise': 'orbs',
+          'source': 'coach',
+          'completed': 'true',
+          'passed': 'false',
+          'seconds': 60,
+        },
+      ]);
+      // Back is not an outcome.
+      expect(analytics.propsOfAll('craving_outcome'), isEmpty);
+    });
+
+    testWidgets('a round cut short is filed as not done', (tester) async {
+      final (c, analytics) = await boot(tester);
+      await openFromChat(tester, c);
+      await play(tester, 5);
+
+      await tester.tap(find.byType(BackChevron));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(runs(analytics), [
+        {
+          'exercise': 'orbs',
+          'source': 'coach',
+          'completed': 'false',
+          'passed': 'false',
+          'seconds': 5,
+        },
+      ]);
     });
   });
 

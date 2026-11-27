@@ -3945,11 +3945,29 @@ abstract class AppLocalizations {
   /// **'Back to today'**
   String get survivedBack;
 
+  /// No description provided for @survivedBackChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the chat'**
+  String get survivedBackChat;
+
   /// No description provided for @survivedShareCopied.
   ///
   /// In en, this message translates to:
   /// **'Stat card copied — paste it anywhere.'**
   String get survivedShareCopied;
+
+  /// No description provided for @exerciseBreathingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathe with me'**
+  String get exerciseBreathingTitle;
+
+  /// No description provided for @exerciseGameSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} seconds · thumbs busy, brain busy'**
+  String exerciseGameSub(int seconds);
 
   /// No description provided for @coachName.
   ///
@@ -3986,6 +4004,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show my progress'**
   String get coachChipProgress;
+
+  /// No description provided for @coachAfterStill.
+  ///
+  /// In en, this message translates to:
+  /// **'Still strong'**
+  String get coachAfterStill;
 
   /// No description provided for @coachInputHint.
   ///
@@ -7136,6 +7160,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Morning notifications now have a clearer title'**
   String get whatsNew1038Item2;
+
+  /// What's New 1.0.40, bullet 1 of 2. A copy of whatsNew1038Item1: 1.0.38 never shipped, so this sheet is the first an updating person meets (docs/10 §60.13). At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'A morning message on your plan\'s first days'**
+  String get whatsNew1040Item1;
+
+  /// What's New 1.0.40, bullet 2 of 2. A copy of whatsNew1038Item2, for the same reason as whatsNew1040Item1. At most 80 characters, plain language, no health or quitting claims.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning notifications now have a clearer title'**
+  String get whatsNew1040Item2;
 }
 
 class _AppLocalizationsDelegate

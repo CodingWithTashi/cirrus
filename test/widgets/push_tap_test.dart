@@ -296,12 +296,21 @@ void _foregroundOnSameScreen() {
     final router = container.read(routerProvider);
 
     push.foreground.add(reply(Routes.communityPost(id)));
+    // Settle, not one 300ms pump: a ticker's first frame is its time zero, so
+    // `pump(); pump(300ms)` leaves the snack's entrance at 0 — collapsed on the
+    // bottom edge — and the tap lands on the reply field beneath it. Nothing
+    // below would notice: both route checks hold whether or not Refresh ran.
+    // The snack's 4s lifetime is a timer, not frames, so settling stops once
+    // it is fully up.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Refresh'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
+    // The action fired: a pressed `SnackBarAction` hides its snack. A tap that
+    // missed would leave it up, and this suite would pass without Refresh
+    // ever having been pressed.
+    expect(find.text('Refresh'), findsNothing, reason: 'the tap missed Refresh');
     expect(
       router.state.uri.path,
       Routes.communityPost(id),

@@ -10,6 +10,7 @@
  * Lives in `tools/` (outside the deploy bundle) beside the script that uses
  * it — the vitest fixtures under `test/` are not importable from here.
  */
+import type {CravingDoc, JustDid} from '../src/ai/cravingDigest';
 import {addDays} from '../src/domain/dateKey';
 import {limitFor} from '../src/domain/taperEngine';
 import type {QuitPlan} from '../src/domain/types';
@@ -17,6 +18,14 @@ import type {QuitPlan} from '../src/domain/types';
 export const EVAL_NOW = new Date('2026-08-27T21:00:00.000Z');
 /** 17:00 on 2026-08-27 in New York — day 32 of the plan, week 5. */
 export const EVAL_TZ = 'America/New_York';
+
+/**
+ * 21:05 the same evening in New York: four hours after [EVAL_NOW], still
+ * day 32, and inside one of the fixture's own danger hours (its puff history
+ * makes them 21:00 and 18:00). The one scenario that asks at a hard hour
+ * uses this clock; every other scenario stays on [EVAL_NOW].
+ */
+export const EVAL_DANGER_NOW = new Date('2026-08-28T01:05:00.000Z');
 
 export const EVAL_PLAN: QuitPlan = {
   method: 'taper',
@@ -84,6 +93,54 @@ export function evalJourney(): Record<string, unknown> {
       {id: 'g1', emoji: '✈️', name: 'Japan trip', price: 1500, fromOnboarding: false},
     ],
     earnedBadges: [],
-    lastPuffAt: '2026-08-27T19:30:00.000',
+    // 15:30 on the eval day, an hour and a half before the eval clock
+    // (17:00). It was 19:30 while nothing rendered it; the card now says
+    // when the last puff was, and a puff later than its own "local time"
+    // line is one the card rightly refuses to state.
+    lastPuffAt: '2026-08-27T15:30:00.000',
   };
+}
+
+/**
+ * The craving log the eval user has on record, as `users/{uid}/cravings`
+ * would hold it: Orbs with a lower re-rating (the latest, 21:10 the evening
+ * before the eval clock), the breathing exercise two evenings earlier, and
+ * Orbs again from an older app that reported only the game.
+ *
+ * Three documents because that is the smallest log that produces all three
+ * craving lines: a latest craving, a tool on it with a re-rating that went
+ * down, and a second, different tool.
+ */
+export function evalCravings(): CravingDoc[] {
+  return [
+    {
+      startedAt: new Date('2026-08-27T01:10:00.000Z'),
+      intensity: 8,
+      intensityAfter: 4,
+      exercise: 'orbs',
+      game: 'orbs',
+    },
+    {
+      startedAt: new Date('2026-08-25T01:30:00.000Z'),
+      intensity: null,
+      intensityAfter: null,
+      exercise: 'breathing',
+      game: null,
+    },
+    {
+      startedAt: new Date('2026-08-22T22:15:00.000Z'),
+      intensity: 6,
+      intensityAfter: null,
+      exercise: null,
+      game: 'orbs',
+    },
+  ];
+}
+
+/**
+ * What the app reports when they have just come back from an exercise: the
+ * breathing one, a little over a minute, ended on "It passed".
+ */
+export function evalJustDid(): JustDid {
+  return {exercise: 'breathing', seconds: 75, completed: true, passed: true};
 }

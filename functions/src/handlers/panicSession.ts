@@ -16,35 +16,63 @@
 import {onCall} from 'firebase-functions/v2/https';
 import {enforceAppCheck, REGION} from '../config';
 import {dayKeyIn} from '../domain/dateKey';
-import {FieldValue, userDoc} from '../lib/firestore';
-import {requireCaller} from '../lib/guards';
+import {
+  EXERCISE_SOURCES,
+  EXERCISES,
+  exerciseById,
+  type ExerciseId,
+  type ExerciseSource,
+} from '../domain/exercises';
+import {cravingsCol, FieldValue} from '../lib/firestore';
+import {asEnum, requireCaller} from '../lib/guards';
 import {countPanicSession, tierFor} from '../lib/usage';
 
 /** docs/04 §7 — free tier gets one AI-backed panic session per day. */
 const FREE_DAILY_PANIC_SESSIONS = 1;
 
-/** The panic games, by the ids the client's `GameId.name` uses. */
-export const PANIC_GAMES = ['tiles', 'blocks', 'orbs'] as const;
-export type PanicGame = (typeof PANIC_GAMES)[number];
+type GameRow = Extract<(typeof EXERCISES)[number], {readonly game: true}>;
 
 /**
- * The two 1–10 ratings and the game on screen when the craving passed.
- * Anything off the scale or unknown is stored as null, never trusted.
+ * The panic games, by the ids the client's `GameId.name` uses.
+ *
+ * Read off the exercise registry rather than listed a second time: a game is
+ * the registry's row with `game: true`, so one added there is accepted here
+ * with no edit to this file. Registry order, which nothing depends on.
+ */
+export type PanicGame = GameRow['id'];
+export const PANIC_GAMES: readonly PanicGame[] = EXERCISES.filter(
+  (row): row is GameRow => row.game,
+).map((row) => row.id);
+
+/**
+ * What a craving document records beyond its outcome: the two 1–10 ratings,
+ * the game on screen when it passed, the exercise they used and where they
+ * opened it from (`panic`, `coach`, …). Anything off the scale or unknown to
+ * the registry is stored as null, never trusted.
+ *
+ * Every field is optional on the wire and independent of the others. In
+ * particular a missing `intensity` stays null: a craving met from outside the
+ * panic flow was never rated, and a default here would be a number Ember
+ * could later quote back as theirs. `game` and `exercise` are kept as sent
+ * and neither fills in the other — an older app sends only `game`.
  */
 export function cravingFields(data: Record<string, unknown>): {
   intensity: number | null;
   intensityAfter: number | null;
   game: PanicGame | null;
+  exercise: ExerciseId | null;
+  source: ExerciseSource | null;
 } {
   const rating = (v: unknown): number | null =>
     typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 10 ? v : null;
-  const game = data['game'];
   return {
     intensity: rating(data['intensity']),
     intensityAfter: rating(data['intensityAfter']),
-    game: (PANIC_GAMES as readonly string[]).includes(game as string)
-      ? (game as PanicGame)
-      : null,
+    // Against the games, not the whole registry: `breathing` is an exercise
+    // and was never on screen in the arena.
+    game: asEnum<PanicGame>(data['game'], PANIC_GAMES),
+    exercise: exerciseById(data['exercise'])?.id ?? null,
+    source: asEnum<ExerciseSource>(data['source'], EXERCISE_SOURCES),
   };
 }
 
@@ -64,7 +92,7 @@ export const panicSession = onCall(
     // session that ends with the app killed simply never reports one.
     const outcome = data['outcome'];
     if (outcome === 'survived' || outcome === 'slipped') {
-      await userDoc(caller.uid).collection('cravings').add({
+      await cravingsCol(caller.uid).add({
         outcome,
         ...cravingFields(data),
         startedAt: FieldValue.serverTimestamp(),

@@ -4,7 +4,9 @@
 /// single store or view (docs/05 architecture).
 library;
 
+import '../logic/exercises/exercise.dart';
 import '../logic/games/game_id.dart';
+import '../models/coach_ui.dart';
 import '../models/journey_state.dart';
 import '../models/models.dart';
 
@@ -150,10 +152,17 @@ abstract interface class PanicRepository {
   /// The craving passed. Fire-and-forget: a lost outcome costs one data
   /// point, never the user anything. [intensityAfter] is the optional
   /// re-rating on the round panel; [game] the one on screen at the time.
+  ///
+  /// [intensity] is null when nobody gave one: a craving that never saw the
+  /// slider reports no strength rather than the slider's untouched default.
+  /// [exercise] is what they had open and [source] where it was opened
+  /// from, when the craving ended inside an exercise.
   Future<void> survived({
-    required int intensity,
+    int? intensity,
     int? intensityAfter,
     GameId? game,
+    ExerciseId? exercise,
+    ExerciseSource? source,
   });
 }
 
@@ -169,11 +178,16 @@ abstract interface class CoachRepository {
   /// [panicIntensity] (1–10) is set only from the panic flow. The server
   /// switches to its short, directive PANIC MODE voice when it is present —
   /// mid-craving is no time for Ember to ask an open question.
+  ///
+  /// [extras] is what the turn carries beyond its words: which cards this
+  /// build can draw, and the exercise they just finished. Null, or an unset
+  /// field, sends nothing — which is the request an older build makes.
   Stream<CoachEvent> streamReply({
     String? text,
     CoachChip? chip,
     required bool capped,
     int? panicIntensity,
+    CoachTurnExtras? extras,
   });
 
   /// Everything already said in this thread, oldest first.
