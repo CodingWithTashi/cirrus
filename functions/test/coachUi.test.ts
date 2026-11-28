@@ -2,20 +2,25 @@
  * Coach cards, server side: what the app said it can draw, who may see a
  * card, and which cards a reply carries.
  *
- * The fourteen files in `test/fixtures/coach_ui/` are the contract with the
+ * The eighteen files in `test/fixtures/coach_ui/` are the contract with the
  * app. The Dart suite `test/fixtures/coach_ui_fixtures_test.dart` feeds the
  * same `blocks` through the app's codec and its real card renderer, and pins
  * the fake backend to them; this suite pins the policy that produces them. A
  * fixture is never edited to make one side pass.
  *
- * No model is involved anywhere in here, which is the point: the cards are
- * decided by code, so they cost nothing and cannot be talked out of a rule.
+ * No model is involved anywhere in here. The one thing a model contributes
+ * is `suggested`: the exercises the follow-up call said the reply is about.
+ * Here that is a plain list of ids like any other input, and the suite's
+ * point is that code still decides: a name the app cannot draw, the tier
+ * cannot open or the audience does not admit never becomes a card.
  */
 import {readdirSync, readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {
   coachUiAudience,
+  nameableExercises,
+  parseSuggestedExercises,
   parseUiCapabilities,
   planBlocks,
   uiEnvelope,
@@ -55,6 +60,7 @@ function input(over: Partial<PlanInput> = {}): PlanInput {
     panicIntensity: null,
     caps: {exercises: ALL_FIVE, craving: false},
     recentTools: [],
+    suggested: [],
     ...over,
   };
 }
@@ -65,7 +71,8 @@ const launchers = (blocks: readonly Block[]): string[] =>
 /**
  * Every combination the handler can hand the policy: tier × audience × chip
  * × panic × the app's craving flag × three capability lists × three craving
- * histories. 1,620 inputs; the policy is pure, so this costs milliseconds.
+ * histories × three things the reply might have been about. 4,860 inputs;
+ * the policy is pure, so this costs milliseconds.
  */
 function everyInput(): PlanInput[] {
   const capabilityLists: readonly (readonly ExerciseId[])[] = [
@@ -83,6 +90,12 @@ function everyInput(): PlanInput[] {
     ['tiles'],
     ['orbs', 'breathing'],
   ];
+  const namings: readonly (readonly ExerciseId[])[] = [
+    [],
+    ['orbs'],
+    // Two games, a repeat, and more names than a menu holds.
+    ['tiles', 'blocks', 'sos', 'breathing', 'tiles'],
+  ];
   const out: PlanInput[] = [];
   for (const tier of SUBSCRIPTION_TIERS) {
     for (const audience of ['off', 'premium', 'all'] as const) {
@@ -91,14 +104,17 @@ function everyInput(): PlanInput[] {
           for (const craving of [false, true]) {
             for (const exercises of capabilityLists) {
               for (const recentTools of histories) {
-                out.push({
-                  audience,
-                  tier,
-                  chip,
-                  panicIntensity,
-                  caps: {exercises, craving},
-                  recentTools,
-                });
+                for (const suggested of namings) {
+                  out.push({
+                    audience,
+                    tier,
+                    chip,
+                    panicIntensity,
+                    caps: {exercises, craving},
+                    recentTools,
+                    suggested,
+                  });
+                }
               }
             }
           }
@@ -112,10 +128,10 @@ function everyInput(): PlanInput[] {
 describe('planBlocks', () => {
   it('every fixture', () => {
     const names = fixtureNames();
-    // Fourteen is the set the Dart suite pins by name. Fewer here means a
+    // Eighteen is the set the Dart suite pins by name. Fewer here means a
     // file went missing on this side only, and the two would stop agreeing
     // without either suite saying so.
-    expect(names.length).toBeGreaterThanOrEqual(14);
+    expect(names.length).toBeGreaterThanOrEqual(18);
     for (const name of names) {
       const fixture = readFixture(name);
       expect(planBlocks(fixture.input), name).toEqual(fixture.blocks);
@@ -124,7 +140,7 @@ describe('planBlocks', () => {
 
   it('never more than one card in a craving, never more than three otherwise', () => {
     const inputs = everyInput();
-    expect(inputs).toHaveLength(1620);
+    expect(inputs).toHaveLength(4860);
     let craving = 0;
     let menus = 0;
     for (const i of inputs) {
@@ -252,6 +268,200 @@ describe('planBlocks', () => {
         planBlocks(input({audience: 'all', tier: 'free', panicIntensity: 8, recentTools})),
       ),
     ).toEqual(['orbs']);
+  });
+
+  it('an ordinary message gets the exercise its reply was about', () => {
+    // The turn this exists for: the coach offers a breath, the person says
+    // "let's do it now", and the breathing exercise is one tap away.
+    expect(launchers(planBlocks(input({suggested: ['breathing']})))).toEqual([
+      'breathing',
+    ]);
+    expect(launchers(planBlocks(input({chip: 'roughDay', suggested: ['sos']})))).toEqual([
+      'sos',
+    ]);
+    // And still nothing when the reply was about none of them.
+    expect(planBlocks(input())).toEqual([]);
+  });
+
+  it('several named: one of each kind, at most three, laid out calm first', () => {
+    // The model says which; the order is the registry's, as it is for the
+    // craving menu. Of two games the one named first is kept.
+    expect(
+      launchers(planBlocks(input({suggested: ['orbs', 'tiles', 'sos', 'breathing']}))),
+    ).toEqual(['breathing', 'orbs', 'sos']);
+    expect(
+      launchers(planBlocks(input({suggested: ['tiles', 'orbs', 'sos']}))),
+    ).toEqual(['tiles', 'sos']);
+    // Somebody about to vape: the breath comes before the post, whichever
+    // the model thought of first.
+    expect(
+      launchers(planBlocks(input({suggested: ['sos', 'sos', 'breathing']}))),
+    ).toEqual(['breathing', 'sos']);
+  });
+
+  it('a name the tier cannot open, or the app did not list, becomes one of its kind that it can', () => {
+    // A free account is never handed a lock: "a game" is the free game.
+    expect(
+      launchers(planBlocks(input({audience: 'all', tier: 'free', suggested: ['tiles']}))),
+    ).toEqual(['orbs']);
+    // A subscriber on a build that only draws Orbs.
+    expect(
+      launchers(
+        planBlocks(
+          input({caps: {exercises: ['orbs'], craving: false}, suggested: ['blocks']}),
+        ),
+      ),
+    ).toEqual(['orbs']);
+    // Nothing of that kind on offer is no card, never a different kind.
+    expect(
+      planBlocks(
+        input({caps: {exercises: ['sos', 'orbs'], craving: false}, suggested: ['breathing']}),
+      ),
+    ).toEqual([]);
+  });
+
+  it('a name the registry does not hold is ignored', () => {
+    const suggested = ['teleport', 7, null, 'sos'] as unknown as ExerciseId[];
+    expect(launchers(planBlocks(input({suggested})))).toEqual(['sos']);
+    expect(
+      planBlocks(input({suggested: ['teleport'] as unknown as ExerciseId[]})),
+    ).toEqual([]);
+  });
+
+  it('in a craving the one card is the exercise the reply named', () => {
+    const inCraving = {exercises: ALL_FIVE, craving: true};
+    // "Open Orbs with me" beside a breathing card is two different next
+    // steps. The reply's own exercise leads; still exactly one.
+    expect(
+      launchers(
+        planBlocks(
+          input({caps: inCraving, recentTools: ['breathing'], suggested: ['orbs', 'sos']}),
+        ),
+      ),
+    ).toEqual(['orbs']);
+    // Nothing named: what they used last, as before.
+    expect(
+      launchers(planBlocks(input({caps: inCraving, recentTools: ['orbs']}))),
+    ).toEqual(['orbs']);
+  });
+
+  it('the craving chip is the same menu whatever the reply named', () => {
+    expect(
+      launchers(planBlocks(input({chip: 'craving', suggested: ['sos']}))),
+    ).toEqual(['breathing', 'orbs', 'sos']);
+  });
+
+  it('a name never gets a card past the audience, the tier or an app that said nothing', () => {
+    const suggested: ExerciseId[] = ['breathing'];
+    expect(planBlocks(input({audience: 'off', suggested}))).toEqual([]);
+    expect(planBlocks(input({tier: 'free', suggested}))).toEqual([]);
+    expect(planBlocks(input({caps: null, suggested}))).toEqual([]);
+  });
+});
+
+describe('nameableExercises', () => {
+  it('is what this person could be shown, in registry order', () => {
+    expect(nameableExercises(input())).toEqual(ALL_FIVE);
+    expect(nameableExercises(input({audience: 'all', tier: 'free'}))).toEqual([
+      'breathing', 'orbs', 'sos',
+    ]);
+    expect(
+      nameableExercises(input({caps: {exercises: ['sos', 'orbs'], craving: false}})),
+    ).toEqual(['orbs', 'sos']);
+  });
+
+  it('is nothing when no card could come of a name', () => {
+    // Nobody is asked to name an exercise the reply cannot carry: the
+    // follow-up call then goes out exactly as it did before cards existed.
+    expect(nameableExercises(input({caps: null}))).toEqual([]);
+    expect(nameableExercises(input({audience: 'off'}))).toEqual([]);
+    expect(nameableExercises(input({tier: 'free'}))).toEqual([]);
+    expect(
+      nameableExercises(input({caps: {exercises: [], craving: false}})),
+    ).toEqual([]);
+    // The craving chip's menu is fixed, so a name would change nothing.
+    expect(nameableExercises(input({chip: 'craving'}))).toEqual([]);
+  });
+
+  it('is still asked inside a craving, where the name picks the one card', () => {
+    expect(
+      nameableExercises(
+        input({chip: 'craving', caps: {exercises: ALL_FIVE, craving: true}}),
+      ),
+    ).toEqual(ALL_FIVE);
+  });
+
+  it('agrees with the policy: a name outside it never shows, a name inside it does', () => {
+    for (const i of everyInput()) {
+      const nameable = nameableExercises(i);
+      if (nameable.length === 0) {
+        // Whatever was named, the answer is what it would have been anyway.
+        expect(planBlocks(i), JSON.stringify(i)).toEqual(
+          planBlocks({...i, suggested: []}),
+        );
+        continue;
+      }
+      for (const id of nameable) {
+        expect(
+          launchers(planBlocks({...i, suggested: [id]})),
+          JSON.stringify(i),
+        ).toEqual([id]);
+      }
+    }
+  });
+});
+
+describe('parseSuggestedExercises', () => {
+  it('reads the ids the follow-up call named', () => {
+    expect(
+      parseSuggestedExercises('{"followUps":["that helped"],"exercises":["breathing"]}'),
+    ).toEqual(['breathing']);
+    expect(
+      parseSuggestedExercises('```json\n{"exercises":["orbs","sos"]}\n```'),
+    ).toEqual(['orbs', 'sos']);
+  });
+
+  it('keeps only ids the registry holds, once each, whatever their case', () => {
+    expect(
+      parseSuggestedExercises(
+        '{"exercises":[" Breathing","teleport",7,"breathing","orbs","sos","tiles"]}',
+      ),
+    ).toEqual(['breathing', 'orbs', 'sos', 'tiles']);
+  });
+
+  it('does not cut the list to a menu: the policy does, after one per kind', () => {
+    // Two games first. Stopping at three names here would hand the policy
+    // Orbs, Tiles and SOS, and the breathing card would be lost to a second
+    // game the policy drops anyway.
+    const named = parseSuggestedExercises(
+      '{"exercises":["orbs","tiles","sos","breathing"]}',
+    );
+    expect(named).toEqual(['orbs', 'tiles', 'sos', 'breathing']);
+    expect(launchers(planBlocks(input({suggested: named})))).toEqual([
+      'breathing', 'orbs', 'sos',
+    ]);
+  });
+
+  it('reads only the first eight entries of a longer list', () => {
+    const exercises = [...Array<string>(8).fill('teleport'), 'breathing'];
+    expect(parseSuggestedExercises(JSON.stringify({exercises}))).toEqual([]);
+  });
+
+  it('is nothing for anything that is not a list of ids', () => {
+    for (const raw of [
+      '',
+      'not json',
+      'null',
+      '[]',
+      '["breathing"]',
+      '{"followUps":["ok"]}',
+      '{"exercises":null}',
+      '{"exercises":"breathing"}',
+      '{"exercises":{"id":"breathing"}}',
+      '{"exercise":"breathing"}',
+    ]) {
+      expect(parseSuggestedExercises(raw), raw).toEqual([]);
+    }
   });
 });
 

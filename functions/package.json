@@ -27,7 +27,8 @@
     "seed:testimonials": "npm run build && node lib/tools/seedTestimonials.js",
     "backfill:replyCounts": "npm run build && node lib/tools/backfillReplyCounts.js",
     "eval:coach": "npm run build && node lib/tools/coachEval.js",
-    "eval:moderation": "npm run build && node lib/tools/moderationEval.js"
+    "eval:moderation": "npm run build && node lib/tools/moderationEval.js",
+    "eval:cards": "npm run build && node lib/tools/cardsEval.js"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

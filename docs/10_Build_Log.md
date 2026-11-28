@@ -6621,7 +6621,7 @@ After the first comparison the old side is in the cache, so a session is five ne
 
 ### 61.8 Deployed (Nov 27, 15:01 UTC)
 
-The founder asked for the backend to be deployed, with the app release already out. `npm run test:rules` (57) and `npm run test:integration` (454) were run on the emulators first, then `firebase deploy --only firestore:rules,firestore:indexes` (the rules were already current) and `firebase deploy --only functions`, whose predeploy ran `verify` (550). All 26 functions updated and every Cloud Run service came up on a new ready revision (`aicoachchat-00043`). Read back off the live `aicoachchat` service: `COACH_UI_AUDIENCE=premium`, `COACH_CONTEXT_LINES=off`, `COACH_FOLLOWUPS=true`, `ENTITLEMENT_MODE=mirror`, `ENFORCE_APP_CHECK=true`, both model ids as pinned, `GEMINI_API_KEY` bound as a secret. No warning or error was logged by any function in the minutes after.
+The founder asked for the backend to be deployed, with the app release already out. `npm run test:rules` (57) and `npm run test:integration` (454) were run on the emulators first, then `firebase deploy --only firestore:rules,firestore:indexes` (the rules were already current) and `firebase deploy --only functions`, whose predeploy ran `verify` (550). All 26 functions updated and every Cloud Run service came up on a new ready revision (`aicoachchat-00043`). Read back off the live `aicoachchat` service: `COACH_UI_AUDIENCE=premium`, `COACH_CONTEXT_LINES=off`, `COACH_FOLLOWUPS=true`, `ENTITLEMENT_MODE=mirror`, `ENFORCE_APP_CHECK=true`, both model ids as pinned, `GEMINI_API_KEY` bound as a secret. No warning or error was logged by any function in the fifteen minutes after. **The first real traffic on the new revision:** one free account sent two coach messages at 15:04 and 15:05 UTC; each logged `coach.ui` with `blocks: 0, craving: false` and a normal `coach.turn` on the lite model (40 and 49 output tokens), which is the free half of `S7-41`'s proof. `remoderateHeld` ran clean on its new revision at 15:16 (the deploy re-based the 15-minute schedule from :13 to :16).
 
 Three things about it:
 
@@ -6629,4 +6629,95 @@ Three things about it:
 - **It was deployed from an uncommitted tree**: §61.4's changes to `src/ai/model.ts` and `src/ai/gemini.ts` (the batch door, `thoughtTokens`, the reply reader) are live and were not in git at the time.
 - **Hosting was not deployed.** It is the redirect page, unchanged since Aug 29.
 
-Still owed, and it is `S7-41` on the board: a subscriber's craving chip showing cards on a real device, a free account's showing none, and `coach.ui` in the `aiCoachChat` log with `blocks: 3` and `blocks: 0`.
+Still owed, and it is `S7-41` on the board: a subscriber's craving chip showing cards on a real device, and `coach.ui` in the `aiCoachChat` log with `blocks: 3`. The free account's `blocks: 0` is in the log above; what a free account sees on screen was not looked at.
+
+---
+
+## 62. THE CARD FOR WHAT THE REPLY SAID (Nov 28) — the follow-up call names the exercise, code still decides, and no app release
+
+### 62.1 What the founder saw
+
+On a trial account (`refreshEntitlement` wrote `tier: trial` at 15:19 UTC), three coach turns at 15:20 UTC each logged `coach.ui` with `blocks: 0, craving: false`. The screenshot: Koda offers "a quick 4-7-8 breath with me right now", the founder sends "Let's do it now", and the reply counts the breath out in words. No card, and the breathing exercise nowhere on screen.
+
+Nothing was broken. §60's policy gave cards on the craving chip and inside a craving and nowhere else, and after a reply the chip row shows Ember's follow-ups, so the chip was not even on screen. The founder: "I have to type 'I'm craving' only to see the genui. This is not useful then. We should be smart enough to figure out when to show what."
+
+At 15:25 UTC the same account sent the craving chip and the log reads `coach.ui … blocks: 3`. That is the first menu the real backend is known to have sent, and the log half of `S7-41`; nobody recorded what the screen showed.
+
+A day earlier the same account read `tier: free` on every turn, which under `COACH_UI_AUDIENCE=premium` is also no card. Two different reasons produced the same empty screen, and the log line could not tell them apart. It can now (§62.3).
+
+### 62.2 The decision, and what it reverses
+
+The plan behind §60 put "cards the model picks" under *Not in this plan*, because it would be a second model call on every turn. That reason does not hold for this design: a second call already exists. `suggestFollowUps` reads the last exchange after every streamed reply, on the lite model, to write the follow-up chips. It is now also asked which exercises the reply was about.
+
+**The model names; code decides.** What a name has to pass is unchanged and is all code: the registry, the app's own list, the server's tier read, the audience. Three alternatives were dropped: a marker in Ember's own reply (touches the coach prompt, which is eval-gated and missed its bar twice in §60, and a marker can leak into a streamed bubble); matching words in the reply in code (six languages, and "your lungs are clearing out" contains the word); a classifier call of its own (the call it would duplicate already runs).
+
+### 62.3 What changed (server only)
+
+| File | Change |
+|---|---|
+| `functions/src/ai/prompts.ts` | `followUpPrompt(exercises)`: `FOLLOW_UP_PROMPT` itself when the list is empty, otherwise the same prompt asked for a second key, `"exercises"`. `followUpRequest` builds the whole call, for the handler and the eval alike. `FOLLOW_UP_PROMPT` is byte-identical to the committed one (compared against `git show HEAD`). |
+| `functions/src/ai/coachUi.ts` | `PlanInput.suggested`; `nameableExercises` (whom to ask); `parseSuggestedExercises` (model output to ids); the policy is seven steps (the fixtures README has them). |
+| `functions/src/handlers/aiCoachChat.ts` | The craving rules are planned before the quota, as before, so the cap and outage envelopes are unchanged. A reply that gets written is planned once more with the names. `coach.ui` is one line a turn, written where the turn ends, with two new fields. |
+| `functions/test/fixtures/coach_ui/` | 14 files to 18: every input gains `suggested`, and four new files (`suggested_one` is the founder's exchange). |
+| `functions/tools/cardsEval.ts`, `npm run eval:cards` | The gate for the prompt (§62.5). |
+| App | No behaviour change and no release: a comment in `fake_coach_ui.dart`, and three suites that count or read the fixtures. |
+
+The rules, as the code applies them:
+
+- **Asked only where a name can change the cards** (`nameableExercises`): an app that listed something, a tier the audience admits, and not the craving chip outside a craving, whose menu is fixed. Everybody else's follow-up call is the plain prompt, byte for byte, so a free account's turn costs what it cost.
+- **Shown only exercises this person can open.** The list in the prompt is already narrowed by tier and by the app.
+- **A name is looked up before it is believed.** One the registry does not hold is ignored. One that is not available becomes the first available exercise of its kind ("a game" is the free game for a free account under `all`). One per kind, at most three.
+- **The craving rules come first.** Inside a craving it is still exactly one card, and the name only picks which. The craving chip's menu ignores names.
+- **`coach.ui`** now carries `advertised` (the app said what it can draw) and `named` (how many exercises the follow-up call named), beside `blocks` and `craving`.
+
+One bug the eval's own test caught before any model was asked: the parser stopped at three names, so "Orbs, Tiles, SOS, breathing" reached the policy as two games and SOS, and the breathing card was lost to a game the policy then dropped. The parser keeps every registered id now and the policy cuts after one per kind.
+
+### 62.4 What it does not do
+
+- **No card on a plain (non-streamed) call, a panic turn, the cap or an outage** beyond the craving rules' own. No follow-up call runs there, so nobody is asked.
+- **`COACH_FOLLOWUPS=false` takes the names with the chips.** One switch, one call.
+- **Not on the fake backend.** There is no model there. Like the follow-up chips, this card can only be seen against real Firebase.
+- **Free accounts are unchanged** while the audience is `premium`.
+- **It does not change what Ember says.** If Ember suggests a walk, there is no card, because a walk is not an exercise the app opens. Making Ember prefer the app's exercises is a coach-prompt change and an eval pass of its own.
+- **The week card is untouched.** "How am I doing" typed out still gets words only; `showWeekCard` follows the progress chip.
+- **An exercise opened from this card is a craving session**, like one opened from any card: the exercise screen calls `ensureStarted()`, and "It passed" counts a craving survived. For "work is stressing me out" that is the person's own claim, but it was not designed for this door. A session-free practice launch is still in §60's not-built list.
+
+### 62.5 Verified, and how
+
+- `npm run verify`: 37 files, 578 tests. `npm run test:integration`: 468 on the emulator (454 before). `flutter test` on the four suites that read the fixtures: 105. Rules were not touched and not re-run.
+- **The handler tests were checked against a broken handler**: with the second `planBlocks` call replaced by the first plan, six of them fail.
+- **On the real model** (`npm run eval:cards`, founder's go given, US$0.0168 of the day's US$0.33): 19 exchanges, three rolls each, on `gemini-3.5-flash-lite` at the production temperature, graded on the cards a subscriber would see. The bar was written first: no case fails most of its rolls, at most one roll in ten fails. **56 of 57 passed.** The founder's exchange gave `breathing` on all three rolls; Spanish and German gave `breathing`; "a game" gave Orbs; Blocks asked for by name gave Blocks; "what are my options" gave one of each kind; and "your lungs are clearing out" gave no card on all three.
+- **The one failure, read:** on `vent` ("my boss yelled at me", and a reply that asks a question) roll 2 named `breathing`. Its own answer shows why: it had just written the chip "let's do breathing instead", then named the exercise for its own suggestion. The fix is one rule line (decide from the user's message and the coach's reply, never from the suggestions) or putting `"exercises"` first in the object, and either needs a re-roll. Not made in this session: the bar was met and the go was for one run.
+- **The chips were not hurt:** all 57 answers carried follow-ups and all were the JSON asked for.
+
+### 62.6 Deployed, and what is owed
+
+The founder approved a deploy on the condition that the check met its bar. `firebase deploy --only functions:aiCoachChat` ran at 16:36 UTC on Nov 28 (its predeploy ran `verify`), and `aicoachchat-00044-zos` is the ready and serving revision. Only `aiCoachChat` was deployed: nothing else in this work reaches the other 25 functions, which stay on their Nov 27 revisions. It went out from an uncommitted tree, and nothing was committed.
+
+**Owed:** the card seen on a phone. A subscriber or trial account, a streamed turn whose reply offers an exercise, the card under it, and `coach.ui` with `named: 1, blocks: 1` in `firebase functions:log --only aiCoachChat`. It is `S7-44` on the board, and the same device run settles `S7-41`.
+
+### 62.7 Cost
+
+About 520 input tokens and a dozen output tokens more on the follow-up call of a streamed, non-panic turn from an account the audience admits: roughly US$0.0002 a turn at Nov 2026 lite rates, on the rule as it stands after §62.8. Nothing on any other turn.
+
+### 62.8 An hour later: the phone could not draw a card, and the rule widened
+
+**The founder tried it on the Pixel and saw no card**, on "let's do breathing exercises" and on "work is stressing me out". The log had the answer in the field added that morning: five turns between 16:42 and 16:43 UTC, every one `advertised: false, named: 0, blocks: 0`. The app on that phone never said it could draw anything.
+
+Why, read off the phone and the release runs, not inferred:
+
+- `adb shell dumpsys package com.quitvape.last_puff`: version 1.0.38 (38), installed from the Play Store at 11:41 local that morning.
+- Its `libapp.so`, pulled and searched: `reminder_opened` and `day2_morning` are in it (the Nov 21 work), and `coach_ui_dropped`, `exercise_opened`, `exercise_finished` and `ExerciseLauncher` are not. The card code is not in that binary.
+- The Release workflow uploads Android to Play's **internal** track by default: build 38 on Nov 22, build 40 (the first with cards) on Nov 27 at 02:21 UTC. There has been no Release run for 1.0.42.
+
+So "the app release had already gone out" (§61.8, §60, the board, CLAUDE.md) was true of the internal track and TestFlight and of nothing else. A phone that takes the store's build has no cards, and no server change reaches it. The menu logged at 15:25 UTC (`blocks: 3`) came from a build that does advertise, which on this desk is the iPhone. What Play's production track holds was not read; what it served this Pixel was.
+
+**The second message was a real gap, though.** "work is stressing me out" got a reply about the urge fading and stepping away, and under the morning's rule that names nothing: the reply offered no exercise and the person asked for none. The founder's reading is the product's: somebody who says they are stressed right now should be one tap from the breath. The rule gained a second way to earn a name: the person says that right now they are craving, stressed, anxious, restless or about to vape, even when Ember's reply suggests something else. And one line against the morning's wobble: decide from the two messages, never from the suggestions written for the chips.
+
+**The check missed its bar first, and the fix was in code.** 22 exchanges now (the founder's two from the Pixel, word for word, and "about to hit the vape"); `vent` accepts no card or a breathing card, because under the new rule both are fair. First grading: 63 of 66, with `about-to-vape` failing two rolls of three. Its answers were "SOS, breathing": the right two exercises in the wrong order for somebody who needs the next breath before a post. The registry already says row order is the order cards are offered in, so the policy now lays named cards out in registry order, calm first, and only the choice is the model's. The same 66 stored answers, graded again against that policy (no new calls): **65 of 66, bar met.** The one left is `vent` roll 2, an SOS card alone under a venting reply. The founder's two exchanges gave `breathing` on all six rolls, and all seven "no card" cases stayed empty on all 21.
+
+Spent on the day's two runs: US$0.0384 of the US$0.33 cap.
+
+**Deployed again:** `firebase deploy --only functions:aiCoachChat` at 16:55 UTC, revision `aicoachchat-00045-loq` ready and serving. `npm run verify` 579 and `test:integration` 468 first. Still from an uncommitted tree.
+
+**What the Pixel needs** is a build with the card code, 1.0.40 or later: the internal-testing opt-in for the Google account on that phone, or a promoted release. A sideloaded release APK cannot pass App Check, and the pinned debug token is not registered. Until then the iPhone, whose build did advertise cards that morning, is the phone that can show it.

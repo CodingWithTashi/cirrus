@@ -44,6 +44,8 @@ import {
 import {
   audienceAdmits,
   coachUiAudience,
+  nameableExercises,
+  parseSuggestedExercises,
   parseUiCapabilities,
   planBlocks,
   uiEnvelope,
@@ -59,9 +61,9 @@ import {buildMemoryCard} from '../ai/memoryCard';
 import {ModelUnavailableError, type TextModel, type Turn} from '../ai/model';
 import {
   COACH_SUMMARY_PROMPT,
-  FOLLOW_UP_PROMPT,
   MEMORY_EXTRACTION_PROMPT,
   buildCoachInstruction,
+  followUpRequest,
 } from '../ai/prompts';
 import {
   EMBEDDING_DIMENSIONS,
@@ -88,6 +90,7 @@ import {
   refundPanicMessage,
   tierFor,
 } from '../lib/usage';
+import type {ExerciseId} from '../domain/exercises';
 import {COACH_CHIPS, type CoachChip, type CoachTemplate, type SubscriptionTier} from '../domain/types';
 
 const MAX_MESSAGE_CHARS = 1000;
@@ -129,12 +132,14 @@ interface CoachReplyEnvelope {
    * Rides this envelope for the reason `followUps` does, and is absent rather
    * than empty when there is nothing to show — so a request that says nothing
    * about cards (an older app), a free account while the audience is
-   * `premium`, and an ordinary message all get the keys they get today and
-   * no others. A block is an id and nothing else; the app draws the rest.
+   * `premium`, and a reply that was about no exercise all get the keys they
+   * get today and no others. A block is an id and nothing else; the app draws
+   * the rest.
    *
    * Unlike `followUps` it is on `capReached` and `connectionLost` too. Those
    * are the two replies where Ember has nothing to say, and an exercise needs
-   * neither a message nor the model.
+   * neither a message nor the model. What they carry is the craving rules'
+   * cards: the card for what a reply was about needs a reply.
    */
   ui?: {v: 1; blocks: readonly Block[]};
 }
@@ -222,13 +227,17 @@ export const aiCoachChat = onCall(
         : {cravings, justDid: parseJustDid(data['justDid'])},
     );
 
-    // Coach cards, decided ONCE and by code: no model call is added for
-    // them, so they cost nothing and are there on the turns the model is not
-    // (the cap, an outage). Planned after the greeting above on purpose —
-    // with no journey there is nothing to open — and before the quota, so
-    // every envelope below carries the same answer. `tier` is the server's
-    // own read; the app's list only ever narrows what may be offered.
-    const blocks = planBlocks({
+    // Coach cards, decided by code: no model call is added for them, so
+    // they cost nothing and are there on the turns the model is not (the
+    // cap, an outage). Planned after the greeting above on purpose — with no
+    // journey there is nothing to open — and before the quota, so every
+    // refusal below carries the same answer. `tier` is the server's own
+    // read; the app's list only ever narrows what may be offered.
+    //
+    // This first plan is the one that needs no model: the craving rules. A
+    // reply that gets written can add to it once, at the end, with the
+    // exercises the follow-up call said the reply was about (`suggested`).
+    const planInput = {
       audience,
       tier,
       chip,
@@ -237,13 +246,23 @@ export const aiCoachChat = onCall(
       // What they have opened during a craving, most recent first: the
       // latest one leads the menu, and is the one card mid-craving.
       recentTools: cravings?.tools ?? [],
-    });
-    const ui = uiEnvelope(blocks);
-    log.info('coach.ui', safeMeta({
-      uid: caller.uid,
-      blocks: blocks.length,
-      craving: panicIntensity !== null || caps?.craving === true,
-    }));
+    };
+    const planned = planBlocks({...planInput, suggested: []});
+    const ui = uiEnvelope(planned);
+    // One line a turn, written where the turn ends, with the cards that
+    // actually went out. `advertised` and `named` are what tell the three
+    // kinds of "no card" apart in `firebase functions:log`: an app that
+    // never said what it can draw, a reply that was about no exercise, and
+    // an account the audience does not admit.
+    const logUi = (sent: readonly Block[], named: number): void => {
+      log.info('coach.ui', safeMeta({
+        uid: caller.uid,
+        blocks: sent.length,
+        craving: panicIntensity !== null || caps?.craving === true,
+        advertised: caps !== null,
+        named,
+      }));
+    };
 
     // Through `readAllowance`, never the param's `.value()` directly: a param
     // that resolves to 0 — no `.env` for the active project, a typo'd key —
@@ -286,6 +305,7 @@ export const aiCoachChat = onCall(
         : refundCoachMessage(caller.uid, card.todayKey);
     if (!quota.allowed) {
       // docs/04 §7 — kind cap copy, and zero model spend.
+      logUi(planned, 0);
       return {
         template: 'capReached',
         args: {limit},
@@ -422,6 +442,7 @@ export const aiCoachChat = onCall(
         // already knows this template. The message was not delivered, so give
         // the quota unit back — nobody pays for our outage.
         await refundTurn();
+        logUi(planned, 0);
         // Refunded, so the allowance is one higher than the claim left it.
         return {
           template: 'connectionLost',
@@ -438,6 +459,7 @@ export const aiCoachChat = onCall(
     reply = reply.trim();
     if (reply.length === 0) {
       await refundTurn();
+      logUi(planned, 0);
       return {
         template: 'connectionLost',
         args: {},
@@ -462,7 +484,7 @@ export const aiCoachChat = onCall(
     // suggestions cost roughly no extra wall-clock at all; on a turn where it
     // does not, they delay the ENVELOPE (never the first token, which left
     // long ago on the streaming path).
-    const [, , followUps] = await Promise.all([
+    const [, , suggestions] = await Promise.all([
       learnFrom(model, caller.uid, userText, reply, card.todayKey),
       maybeUpdateSummary(model, caller.uid, summary, [
         ...history,
@@ -481,10 +503,30 @@ export const aiCoachChat = onCall(
       // platform-specific stream-error gotcha in CLAUDE.md). So the turns that
       // lose their chips are exactly the turns already recovering from a
       // failed stream — which is where an extra round-trip would hurt most.
+      //
+      // The same call says which exercise, if any, the reply was about, for
+      // a turn where that can become a card (`nameableExercises`). No call
+      // of its own, so a plain call names nothing, like it suggests nothing.
       streaming
-        ? suggestFollowUps(model, caller.uid, userText, reply, panicIntensity)
-        : Promise.resolve<string[]>([]),
+        ? suggestFollowUps(
+            model,
+            caller.uid,
+            userText,
+            reply,
+            panicIntensity,
+            nameableExercises(planInput),
+          )
+        : Promise.resolve(NO_SUGGESTIONS),
     ]);
+    const {followUps, named} = suggestions;
+    // A name is model output and a suggestion: the policy looks it up
+    // against the registry, the tier, the audience and the app's own list
+    // before it is a card, and the craving rules still come first.
+    const blocks =
+      named.length === 0
+        ? planned
+        : planBlocks({...planInput, suggested: named});
+    logUi(blocks, named.length);
 
     return {
       // `generic1` is the graceful degradation for a client that predates the
@@ -502,12 +544,23 @@ export const aiCoachChat = onCall(
       // chips), and not sending it keeps the payload honest about whether
       // anything was actually suggested.
       ...(followUps.length > 0 ? {followUps} : {}),
-      // One return for both paths, so a streamed turn and a plain call carry
-      // the same cards. `{}` when there are none: the key is absent.
-      ...ui,
+      // The craving rules' cards on both paths; on a streamed turn, also the
+      // exercise the reply was about. `{}` when there are none: the key is
+      // absent.
+      ...uiEnvelope(blocks),
     };
   },
 );
+
+/** What the follow-up call adds to a reply that is already written. */
+interface Suggestions {
+  /** What the person might tap to say next. */
+  readonly followUps: string[];
+  /** The exercises the reply was about, as the model named them. */
+  readonly named: ExerciseId[];
+}
+
+const NO_SUGGESTIONS: Suggestions = {followUps: [], named: []};
 
 /** How far back the craving log is read. Enough to list every tool they use. */
 const CRAVING_DOCS = 12;
@@ -557,8 +610,9 @@ const stringOrNull = (v: unknown): string | null =>
   typeof v === 'string' ? v : null;
 
 /**
- * Three or four things the user might tap to say next. Never throws, never
- * blocks a reply that is already written.
+ * Three or four things the user might tap to say next, and, where a card
+ * could come of it, which exercises the reply was about ([followUpRequest]).
+ * Never throws, never blocks a reply that is already written.
  *
  * Gated four ways, because this is the second thing in the loop that costs
  * money without producing anything the user asked for:
@@ -582,30 +636,37 @@ async function suggestFollowUps(
   userText: string,
   reply: string,
   panicIntensity: number | null,
-): Promise<string[]> {
+  nameable: readonly ExerciseId[],
+): Promise<Suggestions> {
   // Read as "off only when explicitly off". A deploy-time param resolves to
   // the EMPTY STRING when nothing supplies a value — no `.env` for the active
   // project, a typo'd key, a test harness — and `!== 'true'` would turn the
   // feature off in exactly those cases while looking like a policy decision.
   // Same lesson as `allowance()` in `config.ts`, pointed the same way: the
   // unresolved case has to fail toward the intended default.
-  if (COACH_FOLLOWUPS.value().trim().toLowerCase() === 'false') return [];
-  if (panicIntensity !== null) return [];
+  if (COACH_FOLLOWUPS.value().trim().toLowerCase() === 'false') {
+    return NO_SUGGESTIONS;
+  }
+  if (panicIntensity !== null) return NO_SUGGESTIONS;
+  const asksForNames = nameable.length > 0;
   try {
-    const result = await model.generate({
-      model: MODEL_FREE.value(),
-      systemInstruction: FOLLOW_UP_PROMPT,
-      turns: [{role: 'user', text: `USER: ${userText}\nCOACH: ${reply}`}],
-      maxOutputTokens: 120,
-      // Warm enough not to produce the same three chips every turn, cold
-      // enough to stay on the exchange it was given.
-      temperature: 0.6,
-      json: true,
-    });
-    return parseFollowUps(result.text);
+    const result = await model.generate(
+      followUpRequest({
+        model: MODEL_FREE.value(),
+        userText,
+        reply,
+        exercises: nameable,
+      }),
+    );
+    return {
+      followUps: parseFollowUps(result.text),
+      // Read only when it was asked for: a name volunteered to the plain
+      // prompt answers a question nobody put.
+      named: asksForNames ? parseSuggestedExercises(result.text) : [],
+    };
   } catch (error) {
     log.warn('coach.followups_failed', {uid, error: String(error)});
-    return [];
+    return NO_SUGGESTIONS;
   }
 }
 

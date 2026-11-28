@@ -21,6 +21,9 @@
  * client-side model call.
  */
 
+import type {ExerciseId} from '../domain/exercises';
+import type {GenerateRequest} from './model';
+
 export const EMBER_SYSTEM_PROMPT = `You are Ember, the in-app quit-vaping coach for LastPuff — a warm, steady little
 flame who has been at this user's side since day one and burns brighter as their
 streak grows. Speak as a friend, never as a mascot: don't call yourself their
@@ -292,6 +295,118 @@ Rules:
 - Same language as the conversation.
 - If nothing useful fits, return {"followUps":[]}. An empty list is a fine
   answer and better than filler.`
+
+/**
+ * How the follow-up call is told what each exercise is. One line each, in
+ * the model's terms: enough to match "in for four, hold for seven" to
+ * `breathing` and "a quick game" to a game, and nothing about how it plays.
+ * Typed exhaustively, so a new exercise fails typecheck until it has a line.
+ */
+const EXERCISE_HINTS: Record<ExerciseId, string> = {
+  breathing: 'a guided breathing exercise, slow counted breaths',
+  orbs: 'Orbs, a 60-second game that keeps the hands busy',
+  tiles: 'Tiles, another 60-second game',
+  blocks: 'Blocks, another 60-second game',
+  sos: 'an SOS post asking the community for support right now',
+};
+
+/**
+ * The follow-up prompt for one turn: [FOLLOW_UP_PROMPT] itself when
+ * [exercises] is empty, and otherwise the same prompt asked for a second
+ * key, the exercises the coach's reply was about.
+ *
+ * This is the one place a model has a say in the coach's cards (founder
+ * decision, Nov 28 2026). Ember would offer "a quick 4-7-8 breath", the
+ * person would answer "let's do it now", and the reply came back as words
+ * with the breathing exercise nowhere on screen: cards only ever followed
+ * the craving chip, so in an ordinary conversation nobody met one. The
+ * follow-up call already reads the last exchange after every streamed reply,
+ * on the cheap model, so asking it costs no call: about five hundred and
+ * twenty input tokens and a dozen output tokens on a turn that can show a
+ * card (some US$0.0002 at Nov 2026 rates), and nothing at all on a turn
+ * that cannot.
+ *
+ * **It names; it never decides.** `planBlocks` (`ai/coachUi.ts`) looks every
+ * name up in the registry and against the tier, the audience and what the
+ * app can draw, and [exercises] is already that list, so the model is never
+ * shown an exercise this person cannot open. Two things earn a name: the
+ * exchange is about doing the exercise, or the person says that right now
+ * they are craving or stressed. The second holds even when Ember's own words
+ * suggest a walk (founder, Nov 28 2026: "work is stressing me out" got a
+ * reply about stepping away and no card, and "it should be smart to know").
+ * Everything else leans hard toward `[]`.
+ *
+ * Appended to the plain prompt instead of rewriting it, so the follow-up
+ * rules a free account's call carries are the same bytes they always were.
+ * Like that prompt, it is outside `buildCoachInstruction`: nothing here can
+ * change what Ember says, so the coach eval does not grade it.
+ * `npm run eval:cards` does.
+ */
+export function followUpPrompt(exercises: readonly ExerciseId[]): string {
+  if (exercises.length === 0) return FOLLOW_UP_PROMPT;
+  const list = exercises
+    .map((id) => `- "${id}": ${EXERCISE_HINTS[id]}`)
+    .join('\n');
+  return `${FOLLOW_UP_PROMPT}
+
+The same JSON object carries a second key, "exercises", so your whole answer is:
+{"followUps":["...","...","..."],"exercises":[]}
+
+The app can put a button under the coach's reply that opens one of these in one tap:
+${list}
+
+Rules for "exercises":
+- Name one when this exchange is about doing it now: the coach suggests it,
+  offers it or talks the user through it; or the user asks for it or says
+  yes to it.
+- Also name one when the USER says that right now they are craving, stressed,
+  anxious, restless or about to vape, or asks what they can do about it. Do
+  this even when the coach's reply suggests something else, like a walk or
+  water. Pick the one that fits what they said; when nothing points at
+  another, the first one listed above.
+- Usually exactly one: the one the coach's words point at. More than one (at
+  most 3, best first) only when the coach offered several, or the user asked
+  what their options are.
+- Breaths counted out in the reply ("in for 4, hold for 7") are "breathing".
+  A game suggested without a name is the first game listed above.
+- Decide from the user's message and the coach's reply alone, never from the
+  suggestions you wrote for "followUps".
+- Everything else gets []: progress, money, plans, health questions, a slip
+  from earlier being talked through, thanks, small talk. A walk, water or
+  texting a friend are not in the list: on their own they get []. When
+  unsure, []. A button that does not match the moment is worse than no button.
+- Only the ids listed above, spelled exactly. Both keys are always present.`;
+}
+
+/**
+ * The follow-up call, whole: the request `aiCoachChat` sends after a reply
+ * and the one `npm run eval:cards` grades, built in one place so the eval
+ * can never drift from production (the rule `buildCoachInstruction` keeps
+ * for the coach itself).
+ *
+ * It sees only the last exchange, on whatever [model] the caller names (the
+ * cheap one, always). [exercises] is what this person could be shown; empty
+ * sends the plain prompt and the plain budget.
+ */
+export function followUpRequest(args: {
+  readonly model: string;
+  readonly userText: string;
+  readonly reply: string;
+  readonly exercises: readonly ExerciseId[];
+}): GenerateRequest {
+  return {
+    model: args.model,
+    // The plain prompt, byte for byte, when no card could come of a name.
+    systemInstruction: followUpPrompt(args.exercises),
+    turns: [{role: 'user', text: `USER: ${args.userText}\nCOACH: ${args.reply}`}],
+    // Room for the second key, so a full row of chips cannot cut it off.
+    maxOutputTokens: args.exercises.length === 0 ? 120 : 160,
+    // Warm enough not to produce the same three chips every turn, cold
+    // enough to stay on the exchange it was given.
+    temperature: 0.6,
+    json: true,
+  };
+}
 
 /**
  * docs/04 §5 — Sunday weekly insight. Returns strict JSON.

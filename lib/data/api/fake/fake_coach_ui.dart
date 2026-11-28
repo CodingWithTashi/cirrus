@@ -8,9 +8,12 @@
 /// answer.
 ///
 /// What it leaves out, because the fake has nothing to read them from: the
-/// craving history (the server leads with the tool somebody used last) and
-/// the audience param (the server can widen cards to free accounts). So the
-/// fake always behaves like a first craving on the default audience.
+/// craving history (the server leads with the tool somebody used last), the
+/// audience param (the server can widen cards to free accounts), and the
+/// card for what a reply was about (the server's follow-up call names the
+/// exercise, and there is no model here: like Ember's follow-up chips, that
+/// card can only be seen against real Firebase). So the fake always behaves
+/// like a first craving on the default audience.
 library;
 
 /// Fixture name → that fixture's `blocks`, as they travel on the wire.

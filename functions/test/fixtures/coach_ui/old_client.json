@@ -5,7 +5,8 @@
     "chip": "craving",
     "panicIntensity": null,
     "caps": null,
-    "recentTools": []
+    "recentTools": [],
+    "suggested": []
   },
   "blocks": []
 }

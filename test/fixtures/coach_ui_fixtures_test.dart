@@ -6,7 +6,7 @@ import 'package:last_puff/data/dto/coach_codec.dart';
 import 'package:last_puff/domain/logic/exercises/exercise.dart';
 import 'package:last_puff/domain/models/enums.dart';
 
-/// The coach-card fixtures (K6): fourteen `{input, blocks}` files that both
+/// The coach-card fixtures (K6): eighteen `{input, blocks}` files that both
 /// sides are pinned to. The server's `planBlocks(input)` must answer `blocks`;
 /// this suite proves every `blocks` is something this build can decode, and
 /// that the files themselves are well-formed — a fixture with a typo in it
@@ -24,6 +24,7 @@ void main() {
     'craving_chip_recent',
     'craving_chip_recent_tiles',
     'craving_followup',
+    'craving_suggested',
     'free_text',
     'free_tier',
     'narrow_client',
@@ -31,6 +32,9 @@ void main() {
     'other_chip',
     'panic_default',
     'panic_recent',
+    'suggested_locked',
+    'suggested_one',
+    'suggested_several',
     'trial_tier',
   ];
 
@@ -38,7 +42,7 @@ void main() {
       jsonDecode(File('${dir.path}/$name.json').readAsStringSync())
           as Map<String, dynamic>;
 
-  test('the folder holds exactly the fourteen fixtures', () {
+  test('the folder holds exactly the eighteen fixtures', () {
     final found = [
       for (final entry in dir.listSync())
         if (entry is File && entry.path.endsWith('.json'))
@@ -57,7 +61,7 @@ void main() {
       });
 
       test(
-        'its input carries all six fields, each a value the policy reads',
+        'its input carries all seven fields, each a value the policy reads',
         () {
           final input = read(name)['input'] as Map<String, dynamic>;
           expect(input.keys.toSet(), {
@@ -67,6 +71,7 @@ void main() {
             'panicIntensity',
             'caps',
             'recentTools',
+            'suggested',
           });
           expect(input['audience'], isIn(['off', 'premium', 'all']));
           expect(input['tier'], isIn(['free', 'trial', 'premium']));
@@ -76,6 +81,9 @@ void main() {
           );
           expect(input['panicIntensity'], anyOf(isNull, isA<int>()));
           expect(input['recentTools'], everyElement(isA<String>()));
+          // What the server's follow-up call said the reply was about. The
+          // app never sees it; it is here because the policy reads it.
+          expect(input['suggested'], everyElement(isA<String>()));
 
           final caps = input['caps'];
           if (caps != null) {

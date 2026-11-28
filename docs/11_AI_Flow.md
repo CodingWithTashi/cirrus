@@ -36,11 +36,12 @@ Order matters for cost: **quota before any AI call** (a refused message costs $0
 **computed, not generated** (exact numbers, zero AI cost), and thinking is disabled (we probed:
 the previous premium model burned 400–2,000 hidden "thought" tokens per reply — pure waste).
 
-## 2a. Coach cards on the read path (Nov 25 2026 — built, not deployed)
+## 2a. Coach cards on the read path (Nov 25 2026; live since Nov 27; the reply's own card added Nov 28)
 
 A reply can carry up to three tappable cards that open a craving exercise in one tap
 (docs/10 §60). Nothing about them is generated. Two steps joined the read path, and neither
-is a model call:
+is a model call. (One card can also come from the reply itself, named by the follow-up
+call that runs AFTER the reply; that is the last bullet below and §3.)
 
 ```mermaid
 flowchart TD
@@ -61,9 +62,21 @@ flowchart TD
   chat is mid-craving): exactly one card, the tool they used last, else the first calm
   exercise. On the craving chip from outside one: a menu of at most three, the tool they
   used last and then one of each kind, skipping the kind that tool already covers. Any
-  other message: none. The tier is the server's own read; the app's list only narrows what
-  may be offered. A card is an exercise id and nothing else. The policy is pinned to 14
-  fixture files that the app's own suite reads too.
+  other message: the exercise the reply was about, or none. The tier is the server's own
+  read; the app's list only narrows what may be offered. A card is an exercise id and
+  nothing else. The policy is pinned to 18 fixture files that the app's own suite reads too.
+- **The reply's own card (Nov 28 2026, docs/10 §62).** After a streamed reply, the
+  follow-up call that already writes the chips (§3) is also asked which exercises the
+  reply was about, and `planBlocks` runs once more with that list (`suggested`). The model
+  names; code decides: a name passes the registry, the tier, the audience and the app's
+  list, a locked one becomes the free one of its kind, one per kind, at most three, and
+  inside a craving it only picks which one card. It is asked only when a card could come
+  of it; every other follow-up call is the plain prompt, byte for byte. No name on a plain
+  call, a panic turn, the cap or an outage: those carry the craving rules' cards only.
+  A name is earned two ways: the exchange is about doing the exercise, or the person says
+  that right now they are craving or stressed (then even a reply that suggests a walk
+  carries one). Several names are laid out in registry order, calm first. Judged by
+  `npm run eval:cards` (22 exchanges; 65 of 66 rolls on the rule that is live, Nov 28).
 
 The cards ride the reply's envelope, and unlike the follow-up chips they are also on the cap
 message and the outage message: those are the two replies where Ember has nothing to say,
@@ -107,7 +120,9 @@ swallows its own errors and returns nothing.
 rendered identically on every turn forever. They see only the last exchange, never the card,
 the summary or the memories: what comes next in *this* exchange is not a question the rest of
 the stack answers. They are skipped entirely mid-craving — the panic rider is breath and
-presence only, and a menu of four things to say is the opposite of that.
+presence only, and a menu of four things to say is the opposite of that. Since Nov 28 2026
+the same call, for an account that can be shown a card, also says which exercises the reply
+was about (§2a): about 520 more input tokens and a dozen more output tokens on that turn.
 
 So the full loop is exactly what you sketched: **data (journey) → deterministic feed (card) +
 message → embedding → Firestore vector search → Gemini → response → extraction → embedding →
@@ -131,6 +146,7 @@ Three-layer memory, by freshness and cost:
 | Fact extraction (cheap model) | ~760 | ~$0.0001 |
 | Summary, amortized over 4 turns | ~1,500 / 4 | ~$0.00005 |
 | Follow-up chips (cheap model) | ~250 in / ~40 out | ~$0.00005 |
+| …also naming the reply's exercise (accounts the card audience admits only) | +~520 in / +~12 out | +~$0.0002 |
 | Embeddings (1 query + occasional docs) | ~100 | ~$0.00002 |
 | **Total per premium turn** | | **≈ $0.001** |
 
@@ -141,7 +157,10 @@ static openers. The param is read as `!== 'false'`, never `=== 'true'`: an unset
 param resolves to the empty string, and reading *that* as "off" would silently disable the
 feature on any project whose `.env` never named it.
 
-**Coach cards add no line to this table** (§2a). No model call was added for them, so the
+**Coach cards add no model call** (§2a); the one line they add is the naming row above,
+on the call that already ran. The follow-up rows are priced at the Nov 27 2026 lite rates
+($0.30 in, $2.50 out per million), which is why the naming row is larger than the older
+chips row beside it. No model call was added for the craving rules' cards, so the
 per-turn AI cost is unchanged. What a turn that can show cards adds is one Firestore query
 of up to 12 documents, beside the journey read; that cost was not measured and sits in the
 infra line of §5, not here. The six context lines of §7 would add up to about 680 characters
