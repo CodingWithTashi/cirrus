@@ -2,10 +2,14 @@
  * Coach cards: which tappable cards an Ember reply carries (K3, K6 and K8 in
  * docs/superpowers/plans/2026-11-25-coach-cards.md).
  *
- * Decided here by plain code, never by the model. A card is therefore free
- * (no second model call on a turn that already made one), it is the same card
- * for the same situation every time, and no wording of a message can talk the
- * policy into showing a locked exercise or a menu mid-craving.
+ * Decided here by plain code. A model has ONE say, and it is a suggestion:
+ * the follow-up call that already runs after a reply may name the exercises
+ * that reply was about (`suggested`, founder decision Nov 28 2026: a coach
+ * that says "breathe with me" and shows no way to do it is a coach whose
+ * cards nobody finds). Everything a name has to pass is still code — the
+ * registry, what the app can draw, the tier, the audience — so a card adds
+ * no model call of its own, and no wording of a message can talk the policy
+ * into showing a locked exercise or a menu mid-craving.
  *
  * **A block carries an id and nothing else.** Never a route, a URL, a number,
  * a label or a colour: the app owns everything it draws (its strings, its
@@ -13,10 +17,10 @@
  * already knows how to draw. A client skips a block it does not know and
  * keeps the rest.
  *
- * Pure: no Firestore, no params, no clock. The handler reads the tier, the
- * param and the request, and hands them in; `test/coachUi.test.ts` pins the
- * policy to the fourteen files in `test/fixtures/coach_ui/`, which the app's
- * own suite reads too.
+ * Pure: no Firestore, no params, no clock, no model. The handler reads the
+ * tier, the param, the request and the follow-up call's answer, and hands
+ * them in; `test/coachUi.test.ts` pins the policy to the eighteen files in
+ * `test/fixtures/coach_ui/`, which the app's own suite reads too.
  */
 import {
   EXERCISE_KINDS,
@@ -37,7 +41,7 @@ export interface UiCapabilities {
 /** One card under a reply. `launcher` is the only kind there is. */
 export type Block = {readonly t: 'launcher'; readonly exercise: ExerciseId};
 
-/** Everything the policy reads. The fixtures carry all six, so none defaults. */
+/** Everything the policy reads. The fixtures carry all seven, so none defaults. */
 export interface PlanInput {
   /** `COACH_UI_AUDIENCE`, already through [coachUiAudience]. */
   readonly audience: 'off' | 'premium' | 'all';
@@ -50,6 +54,13 @@ export interface PlanInput {
   readonly caps: UiCapabilities | null;
   /** From the craving digest, most recent first; `[]` when there is none. */
   readonly recentTools: readonly ExerciseId[];
+  /**
+   * The exercises the follow-up call said this reply is about, best first
+   * ([parseSuggestedExercises]); `[]` when it named none or did not run (a
+   * panic turn, a plain call, the cap, an outage, `COACH_FOLLOWUPS` off).
+   * Model output: every id is looked up before it is believed.
+   */
+  readonly suggested: readonly ExerciseId[];
 }
 
 /**
@@ -122,8 +133,89 @@ export function audienceAdmits(
 
 const launcher = (exercise: ExerciseId): Block => ({t: 'launcher', exercise});
 
+type Row = (typeof EXERCISES)[number];
+
 /**
- * The cards for one turn. Six steps, in this order:
+ * Step 1 of the policy, on its own because two callers need it: the rows
+ * the app listed, minus Premium rows for a free account, in registry order.
+ * Empty when the audience does not admit the tier or the app said nothing.
+ */
+function availableRows(
+  input: Pick<PlanInput, 'audience' | 'tier' | 'caps'>,
+): readonly Row[] {
+  const {audience, tier, caps} = input;
+  if (caps === null || !audienceAdmits(audience, tier)) return [];
+  const advertised = new Set<string>(caps.exercises);
+  return EXERCISES.filter(
+    (row) => advertised.has(row.id) && !(row.premium && tier === 'free'),
+  );
+}
+
+const inCraving = (
+  input: Pick<PlanInput, 'panicIntensity' | 'caps'>,
+): boolean => input.panicIntensity !== null || input.caps?.craving === true;
+
+/** How many names are looked at. A bound on model output, not a feature. */
+const MAX_SUGGESTED = 8;
+
+/**
+ * The exercises the follow-up call may name on this turn, in registry order;
+ * `[]` means do not ask. It is asked only where a name can change the cards:
+ * somebody the audience admits, on an app that listed something, and not on
+ * the craving chip outside a craving, whose menu is fixed. Everybody else's
+ * follow-up call goes out exactly as it did before a reply could carry cards.
+ */
+export function nameableExercises(
+  input: Omit<PlanInput, 'suggested'>,
+): ExerciseId[] {
+  if (input.chip === 'craving' && !inCraving(input)) return [];
+  return availableRows(input).map((row) => row.id);
+}
+
+/**
+ * Reads `exercises` out of the follow-up call's JSON: registry ids, once
+ * each, in the order given, from the first [MAX_SUGGESTED] entries. Anything
+ * else — no JSON, no such key, not a list, an id nobody registered — is
+ * `[]`, which is "no card". Never throws: this is where model output becomes
+ * something a person can tap, and a malformed answer must cost the card, not
+ * the reply.
+ *
+ * It does NOT stop at three. How many become cards is the policy's to say,
+ * after it has kept one per kind: cut to three here, "Orbs, Tiles, SOS,
+ * breathing" would lose the breathing card to a second game the policy then
+ * drops anyway.
+ */
+export function parseSuggestedExercises(raw: string): ExerciseId[] {
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/, '')
+    .trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return [];
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return [];
+  }
+  const list = (parsed as Record<string, unknown>)['exercises'];
+  if (!Array.isArray(list)) return [];
+
+  const out: ExerciseId[] = [];
+  for (const item of list.slice(0, MAX_SUGGESTED) as unknown[]) {
+    const id =
+      typeof item === 'string'
+        ? exerciseById(item.trim().toLowerCase())?.id
+        : undefined;
+    if (id !== undefined && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+/**
+ * The cards for one turn. Seven steps, in this order:
  *
  * 1. `available` is the registry rows the app listed, minus Premium rows for
  *    a free account, in REGISTRY order (the app's order is not a preference).
@@ -133,27 +225,33 @@ const launcher = (exercise: ExerciseId): Block => ({t: 'launcher', exercise});
  * 3. `recent` is what they have used during a craving, narrowed to
  *    `available` — so a game they used while subscribed is never offered once
  *    it is locked, and nobody lands on a lock.
- * 4. In a craving (the turn came from the panic flow, or the app says the
- *    chat is mid-craving): exactly ONE card. What they used last, else the
- *    first calm exercise, else the first available. Somebody at 8/10 gets a
- *    next step, not a menu; this is checked BEFORE the chip, so the craving
- *    chip tapped inside a craving is still one card.
- * 5. Otherwise, on the `craving` chip: a menu of at most three. What they
+ * 4. `named` is what the reply was about (`suggested`), narrowed the same
+ *    way: a name that is not available becomes the first available exercise
+ *    of its kind ("a game" is the free game for a free account), or is
+ *    dropped when there is none. One per kind, at most three.
+ * 5. In a craving (the turn came from the panic flow, or the app says the
+ *    chat is mid-craving): exactly ONE card. The exercise the reply named,
+ *    else what they used last, else the first calm exercise, else the first
+ *    available. Somebody at 8/10 gets a next step, not a menu; this is
+ *    checked BEFORE the chip, so the craving chip tapped inside a craving is
+ *    still one card.
+ * 6. Otherwise, on the `craving` chip: a menu of at most three. What they
  *    used last if anything, then the first available exercise of each kind
  *    in `EXERCISE_KINDS` order, SKIPPING the kind the latest tool already
  *    covers. The skip is what keeps the SOS card for somebody whose latest
  *    tool is a second game: without it the menu is Tiles, breathing and
- *    Orbs, and nobody to ask (founder decision, Nov 25 2026).
- * 6. Otherwise nothing: an ordinary message gets an ordinary reply.
+ *    Orbs, and nobody to ask (founder decision, Nov 25 2026). The menu is
+ *    fixed: what the reply named does not change it.
+ * 7. Otherwise `named`, laid out in REGISTRY order: an ordinary message
+ *    whose reply offered an exercise carries that exercise, and one whose
+ *    reply offered none carries nothing. The model says which; the order is
+ *    the registry's, calm first, like the menu's. Asked what fits somebody
+ *    about to vape, the cheap model answered "SOS, breathing" two times in
+ *    three: both right, and in the wrong order for a person who needs the
+ *    next breath before a post (`npm run eval:cards`, Nov 28 2026).
  */
 export function planBlocks(input: PlanInput): Block[] {
-  const {audience, tier, caps} = input;
-  if (caps === null || !audienceAdmits(audience, tier)) return [];
-
-  const advertised = new Set<string>(caps.exercises);
-  const available = EXERCISES.filter(
-    (row) => advertised.has(row.id) && !(row.premium && tier === 'free'),
-  );
+  const available = availableRows(input);
   const first = available[0];
   if (first === undefined) return [];
 
@@ -165,9 +263,23 @@ export function planBlocks(input: PlanInput): Block[] {
     .map((id) => available.find((row) => row.id === id))
     .find((row) => row !== undefined);
 
-  if (input.panicIntensity !== null || caps.craving) {
+  // What the reply was about, as rows this person can open. Model output:
+  // an id is looked up in the registry before anything is done with it.
+  const named: Row[] = [];
+  for (const id of input.suggested.slice(0, MAX_SUGGESTED)) {
+    const asked = exerciseById(id);
+    if (asked === null) continue;
+    const row =
+      available.find((r) => r.id === asked.id) ??
+      available.find((r) => r.kind === asked.kind);
+    if (row === undefined || named.some((n) => n.kind === row.kind)) continue;
+    named.push(row);
+    if (named.length === MAX_MENU) break;
+  }
+
+  if (inCraving(input)) {
     const calm = available.find((row) => row.kind === 'calm');
-    return [launcher((latest ?? calm ?? first).id)];
+    return [launcher((named[0] ?? latest ?? calm ?? first).id)];
   }
 
   if (input.chip === 'craving') {
@@ -181,7 +293,9 @@ export function planBlocks(input: PlanInput): Block[] {
     return ids.slice(0, MAX_MENU).map(launcher);
   }
 
-  return [];
+  return [...named]
+    .sort((a, b) => EXERCISES.indexOf(a) - EXERCISES.indexOf(b))
+    .map((row) => launcher(row.id));
 }
 
 /**

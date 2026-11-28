@@ -1,0 +1,39 @@
+{
+  "input": {
+    "audience": "premium",
+    "tier": "premium",
+    "chip": null,
+    "panicIntensity": null,
+    "caps": {
+      "exercises": [
+        "breathing",
+        "orbs",
+        "tiles",
+        "blocks",
+        "sos"
+      ],
+      "craving": false
+    },
+    "recentTools": [],
+    "suggested": [
+      "orbs",
+      "tiles",
+      "sos",
+      "breathing"
+    ]
+  },
+  "blocks": [
+    {
+      "t": "launcher",
+      "exercise": "breathing"
+    },
+    {
+      "t": "launcher",
+      "exercise": "orbs"
+    },
+    {
+      "t": "launcher",
+      "exercise": "sos"
+    }
+  ]
+}

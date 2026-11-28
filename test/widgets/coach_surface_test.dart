@@ -127,10 +127,11 @@ void main() {
   ) async {
     final harness = await pump(tester);
     final all = fixtureBlocks();
-    // Fourteen files, nine of which carry cards (K6). Counted, so a folder
-    // that could not be read cannot pass by drawing nothing.
-    expect(all, hasLength(14));
-    expect(all.values.where((b) => b.isNotEmpty), hasLength(9));
+    // Eighteen files, thirteen of which carry cards (K6, plus the four for
+    // a card named by the reply). Counted, so a folder that could not be
+    // read cannot pass by drawing nothing.
+    expect(all, hasLength(18));
+    expect(all.values.where((b) => b.isNotEmpty), hasLength(13));
 
     final width = tester.getSize(find.byType(Scaffold)).width;
     for (final MapEntry(key: name, value: blocks) in all.entries) {

@@ -51,9 +51,11 @@ import {
   FOLLOW_UP_PROMPT,
   MEMORY_EXTRACTION_PROMPT,
   buildCoachInstruction,
+  followUpPrompt,
 } from '../../src/ai/prompts';
 import {
   COACH_CONTEXT_LINES,
+  COACH_FOLLOWUPS,
   COACH_UI_AUDIENCE,
   FREE_DAILY_COACH_MESSAGES,
   GEMINI_API_KEY,
@@ -1049,14 +1051,278 @@ describe('coach cards', () => {
       // `firebase functions:log --only aiCoachChat` is how the device run
       // against production is read: three for a subscriber's menu, zero for
       // the same turn on a free account.
+      // `advertised` is whether the app said what it can draw, and `named`
+      // how many exercises the follow-up call said the reply was about: with
+      // both on the line, "no card" can be told apart from "an older build"
+      // and from "an ordinary reply" without guessing.
       expect(lines).toEqual([
-        {uidHash: expect.any(String), blocks: 3, craving: false},
-        {uidHash: expect.any(String), blocks: 1, craving: true},
-        {uidHash: expect.any(String), blocks: 0, craving: false},
+        {uidHash: expect.any(String), blocks: 3, craving: false, advertised: true, named: 0},
+        {uidHash: expect.any(String), blocks: 1, craving: true, advertised: true, named: 0},
+        {uidHash: expect.any(String), blocks: 0, craving: false, advertised: true, named: 0},
+      ]);
+
+      // One line a turn, whichever way it ended: an older app, and a turn
+      // whose card came from what the reply was about.
+      info.mockClear();
+      await userDoc('alice').set({entitlement: {tier: 'premium'}}, {merge: true});
+      await run(caller({chip: 'craving'}));
+      streamsAReply();
+      generate.mockImplementation((request: {systemInstruction: string}) =>
+        Promise.resolve(
+          request.systemInstruction.includes('"followUps"')
+            ? {text: '{"followUps":[],"exercises":["breathing"]}', inputTokens: 300, outputTokens: 12}
+            : {text: 'That wave breaks.', inputTokens: 900, outputTokens: 12},
+        ),
+      );
+      await streamed({text: 'lets do it now', ui: cards()});
+      expect(
+        info.mock.calls
+          .filter(([event]) => event === 'coach.ui')
+          .map(([, meta]) => meta),
+      ).toEqual([
+        {uidHash: expect.any(String), blocks: 0, craving: false, advertised: false, named: 0},
+        {uidHash: expect.any(String), blocks: 1, craving: false, advertised: true, named: 1},
       ]);
     } finally {
       info.mockRestore();
     }
+  });
+
+  /**
+   * A card for what the reply was about (founder decision, Nov 28 2026).
+   *
+   * Until this, an ordinary message never carried a card: the coach could
+   * say "want to try a 4-7-8 breath with me?", hear "let's do it now", and
+   * answer in words with the breathing exercise nowhere on screen. The
+   * follow-up call that already runs after every streamed reply now also
+   * says which exercise, if any, that reply was about.
+   *
+   * What is under test: that it is the SAME call (no model call is added),
+   * that only somebody who can be shown a card is asked, that code still
+   * decides what a name becomes, and that a bad answer costs the card and
+   * never the reply.
+   */
+  describe('a card for what the reply was about', () => {
+    const NAMED = '{"followUps":["that felt calming"],"exercises":["breathing"]}';
+
+    /** Either follow-up prompt: the plain one, or the one that asks for names. */
+    const isFollowUp = (instruction: string): boolean =>
+      instruction.includes('"followUps"');
+
+    /** A streamed reply; the follow-up call, whichever prompt it carries, answers [text]. */
+    const naming = (text: string): void => {
+      generateStream.mockImplementation(function* () {
+        yield {type: 'text', text: 'That wave breaks.'};
+        yield {type: 'usage', inputTokens: 900, outputTokens: 12};
+      });
+      generate.mockImplementation((request: {systemInstruction: string}) =>
+        Promise.resolve(
+          isFollowUp(request.systemInstruction)
+            ? {text, inputTokens: 330, outputTokens: 30}
+            : {text: 'That wave breaks.', inputTokens: 900, outputTokens: 12},
+        ),
+      );
+    };
+
+    const followUpCalls = (): unknown[][] =>
+      generate.mock.calls.filter((c) => isFollowUp(instructionOf(c)));
+
+    const ONLY = (exercise: string): unknown => ({
+      v: 1,
+      blocks: [{t: 'launcher', exercise}],
+    });
+
+    it('an ordinary message whose reply offers an exercise carries its card', async () => {
+      naming(NAMED);
+      const reply = await streamed({text: 'lets do it now', ui: cards()});
+
+      expect(reply.template).toBe('generic1');
+      expect(reply.text).toBe('That wave breaks.');
+      expect(reply.ui).toEqual(fixtureUi('suggested_one'));
+      // The suggestions it has always carried are still there beside it.
+      expect(reply.followUps).toEqual(['that felt calming']);
+      expect(keysOf(reply)).toEqual([...REPLY_KEYS, 'followUps', 'ui'].sort());
+    });
+
+    it('costs no model call: the follow-up call that already ran is the one asked', async () => {
+      naming(NAMED);
+      await streamed({text: 'lets do it now', ui: cards()});
+
+      expect(generateStream).toHaveBeenCalledTimes(1);
+      expect(followUpCalls()).toHaveLength(1);
+      const [call] = followUpCalls();
+      const request = call?.[0] as {model: string; json: boolean};
+      // Told exactly which exercises this person can open, and nothing else
+      // about them. Still the cheap model, still strict JSON.
+      expect(instructionOf(call!)).toBe(
+        followUpPrompt(['breathing', 'orbs', 'tiles', 'blocks', 'sos']),
+      );
+      expect(instructionOf(call!)).not.toBe(FOLLOW_UP_PROMPT);
+      expect(request.model).toBe(MODEL_FREE.value());
+      expect(request.json).toBe(true);
+    });
+
+    it('a reply about none of them is the reply it always was', async () => {
+      naming('{"followUps":["that helped"],"exercises":[]}');
+      const reply = await streamed({text: 'how much have i saved', ui: cards()});
+
+      expect(reply.followUps).toEqual(['that helped']);
+      expect(keysOf(reply)).toEqual([...REPLY_KEYS, 'followUps'].sort());
+    });
+
+    it('nobody who cannot be shown a card is asked to name one', async () => {
+      // The control: a subscriber on a current app is asked, and gets it.
+      naming(NAMED);
+      expect((await streamed({text: 'hi there', ui: cards()})).ui).toEqual(
+        fixtureUi('suggested_one'),
+      );
+
+      // An older app: the follow-up call is today's, word for word, and a
+      // name the model volunteers anyway becomes nothing.
+      generate.mockClear();
+      const old = await streamed({text: 'hi there'});
+      expect(instructionOf(followUpCalls()[0]!)).toBe(FOLLOW_UP_PROMPT);
+      expect(keysOf(old)).toEqual([...REPLY_KEYS, 'followUps'].sort());
+
+      // A free account while the audience is subscribers only.
+      await makeFree();
+      generate.mockClear();
+      const free = await streamed({text: 'hi there', ui: cards()});
+      expect(free.tier).toBe('free');
+      expect(instructionOf(followUpCalls()[0]!)).toBe(FOLLOW_UP_PROMPT);
+      expect(keysOf(free)).toEqual([...REPLY_KEYS, 'followUps'].sort());
+    });
+
+    it('audience off asks for no names and shows none', async () => {
+      vi.spyOn(COACH_UI_AUDIENCE, 'value').mockReturnValue('off');
+      naming(NAMED);
+      const reply = await streamed({text: 'hi there', ui: cards()});
+
+      expect(instructionOf(followUpCalls()[0]!)).toBe(FOLLOW_UP_PROMPT);
+      expect(reply.ui).toBeUndefined();
+    });
+
+    it('audience all: a free account is asked about, and shown, free exercises only', async () => {
+      vi.spyOn(COACH_UI_AUDIENCE, 'value').mockReturnValue('all');
+      await makeFree();
+      // The model names a Premium game anyway.
+      naming('{"followUps":[],"exercises":["tiles"]}');
+      const reply = await streamed({text: 'a game maybe', ui: cards()});
+
+      expect(instructionOf(followUpCalls()[0]!)).toBe(
+        followUpPrompt(['breathing', 'orbs', 'sos']),
+      );
+      // Nobody lands on a lock: the free game stands in for it.
+      expect(reply.ui).toEqual(fixtureUi('suggested_locked'));
+    });
+
+    it('an app is asked only about what it can draw', async () => {
+      naming('{"followUps":[],"exercises":["blocks"]}');
+      const reply = await streamed({
+        text: 'a game maybe',
+        ui: cards({exercises: ['sos', 'orbs']}),
+      });
+
+      expect(instructionOf(followUpCalls()[0]!)).toBe(
+        followUpPrompt(['orbs', 'sos']),
+      );
+      expect(reply.ui).toEqual(ONLY('orbs'));
+    });
+
+    it('inside a craving the one card is the exercise the reply named', async () => {
+      naming('{"followUps":[],"exercises":["orbs","sos"]}');
+      const named = await streamed({text: 'still here', ui: cards({craving: true})});
+      expect(named.ui).toEqual(ONLY('orbs'));
+
+      // Nothing named: the calm one, as before.
+      naming('{"followUps":[],"exercises":[]}');
+      const plain = await streamed({text: 'still here', ui: cards({craving: true})});
+      expect(plain.ui).toEqual(fixtureUi('panic_default'));
+    });
+
+    it('the craving chip keeps its menu, and asks for no names', async () => {
+      naming('{"followUps":[],"exercises":["sos"]}');
+      const reply = await streamed({chip: 'craving', ui: cards()});
+
+      expect(reply.ui).toEqual(fixtureUi('craving_chip'));
+      expect(instructionOf(followUpCalls()[0]!)).toBe(FOLLOW_UP_PROMPT);
+    });
+
+    it('a bad answer costs the card, never the reply', async () => {
+      for (const junk of [
+        'not json',
+        '{"followUps":["ok then"]}',
+        '{"followUps":["ok then"],"exercises":"breathing"}',
+        '{"followUps":["ok then"],"exercises":["teleport",7,null]}',
+      ]) {
+        naming(junk);
+        const reply = await streamed({text: 'hi there', ui: cards()});
+        expect(reply.template, junk).toBe('generic1');
+        expect(reply.text, junk).toBe('That wave breaks.');
+        expect(reply.ui, junk).toBeUndefined();
+      }
+    });
+
+    it('the follow-up call failing costs the card, never the reply', async () => {
+      generateStream.mockImplementation(function* () {
+        yield {type: 'text', text: 'That wave breaks.'};
+        yield {type: 'usage', inputTokens: 900, outputTokens: 12};
+      });
+      generate.mockImplementation((request: {systemInstruction: string}) =>
+        isFollowUp(request.systemInstruction)
+          ? Promise.reject(new Error('suggester exploded'))
+          : Promise.resolve({text: 'That wave breaks.', inputTokens: 900, outputTokens: 12}),
+      );
+
+      const reply = await streamed({text: 'hi there', ui: cards()});
+
+      expect(reply.text).toBe('That wave breaks.');
+      expect(keysOf(reply)).toEqual(REPLY_KEYS);
+      expect(await usedToday()).toBe(1);
+    });
+
+    it('a call that does not stream names nothing', async () => {
+      // No follow-up call is made on the plain call (it would sit in front
+      // of the answer), so there is nobody to ask. The craving rules, which
+      // need no model, are unchanged on this path.
+      naming(NAMED);
+      const reply = await run(caller({text: 'lets do it now', ui: cards()}));
+
+      expect(keysOf(reply)).toEqual(REPLY_KEYS);
+      expect(followUpCalls()).toHaveLength(0);
+    });
+
+    it('follow-ups switched off take the names with them', async () => {
+      const off = vi.spyOn(COACH_FOLLOWUPS, 'value').mockReturnValue('false');
+      try {
+        naming(NAMED);
+        const reply = await streamed({text: 'lets do it now', ui: cards()});
+
+        expect(keysOf(reply)).toEqual(REPLY_KEYS);
+        expect(followUpCalls()).toHaveLength(0);
+        // The cards that need no model are untouched by that switch.
+        expect((await streamed({chip: 'craving', ui: cards()})).ui).toEqual(
+          fixtureUi('craving_chip'),
+        );
+      } finally {
+        off.mockRestore();
+      }
+    });
+
+    it('out of messages or with the model down, nothing is named and nothing is asked', async () => {
+      naming(NAMED);
+      await userDoc('alice').set(
+        {aiUsage: {day: dayKeyIn(new Date(), 'UTC'), msgCount: 5}},
+        {merge: true},
+      );
+      vi.spyOn(PREMIUM_DAILY_COACH_MESSAGES, 'value').mockReturnValue(5);
+
+      const capped = await streamed({text: 'lets do it now', ui: cards()});
+
+      expect(capped.template).toBe('capReached');
+      expect(keysOf(capped)).toEqual(REFUSAL_KEYS);
+      expect(followUpCalls()).toHaveLength(0);
+    });
   });
 });
 

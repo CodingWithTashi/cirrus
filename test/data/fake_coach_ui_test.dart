@@ -186,9 +186,10 @@ void main() {
 
   group('fakeBlocksFor', () {
     test('agrees with the server wherever it has no history to read', () {
-      // The fake keeps no craving history and has one audience, so it can
-      // answer the fixtures whose input has neither. For each of those it
-      // must say exactly what the server's policy says.
+      // The fake keeps no craving history, has one audience and no model
+      // to say what a reply was about, so it can answer the fixtures whose
+      // input has none of those. For each of them it must say exactly what
+      // the server's policy says.
       const modelled = [
         'panic_default',
         'craving_chip',
@@ -203,6 +204,7 @@ void main() {
         final input = fixture(name)['input'] as Map<String, dynamic>;
         expect(input['audience'], 'premium', reason: name);
         expect(input['recentTools'], isEmpty, reason: name);
+        expect(input['suggested'], isEmpty, reason: name);
         final inputCaps = input['caps'] as Map<String, dynamic>?;
         final blocks = fakeBlocksFor(
           request: {
